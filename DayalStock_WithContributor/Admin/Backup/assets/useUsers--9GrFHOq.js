@@ -1,0 +1,1 @@
+import{f as e}from"./index-D1ecblYS.js";import{n as t}from"./userApi-B6tB0Et9.js";var n=()=>e({queryKey:[`users`],queryFn:()=>t(),staleTime:1e3*60*5});export{n as t};

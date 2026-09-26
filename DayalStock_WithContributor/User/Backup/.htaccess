@@ -1,0 +1,22 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # API routes
+  RewriteRule ^api_v1/ - [L]
+  RewriteRule ^api/ - [L]
+
+  # Social Crawlers - only SPA routes
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|WhatsApp|Twitterbot|Pinterest|LinkedInBot) [NC]
+  RewriteRule ^(.*)$ https://api.dayalstock.com/api_v1/seo/social_crawler_proxy.php?uri=/$1 [L,R=302]
+
+  # Existing files/folders
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # React SPA fallback
+  RewriteRule ^ index.html [L,QSA]
+</IfModule>

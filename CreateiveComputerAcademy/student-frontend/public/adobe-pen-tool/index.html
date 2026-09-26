@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" type="text/css" href="css/mystyle.css">
+	<script type="text/javascript" src="js/paper-full.js"></script>
+	<script type="text/javascript">
+		// Patch Paper.js DomEvent.getOffset so that coordinates are correctly translated when canvas is CSS scaled
+		(function () {
+			var checkPaper = setInterval(function () {
+				if (typeof DomEvent !== 'undefined' && DomEvent.getOffset) {
+					clearInterval(checkPaper);
+					var origGetOffset = DomEvent.getOffset;
+					DomEvent.getOffset = function (event, target) {
+						var pt = origGetOffset.call(this, event, target);
+						var el = target || DomEvent.getTarget(event);
+						if (el && el.id === 'myCanvas') {
+							var rect = el.getBoundingClientRect();
+							if (rect.width > 0 && rect.height > 0) {
+								return new Point((pt.x / rect.width) * el.width, (pt.y / rect.height) * el.height);
+							}
+						}
+						return pt;
+					};
+				}
+			}, 10);
+		})();
+	</script>
+	<script type="text/javascript" src="js/stats.min.js"></script>
+	<script type="text/javascript" src="js/ResourceManager.js"></script>
+	<script type="text/javascript" src="js/Game.js"></script>
+	<script type="text/javascript" src="js/Level001_StraightLineIntro.js"></script>
+	<script type="text/javascript" src="js/Level001_StraightLineTutorial.js"></script>
+	<script type="text/javascript" src="js/Level004_CurveLineTutorial.js"></script>
+	<script type="text/javascript" src="js/TunnelGame.js"></script>
+	<script type="text/javascript" src="js/Stars.js"></script>
+	<script type="text/javascript" src="js/Level003_StraightLineChallange.js"></script>
+	<script type="text/javascript" src="js/Level008_EndStage.js"></script>
+	<script type="text/javascript" src="js/buzz.min.js"></script>
+	<script type="text/javascript" src="js/sitecatalyst.js"></script>
+	<script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+</head>
+
+<body>
+	<div id="canvaswrapper">
+		<img src="./assets/LoadingAnimation002.gif" id="PRELOADER"></img>
+		<canvas keepalive="true" id="myCanvas" width="640" height="360" tabindex="1"></canvas>
+	</div>
+	<div class="buttonbar">
+		<a id="restartbutton" href=".">Restart</a>
+		<a id="soundcontrol" href="#" onclick="togglesound()">Sound ON</a>
+	</div>
+	<div>
+		<div id="escape_message" class="localeString">Press ESC &#10; To End Path</div>
+		<div id="penny_str001" class="localeString">Hi I am Penny, the space explorer.</div>
+		<div id="click_str001" class="localeString">Click to continue...</div>
+	</div>
+	<img src="./assets/background001.png" id="LEVEL002_BACKGROUND" class="backgroundImages"></img>
+	<img src="./assets/background002.png" id="LEVEL005_BACKGROUND" class="backgroundImages"></img>
+	<script type="text/javascript">
+		function autoScaleGame() {
+			var wrapper = document.getElementById("canvaswrapper");
+			if (!wrapper) return;
+			var w = window.innerWidth;
+			var h = window.innerHeight;
+			if (w <= 0 || h <= 0) return;
+			// 16:9 widescreen fit scale
+			var scale = Math.min(w / 640, h / 360);
+			wrapper.style.transform = "scale(" + scale + ")";
+		}
+		window.addEventListener("resize", autoScaleGame);
+		window.addEventListener("load", function () {
+			autoScaleGame();
+			window.focus();
+			var c = document.getElementById("myCanvas");
+			if (c) c.focus();
+		});
+		window.addEventListener("click", function () {
+			window.focus();
+			var c = document.getElementById("myCanvas");
+			if (c) c.focus();
+		});
+		// Receive keyboard events forwarded from parent iframe wrapper
+		window.addEventListener("message", function (e) {
+			if (e.data && e.data.type === 'KEYDOWN') {
+				var evt = new KeyboardEvent('keydown', {
+					key: e.data.key,
+					keyCode: e.data.keyCode,
+					bubbles: true
+				});
+				window.dispatchEvent(evt);
+				var c = document.getElementById("myCanvas");
+				if (c) c.dispatchEvent(evt);
+			}
+		});
+		setTimeout(autoScaleGame, 50);
+		setTimeout(autoScaleGame, 200);
+		setTimeout(autoScaleGame, 500);
+	</script>
+</body>
+
+</html>

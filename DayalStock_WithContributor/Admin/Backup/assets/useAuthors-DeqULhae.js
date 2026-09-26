@@ -1,0 +1,1 @@
+import{f as e,r as t}from"./index-D1ecblYS.js";var n=()=>e({queryKey:[`authors`],queryFn:()=>t(),staleTime:1e3*60*5});export{n as t};

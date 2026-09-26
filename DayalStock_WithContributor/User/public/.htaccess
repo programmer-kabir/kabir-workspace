@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. API folder কখনো React index.html-এ পাঠাবে না
+  RewriteRule ^api_v1/ - [L]
+  RewriteRule ^api/ - [L]
+
+  # 2. Redirect old /content/ URLs to new structure for SEO
+  RewriteRule ^([a-zA-Z0-9_-]+)/content/([a-zA-Z0-9_-]+)/?$ /$1/$2 [R=301,L]
+
+  # 3. Intercept Social Crawlers (Facebook, WhatsApp, Twitter, etc.)
+  # Only intercept SPA routes, do not intercept actual files (like images, css)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|WhatsApp|Twitterbot|Pinterest|LinkedInBot) [NC]
+  RewriteRule ^(.*)$ https://api.dayalstock.com/api_v1/seo/social_crawler_proxy.php?uri=/$1 [L,R=302]
+
+  # 4. Proxy sitemap.xml to backend sitemap generator
+  RewriteRule ^sitemap\.xml$ https://api.dayalstock.com/sitemap.php [L,R=301]
+
+  # 5. Existing file / folder থাকলে rewrite করবে না
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 6. React SPA fallback
+  RewriteRule ^ index.html [L,QSA]
+</IfModule>

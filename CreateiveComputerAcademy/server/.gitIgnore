@@ -1,0 +1,14 @@
+# Environment Configuration
+.env
+.env.local
+.env.*.local
+
+# Logs & Cache
+*.log
+
+# Database dumps
+*.sql
+
+# Uploads directory contents
+uploads/*
+!uploads/.gitkeep

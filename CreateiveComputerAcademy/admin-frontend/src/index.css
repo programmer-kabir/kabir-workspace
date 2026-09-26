@@ -1,0 +1,282 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    @apply bg-slate-50 text-slate-900 dark:bg-[#070b14] dark:text-slate-100 font-sans antialiased;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  /* Universal Ultra-Modern Select & Dropdown Styling */
+  select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.2' stroke='%236366f1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.85rem center !important;
+    background-size: 1.1rem 1.1rem !important;
+    padding-right: 2.75rem !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  select:hover {
+    border-color: #818cf8 !important;
+  }
+
+  select:focus {
+    outline: none !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18), 0 4px 12px -2px rgba(99, 102, 241, 0.12) !important;
+  }
+
+  select option {
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .dark select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.2' stroke='%23818cf8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E") !important;
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .dark select:hover {
+    border-color: #6366f1 !important;
+  }
+
+  .dark select:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25), 0 4px 16px -2px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .dark select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    padding: 10px 14px;
+  }
+}
+
+/* Glassmorphic & Modern Interactive Utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -15px rgba(37, 99, 235, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.dark .glass-card-hover:hover {
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.7), 0 0 20px rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-float {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+/* Custom scrollbar styling for webkit browsers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* Force copy-pasted rich text content to use visible colors and transparent backgrounds on cards */
+.task-description-content {
+  color: #1e293b !important;
+}
+.task-description-content * {
+  background-color: transparent !important;
+}
+.task-description-content *:not(a):not(button):not([style*="background"]) {
+  color: #1e293b;
+}
+
+/* Rich text / HTML content styling for task descriptions */
+.task-description-content h1 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a !important;
+  margin-top: 1.2rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.3rem;
+}
+.task-description-content h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1e293b !important;
+  margin-top: 1.2rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 0.25rem;
+}
+.task-description-content h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.3rem;
+}
+.task-description-content ul {
+  list-style-type: disc !important;
+  padding-left: 1.4rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.6rem !important;
+}
+.task-description-content ol {
+  list-style-type: decimal !important;
+  padding-left: 1.4rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.6rem !important;
+}
+.task-description-content li {
+  display: list-item !important;
+  margin-top: 0.2rem !important;
+  margin-bottom: 0.2rem !important;
+  color: #334155 !important;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.task-description-content ul ul,
+.task-description-content ol ul {
+  list-style-type: circle !important;
+}
+.task-description-content p {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  color: #334155 !important;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.task-description-content span,
+.task-description-content div {
+  color: inherit;
+}
+.task-description-content pre,
+.task-description-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-radius: 0.5rem;
+}
+.task-description-content pre {
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+.task-description-content strong,
+.task-description-content b {
+  font-weight: 700;
+  color: #0f172a !important;
+}
+.task-description-content u {
+  text-decoration: underline;
+}
+.task-description-content a {
+  color: #2563eb !important;
+  text-decoration: underline;
+}
+.task-description-content a:hover {
+  color: #1d4ed8 !important;
+}
+.task-description-content br {
+  display: block;
+  content: "";
+  margin-top: 0.2rem;
+}
+
+.dark .task-description-content {
+  color: #cbd5e1 !important;
+}
+.dark .task-description-content * {
+  background-color: transparent !important;
+}
+.dark .task-description-content *:not(a):not(button):not([style*="background"]) {
+  color: #cbd5e1 !important;
+}
+.dark .task-description-content h1,
+.dark .task-description-content h2,
+.dark .task-description-content strong,
+.dark .task-description-content b {
+  color: #f8fafc !important;
+}
+.dark .task-description-content h3,
+.dark .task-description-content p,
+.dark .task-description-content li {
+  color: #cbd5e1 !important;
+}
+.dark .task-description-content pre,
+.dark .task-description-content code {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155;
+}
+.dark .task-description-content a {
+  color: #60a5fa !important;
+}
+.dark .task-description-content a:hover {
+  color: #93c5fd !important;
+}
+
+/* Jodit Dark Mode Overrides */
+.dark .jodit-container { background-color: #0f172a !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+.dark .jodit-toolbar__box { background-color: #1e293b !important; border-bottom-color: #334155 !important; }
+.dark .jodit-wysiwyg { background-color: #0f172a !important; color: #f1f5f9 !important; }
+.dark .jodit-toolbar-button__button:hover { background-color: #334155 !important; }
+.dark .jodit-ui-separator { border-left-color: #334155 !important; }
+.dark .jodit-toolbar-button__icon { filter: invert(1); }

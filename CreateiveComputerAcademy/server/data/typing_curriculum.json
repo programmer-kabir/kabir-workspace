@@ -1,0 +1,738 @@
+[
+  {
+    "id": 1,
+    "lessonNumber": "1",
+    "title": "The Home Row Basics (ASDF JKL;)",
+    "banglaTitle": "হোম রো বেসিকস (ASDF JKL;)",
+    "description": "Place all 8 fingers on the Home Row (ASDF JKL;) and master the Spacebar without looking.",
+    "newKeys": [
+      "a",
+      "s",
+      "d",
+      "f",
+      "j",
+      "k",
+      "l",
+      ";",
+      " "
+    ],
+    "fingerIntro": {
+      "left": "A (Pinky), S (Ring), D (Middle), F (Index)",
+      "right": "J (Index), K (Middle), L (Ring), ; (Pinky)",
+      "thumb": "Spacebar (Left or Right Thumb)",
+      "tip": "Feel the raised tactile bumps on F and J keys (F ও J বোতামের উঁচু দাগ অনুভব করুন)।"
+    },
+    "passingCriteria": {
+      "minAccuracy": 92,
+      "minWpm": 12,
+      "targetWpm": 20
+    },
+    "exercises": [
+      {
+        "id": "1.1",
+        "title": "Key Drill 1: Left Hand (ASDF)",
+        "type": "drill",
+        "text": "aaa sss ddd fff aaa sss ddd fff asdf asdf fdsa fdsa aass ddff faas fass saff asdf fdsa aaaa ssss dddd ffff afsd asdf fads safd fdas asdf fdsa asdf fdsa aaff ssdd ddff ffaa afaf asas dsd sfsd asdf asdf fdsa fdsa aass ddff faas fass saff afsd fdsa asdf safd aaaa ffff ssss dddd asdf fdsa asdf fdsa aa ss dd ff as df sa fd aass ssdd ddff ffaa asdf asdf asdf fdsa fdsa afsd afsd safd safd fads fads dasf dasf asdf fdsa afsd safd aaaa ssss dddd ffff asdf asdf fdsa fdsa aaff ssdd ffaa ddss as as df df fa fa sd sd asdf asdf fdsa fdsa afsd safd fads dasf fdas asdf fdsa asdf fdsa aaaa aaaa ssss ssss dddd dddd ffff ffff aass ddff aass ddff afsd safd fads dasf asdf fdsa afsd safd asdf asdf asdf asdf fdsa fdsa fdsa fdsa aaff aaff ssdd ssdd faas faas fass fass saff saff asdf fdsa asdf fdsa afsd afsd safd safd fads fads dasf dasf asdf asdf fdsa fdsa"
+      },
+      {
+        "id": "1.2",
+        "title": "Key Drill 2: Right Hand (JKL;)",
+        "type": "drill",
+        "text": "jjj kkk lll ;;; jjj kkk lll ;;; jkl; jkl; ;lkj ;lkj jjkk ll;; kkjj ;;ll j; jk kl l; ;j ;k ;l jkl; ;lkj lk;j ;jkl jjjj kkkk llll ;;;; jkl; jkl; ;lkj ;lkj lk;j ;jkl k;lj ;klj jjkk ll;; jjkk ll;; jkl; ;lkj jkl; ;lkj jjjj ;;;; kkkk llll jk jk kl kl lj lj ;j ;k jkl; ;lkj lk;j ;jkl jjkk kkjj ll;; ;;ll jkl; jkl; fd jkl; ;lkj jkl; ;lkj jjjj kkkk llll ;;;; ;jkl ;lkj j;kl kl;j jk;l kj;l lj;k ;jkl jkl; ;lkj jkl; ;lkj jjkk ll;; kkjj ;;ll jkl; jkl; jkl; jkl; ;lkj ;lkj ;lkj ;lkj jk jk kl kl l; l; ;j ;j jjjj kkkk llll ;;;; jkl; ;lkj lk;j ;jkl jkl; ;lkj jkl; ;lkj jjkk ll;; jjkk ll;; ;jkl ;lkj ;jkl ;lkj jkl; jkl; ;lkj ;lkj jjjj ;;;; kkkk llll"
+      },
+      {
+        "id": "1.3",
+        "title": "Key Combination: Both Hands",
+        "type": "drill",
+        "text": "asdf jkl; asdf jkl; fdsa ;lkj  asdf jkl; fdsa ;lkj  aj sk dl f; fa sd jf kl ;a ls kd jf asdf jkl; a; sl dk fj fj dk sl a; asdf jkl; fdsa ;lkj fjdk sl;a aj sk dl f;  al sk dj f; asdf jkl; ;lkj fdsa asdf jkl;  asdf jkl; asdf jkl;  fdsa ;lkj fdsa ;lkj  aj sk dl f; fa sd jf kl  ;a ls kd jf a; sl dk fj fj dk sl a; asdf jkl; jkl; asdf ;lkj fdsa asdf jkl; fdsa ;lkj aj aj sk sk dl dl f;  jf jf kl kl ;a ;a  asdf asdf jkl; jkl;  fdsa fdsa ;lkj ;lkj asdf jkl; fdsa ;lkj a;sl dkfj fjdk sl;a ajsk dlf; f asd jfkl asdf jkl; ;lkj fdsa asdf jkl; asdf jkl; fdsa ;lkj fdsa ;lkj aj sk dl f; fa sd jf kl jkl; asdf fdsa ;lkj  asdf jkl; fdsa ;lkj a; sl; dk; fj; fj; dk; sl; a; asdf jkl; asdf jkl; fdsa ;lkj"
+      },
+      {
+        "id": "1.4",
+        "title": "Word Practice 1: Basic Words",
+        "type": "words",
+        "text": "dad fad lad sad fall salad flask ask add all dad sad all flask salad dad alas fall lads fads asks salads flask dad fad lad sad all fall salad ask flask add all dad lad sad alas fall lads asks salad flask all dad fad lad sad fall salad flask ask add all dad lad sad fall salad dad asks lad sad lad fall all lads ask dad salad flask fall salad asks fad lad dad all salad fall asks dad lad sad flask all dad lad fall salad asks all fad fad lad lad dad dad sad sad fall fall salad salad ask ask add add all all flask flask lad lad sad sad lads lads fads fads asks asks salads salads dad fad lad sad fall salad flask ask add all dad lad sad alas fall lads fads asks salads flask"
+      },
+      {
+        "id": "1.5",
+        "title": "Word Practice 2: Extended Words",
+        "type": "words",
+        "text": "adds dads lads falls salads flasks asks fads alfa salsa alfalfa dallas alas fall salad ask alfalfa salads fall dad lad adds dads lads fall salads flasks asks fads alfa salsa alfalfa dallas alas fall salad ask alfalfa salads fall dad lad adds dads lads fall salads flasks asks fads alfa salsa alfalfa dallas alas fall salad ask alfalfa salads fall dad lad adds dads lads fall salads flasks asks fads alfa salsa alfalfa dallas alas fall salad ask alfalfa salads fall dad lad adds dads lads fall salads flasks asks fads alfa salsa alfalfa dallas alas salad flask dads lad falls salads ask dads alfalfa salsa dallas salads fall lads adds fads asks flasks dad salad lad flask sad lads fall salads alfalfa dads salsa lads dallas fads"
+      },
+      {
+        "id": "1.6",
+        "title": "Sentence Practice: Full Sentences",
+        "type": "sentences",
+        "text": "a lad asks dad; all salads fall; a sad lad falls; dad asks a lad as salads fall; ask a dad as a lad falls; all flasks fall; a sad dad had a salad; all lads ask a dad as a salad falls; dad had a flask as all lads ask; a lad had a salad; dad had a flask; all lads fall; a sad lad asks dad; dad asks all lads; all salads fall as lads ask; a lad asks for a salad; dad asks for a flask; all lads ask dad; a sad lad falls as all salads fall; dad had all salads; all flasks fall as lads ask; a lad had a flask; sad lads ask dad; dad asks a sad lad; all lads had salads; a dad asks a lad; a lad asks dad for a flask; all salads fall; all lads ask; dad had a salad; a sad lad had a flask; all flasks had salad; dad asks all lads as salads fall; a lad asks a dad as a flask falls; all lads ask dad as a salad falls;"
+      },
+      {
+        "id": "1.7",
+        "title": "Lesson 1 Final Exam: Speed & Accuracy",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "all salads fall as a sad dad asks a lad; all flasks fall as dad asks salad; add salads all lad flask; a dad asks all lads as salad falls; dad had a flask as all lads ask; a sad lad asks a dad as all salads fall; all lads ask dad as a salad falls;"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "lessonNumber": "2",
+    "title": "Top Row: Keys E and I",
+    "banglaTitle": "টপ রো: E এবং I কী",
+    "description": "Reach up from D to type E with Left Middle, and from K to type I with Right Middle.",
+    "newKeys": [
+      "e",
+      "i"
+    ],
+    "fingerIntro": {
+      "left": "D to top row E (Left Middle Finger)",
+      "right": "K to top row I (Right Middle Finger)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Always return fingers to home keys (D & K) after pressing top row keys."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 15,
+      "targetWpm": 22
+    },
+    "exercises": [
+      {
+        "id": "2.1",
+        "title": "Key Drill: Keys E and I",
+        "type": "drill",
+        "text": "ded ded kik kik ded kik ded kik deed deed seek seek feel feel like like life life file file ride ride idea idea side side slid slid feed feed kids kids seed seed fill fill dede dede kiki kiki deed seek feel like life file ride idea side slid feed kids like seed fill idle diet edit side disk life feed seed ded kik deed seek feel like file ride idea side feed kids seed fill dede kiki ded ded kik kik deed deed seek seek feel feel like like life life file file ride ride idea idea side side slid slid feed feed kids kids seed seed fill fill dede kiki deed seek like file idle diet edit side disk life feed seed like feel ride idea side slid kids seed fill idle"
+      },
+      {
+        "id": "2.2",
+        "title": "Word Practice: E and I Words",
+        "type": "words",
+        "text": "side desk file like life sled feel sail lead leaf fake fail seal feed disk silk self sail slide dies flies laid idle alike deal deed deep died die field field file fill fine fish side size like line life lie lid less leak leaf lead feel feed seed seek seem sell silk silly slide sleep sleek sleekly safe safe side idea idle ideal edit else ease easy dead deaf deal deep deer desk diet dish disk dill dirt ride rice rise ride read real relief relief field fields files feeds seeds sides slides likes liked liked life lifelike feel felt fell fall falls failed sail sailed sails slide slid slides seek seeks seeking seed seeded lead leads leading leaf leaves side sides silk silky self selves alike ideal idle idea edit"
+      },
+      {
+        "id": "2.3",
+        "title": "Sentence Practice: E and I",
+        "type": "sentences",
+        "text": "a kid likes a clean desk; a safe leaf is soft like silk; dad likes a side file; feel free to sail like a sled in a calm lake; a kid seeks a safe leaf as dad slides a side file; safe kids feel free to sail in silk sleds beside a lake; a little kid likes a clean desk; a kid feels safe beside dad; dad likes a clean side desk; a kid reads a file beside a desk; feel free to slide a sled; a safe kid likes a silk leaf; dad feels safe as a kid slides a sled; a kid likes a clean file; a leaf is like silk; a kid seeks a safe side; dad likes a safe desk; a kid feels like a little fish; a kid likes to sail a safe sled; feel free and slide a little; a safe kid sits beside a desk; dad reads a file as a kid slides; a kid likes a clean leaf; a safe leaf is beside a silk file; kids like clean desks and safe files; a kid feels safe and likes a clean desk; dad likes silk and safe files; a kid seeks a clean side; feel free to read a file; a kid likes a safe life;"
+      },
+      {
+        "id": "2.4",
+        "title": "Lesson 2 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "life is like a green field and a kid seeks a fresh leaf; dad likes silk and a kid likes a clean desk; a safe kid feels free beside a lake; a kid reads a file as dad sits beside a desk; feel free to slide a safe sled beside a lake; a kid likes a clean file and a soft silk leaf; dad feels safe as the kid slides beside a desk;"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "lessonNumber": "3",
+    "title": "Top Row: Keys R and U",
+    "banglaTitle": "টপ রো: R এবং U কী",
+    "description": "Reach up from F to type R with Left Index, and from J to type U with Right Index.",
+    "newKeys": [
+      "r",
+      "u"
+    ],
+    "fingerIntro": {
+      "left": "F to top row R (Left Index Finger)",
+      "right": "J to top row U (Right Index Finger)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Return index fingers promptly back to anchor positions F and J."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 16,
+      "targetWpm": 25
+    },
+    "exercises": [
+      {
+        "id": "3.1",
+        "title": "Key Drill: Keys R and U",
+        "type": "drill",
+        "text": "frf frf juj juj frf juj juj frf rfr frf uru juj rfr uru frf juj frf juj frf juj rfr uru uru rfr user sure rule rush rude dark surf rural true full drum fur fire rule rush user rural sure true rude fur drum user rule rush dark surf fire cure pure fuel true rural drum fur user sure rule rush true frfr juju frfr juju rfr uru rfr uru frf juj frf juj frfr juju rfr uru user sure rule rush rude dark surf rural true full drum fur fire rule rush user rural pure cure fuel sure true rule user dark surf fire drum fur rush rural true frfr frfr juj juj frfr frfr juj juj rfr uru rfr uru frf juj frf juj user rule sure rush true rural full drum fur fire dark surf pure cure fuel rude"
+      },
+      {
+        "id": "3.2",
+        "title": "Word Practice: R and U Words",
+        "type": "words",
+        "text": "user rule rush rude real rare ride fur dark surf rural sure fuel true drum pure cure flare fluid fruit rural failure future ruler user rule rush rude real rare ride fur dark surf rural sure fuel true drum pure cure flare fluid fruit failure future ruler sure rural true user rule rush rude real rare ride fire fur fuel full drum dark surf pure cure fruit fluid rural ruler future failure regular useful user sure rule true rural ride real rare fur fuel fire full drum rush rude dark surf pure cure fruit fluid flare rural future failure ruler regular useful true user rule rush rude real rare ride dark surf rural sure fuel true drum pure cure flare fluid fruit rural failure future ruler user sure rule rush true rural regular useful fruit"
+      },
+      {
+        "id": "3.3",
+        "title": "Sentence Practice: R and U",
+        "type": "sentences",
+        "text": "a sure user rides through a dark rural road; full rules are useful for pure fire safety; true drum rhythm fills our regular room; rural users follow true rules as a dark fire burns; ride with a sure rule through the rural surf; a rural user follows a true rule; a sure user rides a rural road; pure fire burns in a dark room; full drums are useful for rhythm; true rules are useful for rural users; a user runs through a dark rural road; ride through the surf with a sure rule; a rural road is full of pure air; true users follow regular rules; a sure rule is useful for every user; dark rural roads are full of rough turns; a user rides through a rural road; pure fuel is useful for a full fire; true drum rhythm runs through the room; rural users follow full and useful rules; a sure user can ride through rough surf; regular practice makes every rule useful;"
+      },
+      {
+        "id": "3.4",
+        "title": "Lesson 3 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "a true user likes a rural fire with full rules that are useful; a sure user rides through a dark rural road; pure fire burns as a rural user follows the rules; true users follow regular rules for safe and useful practice; a rural user rides through rough surf with a sure rule; full drum rhythm runs through the room as users practice; a sure rule is useful for every rural user;"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "lessonNumber": "4",
+    "title": "Top Row Center: Keys T and Y",
+    "banglaTitle": "টপ রো: মাঝের T এবং Y কী",
+    "description": "Stretch Left Index up-right to T, and Right Index up-left to Y.",
+    "newKeys": [
+      "t",
+      "y"
+    ],
+    "fingerIntro": {
+      "left": "F stretch up-right to T (Left Index)",
+      "right": "J stretch up-left to Y (Right Index)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Keep hands steady on the home row; stretch only your index fingers."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 18,
+      "targetWpm": 26
+    },
+    "exercises": [
+      {
+        "id": "4.1",
+        "title": "Key Drill: Keys T and Y",
+        "type": "drill",
+        "text": "ftf ftf jyj jyj ftf jyj jyj ftf tft ftf yjy jyj tft yjy ftf jyj ftf jyj ftf jyj tft yjy tft yjy try try you you they they that that easy yard city stay year rust test duty style today youth tidy trust truth story type treat tasty steady ready twenty thirty try you they that easy yard city stay year rust test duty style today youth tidy trust truth story type treat tasty steady ready twenty thirty yellow year ftft jyjy ftft jyjy tft yjy tft yjy ftf jyj ftf jyj ftft jyjy ftft jyjy try they you that stay year test duty today style youth tidy truth trust story type treat tasty steady ready twenty thirty yellow year today they stay"
+      },
+      {
+        "id": "4.2",
+        "title": "Word Practice: T and Y Words",
+        "type": "words",
+        "text": "stay year rust test duty ready style yesterday steady youth tidy today story trust tasty truth treaty thirty twenty yellow treat type try they that easy yard city year youth today tidy steady ready style story trust truth tasty treaty twenty thirty yellow type treat try stay test duty today yesterday youth year style steady story trust true truth tasty treat treaty ready already early every thirty twenty type try yellow yard year youth city duty study style today tonight tidy test testing tested trust trusted truth treat treated tasty steady steadily ready yesterday today year youth young tidy story stories type"
+      },
+      {
+        "id": "4.3",
+        "title": "Sentence Practice: T and Y",
+        "type": "sentences",
+        "text": "today they try that easy style so you stay ready for a tidy year; trust the steady youth as they tell the true story with joy; they study twenty tidy stories today and stay steady for duty; they try to stay ready every day; today is a tidy and steady day; you can try a new style today; they trust every true rule; a steady youth can study every day; they stay ready for a test; today they study style and type; try to stay steady and tidy; they tell a true story every day; a ready student tries to type every day; you stay ready as they study; today they try a tasty treat; they trust a steady style; youth study true stories today; they try twenty types every day; stay ready, stay steady, and try again; today you can test your typing style; they study every day to stay ready; a tidy style makes typing easy;"
+      },
+      {
+        "id": "4.4",
+        "title": "Lesson 4 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "they say that youth is ready to try today and stay steady throughout the year; your tasty fruit always tastes truly fresh; trust every steady step you take toward your brightest destiny; ready youth study true style and stay tidy every single day; today they try to type a steady story; they stay ready and trust their daily practice; a steady student tries every day to improve typing style; they study true stories and try to type them every day;"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "lessonNumber": "5",
+    "title": "Home Row Stretch: Keys G and H",
+    "banglaTitle": "হোম রো মাঝের কী: G এবং H",
+    "description": "Reach Left Index right to G, and Right Index left to H on the Home Row.",
+    "newKeys": [
+      "g",
+      "h"
+    ],
+    "fingerIntro": {
+      "left": "F reach right to G (Left Index)",
+      "right": "J reach left to H (Right Index)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Stay on the home row; reach inward to hit G and H smoothly."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 20,
+      "targetWpm": 28
+    },
+    "exercises": [
+      {
+        "id": "5.1",
+        "title": "Key Drill: Keys G and H",
+        "type": "drill",
+        "text": "fgf fgf jhj jhj fgf jhj fgf jhj gfg fgf hjh jhj gfg hjh fgf jhj fgh fgh jhg jhg fgh jhg fgh jhg hag hag hall hall glad glad gold gold high high half half head head ghost ghost light light laugh laugh fight fight great great earth earth heart heart health health right right sugar sugar gather gather guitar guitar height height flight flight sight sight tough tough tight tight ahead ahead higher higher huge huge fgfg jhjh fgfg jhjh gfg hjh gfg hjh fgf jhj fgf jhj fgh jhg fgh jhg gold high half head ghost light laugh fight great earth heart health right sugar gather guitar height flight sight tough tight ahead higher huge light great heart right health fgfg jhjh fgfg jhjh fgh jhg fgh jhg"
+      },
+      {
+        "id": "5.2",
+        "title": "Word Practice: G and H Words",
+        "type": "words",
+        "text": "ghost light laugh fight great earth heart health right sugar gather guitar height flight sight tough tight ahead higher huge ghost light laugh fight great earth heart health right sugar gather guitar height flight sight tough tight ahead higher huge happy light right high heart healthy bright height great gather ground growth green group glass glad gold goal good giant guide guitar garden light night right sight fight laugh enough tough thought health healthy heart hearts great greater greatest high higher highest huge height higher bright light sunlight ghost gather gold green guitar ground group happy healthy heart fight flight right sight tight tough thought earth heart health ahead higher huge"
+      },
+      {
+        "id": "5.3",
+        "title": "Sentence Practice: G and H",
+        "type": "sentences",
+        "text": "he had a huge light right ahead while his great heart gave high hope; laugh out loud and fight for good health every single day; glad hearts laugh with delight as bright sunlight shines high ahead; a healthy heart gives great hope and good energy; high goals help us grow with steady practice; he had a bright light right ahead; a great heart helps a healthy life; good habits help every student grow; high goals give great hope; bright sunlight shines over the green earth; a happy heart can laugh and smile; fight for good health every day; stay healthy and keep a strong heart; a great student has high goals; bright light helps us see the road ahead; gather good habits and practice every day; healthy hearts need good habits; high goals require steady effort; a bright light shines high above the earth; great habits help typing feel easy; good health gives high energy; laugh and stay happy while you practice; a healthy heart gives hope for a great future;"
+      },
+      {
+        "id": "5.4",
+        "title": "Lesson 5 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "great leaders have huge goals and high spirits that give genuine delight; stay tight and fight for truth with all your heart; bright sunlight shines over the highest hills of the green earth; healthy hearts laugh loudly and seek high goals with faithful courage; good habits help students grow stronger every day; a healthy heart and a strong mind give great hope; high goals require steady practice and good habits;"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "lessonNumber": "6",
+    "title": "Bottom Row: Keys C and , (Comma)",
+    "banglaTitle": "বটম রো: C এবং কমা (,) কী",
+    "description": "Reach down from D to C with Left Middle, and from K to Comma (,) with Right Middle.",
+    "newKeys": [
+      "c",
+      ","
+    ],
+    "fingerIntro": {
+      "left": "D reach down to C (Left Middle)",
+      "right": "K reach down to Comma , (Right Middle)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Always press Spacebar right after a comma naturally."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 20,
+      "targetWpm": 28
+    },
+    "exercises": [
+      {
+        "id": "6.1",
+        "title": "Key Drill: Keys C and Comma",
+        "type": "drill",
+        "text": "dcd dcd k,k k,k dcd k,k k,k dcd cdc dcd ,k, k,k cdc ,k, dcd k,k d,c d,c k,c k,c c,k c,k ,c, ,c, cold, cold, case, case, cake, cake lock, duck, sick, city, code, cool cycle, force, trace, circle, cloud focus, class, click, clean, track direct, clear, scale, logic, magic actor, cosmic, plastic, music, basic classic, careful, correct, clean dcdc k,k, dcdc k,k, cdc ,k, dcd k,k dcd k,k d,c k,c c,k cold, case, cake, lock, duck, sick city, code, cool, cycle, force, trace circle, cloud, focus, class, click clean, track, direct, clear, scale logic, magic, actor, cosmic, plastic dcdc k,k, cdc ,k, dcd k,k cold, code, class, click, clean"
+      },
+      {
+        "id": "6.2",
+        "title": "Word Practice: C and Comma Words",
+        "type": "words",
+        "text": "city, code, cool, cycle, force, trace circle, cloud, focus, class, click clean, track, direct, plastic, logic cosmic, magic, actor, scale, basic classic, careful, correct, clear camera, cancel, center, circle clean, clever, close, color code, coding, cool, copy city, civic, cycle, cyclic force, focus, track, trace direct, plastic, logic, cosmic magic, actor, scale, classic careful, correct, clean, clear city, code, cool, cycle, force trace, circle, cloud, focus, class click, clean, track, direct, plastic logic, cosmic, magic, actor, scale basic, classic, careful, correct clear, close, color, copy camera, cancel, center, circle coding, civic, cycle, city"
+      },
+      {
+        "id": "6.3",
+        "title": "Sentence Practice: C and Comma",
+        "type": "sentences",
+        "text": "code clearly, create cool cards, check each circle, and catch cute cats; focus on logic, clean habits, and cosmic magic every day; click clearly, check clean code, and trace each cycle with care; create clean code, check each case, and correct each error; cool cats sit close, and cute dogs stay calm; clean code, clear logic, and careful practice create good results; check the circle, trace the cycle, and click the correct place; focus carefully, type clearly, and keep the code clean; city roads, clean cars, and cool clouds create a calm scene; click once, check twice, and correct the code carefully; clear code, clean files, and careful typing create better work; focus on each key, check each comma, and continue calmly; a clean desk, a cool chair, and a clear screen help typing; code carefully, click clearly, and check every line; create classic cards, clean circles, and cool designs; practice each cycle, check each comma, and stay focused;"
+      },
+      {
+        "id": "6.4",
+        "title": "Lesson 6 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "clean code, sharp focus, cool cycles, check cats, create cool cards, daily practice brings clarity, speed, and real artistic rhythm; focus on logic, click cleanly, and create classic cosmic cards; check each line, correct each case, and keep the code clean; clear code, clean habits, and careful practice create better results; type carefully, check each comma, and continue with calm focus; create clean code, trace each cycle, and click the correct place;"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "lessonNumber": "7",
+    "title": "Bottom Row: Keys V and M",
+    "banglaTitle": "বটম রো: V এবং M কী",
+    "description": "Reach down from F to V with Left Index, and from J to M with Right Index.",
+    "newKeys": [
+      "v",
+      "m"
+    ],
+    "fingerIntro": {
+      "left": "F reach down to V (Left Index)",
+      "right": "J reach down to M (Right Index)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach down smoothly to V and M, then return your fingers to F and J."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 22,
+      "targetWpm": 30
+    },
+    "exercises": [
+      {
+        "id": "7.1",
+        "title": "Key Drill: Keys V and M",
+        "type": "drill",
+        "text": "fvf fvf jmj jmj fvf jmj fvf jmj vfv fvf mjm jmj vfv mjm fvf jmj fvm fvm jmv jmv vfm vfm mjv mjv move move view view make make mail mail team team live live room room model model movie movie valve valve music music visual visual dream dream volume volume memory memory voice voice marvel marvel vector vector machine machine moment moment modern modern vitamin vitamin master master summer summer value value movie view move make mail live team room model movie valve music visual dream volume memory voice marvel vector machine moment modern vitamin master summer value vfv mjm vfv mjm fvm jmv fvm jmv fvf jmj fvf jmj fvfv jmjm fvfv jmjm move view make mail team live room model movie valve music visual dream volume memory voice vector machine moment modern master"
+      },
+      {
+        "id": "7.2",
+        "title": "Word Practice: V and M Words",
+        "type": "words",
+        "text": "model movie valve music visual dream volume memory voice marvel vector machine moment modern vitamin master summer value move movie view make mail live team room model music visual volume memory voice vector machine moment modern master value marvel vitamin summer movie move moving moved model modern music musical musician visual vision vivid volume valuable value memory memorable memories voice voices vocal vector vertical machine machines moment moments modern movement master mastery summer movies dream dreams team teams live lively value values model models movie movies"
+      },
+      {
+        "id": "7.3",
+        "title": "Sentence Practice: V and M",
+        "type": "sentences",
+        "text": "make movie magic with high volume and view model moves in modern rhythm; valuable memories motivate the entire dedicated dream team; modern movies give visual value and dynamic movement to every room; a vivid movie gives a memorable view; move with care and keep your rhythm steady; modern music can make a room feel alive; a valuable memory can motivate a student; move your fingers smoothly and return to the home row; a good movie can give a vivid visual memory; music and rhythm make typing practice more enjoyable; a modern machine can move very fast; make every movement smooth and simple; a valuable skill grows with daily practice; memory improves when you practice every day; move from F to V and from J to M smoothly; a visual model can help you remember each movement; make your typing movement calm and controlled; modern typing requires rhythm, accuracy, and steady movement; every small movement can improve your typing skill;"
+      },
+      {
+        "id": "7.4",
+        "title": "Lesson 7 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "my valuable memory makes modern movies come alive with vivid rhythm; make memorable visual moments with volume and marvelous vision; move your fingers smoothly and keep a steady rhythm; modern practice helps improve memory, movement, and typing speed; every valuable skill grows with daily practice and careful movement; make each movement smooth, accurate, and comfortable; a vivid memory of every key helps you type with greater confidence;"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "lessonNumber": "8",
+    "title": "Bottom Row Stretch: Keys B and N",
+    "banglaTitle": "বটম রো মাঝের কী: B এবং N",
+    "description": "Stretch Left Index down-right to B, and Right Index down-left to N.",
+    "newKeys": [
+      "b",
+      "n"
+    ],
+    "fingerIntro": {
+      "left": "F stretch down-right to B (Left Index)",
+      "right": "J stretch down-left to N (Right Index)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach down smoothly to B and N, then return your fingers to F and J."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 22,
+      "targetWpm": 30
+    },
+    "exercises": [
+      {
+        "id": "8.1",
+        "title": "Key Drill: Keys B and N",
+        "type": "drill",
+        "text": "fbf fbf jnj jnj fbf jnj fbf jnj bfb fbf njn jnj bfb njn fbf jnj fbn fbn jnb jnb bnf bnf nbj nbj bank bank born born baby baby name name note note band band book book banner banner begin begin blend blend brown brown learn learn number number noble noble brain brain bonus bonus balance balance bridge bridge button button broken broken blank blank nation nation benefit benefit benign benign belong belong bundle bundle begin bank born baby name note band book banner blend brown learn number noble brain bonus balance bridge button broken blank nation benefit benign belong bundle fbfb jnjn fbfb jnjn bfb njn bfb njn fbf jnj fbf jnj fbn jnb fbn jnb bank born baby name note band book banner begin blend brown learn number noble brain"
+      },
+      {
+        "id": "8.2",
+        "title": "Word Practice: B and N Words",
+        "type": "words",
+        "text": "banner begin blend brown learn number noble brain bonus balance bridge button broken blank nation benefit balance benign belong bundle bank born baby name note band book banner begin blend brown learn number noble brain bonus balance bridge button broken blank nation benefit benign belong bundle brave bright brown brain basic balance better benefit begin beginning beginner build building builder bridge bridges broken button buttons book books baby babies bank banking nation national number numbers noble nobility brain brains bonus bonuses bundle bundles banner banners blend blended brown browner learn learning learner benefit beneficial balance balanced belong belongs"
+      },
+      {
+        "id": "8.3",
+        "title": "Sentence Practice: B and N",
+        "type": "sentences",
+        "text": "brave birds build brown nests behind big green trees at bright noon; noble brains learn big new numbers with balanced daily focus; begin building brand new bridges between brave noble nations; brave students build better habits with daily practice; big dreams begin with small but bold actions; noble minds learn new skills with balanced practice; a brave beginner can build strong typing habits; bright ideas bring new benefits to every learner; build a better routine and practice every day; a balanced mind helps beginners learn faster; brave learners never abandon their goals; begin with basic keys and build your typing speed; new skills become natural with enough practice; big goals need daily effort and strong focus; build good habits before trying to type faster; a noble brain can learn many new things; brave students bring new ideas to the team; balanced practice helps build better accuracy; begin slowly, then build speed with confidence; every new lesson brings a new typing challenge;"
+      },
+      {
+        "id": "8.4",
+        "title": "Lesson 8 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "bring noble ideas to build brand new bridges between bright creative minds; never abandon your noble mission to learn and grow; brave builders bring benefit and bright balance to big nations; build strong typing habits with daily practice and careful attention; every new skill begins with basic practice and steady effort; brave learners build confidence by practicing every day; big goals become easier when you practice with patience;"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "lessonNumber": "9",
+    "title": "Top Row: Keys W and O",
+    "banglaTitle": "টপ রো: W এবং O কী",
+    "description": "Reach up from S to W with Left Ring, and from L to O with Right Ring.",
+    "newKeys": [
+      "w",
+      "o"
+    ],
+    "fingerIntro": {
+      "left": "S reach up to W (Left Ring)",
+      "right": "L reach up to O (Right Ring)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach up smoothly to W and O, then return your fingers to S and L."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 24,
+      "targetWpm": 32
+    },
+    "exercises": [
+      {
+        "id": "9.1",
+        "title": "Key Drill: Keys W and O",
+        "type": "drill",
+        "text": "sws sws lol lol sws lol sws lol wsw sws olo lol wsw olo sws lol swo swo low low wol wol owl owl slow slow wolf wolf word word work work flow flow wood wood owl owl world world power power crowd crowd tower tower follow follow brown brown window window wonder wonder shadow shadow sorrow sorrow worker worker growth growth wisdom wisdom borrow borrow tomorrow tomorrow yellow yellow flower flower network network willow willow swsw lolo swsw lolo wsw olo wsw olo sws lol sws lol swo low swo low slow wolf word work flow wood owl world power crowd tower follow brown window wonder shadow sorrow worker growth wisdom borrow tomorrow yellow flower network willow wonder world power crowd tower follow"
+      },
+      {
+        "id": "9.2",
+        "title": "Word Practice: W and O Words",
+        "type": "words",
+        "text": "world power crowd tower follow brown window wonder shadow sorrow worker growth wisdom borrow tomorrow yellow flower network willow wonder world power crowd tower follow brown window shadow worker growth wisdom borrow flower network yellow willow slow slower slowly work worker working word words wording world worlds worldwide power powerful powerful crowd crowded tower towers follow following window windows wonder wonderful shadow shadows sorrow sorrowful growth growing wisdom wise borrow borrowed tomorrow yellow flower flowers network networks willow willows"
+      },
+      {
+        "id": "9.3",
+        "title": "Sentence Practice: W and O",
+        "type": "sentences",
+        "text": "we work with wisdom to open wide new windows of endless wonder; follow the flowing water toward the glowing shadow of tall green trees; wondrous workers show powerful growth as wisdom flows smoothly; we work slowly and carefully to improve our typing; windows show a wide world of wonderful opportunities; follow your own work and grow with steady practice; a wise worker knows how to work with focus; powerful words can show wonderful ideas; work with care and follow every useful rule; a growing skill will show better results over time; workers follow good habits to improve their work; wisdom grows when we work and practice every day; open windows, follow the flow, and keep working; a wonderful world begins with a simple step; work slowly first, then grow your typing speed; follow the correct movement and return to the home row; words become easier when your fingers learn the pattern; steady work and practice will improve your typing;"
+      },
+      {
+        "id": "9.4",
+        "title": "Lesson 9 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "words of wisdom work wonders in everyday life; wondrous work will open whole new worlds of opportunity for you; work with wisdom and watch wonderful windows of power open wide; steady work and daily practice will improve your typing speed; follow every useful rule and keep your fingers moving smoothly; a growing skill becomes stronger when you work with patience; work slowly, stay focused, and allow your typing skills to grow;"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "lessonNumber": "10",
+    "title": "Top Row Outer: Keys Q and P",
+    "banglaTitle": "টপ রো দুই কোণা: Q এবং P কী",
+    "description": "Reach up from A to Q with Left Pinky, and from ; to P with Right Pinky.",
+    "newKeys": [
+      "q",
+      "p"
+    ],
+    "fingerIntro": {
+      "left": "A reach up to Q (Left Pinky)",
+      "right": "; reach up to P (Right Pinky)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach up gently to Q and P, then return your pinky fingers to A and ;."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 25,
+      "targetWpm": 34
+    },
+    "exercises": [
+      {
+        "id": "10.1",
+        "title": "Key Drill: Keys Q and P",
+        "type": "drill",
+        "text": "aqa aqa p;p p;p aqa p;p aqa p;p qaq aqa ;p; p;p qaq ;p; aqa p;p aqp aqp pqa pqa qap qap pap qaq quick quick drop drop page page queen queen plan plan paper paper quiet quiet quality quality power power prompt prompt simple simple space space planet planet player player proper proper equipment equipment quote quote liquid liquid project project puzzle puzzle pepper pepper popular popular qualify qualify package package aqaq p;p; aqaq p;p; qaq ;p; aqa p;p aqa p;p aqp pqa qap pap quick drop page queen plan paper quiet quality power prompt simple space planet player proper equipment quote liquid project puzzle pepper popular qualify package"
+      },
+      {
+        "id": "10.2",
+        "title": "Word Practice: Q and P Words",
+        "type": "words",
+        "text": "quiet quality power prompt simple space planet player proper equipment quote liquid pique project puzzle pepper popular qualify package quick queen question quite quality quiet quietly power powerful prompt prompted simple simply space spaces planet planetary player players proper properly equipment quote quotes liquid liquids project projects puzzle puzzles pepper peppers popular popularity qualify qualified package packages quick quickly question questions quality qualities peaceful peace people popular prepare preparation practice practical progress progressive"
+      },
+      {
+        "id": "10.3",
+        "title": "Sentence Practice: Q and P",
+        "type": "sentences",
+        "text": "quick pilots keep proper pace while playing pure peaceful games; provide prompt answers to important questions with poise and precision; protect peaceful planets and keep proper quality in every project; quick practice helps improve typing speed and accuracy; prepare a proper plan before starting a difficult project; quiet practice can improve your typing quality; players practice proper movements to become faster typists; quality practice is more important than pure speed; ask quick questions and provide clear answers; a proper plan helps you complete every project; quiet people can practice typing with strong focus; prepare carefully and keep your typing pace steady; quick progress comes from regular practice; proper finger position helps improve typing quality; practice every day and keep your pace comfortable; a quiet room can help you focus on typing; quality work requires patience, practice, and precision; quick learners improve when they practice consistently;"
+      },
+      {
+        "id": "10.4",
+        "title": "Lesson 10 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "quick response requires proper preparation and poise; protect output quality with prompt patience and pure passion; prompt pilots prepare pure quality plans for peaceful planetary projects; quick practice helps improve typing speed and accuracy; proper preparation makes difficult typing tasks easier; prepare your fingers, keep a steady pace, and type carefully; quick progress comes from patient and regular practice; practice every day and keep your typing movements smooth;"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "lessonNumber": "11",
+    "title": "Bottom Row: Keys Z, X, . (Dot) and /",
+    "banglaTitle": "বটম রো শেষ ভাগ: Z, X, ডট (.) এবং / কী",
+    "description": "Master bottom row corner keys Z (Left Pinky), X (Left Ring), Dot . (Right Ring), and / (Right Pinky).",
+    "newKeys": [
+      "z",
+      "x",
+      ".",
+      "/"
+    ],
+    "fingerIntro": {
+      "left": "A down to Z (Pinky), S down to X (Ring)",
+      "right": "L down to Dot . (Ring), ; down to Slash / (Pinky)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach down smoothly to Z, X, Dot, and Slash, then return to the home row."
+    },
+    "passingCriteria": {
+      "minAccuracy": 94,
+      "minWpm": 25,
+      "targetWpm": 35
+    },
+    "exercises": [
+      {
+        "id": "11.1",
+        "title": "Key Drill: Keys Z, X, Dot and Slash",
+        "type": "drill",
+        "text": "aza aza sxs sxs l.l l.l /;/ /;/ zaz aza xsx sxs .l. l.l ;/; /;/ azx azx xza xza l./ l./ /.l /.l za za zx zx xz xz zax zax . . . . / / / / ./. ./. /. /./ /./ ./. /. /./ ./ zero zero zoom zoom extra extra exam exam next next zone zone fix fix mix mix size size relax relax exact exact pixel pixel complex complex matrix matrix index index syntax syntax galaxy galaxy climax climax horizon horizon puzzle puzzle execute execute expert expert oxygen oxygen bronze bronze frozen frozen luxury luxury azaa sxxs l..l /;;/ azaa sxxs l..l /;;/ azx xza l./ /.l zax xza .l/ /;. zero zoom extra exam next zone fix mix size relax exact pixel complex matrix index syntax galaxy climax horizon puzzle execute expert"
+      },
+      {
+        "id": "11.2",
+        "title": "Word Practice: Z, X, Dot and Slash",
+        "type": "words",
+        "text": "zone fix mix size relax exact pixel complex matrix index oxygen bronze frozen luxury syntax galaxy climax horizon puzzle execute expert zero zoom extra exam next zone fix fixed fixing mixture maximum size sized resize exact exactly pixel pixels pixelated complex complexity matrix matrices index indexed syntax syntaxes galaxy galaxies climax climaxes horizon horizons puzzle puzzles execute executed execution expert experts oxygen bronze frozen luxury maximum example exercise exciting amazing excellent organize realize analyze maximize minimize relax extra exact expert"
+      },
+      {
+        "id": "11.3",
+        "title": "Sentence Practice: Full Sentences with Periods",
+        "type": "sentences",
+        "text": "relax with extra joy. fix complex syntax before running tests. zoom into the pixel to see exact matrix details on your screen. execute exact puzzle sizes in the calm bronze galaxy zone. the expert will fix the complex syntax. check the exact pixel size before you continue. relax and practice every difficult key slowly. the next exercise will test your typing speed. use maximum focus when typing complex words. fix each mistake before increasing your speed. zoom into the screen and check every pixel. the puzzle has a complex matrix. the expert will execute the exact test. frozen pixels can make the image look strange. use the correct syntax before running the code. practice zero, extra, exact, and complex words. relax, focus, and type every sentence carefully. the next level will become easier with practice. excellent accuracy is more important than speed. exercise every difficult key until it feels natural."
+      },
+      {
+        "id": "11.4",
+        "title": "Lesson 11 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "six extra zebras explore the calm tropical zone. exact sizes make complex puzzles easily fixable. pixel art excels with maximum zoom and smooth pixel layout across every single modern screen. relax and fix complex syntax with maximum precision and zero anxiety. the expert checks every exact pixel before the final test. complex exercises become easier when you practice with focus. fix every mistake, relax your hands, and continue typing. use exact movements and keep your fingers close to the home row."
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "lessonNumber": "12",
+    "title": "Shift Key & Capital Letters",
+    "banglaTitle": "শিফট কী ও বড় হাতের অক্ষর (Capital Letters)",
+    "description": "Use opposite hand pinky on Shift to type uppercase capital letters effortlessly.",
+    "newKeys": [
+      "Shift",
+      "A-Z"
+    ],
+    "fingerIntro": {
+      "left": "Left Shift (Left Pinky) for right-hand capital letters",
+      "right": "Right Shift (Right Pinky) for left-hand capital letters",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Hold Shift with the opposite hand of the key you are typing."
+    },
+    "passingCriteria": {
+      "minAccuracy": 95,
+      "minWpm": 25,
+      "targetWpm": 35
+    },
+    "exercises": [
+      {
+        "id": "12.1",
+        "title": "Key Drill: Capital Letters & Proper Nouns",
+        "type": "drill",
+        "text": "Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz ABC DEF GHI JKL MNO PQR STU VWX YZ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Dhaka Bangladesh London Paris Tokyo Creative Academy Computer Python JavaScript React Node Linux Microsoft Google Apple Java USA UK UAE Asia Europe America Australia United Nations Creative Computer Academy Dhaka Bangladesh London Paris Tokyo Python JavaScript React Node Linux Microsoft Google Apple Java Bangladesh Dhaka Sylhet London Paris Tokyo Creative Academy Computer Science United Nations Asia Europe America Australia Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz"
+      },
+      {
+        "id": "12.2",
+        "title": "Word Practice: Tech Terms & Global Cities",
+        "type": "words",
+        "text": "United Nations Silicon Valley Artificial Intelligence Web Development Machine Learning Data Science Software Engineering Asia Europe America Australia Creative Computer Academy Bangladesh Dhaka Sylhet London Paris Tokyo Singapore Canada America Microsoft Google Apple Python JavaScript React Node Linux Computer Technology Artificial Intelligence Machine Learning Software Development Web Development Data Science Computer Science Digital Technology Information Technology United States United Kingdom United Arab Emirates South Asia South America North America European Union Silicon Valley Creative Academy Software Engineering Machine Learning Artificial Intelligence Web Development Data Science Computer Programming JavaScript Python React Node Microsoft Google Apple Bangladesh Australia America Europe Asia"
+      },
+      {
+        "id": "12.3",
+        "title": "Sentence Practice: Capitalized Sentences",
+        "type": "sentences",
+        "text": "Creative Computer Academy teaches modern software development in Dhaka and Sylhet. John and Mary visited the National Museum on Monday morning. English and Bangla Typing Labs empower students across Bangladesh. Dhaka is the capital city of Bangladesh. Creative Computer Academy helps students learn modern technology. Python and JavaScript are popular programming languages. Microsoft, Google, and Apple are major technology companies. Students in Bangladesh can learn Web Development and Data Science. Artificial Intelligence and Machine Learning are modern technology fields. Asia, Europe, America, and Australia are large regions of the world. John studies Computer Science at Creative Computer Academy. Mary practices English Typing every morning. Bangladesh has many talented Software Developers. Creative Academy provides Computer and Technology training. Students practice Typing, Programming, and Web Development every day. Dhaka, Sylhet, London, and Paris are different cities. Python, JavaScript, React, and Node are common technology terms. United Nations works with countries around the world. Machine Learning and Artificial Intelligence are important technology topics."
+      },
+      {
+        "id": "12.4",
+        "title": "Lesson 12 Final Exam",
+        "type": "exam",
+        "durationSec": 70,
+        "text": "Knowledge Is Power. Practice Makes A Student Perfect. Diligent Students Master Both English And Bangla Typing With Extreme Speed. Consistent Learning Drives Great Success In Every Academic Endeavor. Creative Computer Academy Helps Students Learn Modern Technology. Students Practice English Typing Every Day To Improve Speed And Accuracy. Python, JavaScript, React, And Node Are Popular Technology Skills. Artificial Intelligence And Machine Learning Are Changing Modern Software Development. Bangladesh Has Many Talented Students Who Can Build Great Technology. Practice Every Day, Stay Focused, And Keep Improving Your Typing Skills."
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "lessonNumber": "13",
+    "title": "Number Row: Keys 1 to 0",
+    "banglaTitle": "নম্বর রো: সংখ্যা ১ থেকে ০",
+    "description": "Reach up to the top number row to type numbers 1 to 0 accurately.",
+    "newKeys": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "0"
+    ],
+    "fingerIntro": {
+      "left": "1 (Pinky), 2 (Ring), 3 (Middle), 4 & 5 (Index)",
+      "right": "6 & 7 (Index), 8 (Middle), 9 (Ring), 0 (Pinky)",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Reach up to the number row without moving your whole hand, then return to the home row."
+    },
+    "passingCriteria": {
+      "minAccuracy": 92,
+      "minWpm": 20,
+      "targetWpm": 30
+    },
+    "exercises": [
+      {
+        "id": "13.1",
+        "title": "Key Drill: Numbers 1 to 0",
+        "type": "drill",
+        "text": "1 2 3 4 5 6 7 8 9 0 123 456 789 012 345 678 901 111 222 333 444 555 666 777 888 999 000 121 232 343 454 565 676 787 898 909 1234 2345 3456 4567 5678 6789 7890 0987 9876 8765 7654 6543 5432 4321 3210 12345 67890 54321 09876 123 123 456 456 789 789 000 000 1971 2024 2025 2026 2030 24 7 365 100 500 999 1024 2048 4096 8192 10000 555 666 777 888 999 111 222 333 1971 2026 2024 2025 2030 1234 5678 9012 3456 7890 11 22 33 44 55 66 77 88 99 00 100 200 300 400 500 600 700 800 900 12345 23456 34567 45678 56789 98765 87654 76543 65432 54321 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000"
+      },
+      {
+        "id": "13.2",
+        "title": "Word Practice: Quantities & Years",
+        "type": "words",
+        "text": "room 404 year 2026 speed 120 size 50 step 14 page 99 level 10 batch 2024 code 8086 port 3000 port 5176 port 8080 model 747 item 250 room 404 year 2026 speed 120 size 50 step 14 page 99 level 10 batch 2024 code 8086 port 3000 port 5176 port 8080 model 747 item 250 year 2025 year 2026 student 100 course 14 lesson 13 level 10 score 95 speed 60 accuracy 98 page 50 room 101 batch 2024 batch 2025 batch 2026 code 1234 code 5678 code 9090 port 3000 port 5000 port 8080 size 10 size 20 size 50 size 100 step 1 step 2 step 3 step 14 level 5 level 10 level 15 item 100 item 200 item 500 model 100 model 200 model 747"
+      },
+      {
+        "id": "13.3",
+        "title": "Sentence Practice: Numbers in Sentences",
+        "type": "sentences",
+        "text": "there are 365 days in 1 year and 24 hours in 1 full day. in 2026 our academy trained over 5000 brilliant students with 100 percent satisfaction. our target speed is 60 wpm across 14 intensive modules. lesson 13 introduces the number row from 1 to 0. a typing student should practice 10 number keys every day. our class has 30 students and each student gets 1 computer. the course has 14 lessons and 5 major practice stages. a student can practice for 20 minutes or 30 minutes every day. the target accuracy is 95 percent and the target speed is 60 wpm. page 10 contains level 5 and lesson 13 contains number practice. the academy started a new batch in 2026 with 100 students. each student completes 10 drills before taking the final test. a 60 second exam measures speed, accuracy, and typing errors. 24 hours make 1 day and 7 days make 1 week. 12 months make 1 year and 365 days make a normal year. a student who practices 30 minutes daily can improve steadily. the system records every score from 1 to 100 percent. the final score depends on speed, accuracy, and mistakes."
+      },
+      {
+        "id": "13.4",
+        "title": "Lesson 13 Final Exam",
+        "type": "exam",
+        "durationSec": 60,
+        "text": "in 1971 bangladesh gained independence after 9 months. 24 hours a day and 7 days a week we work for 100 percent speed. our target is to reach 60 wpm with 98 accuracy by step 14. over 5000 students graduate every year with top rankings. in 2026 our academy has 14 lessons and 10 number keys to practice. a student should practice 30 minutes every day to improve speed. the final test lasts 60 seconds and measures typing accuracy. 365 days make 1 year and 12 months complete the full year. lesson 13 helps students type numbers quickly and accurately. practice 1 to 0 repeatedly until every number feels natural."
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "lessonNumber": "14",
+    "title": "Symbols & Coding Punctuation Master",
+    "banglaTitle": "স্পেশাল সিম্বলস ও বিরামচিহ্ন মাস্টার",
+    "description": "Master Shift + Number row symbols and punctuation for professional software coding and typing speed.",
+    "newKeys": [
+      "!",
+      "@",
+      "#",
+      "$",
+      "%",
+      "^",
+      "&",
+      "*",
+      "(",
+      ")",
+      "-",
+      "_",
+      "+",
+      "=",
+      ":",
+      "\"",
+      "?"
+    ],
+    "fingerIntro": {
+      "left": "Shift + 1 (!), 2 (@), 3 (#), 4 ($), 5 (%)",
+      "right": "Shift + 6 (^), 7 (&), 8 (*), 9 ((), 0 ()), ; (:), ' (\")",
+      "thumb": "Spacebar (Thumb)",
+      "tip": "Use the opposite-hand Shift key whenever possible and return smoothly to the home row."
+    },
+    "passingCriteria": {
+      "minAccuracy": 92,
+      "minWpm": 20,
+      "targetWpm": 30
+    },
+    "exercises": [
+      {
+        "id": "14.1",
+        "title": "Key Drill: Standard Symbols",
+        "type": "drill",
+        "text": "! @ # $ % ^ & * ( ) _ + = - : \" ? ! ! ! @ @ @ # # # $ $ $ % % % ^ ^ ^ & & & * * * ( ( ( ) ) ) _ _ _ + + + = = = - - - : : : \" \" \" ? ? ? !@# $%^ &*() _+= -=- _=_ +=+ :\": ?\"? !@ !@ #$ #$ %^ %^ &* &* () () _+ _+ =- =- :\" :\" ?? !@#$% ^&*() _+=- :\"? @@@ ### $$$ %%% &&& *** ((( ))) ___ +++ === !!! ??? ::: \"\"\" --- ___ !@#$%^&*() _+-=:\"? ! @ # $ % ^ & * ( ) - _ + = : \" ?"
+      },
+      {
+        "id": "14.2",
+        "title": "Word Practice: Emails, Tags & Code Syntax",
+        "type": "words",
+        "text": "user@gmail.com admin@example.com student@cca.edu.bd #coding #javascript #react #typing 100% 95% 99% $50 $99 $199 $999 (smart) (ready) (active) [ready] [active] [complete] key:value name:\"Admin\" status:\"active\" role:\"student\" true/false yes/no id=101 id=202 count+=1 count-=1 price=$99.99 discount=15% total=100% user@gmail.com #coding 100% $50 (smart) [ready] key:value true/false name=\"Admin\" id=101 count+=1 price=$99.99 discount=15%"
+      },
+      {
+        "id": "14.3",
+        "title": "Sentence Practice: Code Statements & Quotes",
+        "type": "sentences",
+        "text": "Hello World! \"Success = Hardwork + Focus\". Are you 100% ready for the top challenge? email: student@cca.edu.bd; let score = (100 * 5); const status = \"Certified\"; return (speed >= 50 && accuracy >= 95); user@gmail.com is the primary email. #coding #javascript #react price = $99.99; discount = 15%; total = price - discount; name = \"Student\"; role = \"Learner\"; status = \"Active\"; count += 1; score += 10; if (accuracy >= 95) { status = \"Pass\"; } if (speed >= 50) { level = \"Advanced\"; } \"Practice + Accuracy = Better Speed!\"; Are you ready for 100% accuracy? email: admin@cca.edu.bd; const result = (speed + accuracy); return \"Success!\";"
+      },
+      {
+        "id": "14.4",
+        "title": "Lesson 14 Grand Final Exam",
+        "type": "exam",
+        "durationSec": 90,
+        "text": "Congratulations! You have mastered Touch Typing (100% Accuracy). Keep coding with: const speed = \"Pro\"; email: info@cca.edu.bd; phone: +880-1700-000000; Success = (Passion * Dedication) + Daily Practice; You are now a Certified Touch Typist! Keep building amazing software and typing with incredible speed and accuracy! Your final score should reach 95% or higher. Practice = Accuracy + Speed + Confidence; const status = \"Certified\"; if (accuracy >= 95 && speed >= 50) { status = \"Excellent\"; } Keep practicing every day! Your hard work + patience = success. Welcome to the next level of professional typing!"
+      }
+    ]
+  }
+]

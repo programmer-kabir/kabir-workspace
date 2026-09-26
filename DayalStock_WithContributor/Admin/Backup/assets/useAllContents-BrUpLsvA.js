@@ -1,0 +1,1 @@
+import{f as e}from"./index-D1ecblYS.js";import{t}from"./contentApi-Cbwc4Cd7.js";var n=({status:n=`all`,page:r=1,limit:i=48}={})=>e({queryKey:[`contents`,n,r,i],queryFn:()=>t({status:n,page:r,limit:i}),staleTime:1e3*60*5});export{n as t};

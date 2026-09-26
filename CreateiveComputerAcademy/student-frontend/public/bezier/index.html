@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!-- saved from url=(0025)https://bezier.method.ac/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   
+  <title>Pen Tool Master Lab</title>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta property="og:url" content="#"> 
+  <meta property="og:title" content="Pen Tool Master Lab">
+  <meta property="og:description" content="A master lab to help you master vector pen tools"> 
+  <meta property="og:image" content="images/fbimage.png"> 
+  
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height">
+</head>
+<body>
+
+  <div id="game" style="display: block;">
+    <div id="ui_controls">
+
+      <div class="ui_control">
+        <div class="ui_button" id="ui_undo"><span class="shortcut">⌘z</span>Undo</div>
+      </div>
+
+      <div class="ui_control">
+        <div class="ui_button" id="ui_redo"><span class="shortcut">⇧⌘z</span>Redo</div>
+      </div>
+
+      <div class="ui_control">
+        <div class="ui_button" id="ui_reload"><span class="shortcut">⌘x</span>Clear Stage</div>
+      </div>
+
+      <div class="ui_control">
+        <div class="ui_button" id="ui_undo"><span class="shortcut">⇧</span>Snap to Angle</div>
+      </div>
+
+      <div class="ui_control">
+        <div class="ui_button" id="ui_redo"><span class="shortcut">⌥</span>Unlink Control Handles</div>
+      </div>
+
+    </div>
+    
+    <div id="tooltip">
+      <div class="tooltip_body">
+        <div class="tooltip_text" id="tooltip_text"></div>
+      </div>
+    </div>
+
+    <svg id="workspace" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <lineargradient id="tut_key" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ddd"></stop>
+          <stop offset="100%" stop-color="#fff"></stop>
+        </lineargradient>
+        <lineargradient id="tut_key_body" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.8"></stop>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0.4"></stop>
+        </lineargradient>
+        <filter id="innerbevel" x0="-50%" y0="-50%" width="200%" height="200%">
+          <fegaussianblur in="SourceAlpha" stdDeviation="2" result="blur"></fegaussianblur>
+          <fegaussianblur in="SourceAlpha" stdDeviation="0.5" result="highlight"></fegaussianblur>
+          <feoffset dy="-1" dx="0" in="highlight"></feoffset>
+          <fecomposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="hlDiff"></fecomposite>
+          <feflood flood-color="white" flood-opacity=".1"></feflood>
+          <fecomposite in2="hlDiff" operator="in"></fecomposite>
+          <fecomposite in2="SourceGraphic" operator="over" result="withGlow"></fecomposite>
+
+          <feoffset in="blur" dy="1" dx="0"></feoffset>
+          <fecomposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"></fecomposite>
+          <feflood flood-color="black" flood-opacity="0.8"></feflood>
+          <fecomposite in2="shadowDiff" operator="in"></fecomposite>
+          <fecomposite in2="withGlow" operator="over"></fecomposite>
+        </filter>
+        <marker id="markerCircle" markerWidth="40" markerHeight="40" refX="20" refY="20" markerUnits="userSpaceOnUse">
+          <circle cx="20" cy="20" r="10" fill="#393F43" id="marker_circle"></circle>
+        </marker>
+      </defs>
+      <g id="center" transform="translate(703,334)">
+        <circle cx="200" cy="200" r="10" id="endpoint"></circle>
+        <circle cx="0" cy="0" r="10" id="startpoint"></circle>
+        <path d="M 300 300 Z" id="bbox"></path>
+        
+        <path d="M 0 0 L 200 0 L 200 200" id="problem" filter="url(#innerbevel)" marker-start="url(#markerCircle)" marker-end="url(#markerCircle)" style="opacity: 0.99;" opacity="1"></path><path d="M 0 0" class="placeholder" id="placeholder"></path>
+        <g id="segments"></g>
+        <g id="remaining_nodes">
+          <text><tspan id="remaining_text">0</tspan> Nodes remaining</text>
+        </g>
+        <g id="available_nodes"></g>
+        <g id="tutorial" style="opacity: 0.2;">
+          <image id="tut_cursor" xlink:href="img-penne.png" width="16" height="16" x="200" y="200" transform="translate(-8, 0)" style="opacity: 0;"></image>
+          <circle id="tut_click" r="0" cx="199.5" cy="199.5" style="opacity: 1;"></circle>
+          <g id="tut_key" transform="translate(100,100)">
+            <rect x="-1" y="10" width="82" height="40" fill="url(#tut_key_body)" opacity="0.3" rx="3" ry="3"></rect>
+            <g id="tut_key_move">
+              <rect x="0" y="-1" width="80" height="40" fill="white" rx="3" ry="3"></rect>
+              <rect x="0" y="0" width="80" height="40" fill="url(#tut_key)" rx="3" ry="3"></rect>
+              <text x="10" y="30" id="tut_key_text"></text>
+            </g>
+          </g>
+          <g id="tut_segments"><path d="M -0.5 -0.5 C -0.5 -0.5 -0.5 -0.5 200 0 C 199.5 -0.5 199.5 -0.5 200 200 C 199.5 199.5 199.5 199.5 199.5 199.5"></path></g>
+          <g id="tut_nodes"><g style="opacity: 1;"><rect width="5" height="5" x="-3" y="-3"></rect><circle r="2" cx="-0.5" cy="-0.5"></circle><circle r="2" cx="-0.5" cy="-0.5"></circle><line x1="-0.5" x2="-0.5" y1="-0.5" y2="-0.5"></line><line x1="-0.5" x2="-0.5" y1="-0.5" y2="-0.5"></line></g><g style="opacity: 1;"><rect width="5" height="5" x="197" y="-3"></rect><circle r="2" cx="199.5" cy="-0.5"></circle><circle r="2" cx="199.5" cy="-0.5"></circle><line x1="199.5" x2="199.5" y1="-0.5" y2="-0.5"></line><line x1="199.5" x2="199.5" y1="-0.5" y2="-0.5"></line></g><g style="opacity: 1;"><rect width="5" height="5" x="197" y="197"></rect><circle r="2" cx="199.5" cy="199.5"></circle><circle r="2" cx="199.5" cy="199.5"></circle><line x1="199.5" x2="199.5" y1="199.5" y2="199.5"></line><line x1="199.5" x2="199.5" y1="199.5" y2="199.5"></line></g></g>
+        </g>
+        
+        <circle id="pulsator_start" r="1.4045000000002075" cx="0" cy="0" style="opacity: 1;"></circle>
+        <circle id="pulsator_end" class="hidden" r="0" cx="200" cy="200"></circle>
+        <text id="replay_tutorial" x="803" y="824" style="opacity: 1;">Replay Tutorial</text>
+      </g>
+    </svg>
+
+    <div id="final_score" class="hidden">
+      <button class="modal_close_btn" onclick="document.getElementById('final_score').classList.add('hidden');" title="Close">✕</button>
+      
+      <div class="modal_trophy_wrap">
+        <div class="modal_trophy_icon">🏆</div>
+      </div>
+
+      <div class="modal_badge">ACADEMY MASTER DIPLOMA</div>
+      <div class="subtitle">You completed the Pen Tool Master Lab</div>
+      
+      <div class="title">
+        <span id="nodes_to_spare">0</span>
+        <span class="title_sub">Nodes to Spare</span>
+      </div>
+
+      <div class="score_stats_row">
+        <div class="stat_pill">
+          <span class="stat_label">Stages Cleared</span>
+          <span class="stat_val">21 / 21</span>
+        </div>
+        <div class="stat_pill">
+          <span class="stat_label">Vector Precision</span>
+          <span class="stat_val">100%</span>
+        </div>
+      </div>
+
+      <div class="svg_wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" width="260" height="60" id="final_score_svg"></svg>
+      </div>
+
+      <div class="modal_actions">
+        <div class="line_button modal_primary_btn" id="final_score_tweet">
+          <span>🚀</span>
+          <span>Share Achievement</span>
+        </div>
+        <button class="modal_secondary_btn" onclick="location.reload();">
+          <span>🔄</span>
+          <span>Practice Again</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="stage_score" class="slidden">
+      <button class="modal_close_btn" onclick="document.getElementById('stage_score').classList.add('slidden');" title="Close">✕</button>
+      <div class="stage_modal_icon_wrap">
+        <div class="stage_modal_icon">🎯</div>
+      </div>
+      
+      <div class="stage_modal_badge">STAGE COMPLETED!</div>
+      
+      <div class="stage_modal_title">
+        <span class="note_prefix">You used</span>
+        <div class="stage_node_count">
+          <span id="nodes_used">0</span> <span class="nodes_unit">nodes</span>
+        </div>
+        <span class="note_suffix">out of <span id="nodes_available">0</span> available</span>
+      </div>
+
+      <div class="stage_modal_ideal_pill">
+        <div class="normal hidden message">
+          <span>The ideal solution has <strong id="min_nodes">0</strong> nodes.</span>
+        </div>
+      </div>
+
+      <div class="stage_modal_actions">
+        <div class="stage_next_btn" id="ui_next_stage">
+          <span>Next Stage</span>
+          <span class="arrow">➔</span>
+        </div>
+        <button class="stage_retry_btn" id="stage_try_again" onclick="if(window.game) window.game.play(window.game.currentStageIndex); return false;">
+          <span>🔄</span>
+          <span>Try Again</span>
+        </button>
+      </div>
+    </div>
+    <div id="tut_skip">Skip Tutorial Stages<span></span></div> 
+    <canvas id="canvas" width="1606" height="868"></canvas>
+    <canvas id="scratchpad"></canvas>
+    <div id="contact">
+      Creative Computer Academy<br>
+      <span style="color:var(--z8);font-size:12px;">Pen Tool Master Lab</span>
+    </div>
+  </div>
+
+  <div id="notice">
+    <div class="container">
+      <h1>This game requires <strong>keyboard</strong> and <strong>mouse</strong></h1>
+      <p>It seems you are on a touch device, but I can't tell for sure, please confirm:</p>
+        
+      <p><a href="#" class="button continue">I'm using a keyboard and a mouse/trackpad</a>
+        <span class="dimmed">You will continue to Pen Tool Master Lab.</span>
+      </p>
+      <p></p>
+    </div>
+  </div>
+
+  <div id="intro">
+    <div class="container">
+        <div id="title">
+          <h1>Pen Tool Master Lab</h1> 
+          <p>A game to help you master the <img src="img-pen-tool.png" width="26" height="22" alt=""> pen tool</p>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      var isTouchDevice = 'ontouchstart' in document.documentElement;
+      var notice = document.getElementById("notice");
+      if (isTouchDevice) {
+        notice.classList.add("visible");
+      }
+
+      var play = notice.querySelector(".continue");
+
+      play.addEventListener("click", function(){
+        notice.classList.remove("visible");
+      })
+    </script>
+    <script type="text/javascript" src="pathseglist.js" charset="utf-8"></script>
+    <script type="text/javascript" src="bundle.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      function applyTheme(theme) {
+        if (theme === 'light') {
+          document.body.classList.add('theme-light');
+          document.body.classList.remove('theme-dark');
+        } else {
+          document.body.classList.add('theme-dark');
+          document.body.classList.remove('theme-light');
+        }
+      }
+
+      // Initial theme detection from URL or localStorage
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const initTheme = urlParams.get('theme') || localStorage.getItem('cca_theme') || 'dark';
+        applyTheme(initTheme);
+      } catch (e) {
+        applyTheme('dark');
+      }
+
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'THEME_CHANGE') {
+          applyTheme(event.data.theme);
+        }
+      });
+
+      window.setTheme = applyTheme;
+
+      function showTestStageModal() {
+        const stageScore = document.getElementById("stage_score");
+        const nodesUsed = document.getElementById("nodes_used");
+        const nodesAvail = document.getElementById("nodes_available");
+        const minNodes = document.getElementById("min_nodes");
+        if (nodesUsed) nodesUsed.textContent = "12";
+        if (nodesAvail) nodesAvail.textContent = "15";
+        if (minNodes) minNodes.textContent = "9";
+        const normalMsg = stageScore?.querySelector(".normal");
+        if (normalMsg) normalMsg.classList.remove("hidden");
+        stageScore?.classList.remove("slidden");
+        stageScore?.classList.remove("hidden");
+      }
+      window.testStageModal = showTestStageModal;
+
+      window.addEventListener("load", function() {
+        document.getElementById("ui_jump_last")?.addEventListener("click", function() {
+          if (window.game && typeof window.game.play === "function") {
+            window.game.play(13); // Stage 14: Flag (0-indexed 13)
+          }
+        });
+        document.getElementById("ui_jump_score")?.addEventListener("click", function() {
+          if (window.game && typeof window.game.showScore === "function") {
+            window.game.showScore(12);
+          }
+        });
+        document.getElementById("ui_jump_stage_modal")?.addEventListener("click", showTestStageModal);
+      });
+
+      window.jumpToStage = function(stageIdx) {
+        if (!window.game) return;
+        if (stageIdx === 'score') {
+          window.game.showScore(12);
+        } else if (stageIdx === 'stage_modal') {
+          showTestStageModal();
+        } else {
+          window.game.play(Number(stageIdx));
+        }
+      };
+
+      // ── MICROSCOPIC STAGE TELEMETRY TRACKER ──────────────────────────
+      var stageStartTime = Date.now();
+      var stageAttempts = {};
+      var stageUndos = {};
+
+      window.addEventListener('stageLoaded', function(e) {
+        var stageIdx = window.game ? window.game.currentStageIndex : 0;
+        stageStartTime = Date.now();
+        stageAttempts[stageIdx] = (stageAttempts[stageIdx] || 0) + 1;
+        stageUndos[stageIdx] = 0;
+      });
+
+      window.addEventListener('nodeRemoved', function() {
+        var stageIdx = window.game ? window.game.currentStageIndex : 0;
+        stageUndos[stageIdx] = (stageUndos[stageIdx] || 0) + 1;
+      });
+
+      window.addEventListener('scoreDisplayed', function() {
+        if (!window.game || !window.game.stage) return;
+        try {
+          var stageIdx = window.game.currentStageIndex;
+          var stageObj = (typeof stages !== 'undefined' && stages[stageIdx]) ? stages[stageIdx] : null;
+          var stageName = stageObj ? stageObj.name : ('Stage ' + (stageIdx + 1));
+          var isClosed = !window.game.stage.pathIsOpen;
+          var nodesUsed = window.game.stage.nodes().length - (isClosed ? 1 : 0);
+          var minNodes = window.game.stage.minNodes || 0;
+          var nodesAvail = window.game.stage.totalNodes || 0;
+          var durationSec = Math.max(1, Math.round((Date.now() - stageStartTime) / 1000));
+          var attempts = stageAttempts[stageIdx] || 1;
+          var undos = stageUndos[stageIdx] || 0;
+
+          var payload = {
+            type: 'PENTOOL_STAGE_COMPLETE',
+            stageId: stageIdx,
+            stageName: stageName,
+            nodesUsed: nodesUsed,
+            minNodes: minNodes,
+            nodesAvailable: nodesAvail,
+            durationSeconds: durationSec,
+            attempts: attempts,
+            undoCount: undos,
+            isFinalStage: stageIdx >= (typeof stages !== 'undefined' ? stages.length - 1 : 20)
+          };
+
+          window.parent.postMessage(payload, '*');
+        } catch (err) {
+          console.error('[PenToolLab Telemetry Error]', err);
+        }
+      });
+    </script>
+
+</body></html>

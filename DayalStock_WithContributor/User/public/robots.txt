@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Disallow admin/private paths
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /checkout/
+Disallow: /success
+Disallow: /account/
+
+# Sitemaps
+Sitemap: https://api.dayalstock.com/api_v1/seo/sitemap_index.php

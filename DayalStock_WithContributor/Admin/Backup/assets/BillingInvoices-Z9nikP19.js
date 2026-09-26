@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DsKLSDJq.js";var t=e(),n=()=>(0,t.jsxs)(`div`,{className:`p-6`,children:[(0,t.jsx)(`h1`,{className:`text-2xl font-bold text-white mb-4`,children:`Billing & Invoices`}),(0,t.jsx)(`p`,{className:`text-gray-400`,children:`This page is under construction.`})]});export{n as default};

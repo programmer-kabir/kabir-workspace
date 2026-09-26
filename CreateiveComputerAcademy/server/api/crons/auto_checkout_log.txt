@@ -1,0 +1,7 @@
+[2026-08-29 22:00:01] Auto Check-Out Cron started.
+  -> User Hosna Akter (ID: 9) auto checked out at 17:00:00 for date 2026-08-20.
+  -> User Kalam Miah (ID: 5) auto checked out at 14:00:00 for date 2026-08-26.
+  -> User Kalam Miah (ID: 5) auto checked out at 14:00:00 for date 2026-08-27.
+  -> User KABIR HOSSEN (ID: 2) auto checked out at 18:00:00 for date 2026-08-29.
+[2026-08-29 22:00:01] Success: Auto check-out completed for 4 staff member(s).
+
