@@ -23,12 +23,12 @@ $end_time = date('Y-m-d H:i:s');
 try {
     if (isset($data->break_id)) {
         // Admin force end
-        $query = "SELECT id, user_id, break_type, start_time FROM employee_breaks WHERE id = :id AND status = 'Active'";
+        $query = "SELECT id, user_id, break_type, start_time FROM user_breaks WHERE id = :id AND status = 'Active'";
         $stmt = $db->prepare($query);
         $stmt->execute([':id' => $data->break_id]);
     } else {
         // Staff self end
-        $query = "SELECT id, user_id, break_type, start_time FROM employee_breaks WHERE user_id = :user_id AND status = 'Active' ORDER BY id DESC LIMIT 1";
+        $query = "SELECT id, user_id, break_type, start_time FROM user_breaks WHERE user_id = :user_id AND status = 'Active' ORDER BY id DESC LIMIT 1";
         $stmt = $db->prepare($query);
         $stmt->execute([':user_id' => $data->user_id]);
     }
@@ -49,7 +49,7 @@ try {
     $end_ts = strtotime($end_time);
     $duration_minutes = max(1, round(abs($end_ts - $start_ts) / 60));
 
-    $update_query = "UPDATE employee_breaks 
+    $update_query = "UPDATE user_breaks 
                      SET end_time = :end_time, 
                          duration_minutes = :duration, 
                          status = 'Completed', 

@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.artboard-shadow {
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.checker-bg {
+  background-color: #0f172a;
+  background-image: 
+    linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+    linear-gradient(-45deg, #1e293b 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+    linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+}
+
+#svgContainer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Interactive Canvas Drag & Drop Styles */
+.interactive-drag-enabled [data-draggable] {
+  cursor: grab;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  user-select: none;
+}
+
+.interactive-drag-enabled [data-draggable]:hover {
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.45));
+  outline: 1px dashed rgba(34, 211, 238, 0.5);
+  outline-offset: 4px;
+}
+
+.interactive-drag-enabled [data-draggable].draggable-hover {
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.6));
+}
+
+.interactive-drag-enabled [data-draggable].is-dragging {
+  cursor: grabbing !important;
+  opacity: 0.85;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 12px rgba(34, 211, 238, 0.8)) !important;
+}
+
+.interactive-drag-enabled [data-draggable] * {
+  pointer-events: all;
+}
+

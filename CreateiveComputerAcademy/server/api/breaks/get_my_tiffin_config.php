@@ -13,9 +13,12 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     
-    // Fetch user's tiffin config from employees table
+    // Fetch user's tiffin config from employees or students table
     $query = "SELECT has_tiffin_break, tiffin_start_time, tiffin_end_time, tiffin_duration_minutes 
-              FROM employees WHERE user_id = :user_id";
+              FROM employees WHERE user_id = :user_id
+              UNION
+              SELECT has_tiffin_break, tiffin_start_time, tiffin_end_time, tiffin_duration_minutes 
+              FROM students WHERE user_id = :user_id LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->execute([':user_id' => $user_id]);
     
@@ -31,7 +34,7 @@ try {
     } else {
         echo json_encode([
             "status" => "error",
-            "message" => "Employee record not found"
+            "message" => "User record not found"
         ]);
     }
 

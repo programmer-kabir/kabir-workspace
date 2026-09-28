@@ -43,7 +43,7 @@ $today = date('Y-m-d');
 try {
     // 1. Get active break
     $activeQuery = "SELECT id, break_type, start_time, reason, estimated_minutes 
-                    FROM employee_breaks 
+                    FROM user_breaks 
                     WHERE user_id = :user_id AND status = 'Active' 
                     ORDER BY id DESC LIMIT 1";
     $activeStmt = $db->prepare($activeQuery);
@@ -54,7 +54,7 @@ try {
     $pending_request = null;
     if (!$active_break) {
         $pendQuery = "SELECT id, break_type, reason, estimated_minutes, created_at 
-                      FROM employee_breaks 
+                      FROM user_breaks 
                       WHERE user_id = :user_id AND date = :today AND status = 'Pending' 
                       ORDER BY id DESC LIMIT 1";
         $pendStmt = $db->prepare($pendQuery);
@@ -62,8 +62,10 @@ try {
         $pending_request = $pendStmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    // 3. Get allocated_break_minutes for this user
-    $limit_query = "SELECT allocated_break_minutes FROM employees WHERE user_id = :user_id LIMIT 1";
+    // 3. Get allocated_break_minutes for this user (from employees or students)
+    $limit_query = "SELECT allocated_break_minutes FROM employees WHERE user_id = :user_id 
+                    UNION 
+                    SELECT allocated_break_minutes FROM students WHERE user_id = :user_id LIMIT 1";
     $limit_stmt = $db->prepare($limit_query);
     $limit_stmt->execute([':user_id' => $user_id]);
     $allocated_minutes = 60; // Default
@@ -77,7 +79,7 @@ try {
 
     // 4. Get total break minutes today
     $total_query = "SELECT SUM(duration_minutes) as total_mins 
-                    FROM employee_breaks 
+                    FROM user_breaks 
                     WHERE user_id = :user_id AND date = :today AND status = 'Completed'";
     $total_stmt = $db->prepare($total_query);
     $total_stmt->execute([':user_id' => $user_id, ':today' => $today]);

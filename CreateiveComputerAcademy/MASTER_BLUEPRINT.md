@@ -98,7 +98,7 @@ Two CORS strategies coexist: `config/cors.php` (origin allow-list, used by most 
 - `credit_transactions` (full ledger: user_id, sender_id, receiver_id, amount, type, reference_id, **event_key [idempotency guard]**, meta_data JSON)
 
 **Attendance/HR cluster**
-- `attendance`, `attendance_device_logs`, `attendance_disputes`, `employee_breaks`, `leave_requests`, `holidays`
+- `attendance`, `attendance_device_logs`, `attendance_disputes`, `user_breaks`, `leave_requests`, `holidays`
 
 **LMS cluster**
 - `courses`, `course_modules`, `course_lessons`, `course_milestones`, `course_quizzes` + `course_quiz_questions`, `course_resources`, `course_assignments`
@@ -307,7 +307,7 @@ tasks ──1:N──> {task_comments, task_history, task_logs, task_submissions
 task_marketplace_submissions ──1:N──> task_marketplace_submission_logs
 courses ──1:N──> course_modules ──1:N──> course_lessons ──1:N──> {student_lesson_progress, student_lesson_notes, student_lesson_discussions}
 courses ──1:N──> {course_quizzes, course_assignments, course_resources, course_milestones}
-users ──1:N──> attendance, attendance_disputes, employee_breaks, leave_requests, notifications
+users ──1:N──> attendance, attendance_disputes, user_breaks, leave_requests, notifications
 chats ──1:N──> chat_messages ──1:N──> {chat_message_reactions, chat_message_receipts}
 chats ──N:N──> users (via chat_participants)
 academy_blogs ──1:N──> {blog_comments, blog_reactions, blog_reads}

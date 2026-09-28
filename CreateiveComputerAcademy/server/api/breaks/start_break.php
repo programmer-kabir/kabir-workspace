@@ -21,7 +21,7 @@ $start_time = date('Y-m-d H:i:s');
 
 try {
     // Check if there is already an active break
-    $check_query = "SELECT id FROM employee_breaks WHERE user_id = :user_id AND status = 'Active'";
+    $check_query = "SELECT id FROM user_breaks WHERE user_id = :user_id AND status = 'Active'";
     $check_stmt = $db->prepare($check_query);
     $check_stmt->execute([':user_id' => $user_id]);
     
@@ -30,7 +30,7 @@ try {
         exit;
     }
 
-    $query = "INSERT INTO employee_breaks (user_id, date, break_type, start_time, status) VALUES (:user_id, :date, :break_type, :start_time, 'Active')";
+    $query = "INSERT INTO user_breaks (user_id, date, break_type, start_time, status) VALUES (:user_id, :date, :break_type, :start_time, 'Active')";
     $stmt = $db->prepare($query);
     
     if ($stmt->execute([

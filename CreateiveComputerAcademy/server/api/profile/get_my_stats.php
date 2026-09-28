@@ -1,8 +1,6 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-
 require_once '../../config/database.php';
+require_once '../../config/cors.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -77,7 +75,7 @@ try {
     }
 
     // Get today's total break minutes
-    $break_query = "SELECT SUM(duration_minutes) as total_break FROM employee_breaks WHERE user_id = :user_id AND date = :today AND status = 'Completed'";
+    $break_query = "SELECT SUM(duration_minutes) as total_break FROM user_breaks WHERE user_id = :user_id AND date = :today AND status = 'Completed'";
     $break_stmt = $db->prepare($break_query);
     $break_stmt->execute([':user_id' => $user_id, ':today' => date('Y-m-d')]);
     $break_row = $break_stmt->fetch(PDO::FETCH_ASSOC);
@@ -86,7 +84,7 @@ try {
     }
     
     // Add current active break duration if any
-    $active_break_query = "SELECT start_time FROM employee_breaks WHERE user_id = :user_id AND status = 'Active' LIMIT 1";
+    $active_break_query = "SELECT start_time FROM user_breaks WHERE user_id = :user_id AND status = 'Active' LIMIT 1";
     $ab_stmt = $db->prepare($active_break_query);
     $ab_stmt->execute([':user_id' => $user_id]);
     if ($ab_row = $ab_stmt->fetch(PDO::FETCH_ASSOC)) {

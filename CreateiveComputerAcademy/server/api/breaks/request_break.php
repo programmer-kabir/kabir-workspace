@@ -32,7 +32,7 @@ $today = date('Y-m-d');
 
 try {
     // 1. Check if user already has an active or pending break
-    $chkStmt = $db->prepare("SELECT id, status, break_type FROM employee_breaks 
+    $chkStmt = $db->prepare("SELECT id, status, break_type FROM user_breaks 
                              WHERE user_id = :user_id AND date = :date AND status IN ('Pending', 'Active') 
                              ORDER BY id DESC LIMIT 1");
     $chkStmt->execute([':user_id' => $user_id, ':date' => $today]);
@@ -52,10 +52,10 @@ try {
     $uStmt = $db->prepare("SELECT name, profile_picture FROM users WHERE id = :user_id LIMIT 1");
     $uStmt->execute([':user_id' => $user_id]);
     $user = $uStmt->fetch(PDO::FETCH_ASSOC);
-    $userName = $user ? $user['name'] : "Staff #{$user_id}";
+    $userName = $user ? $user['name'] : "User #{$user_id}";
 
     // 3. Insert new break request with status = 'Pending'
-    $insStmt = $db->prepare("INSERT INTO employee_breaks 
+    $insStmt = $db->prepare("INSERT INTO user_breaks 
                              (user_id, date, break_type, start_time, status, reason, estimated_minutes, created_at) 
                              VALUES (:user_id, :date, :break_type, NULL, 'Pending', :reason, :estimated_minutes, NOW())");
     $insStmt->execute([

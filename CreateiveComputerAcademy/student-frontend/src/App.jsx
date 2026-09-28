@@ -20,6 +20,7 @@ const PenToolLab = React.lazy(() => import('./pages/PenToolLab'));
 const SkillReport = React.lazy(() => import('./pages/SkillReport'));
 const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
 const LumiOdyssey = React.lazy(() => import('./pages/LumiOdyssey'));
+const DailyWorkLog = React.lazy(() => import('./pages/DailyWorkLog'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -125,6 +126,14 @@ function App() {
                 <ProtectedRoute>
                   <StudentLayout>
                     <BrowseCourses />
+                  </StudentLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/daily-log" element={
+                <ProtectedRoute>
+                  <StudentLayout>
+                    <DailyWorkLog />
                   </StudentLayout>
                 </ProtectedRoute>
               } />

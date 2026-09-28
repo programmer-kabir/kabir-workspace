@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import StaffDirectory from './pages/StaffDirectory';
 import ReviewerDirectory from './pages/ReviewerDirectory';
 import StudentDirectory from './pages/StudentDirectory';
+import StudentDailyLogs from './pages/StudentDailyLogs';
 import CoursesAndCurriculum from './pages/CoursesAndCurriculum';
 import StaffProfile from './pages/StaffProfile';
 import TaskOversight from './pages/TaskOversight';
@@ -72,6 +73,12 @@ function App() {
           <Route path="/students" element={
             <ProtectedRoute>
               <AdminLayout><StudentDirectory /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student-daily-logs" element={
+            <ProtectedRoute>
+              <AdminLayout><StudentDailyLogs /></AdminLayout>
             </ProtectedRoute>
           } />
 

@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiClock, FiCheckSquare, FiBookOpen,
   FiUser, FiLogOut, FiAward, FiCompass, FiPlayCircle,
-  FiFolder, FiChevronDown, FiMousePointer, FiZap, FiBarChart2, FiPenTool, FiTarget, FiStar
+  FiFolder, FiChevronDown, FiMousePointer, FiZap, FiBarChart2, FiPenTool, FiTarget, FiStar, FiFileText
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
@@ -72,6 +72,7 @@ const StudentSidebar = ({ isOpen = true }) => {
   ];
 
   const bottomMenuItems = [
+    { name: 'Daily Work Log', path: '/daily-log', icon: <FiFileText size={18} /> },
     { name: 'Explore All Courses', path: '/courses', icon: <FiCompass size={18} /> },
     { name: 'Daily Attendance', path: '/attendance', icon: <FiClock size={18} /> },
     { name: 'Assignments & Projects', path: '/assignments', icon: <FiCheckSquare size={18} /> },

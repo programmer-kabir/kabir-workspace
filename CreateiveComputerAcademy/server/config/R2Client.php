@@ -10,13 +10,13 @@ class R2Client {
     private $publicUrl;
     private $region;
 
-    public function __construct() {
+    public function __construct($bucket = null, $publicUrl = null) {
         $this->accountId  = defined('R2_ACCOUNT_ID') ? R2_ACCOUNT_ID : 'fa948485e5e2101ff9947aa131ca2a10';
         $this->accessKey  = defined('R2_ACCESS_KEY_ID') ? R2_ACCESS_KEY_ID : '8388e6bdc9147b7a38c1c472bc7404eb';
         $this->secretKey  = defined('R2_SECRET_ACCESS_KEY') ? R2_SECRET_ACCESS_KEY : 'a02487098fb85ff1ac74ca43773484a9dec89c5afb60a2736ca4cb4df3b6477e';
-        $this->bucketName = defined('R2_BUCKET_NAME') ? R2_BUCKET_NAME : 'cca-task-attachments';
+        $this->bucketName = $bucket ?: (defined('R2_BUCKET_NAME') ? R2_BUCKET_NAME : 'cca-task-attachments');
         $this->endpoint   = defined('R2_ENDPOINT') ? rtrim(R2_ENDPOINT, '/') : 'https://fa948485e5e2101ff9947aa131ca2a10.r2.cloudflarestorage.com';
-        $this->publicUrl  = defined('R2_PUBLIC_URL') ? rtrim(R2_PUBLIC_URL, '/') : 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev';
+        $this->publicUrl  = $publicUrl ? rtrim($publicUrl, '/') : (defined('R2_PUBLIC_URL') ? rtrim(R2_PUBLIC_URL, '/') : 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev');
         $this->region     = defined('R2_REGION') ? R2_REGION : 'auto';
     }
 
@@ -133,9 +133,6 @@ class R2Client {
 
     /**
      * Delete an object from Cloudflare R2 bucket using AWS Signature Version 4
-     * 
-     * @param string $r2Key The key of the object to delete
-     * @return array ['success' => bool, 'key' => string, 'http_code' => int, 'error' => string]
      */
     public function deleteObject($r2Key) {
         $host = "{$this->accountId}.r2.cloudflarestorage.com";
@@ -214,10 +211,7 @@ class R2Client {
     }
 
     /**
-     * Delete all objects matching a prefix (e.g., recursive folder delete)
-     * 
-     * @param string $prefix Folder prefix to delete
-     * @return array ['success' => bool, 'deleted_count' => int]
+     * Delete all objects matching a prefix
      */
     public function deletePrefix($prefix) {
         $list = $this->listObjects($prefix, null, 1000);
@@ -237,7 +231,7 @@ class R2Client {
     }
 
     /**
-     * List objects in Cloudflare R2 bucket using AWS Signature Version 4
+     * List objects in Cloudflare R2 bucket
      */
     public function listObjects($prefix = '', $continuationToken = null, $maxKeys = 1000) {
         $host = "{$this->accountId}.r2.cloudflarestorage.com";
@@ -405,7 +399,7 @@ class R2Client {
                 } elseif (strpos($key, 'reviewer') !== false || strpos($key, 'delivery') !== false) {
                     $categories['reviewer']['count']++;
                     $categories['reviewer']['size'] += $obj['size'];
-                } elseif (strpos($key, 'student') !== false || strpos($key, 'submission') !== false) {
+                } elseif (strpos($key, 'student') !== false || strpos($key, 'submission') !== false || strpos($key, 'daily-logs') !== false) {
                     $categories['submissions']['count']++;
                     $categories['submissions']['size'] += $obj['size'];
                 } elseif (strpos($key, 'profile') !== false || strpos($key, 'avatar') !== false) {
@@ -426,15 +420,10 @@ class R2Client {
         $totalSizeMb = round($totalSizeBytes / (1024 * 1024), 2);
         $totalSizeGb = round($totalSizeBytes / (1024 * 1024 * 1024), 3);
 
-        // Cloudflare R2 Free Tier limits:
-        // Storage: 10 GB free per month
-        // Class A: 1,000,000 requests / month
-        // Class B: 10,000,000 requests / month
         $freeTierStorageGb = 10.0;
         $classALimit = 1000000;
         $classBLimit = 10000000;
 
-        // Estimated / tracked operations
         $classAOps = max(117, $totalObjects * 2);
         $classBOps = max(1703, $totalObjects * 15);
 
@@ -443,32 +432,28 @@ class R2Client {
             'connected' => $listRes['success'],
             'latency_ms' => $latencyMs,
             'bucket_name' => $this->bucketName,
-            'public_url' => $this->publicUrl,
-            'region' => $this->region,
             'endpoint' => $this->endpoint,
-            'total_objects' => $totalObjects,
+            'public_url' => $this->publicUrl,
+            'total_files' => $totalObjects,
             'total_size_bytes' => $totalSizeBytes,
             'total_size_mb' => $totalSizeMb,
             'total_size_gb' => $totalSizeGb,
-            'free_tier_storage_gb' => $freeTierStorageGb,
-            'storage_usage_percent' => min(100, round(($totalSizeGb / $freeTierStorageGb) * 100, 2)),
-            'class_a_operations' => [
-                'count' => $classAOps,
-                'limit' => $classALimit,
-                'limit_formatted' => '1M (Free)',
-                'usage_percent' => round(($classAOps / $classALimit) * 100, 3),
-                'label' => 'Upload, Copy, List Files'
-            ],
-            'class_b_operations' => [
-                'count' => $classBOps,
-                'limit' => $classBLimit,
-                'limit_formatted' => '10M (Free)',
-                'usage_percent' => round(($classBOps / $classBLimit) * 100, 3),
-                'label' => 'View, Download, Read Files'
+            'storage_used_percent' => min(100, round(($totalSizeGb / $freeTierStorageGb) * 100, 2)),
+            'storage_limit_gb' => $freeTierStorageGb,
+            'operations' => [
+                'class_a' => [
+                    'used' => $classAOps,
+                    'limit' => $classALimit,
+                    'percent' => round(($classAOps / $classALimit) * 100, 4)
+                ],
+                'class_b' => [
+                    'used' => $classBOps,
+                    'limit' => $classBLimit,
+                    'percent' => round(($classBOps / $classBLimit) * 100, 4)
+                ]
             ],
             'categories' => $categories,
-            'recent_files' => $recentFiles,
-            'raw_error' => isset($listRes['error']) ? $listRes['error'] : null
+            'recent_files' => $recentFiles
         ];
     }
 }

@@ -47,9 +47,10 @@ const useDashboardData = () => {
       cash.source === "company-expense"
   );
 
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-  }).format(new Date());
+  // const today = new Intl.DateTimeFormat("en-CA", {
+  //   timeZone: "Asia/Dhaka",
+  // }).format(new Date());
+  const today = '2026-09-10'
 
   const previousCashReports = approvedCashReports.filter(
     (cash) => cash.date?.split(" ")[0] < today

@@ -71,6 +71,7 @@ const AdminSidebar = ({ isOpen = true }) => {
       icon: <FiBookOpen size={18} />,
       subItems: [
         { name: 'Student Directory', path: '/students' },
+        { name: 'Daily Work Logs & Reviews', path: '/student-daily-logs' },
         { name: 'Courses & Curriculum', path: '/courses' },
         { name: 'Typing Master Reports', path: '/typing-reports' },
         { name: 'Pen Tool Master Reports', path: '/pentool-reports' }

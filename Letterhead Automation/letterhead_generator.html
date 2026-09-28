@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corporate Letterhead Studio & Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            montserrat: ['Montserrat', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#0f172a'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.05); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
+    
+    .artboard-shadow {
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+    
+    .checker-bg {
+      background-color: #f1f5f9;
+      background-image: 
+        linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans overflow-hidden">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-14 border-b border-slate-800 bg-slate-950/80 backdrop-blur px-4 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20 text-sm">
+        LH
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-semibold text-sm tracking-wide text-white">Letterhead Generator & Spec Engine</h1>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-cyan-400 font-mono border border-cyan-500/20">JSON Spec Driven</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick action buttons -->
+    <div class="flex items-center gap-2">
+      <!-- Guides toggles -->
+      <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+        <button id="toggleGuidesBtn" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-slate-300 hover:text-white transition-all bg-slate-800">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+          </svg>
+          <span id="guidesBtnLabel">Guides: ON</span>
+        </button>
+      </div>
+
+      <div class="h-5 w-px bg-slate-800 mx-1"></div>
+
+      <!-- Export actions -->
+      <button id="regenArtTopBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/20 transition-all flex items-center gap-1.5 active:scale-95">
+        <svg class="w-3.5 h-3.5 animate-spin-reverse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>🎲 Regenerate Art</span>
+      </button>
+
+      <button id="copySvgBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        Copy SVG
+      </button>
+
+      <button id="downloadSvgBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-500/30 transition-all flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Download SVG
+      </button>
+      
+      <button id="printBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm shadow-cyan-500/30 transition-all flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+        Print / PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+    <!-- Left Configuration Sidebar -->
+    <aside class="w-full md:w-[460px] lg:w-[490px] border-r border-slate-800 bg-slate-950 flex flex-col shrink-0 z-20 h-full">
+      <!-- Tabs header -->
+      <div class="flex items-center border-b border-slate-800 px-3 bg-slate-900/50">
+        <button id="tabFormBtn" class="tab-btn px-4 py-3 text-xs font-medium border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Quick Content
+        </button>
+        <button id="tabJsonBtn" class="tab-btn px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          JSON Specification
+        </button>
+        <button id="tabThemesBtn" class="tab-btn px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4 4 4 0 014-4c.48 0 .93.08 1.35.24C9.17 11.23 11.39 9 14 9c.47 0 .92.06 1.35.18C16.14 7.27 18.39 6 21 6a4 4 0 014 4c0 .48-.08.93-.24 1.35C26.77 12.17 29 14.39 29 17a4 4 0 01-4 4H7z" />
+          </svg>
+          Themes & Presets
+        </button>
+      </div>
+
+      <!-- Tab 1: Direct Form Editor -->
+      <div id="tabContentForm" class="flex-1 overflow-y-auto p-4 space-y-5">
+        
+        <!-- Art Generator Banner Card -->
+        <div class="bg-gradient-to-br from-cyan-950/40 via-slate-900 to-blue-950/30 rounded-xl p-3.5 border border-cyan-800/40 shadow-inner">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              <h3 class="text-xs font-semibold uppercase tracking-wider text-cyan-300">Generative Vector Art</h3>
+            </div>
+            <span id="artStyleBadge" class="text-[10px] text-cyan-400 bg-cyan-900/60 px-2 py-0.5 rounded-full border border-cyan-700/50 font-mono">Waves</span>
+          </div>
+          <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
+            এক ক্লিকে নতুন হেডার এবং ফুটার ভেক্টর আর্টওয়ার্ক তৈরি করুন। প্রতি ক্লিকে নতুন কার্ভ, জ্যামিতিক টেক স্লাইস ও ব্যাজ স্টাইল জেনারেট হবে।
+          </p>
+          <div class="flex items-center gap-2">
+            <button id="regenArtFormBtn" class="flex-1 py-2 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/40 active:scale-[0.98] transition-all">
+              <svg class="w-4 h-4 text-cyan-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <span>এক ক্লিকে নতুন আর্ট (Regenerate)</span>
+            </button>
+            <select id="artStyleSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-400">
+              <option value="random">🎲 র্যান্ডম স্টাইল</option>
+              <option value="waves">🌊 Fluid Waves</option>
+              <option value="tech_angles">⚡ Tech Polygonal</option>
+              <option value="ribbons">🎗️ Curved Ribbons</option>
+              <option value="minimal_arcs">⭕ Minimal Arcs</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Company Profile -->
+        <div class="bg-slate-900/60 rounded-xl p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Company & Brand</h3>
+            <span class="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Layer 3</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Brand Name</label>
+              <input type="text" id="inputBrandName" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Tagline</label>
+              <input type="text" id="inputBrandTagline" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+        </div>
+
+        <!-- Recipient & Meta -->
+        <div class="bg-slate-900/60 rounded-xl p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Recipient Details & Date</h3>
+            <span class="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Layer 4</span>
+          </div>
+          <div class="space-y-2.5">
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Prefix</label>
+                <input type="text" id="inputRecipientLabel" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+              <div class="col-span-2">
+                <label class="text-[11px] text-slate-400 mb-1 block">Recipient Full Name</label>
+                <input type="text" id="inputRecipientName" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Designation / Title</label>
+                <input type="text" id="inputRecipientTitle" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Letter Date</label>
+                <input type="text" id="inputLetterDate" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Address</label>
+              <input type="text" id="inputRecipientAddress" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Email & Website</label>
+                <input type="text" id="inputRecipientEmailWeb" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Phone</label>
+                <input type="text" id="inputRecipientPhone" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Subject Line</label>
+              <input type="text" id="inputSubject" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+        </div>
+
+        <!-- Body & Message -->
+        <div class="bg-slate-900/60 rounded-xl p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Letter Body</h3>
+            <span class="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Layer 5</span>
+          </div>
+          <div class="space-y-2.5">
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Salutation</label>
+              <input type="text" id="inputSalutation" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Paragraphs (Separate with double linebreaks)</label>
+              <textarea id="inputBodyText" rows="6" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 leading-relaxed"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sign-off & Sender -->
+        <div class="bg-slate-900/60 rounded-xl p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Sign-off & Sender</h3>
+            <span class="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Layer 6</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Closing</label>
+              <input type="text" id="inputClosing" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Signer Name</label>
+              <input type="text" id="inputSenderName" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Signer Title</label>
+              <input type="text" id="inputSenderTitle" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Contacts -->
+        <div class="bg-slate-900/60 rounded-xl p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Footer Company Contacts</h3>
+            <span class="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Layer 7</span>
+          </div>
+          <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Phone Lines (comma separated)</label>
+                <input type="text" id="inputContactPhone" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Email</label>
+                <input type="text" id="inputContactEmail" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Website</label>
+                <input type="text" id="inputContactWeb" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 mb-1 block">Address (comma separated lines)</label>
+                <input type="text" id="inputContactAddress" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tab 2: Full JSON Specification Editor -->
+      <div id="tabContentJson" class="hidden flex-1 flex-col p-3 overflow-hidden">
+        <div class="flex items-center justify-between pb-2 text-xs">
+          <span class="text-slate-400">Edit JSON specification live:</span>
+          <button id="resetJsonBtn" class="text-cyan-400 hover:text-cyan-300 text-[11px] flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset Default Prompt JSON
+          </button>
+        </div>
+        <div class="relative flex-1">
+          <textarea id="jsonCodeEditor" class="w-full h-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-[11px] text-emerald-400 leading-relaxed focus:outline-none focus:border-cyan-400 resize-none overflow-y-auto"></textarea>
+        </div>
+        <div id="jsonErrorBar" class="hidden mt-2 p-2 rounded bg-rose-950/80 border border-rose-800 text-rose-300 text-xs"></div>
+      </div>
+
+      <!-- Tab 3: Themes & Palettes -->
+      <div id="tabContentThemes" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Preset Design Palettes</h3>
+        <p class="text-xs text-slate-400">Switch color schemes while preserving the exact layout structure and print metrics.</p>
+
+        <div class="grid grid-cols-1 gap-2.5" id="presetsList">
+          <!-- Dynamically populated or static themes -->
+        </div>
+
+        <div class="pt-4 border-t border-slate-800">
+          <h4 class="text-xs font-semibold text-slate-300 mb-2">Print & Geometry Specs</h4>
+          <div class="bg-slate-900 p-3 rounded-lg text-[11px] font-mono space-y-1 text-slate-400">
+            <div><span class="text-slate-200">Format:</span> A4 Portrait + 0.125 in Bleed</div>
+            <div><span class="text-slate-200">ViewBox:</span> 0 0 817.7 1146.5 pt</div>
+            <div><span class="text-slate-200">Bleed Box:</span> 817.7 × 1146.5 (x=0, y=0)</div>
+            <div><span class="text-slate-200">Trim Box:</span> 793.7 × 1122.5 (x=12, y=12)</div>
+            <div><span class="text-slate-200">Safe Area:</span> 745.7 × 1074.5 (x=36, y=36)</div>
+            <div><span class="text-slate-200">Grid:</span> 12 Columns, Margin 68, Width 680</div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Canvas & Artboard Preview -->
+    <section class="flex-1 flex flex-col bg-slate-950 checker-bg overflow-hidden relative">
+
+      <!-- Canvas Toolbar Overlay -->
+      <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur border border-slate-700/60 rounded-full px-3 py-1.5 shadow-xl shadow-black/30 text-xs">
+        <button id="zoomOutBtn" class="p-1 hover:text-cyan-400 text-slate-300 rounded" title="Zoom Out">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+          </svg>
+        </button>
+        <span id="zoomLevelDisplay" class="font-mono text-[11px] px-2 text-cyan-300 min-w-[50px] text-center">Fit</span>
+        <button id="zoomInBtn" class="p-1 hover:text-cyan-400 text-slate-300 rounded" title="Zoom In">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+        <button id="zoomFitBtn" class="ml-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Reset</button>
+
+        <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+        <!-- Legend indicators -->
+        <div class="flex items-center gap-3 text-[10px] pl-1 text-slate-400 font-mono">
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+            <span>Bleed</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+            <span>Trim</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+            <span>Safe</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Scroll Area -->
+      <div id="artboardContainer" class="flex-1 overflow-auto p-8 flex items-center justify-center relative">
+        <div id="paperWrapper" class="artboard-shadow transition-transform duration-200 origin-center bg-white rounded-none relative">
+          <!-- The SVG rendered document will be injected here -->
+          <div id="svgContainer"></div>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="h-7 bg-slate-950/90 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0 font-mono">
+        <div class="flex items-center gap-3">
+          <span id="statusBarTheme">Theme: Modern Tech Wave</span>
+          <span class="text-slate-600">|</span>
+          <span id="statusBarUnits">Spec: A4 + 0.125" Bleed (817.7 × 1146.5 pt)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-emerald-400">Pure Vector SVG</span>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toast" class="fixed bottom-10 right-10 bg-slate-900 border border-cyan-500/40 text-cyan-200 px-4 py-2.5 rounded-xl shadow-2xl text-xs flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 z-50">
+    <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    </svg>
+    <span id="toastMessage">Letterhead copied to clipboard</span>
+  </div>
+
+  <script>
+    // Initial JSON Template verbatim from User Specification
+    const initialPromptSpec = {
+      "meta": {
+        "asset_type": "Corporate Letterhead",
+        "style": "Modern Tech Wave",
+        "mood": "innovative, digital, fluid"
+      },
+      "design_theme": "Overlapping fluid gradient waves with a tech polygon badge",
+      "document_specs": {
+        "format": "A4 portrait 8.2677 × 11.6929 in + 0.125 in bleed on all sides (Illustrator default)",
+        "viewBox": "0 0 817.7 1146.5",
+        "width": "8.5177in",
+        "height": "11.9427in",
+        "units": "96 user units per inch",
+        "bleed": {
+          "inches": 0.125,
+          "units": 12,
+          "edge_box": {
+            "x": 0,
+            "y": 0,
+            "width": 817.7,
+            "height": 1146.5
+          }
+        },
+        "trim_box": {
+          "x": 12,
+          "y": 12,
+          "width": 793.7,
+          "height": 1122.5
+        },
+        "safe_area": {
+          "x": 36,
+          "y": 36,
+          "width": 745.7,
+          "height": 1074.5,
+          "note": "0.25 in inside trim; all text, logo and icons stay inside"
+        },
+        "bleed_rule": "Background and every edge-touching shape must run to the bleed edge (x=0 / 817.7, y=0 / 1146.5), not stop at the trim line",
+        "clip": "Clip all artwork to the full bleed box 0 0 817.7 1146.5"
+      },
+      "grid": {
+        "columns": 12,
+        "margin_left": 68,
+        "margin_right": 68,
+        "content_width": 680,
+        "gutter": 16,
+        "baseline_px": 6
+      },
+      "palette": {
+        "gradient_primary": [
+          "#0F172A",
+          "#1E3A8A"
+        ],
+        "gradient_accent": [
+          "#00C6FF",
+          "#0072FF"
+        ],
+        "background": "#FFFFFF",
+        "text_primary": "#0F172A",
+        "text_secondary": "#64748B",
+        "neutral_shape": "#E2E8F0",
+        "divider": "#E2E8F0"
+      },
+      "typography": {
+        "font_family": "Montserrat, 'Helvetica Neue', Arial, sans-serif",
+        "note": "Declare font-family as an attribute only; never @import or embed fonts",
+        "scale": {
+          "brand_name": { "size": 26, "weight": 800, "letter_spacing": 0.5 },
+          "tagline": { "size": 8.5, "weight": 600, "letter_spacing": 2.4, "transform": "uppercase" },
+          "label": { "size": 9, "weight": 600 },
+          "recipient_name": { "size": 17, "weight": 700 },
+          "meta": { "size": 9.5, "weight": 400, "line_height": 15 },
+          "subject": { "size": 11, "weight": 700 },
+          "body": { "size": 10.5, "weight": 400, "line_height": 17, "color": "text_secondary", "paragraph_spacing": 14 },
+          "signature_name": { "size": 14, "weight": 700 },
+          "footer": { "size": 9, "weight": 500, "line_height": 14 }
+        }
+      },
+      "layout": [
+        { "id": "Layer_1_Background", "content": "Full-bleed rect in palette.background, plus one very subtle neutral_shape watermark polygon" },
+        { "id": "Layer_2_Header_Art", "content": "Top edge: three overlapping smooth cubic-bezier waves spanning the full width" },
+        { "id": "Layer_3_Branding", "content": "Logo mark 44×44 at x=68 y=58, brand_name at x=122 baseline y=84, tagline at y=100" },
+        { "id": "Layer_4_Letter_Meta", "content": "Recipient block at x=68 starting y=232, date right-aligned at x=748, subject line at y=338" },
+        { "id": "Layer_5_Body", "content": "Salutation at x=68 y=378, body paragraphs from y=402 within content_width 680" },
+        { "id": "Layer_6_Signature", "content": "Closing at x=68 y=880, hand-drawn style signature stroke, sender name y=950" },
+        { "id": "Layer_7_Footer", "content": "Bottom edge mirrored waves from y=1085 to 1146.5, divider line y=990, contact stack with icon badges" },
+        { "id": "Layer_8_Guides_Hidden", "content": "Guides reserved (bleed, trim, safe area box overlays)" }
+      ],
+      "content": {
+        "company": {
+          "name": "CODEXO",
+          "tagline": "Design Studio"
+        },
+        "recipient": {
+          "label": "To,",
+          "name": "John Smeeth",
+          "title": "Creative Director",
+          "address": "6598 West Media Sponsor, USA-568",
+          "email_web": "email@mailid.com, www.myweb.com",
+          "phone": "+1-222-333-444"
+        },
+        "date": "Date : 14 March, 2027",
+        "subject": "Subject: Proposal for Brand Identity Partnership",
+        "salutation": "Dear Mr. Smeeth,",
+        "body": {
+          "paragraphs": [
+            "We are pleased to submit our formal proposal for the comprehensive redesign of your brand identity and digital collateral system. Our studio combines strategic research with modern engineering to craft systems that build lasting market presence.",
+            "Over the past decade, our multidisciplinary team has partnered with ambitious technology firms and creative enterprises worldwide, consistently achieving measurable growth and visual cohesion across print, digital, and mobile touchpoints.",
+            "Enclosed you will find the strategic framework, project milestones, and deliverables outlined in accordance with our initial consultation. We look forward to scheduling a review session to address any specific inquiries and commence our collaborative roadmap."
+          ]
+        },
+        "closing": "Sincerely,",
+        "sender": {
+          "name": "James Smith",
+          "title": "Manager"
+        },
+        "contact": {
+          "phone": ["0123-456-7890", "0123-456-7890"],
+          "email": "your@emailid.com",
+          "web": "www.example.com",
+          "address": ["Street Address Here", "Singapore, 2222"]
+        }
+      },
+      "export_rules": [
+        "Vector only: no <image>, no base64, no external links",
+        "No CSS @import, no <style> web fonts; presentation attributes only",
+        "Every text stays live and editable",
+        "Top-level layer groups exactly as listed, in order",
+        "Nothing important outside the safe area; decorative art may bleed and is clipped",
+        "Consistent icon badge size and color across the footer"
+      ]
+    };
+
+    // State Variables
+    let currentSpec = JSON.parse(JSON.stringify(initialPromptSpec));
+    let showGuides = true;
+    let currentZoom = 0.72; // default scale fit for screen
+
+    // Generative Artwork Engine for Header and Footer
+    let activeArtPreset = {
+      type: "waves",
+      headerPrimary: "M 0 0 L 817.7 0 L 817.7 85 C 680 135 520 70 380 92 C 240 114 120 148 0 105 Z",
+      headerAccent: "M 0 0 L 817.7 0 L 817.7 58 C 710 112 590 62 460 76 C 310 92 180 132 0 88 Z",
+      headerNeutral: "M 0 0 L 817.7 0 L 817.7 32 C 690 68 590 35 480 44 C 330 56 160 88 0 52 Z",
+      footerPrimary: "M 0 1146.5 L 817.7 1146.5 L 817.7 1095 C 670 1080 540 1130 380 1110 C 230 1092 120 1125 0 1098 Z",
+      footerAccent: "M 0 1146.5 L 817.7 1146.5 L 817.7 1115 C 690 1095 560 1138 410 1120 C 260 1104 140 1135 0 1122 Z",
+      footerNeutral: "M 0 1146.5 L 817.7 1146.5 L 817.7 1135 C 720 1125 580 1146.5 450 1138 C 300 1130 160 1144 0 1136 Z",
+      badgeType: "hexagon",
+      badgePos: { x: 720, y: 150 }
+    };
+
+    function randomRange(min, max) {
+      return Math.round((min + Math.random() * (max - min)) * 10) / 10;
+    }
+
+    function generateNewArtwork(preferredStyle = "random") {
+      const styles = ["waves", "tech_angles", "ribbons", "minimal_arcs"];
+      const style = preferredStyle === "random" ? styles[Math.floor(Math.random() * styles.length)] : preferredStyle;
+      const badges = ["hexagon", "diamond", "cyber_circles", "quad_cross"];
+      const chosenBadge = badges[Math.floor(Math.random() * badges.length)];
+
+      let headerPrimary, headerAccent, headerNeutral;
+      let footerPrimary, footerAccent, footerNeutral;
+
+      if (style === "tech_angles") {
+        // Geometric sharp angular slices
+        const hCut1 = randomRange(75, 125);
+        const hCut2 = randomRange(50, 95);
+        const hCut3 = randomRange(25, 60);
+        const midCutX = randomRange(360, 520);
+        const leftCutY = randomRange(60, 110);
+
+        headerPrimary = `M 0 0 L 817.7 0 L 817.7 ${hCut1} L ${midCutX} ${leftCutY} L 0 ${hCut2} Z`;
+        headerAccent = `M 0 0 L 817.7 0 L 817.7 ${hCut2 - 15} L ${midCutX + 40} ${leftCutY - 20} L 0 ${hCut3} Z`;
+        headerNeutral = `M 0 0 L 817.7 0 L 817.7 ${hCut3 - 10} L ${midCutX - 60} ${leftCutY - 35} L 0 25 Z`;
+
+        // Coordinated angular footer
+        const fCut1 = randomRange(1080, 1110);
+        const fCut2 = randomRange(1095, 1125);
+        const fCut3 = randomRange(1120, 1138);
+        const fMidX = randomRange(340, 500);
+
+        footerPrimary = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${fCut1} L ${fMidX} ${fCut1 - 15} L 0 ${fCut2} Z`;
+        footerAccent = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${fCut2} L ${fMidX - 40} ${fCut2 + 10} L 0 ${fCut3} Z`;
+        footerNeutral = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${fCut3} L ${fMidX + 50} ${fCut3 + 5} L 0 1142 Z`;
+      } 
+      else if (style === "ribbons") {
+        // Intersecting dynamic ribbons
+        const cp1x = randomRange(620, 710);
+        const cp1y = randomRange(110, 145);
+        const cp2x = randomRange(180, 310);
+        const cp2y = randomRange(60, 100);
+
+        headerPrimary = `M 0 0 L 817.7 0 L 817.7 ${randomRange(70, 95)} Q ${cp1x} ${cp1y} 410 ${randomRange(80, 105)} T 0 ${randomRange(90, 120)} Z`;
+        headerAccent = `M 0 0 L 817.7 0 L 817.7 ${randomRange(50, 70)} Q ${cp2x} ${cp2y + 40} 420 ${randomRange(60, 85)} T 0 ${randomRange(70, 90)} Z`;
+        headerNeutral = `M 0 0 L 817.7 0 L 817.7 35 Q 500 50 300 35 T 0 45 Z`;
+
+        footerPrimary = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${randomRange(1090, 1110)} Q ${cp1x} ${randomRange(1080, 1105)} 400 ${randomRange(1110, 1125)} T 0 ${randomRange(1095, 1115)} Z`;
+        footerAccent = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${randomRange(1115, 1130)} Q ${cp2x} ${randomRange(1105, 1125)} 420 ${randomRange(1125, 1138)} T 0 ${randomRange(1120, 1132)} Z`;
+        footerNeutral = `M 0 1146.5 L 817.7 1146.5 L 817.7 1135 Q 400 1142 0 1138 Z`;
+      }
+      else if (style === "minimal_arcs") {
+        // Minimalist smooth architectural arcs
+        const hDepth1 = randomRange(75, 105);
+        const hDepth2 = randomRange(55, 75);
+        headerPrimary = `M 0 0 L 817.7 0 L 817.7 ${hDepth1 - 10} C 580 ${hDepth1 + 35} 240 ${hDepth1 - 25} 0 ${hDepth1} Z`;
+        headerAccent = `M 0 0 L 817.7 0 L 817.7 ${hDepth2 - 15} C 540 ${hDepth2 + 25} 260 ${hDepth2 - 15} 0 ${hDepth2} Z`;
+        headerNeutral = `M 0 0 L 817.7 0 L 817.7 28 C 450 48 300 20 0 35 Z`;
+
+        footerPrimary = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${1146.5 - hDepth1 + 25} C 580 ${1146.5 - hDepth1 - 10} 220 ${1146.5 - hDepth1 + 30} 0 ${1146.5 - hDepth1 + 15} Z`;
+        footerAccent = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${1146.5 - hDepth2 + 10} C 520 ${1146.5 - hDepth2 - 5} 250 ${1146.5 - hDepth2 + 15} 0 ${1146.5 - hDepth2 + 5} Z`;
+        footerNeutral = `M 0 1146.5 L 817.7 1146.5 L 817.7 1134 C 450 1140 250 1130 0 1136 Z`;
+      }
+      else {
+        // Fluid cubic waves with harmonic variations
+        const c1 = randomRange(115, 150);
+        const c2 = randomRange(60, 95);
+        const c3 = randomRange(80, 115);
+        const c4 = randomRange(100, 135);
+        const rightY = randomRange(70, 95);
+        const leftY = randomRange(85, 115);
+
+        headerPrimary = `M 0 0 L 817.7 0 L 817.7 ${rightY} C ${randomRange(650, 710)} ${c1} ${randomRange(480, 540)} ${c2} ${randomRange(360, 410)} ${c3} C ${randomRange(220, 270)} ${c4} ${randomRange(100, 140)} ${c1} 0 ${leftY} Z`;
+        headerAccent = `M 0 0 L 817.7 0 L 817.7 ${rightY - 25} C ${randomRange(670, 720)} ${c1 - 25} ${randomRange(550, 600)} ${c2} ${randomRange(420, 470)} ${c3 - 15} C ${randomRange(280, 320)} ${c4 - 20} ${randomRange(160, 200)} ${c1 - 15} 0 ${leftY - 20} Z`;
+        headerNeutral = `M 0 0 L 817.7 0 L 817.7 34 C ${randomRange(680, 730)} 62 ${randomRange(560, 610)} 30 ${randomRange(450, 490)} 42 C ${randomRange(300, 350)} 54 ${randomRange(150, 180)} 78 0 46 Z`;
+
+        // Inverted matching waves for footer
+        footerPrimary = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${1146.5 - rightY + 15} C ${randomRange(640, 690)} ${1146.5 - c1 + 25} ${randomRange(510, 560)} ${1146.5 - c2 + 30} ${randomRange(360, 410)} ${1146.5 - c3 + 20} C ${randomRange(210, 260)} ${1146.5 - c4 + 25} ${randomRange(100, 140)} ${1146.5 - c1 + 25} 0 ${1146.5 - leftY + 20} Z`;
+        footerAccent = `M 0 1146.5 L 817.7 1146.5 L 817.7 ${1146.5 - rightY + 35} C ${randomRange(660, 710)} ${1146.5 - c1 + 45} ${randomRange(530, 580)} ${1146.5 - c2 + 50} ${randomRange(390, 430)} ${1146.5 - c3 + 35} C ${randomRange(240, 280)} ${1146.5 - c4 + 40} ${randomRange(120, 160)} ${1146.5 - c1 + 45} 0 ${1146.5 - leftY + 38} Z`;
+        footerNeutral = `M 0 1146.5 L 817.7 1146.5 L 817.7 1136 C 700 1128 550 1146.5 420 1138 C 280 1132 140 1144 0 1138 Z`;
+      }
+
+      activeArtPreset = {
+        type: style,
+        headerPrimary,
+        headerAccent,
+        headerNeutral,
+        footerPrimary,
+        footerAccent,
+        footerNeutral,
+        badgeType: chosenBadge,
+        badgePos: { x: randomRange(705, 735), y: randomRange(138, 162) }
+      };
+
+      // Reflect in badge UI
+      const badge = document.getElementById('artStyleBadge');
+      if (badge) {
+        const labels = {
+          waves: "Fluid Waves",
+          tech_angles: "Tech Polygonal",
+          ribbons: "Curved Ribbons",
+          minimal_arcs: "Minimal Arcs"
+        };
+        badge.textContent = labels[style] || style;
+      }
+
+      // Update Spec Layout descriptions for complete JSON coherence
+      if (currentSpec.layout) {
+        const l2 = currentSpec.layout.find(l => l.id === "Layer_2_Header_Art");
+        if (l2) l2.content = `Procedural ${style} header spanning full bleed (max y ≈ 140pt) with a tech ${chosenBadge} badge at x=${Math.round(activeArtPreset.badgePos.x)} y=${Math.round(activeArtPreset.badgePos.y)}`;
+        const l7 = currentSpec.layout.find(l => l.id === "Layer_7_Footer");
+        if (l7) l7.content = `Mirrored ${style} footer curves from y≈1085 to 1146.5 with contact stack and glyph badges`;
+      }
+      document.getElementById('jsonCodeEditor').value = JSON.stringify(currentSpec, null, 2);
+    }
+
+    // Helper to render procedural badge
+    function renderTechBadge(p, pos, type) {
+      const x = pos.x;
+      const y = pos.y;
+      if (type === "diamond") {
+        return `
+          <g transform="translate(${x}, ${y})">
+            <polygon points="0,-22 22,0 0,22 -22,0" fill="none" stroke="${p.gradient_accent[0]}" stroke-width="1.8" />
+            <polygon points="0,-12 12,0 0,12 -12,0" fill="${p.gradient_accent[1]}" opacity="0.3" />
+            <circle cx="0" cy="0" r="3.5" fill="${p.gradient_accent[0]}" />
+            <line x1="28" y1="0" x2="38" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.2" opacity="0.6" />
+            <line x1="-38" y1="0" x2="-28" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.2" opacity="0.6" />
+          </g>`;
+      } else if (type === "cyber_circles") {
+        return `
+          <g transform="translate(${x}, ${y})">
+            <circle cx="0" cy="0" r="18" fill="none" stroke="${p.gradient_accent[0]}" stroke-width="1.6" stroke-dasharray="6 3" />
+            <circle cx="0" cy="0" r="11" fill="none" stroke="${p.gradient_accent[1]}" stroke-width="1.2" />
+            <circle cx="0" cy="0" r="4.5" fill="${p.gradient_accent[0]}" />
+            <circle cx="26" cy="0" r="2" fill="${p.gradient_accent[1]}" opacity="0.8" />
+            <circle cx="-26" cy="0" r="2" fill="${p.gradient_accent[1]}" opacity="0.8" />
+          </g>`;
+      } else if (type === "quad_cross") {
+        return `
+          <g transform="translate(${x}, ${y})">
+            <rect x="-14" y="-14" width="28" height="28" rx="6" fill="none" stroke="${p.gradient_accent[0]}" stroke-width="1.8" transform="rotate(45)" />
+            <circle cx="0" cy="0" r="4" fill="${p.gradient_accent[1]}" />
+            <line x1="0" y1="-26" x2="0" y2="-18" stroke="${p.gradient_accent[0]}" stroke-width="1.4" />
+            <line x1="0" y1="18" x2="0" y2="26" stroke="${p.gradient_accent[0]}" stroke-width="1.4" />
+            <line x1="-26" y1="0" x2="-18" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.4" />
+            <line x1="18" y1="0" x2="26" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.4" />
+          </g>`;
+      } else {
+        // Default Hexagon
+        return `
+          <g transform="translate(${x}, ${y})">
+            <polygon points="0,-24 20.8,-12 20.8,12 0,24 -20.8,12 -20.8,-12" fill="none" stroke="${p.gradient_accent[0]}" stroke-width="1.8" />
+            <polygon points="0,-14 12.1,-7 12.1,7 0,14 -12.1,7 -12.1,-7" fill="${p.gradient_accent[1]}" opacity="0.25" />
+            <circle cx="0" cy="0" r="4" fill="${p.gradient_accent[1]}" />
+            <line x1="28" y1="0" x2="36" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.2" opacity="0.6" />
+            <line x1="-36" y1="0" x2="-28" y2="0" stroke="${p.gradient_accent[0]}" stroke-width="1.2" opacity="0.6" />
+          </g>`;
+      }
+    }
+
+    // Presets
+    const presetThemes = [
+      {
+        name: "Modern Tech Wave",
+        mood: "innovative, digital, fluid",
+        palette: {
+          gradient_primary: ["#0F172A", "#1E3A8A"],
+          gradient_accent: ["#00C6FF", "#0072FF"],
+          background: "#FFFFFF",
+          text_primary: "#0F172A",
+          text_secondary: "#64748B",
+          neutral_shape: "#E2E8F0",
+          divider: "#E2E8F0"
+        }
+      },
+      {
+        name: "Crimson Executive",
+        mood: "bold, authoritative, premium",
+        palette: {
+          gradient_primary: ["#450A0A", "#881337"],
+          gradient_accent: ["#F43F5E", "#BE123C"],
+          background: "#FFFFFF",
+          text_primary: "#1C1917",
+          text_secondary: "#78716C",
+          neutral_shape: "#F5EBEB",
+          divider: "#F43F5E33"
+        }
+      },
+      {
+        name: "Emerald BioTech",
+        mood: "sustainable, clean, biological",
+        palette: {
+          gradient_primary: ["#064E3B", "#065F46"],
+          gradient_accent: ["#10B981", "#059669"],
+          background: "#FFFFFF",
+          text_primary: "#022C22",
+          text_secondary: "#4B5563",
+          neutral_shape: "#D1FAE5",
+          divider: "#E5E7EB"
+        }
+      },
+      {
+        name: "Royal Purple Minimal",
+        mood: "creative, prestigious, sleek",
+        palette: {
+          gradient_primary: ["#2E1065", "#4C1D95"],
+          gradient_accent: ["#A855F7", "#7C3AED"],
+          background: "#FFFFFF",
+          text_primary: "#1E1B4B",
+          text_secondary: "#6B7280",
+          neutral_shape: "#F3E8FF",
+          divider: "#EDE9FE"
+        }
+      },
+      {
+        name: "Midnight Monochrome",
+        mood: "architectural, stark, precise",
+        palette: {
+          gradient_primary: ["#18181B", "#27272A"],
+          gradient_accent: ["#52525B", "#3F3F46"],
+          background: "#FFFFFF",
+          text_primary: "#09090B",
+          text_secondary: "#71717A",
+          neutral_shape: "#F4F4F5",
+          divider: "#E4E4E7"
+        }
+      }
+    ];
+
+    // Helper: Toast message
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      toastMessage.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2600);
+    }
+
+    // Helper: SVG Path text wrap builder
+    function wrapTextToLines(text, maxChars = 84) {
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      for (const word of words) {
+        if ((currentLine + word).length > maxChars) {
+          lines.push(currentLine.trim());
+          currentLine = word + ' ';
+        } else {
+          currentLine += word + ' ';
+        }
+      }
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      return lines;
+    }
+
+    function generateVectorLetterheadSVG(spec, includeGuides) {
+      const p = spec.palette;
+      const s = spec.document_specs;
+      const c = spec.content;
+      const t = spec.typography;
+      const font = t.font_family;
+
+      // Extract viewBox dimensions
+      const vbWidth = 817.7;
+      const vbHeight = 1146.5;
+
+      // Wrap body paragraphs
+      const bodyLines = [];
+      let currentY = 402;
+      const lineHeight = t.scale.body.line_height || 17;
+      const paragraphSpacing = t.scale.body.paragraph_spacing || 14;
+
+      // Normalise paragraphs
+      let paragraphs = [];
+      if (Array.isArray(c.body.paragraphs)) {
+        paragraphs = c.body.paragraphs;
+      } else if (typeof c.body.text === 'string') {
+        paragraphs = [c.body.text];
+      } else {
+        paragraphs = [
+          "We are pleased to submit our formal proposal for the comprehensive redesign of your brand identity and digital collateral system.",
+          "Over the past decade, our multidisciplinary team has partnered with ambitious technology firms worldwide.",
+          "Enclosed you will find the strategic framework, project milestones, and deliverables outlined in accordance with our initial consultation."
+        ];
+      }
+
+      paragraphs.forEach((pText) => {
+        const wrapped = wrapTextToLines(pText, 86);
+        wrapped.forEach((line) => {
+          bodyLines.push({ text: line, y: currentY });
+          currentY += lineHeight;
+        });
+        currentY += paragraphSpacing;
+      });
+
+      // Format SVG string
+      return `<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+     viewBox="${s.viewBox}" 
+     width="${s.width}" 
+     height="${s.height}" 
+     xml:space="preserve">
+
+  <defs>
+    <!-- Master Clip to full bleed box -->
+    <clipPath id="BleedClip">
+      <rect x="0" y="0" width="${vbWidth}" height="${vbHeight}" />
+    </clipPath>
+
+    <!-- Gradients -->
+    <linearGradient id="gradPrimary" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="${p.gradient_primary[0]}" />
+      <stop offset="100%" stop-color="${p.gradient_primary[1]}" />
+    </linearGradient>
+
+    <linearGradient id="gradAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${p.gradient_accent[0]}" />
+      <stop offset="100%" stop-color="${p.gradient_accent[1]}" />
+    </linearGradient>
+
+    <linearGradient id="gradAccentReverse" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="${p.gradient_accent[0]}" />
+      <stop offset="100%" stop-color="${p.gradient_accent[1]}" />
+    </linearGradient>
+  </defs>
+
+  <g id="Artwork_Root" clip-path="url(#BleedClip)">
+
+    <!-- LAYER 1: Background -->
+    <g id="Layer_1_Background">
+      <!-- Full-bleed background rect -->
+      <rect x="0" y="0" width="${vbWidth}" height="${vbHeight}" fill="${p.background}" />
+      
+      <!-- Watermark subtle polygon centered behind body (opacity 0.04) -->
+      <g transform="translate(408.85, 620) scale(1.6)" opacity="0.04">
+        <polygon points="0,-120 103.9,-60 103.9,60 0,120 -103.9,60 -103.9,-60" fill="none" stroke="${p.text_primary}" stroke-width="12" />
+        <polygon points="0,-85 73.6,-42.5 73.6,42.5 0,85 -73.6,42.5 -73.6,-42.5" fill="none" stroke="${p.text_primary}" stroke-width="4" />
+        <polygon points="0,-50 43.3,-25 43.3,25 0,50 -43.3,25 -43.3,-25" fill="${p.text_primary}" />
+      </g>
+    </g>
+
+    <!-- LAYER 2: Header Art -->
+    <g id="Layer_2_Header_Art">
+      <!-- Back wave: Primary gradient -->
+      <path d="${activeArtPreset.headerPrimary}" 
+            fill="url(#gradPrimary)" />
+
+      <!-- Middle wave: Accent gradient with 85% opacity -->
+      <path d="${activeArtPreset.headerAccent}" 
+            fill="url(#gradAccent)" 
+            opacity="0.85" />
+
+      <!-- Front thin wave: neutral_shape -->
+      <path d="${activeArtPreset.headerNeutral}" 
+            fill="${p.neutral_shape}" 
+            opacity="0.45" />
+
+      <!-- Tech badge outline generated dynamically -->
+      ${renderTechBadge(p, activeArtPreset.badgePos, activeArtPreset.badgeType)}
+    </g>
+
+    <!-- LAYER 3: Branding -->
+    <g id="Layer_3_Branding">
+      <!-- Logo mark: 44x44 at x=68 y=58 (Geometric tech monogram) -->
+      <g transform="translate(68, 58)">
+        <!-- Logo background plate -->
+        <rect x="0" y="0" width="44" height="44" rx="10" fill="url(#gradPrimary)" />
+        <!-- Internal geometric poly badge -->
+        <path d="M 22 7 L 36 15 L 36 30 L 22 38 L 8 30 L 8 15 Z" fill="none" stroke="url(#gradAccent)" stroke-width="2" />
+        <path d="M 22 13 L 30 18 L 30 27 L 22 32 L 14 27 L 14 18 Z" fill="url(#gradAccent)" />
+        <circle cx="22" cy="22.5" r="3" fill="#FFFFFF" />
+      </g>
+
+      <!-- Brand Name -->
+      <text x="124" y="84" 
+            font-family="${font}" 
+            font-size="${t.scale.brand_name.size}" 
+            font-weight="${t.scale.brand_name.weight}" 
+            letter-spacing="${t.scale.brand_name.letter_spacing}" 
+            fill="${p.text_primary}">
+        ${c.company.name}
+      </text>
+
+      <!-- Tagline -->
+      <text x="125" y="100" 
+            font-family="${font}" 
+            font-size="${t.scale.tagline.size}" 
+            font-weight="${t.scale.tagline.weight}" 
+            letter-spacing="${t.scale.tagline.letter_spacing}" 
+            fill="${p.text_secondary}">
+        ${c.company.tagline.toUpperCase()}
+      </text>
+    </g>
+
+    <!-- LAYER 4: Letter Meta -->
+    <g id="Layer_4_Letter_Meta">
+      <!-- Recipient Block at x=68 starting y=232 -->
+      <text x="68" y="232" font-family="${font}" font-size="${t.scale.label.size}" font-weight="${t.scale.label.weight}" fill="${p.text_secondary}">
+        ${c.recipient.label}
+      </text>
+
+      <text x="68" y="254" font-family="${font}" font-size="${t.scale.recipient_name.size}" font-weight="${t.scale.recipient_name.weight}" fill="${p.gradient_accent[1]}">
+        ${c.recipient.name}
+      </text>
+
+      <text x="68" y="271" font-family="${font}" font-size="${t.scale.meta.size}" font-weight="500" fill="${p.text_primary}">
+        ${c.recipient.title}
+      </text>
+
+      <!-- Prefix Rows: A, W, P -->
+      <g transform="translate(68, 288)">
+        <!-- Address Row -->
+        <text x="0" y="0" font-family="${font}" font-size="9" font-weight="700" fill="${p.gradient_accent[1]}">A :</text>
+        <text x="18" y="0" font-family="${font}" font-size="${t.scale.meta.size}" font-weight="400" fill="${p.text_secondary}">${c.recipient.address}</text>
+
+        <!-- Web/Email Row -->
+        <text x="0" y="15" font-family="${font}" font-size="9" font-weight="700" fill="${p.gradient_accent[1]}">W :</text>
+        <text x="18" y="15" font-family="${font}" font-size="${t.scale.meta.size}" font-weight="400" fill="${p.text_secondary}">${c.recipient.email_web}</text>
+
+        <!-- Phone Row -->
+        <text x="0" y="30" font-family="${font}" font-size="9" font-weight="700" fill="${p.gradient_accent[1]}">P :</text>
+        <text x="18" y="30" font-family="${font}" font-size="${t.scale.meta.size}" font-weight="400" fill="${p.text_secondary}">${c.recipient.phone}</text>
+      </g>
+
+      <!-- Right-aligned Date at x=748 y=232 -->
+      <text x="748" y="232" text-anchor="end" font-family="${font}" font-size="${t.scale.meta.size}" font-weight="500" fill="${p.text_secondary}">
+        ${c.date}
+      </text>
+
+      <!-- Subject line at x=68 y=338 with 40px accent underline at y=346 -->
+      <text x="68" y="338" font-family="${font}" font-size="${t.scale.subject.size}" font-weight="${t.scale.subject.weight}" fill="${p.text_primary}">
+        ${c.subject}
+      </text>
+      <rect x="68" y="346" width="46" height="2.5" rx="1.25" fill="url(#gradAccent)" />
+    </g>
+
+    <!-- LAYER 5: Body -->
+    <g id="Layer_5_Body">
+      <!-- Salutation at x=68 y=378 -->
+      <text x="68" y="378" font-family="${font}" font-size="${t.scale.body.size + 0.5}" font-weight="600" fill="${p.text_primary}">
+        ${c.salutation}
+      </text>
+
+      <!-- Body text lines -->
+      <g>
+        ${bodyLines.map(line => `
+          <text x="68" y="${line.y}" font-family="${font}" font-size="${t.scale.body.size}" font-weight="${t.scale.body.weight}" fill="${p.text_secondary}">
+            ${line.text}
+          </text>
+        `).join('')}
+      </g>
+    </g>
+
+    <!-- LAYER 6: Signature -->
+    <g id="Layer_6_Signature">
+      <!-- Closing -->
+      <text x="68" y="880" font-family="${font}" font-size="11" font-weight="500" fill="${p.text_primary}">
+        ${c.closing}
+      </text>
+
+      <!-- Realistic Hand-drawn style signature stroke path (no fill) -->
+      <path d="M 70 916 Q 84 892 102 918 T 132 904 T 154 928 Q 172 888 186 914 Q 198 934 220 906" 
+            fill="none" 
+            stroke="${p.text_primary}" 
+            stroke-width="1.6" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
+      <path d="M 90 924 Q 140 926 198 920" 
+            fill="none" 
+            stroke="${p.text_primary}" 
+            stroke-width="1.2" 
+            stroke-linecap="round" />
+
+      <!-- Sender Name -->
+      <text x="68" y="950" font-family="${font}" font-size="${t.scale.signature_name.size}" font-weight="${t.scale.signature_name.weight}" fill="${p.text_primary}">
+        ${c.sender.name}
+      </text>
+
+      <!-- Sender Title -->
+      <text x="68" y="966" font-family="${font}" font-size="10" font-weight="500" fill="${p.gradient_accent[1]}">
+        ${c.sender.title}
+      </text>
+    </g>
+
+    <!-- LAYER 7: Footer -->
+    <g id="Layer_7_Footer">
+      <!-- Divider line across content width (68 to 748) at y=990 -->
+      <line x1="68" y1="990" x2="748" y2="990" stroke="${p.divider}" stroke-width="1" />
+
+      <!-- Contact Stack right aligned text at x=716 -->
+      <!-- Phone Group -->
+      <text x="716" y="1006" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="500" fill="${p.text_primary}">
+        ${(c.contact.phone && c.contact.phone[0]) || ''}
+      </text>
+      <text x="716" y="1020" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="400" fill="${p.text_secondary}">
+        ${(c.contact.phone && c.contact.phone[1]) || ''}
+      </text>
+      <!-- Phone Badge at x=726 y=1000 -->
+      <rect x="726" y="1002" width="22" height="22" rx="4" fill="${p.gradient_accent[1]}" />
+      <path d="M 734 1009 C 733.5 1009 732 1010.5 732 1012 C 732 1014.5 734 1017 736.5 1017 C 738 1017 739.5 1015.5 739.5 1015 L 738 1013.5 L 736.8 1014.3 C 736 1013.8 735.2 1013 734.7 1012.2 L 735.5 1011 Z" fill="#FFFFFF" />
+
+      <!-- Email / Web Group -->
+      <text x="716" y="1042" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="500" fill="${p.text_primary}">
+        ${c.contact.email || ''}
+      </text>
+      <text x="716" y="1056" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="400" fill="${p.text_secondary}">
+        ${c.contact.web || ''}
+      </text>
+      <!-- Globe Badge at x=726 y=1038 -->
+      <rect x="726" y="1038" width="22" height="22" rx="4" fill="${p.gradient_accent[1]}" />
+      <circle cx="737" cy="1049" r="5" fill="none" stroke="#FFFFFF" stroke-width="1.2" />
+      <line x1="732" y1="1049" x2="742" y2="1049" stroke="#FFFFFF" stroke-width="1" />
+      <ellipse cx="737" cy="1049" rx="2.4" ry="5" fill="none" stroke="#FFFFFF" stroke-width="1" />
+
+      <!-- Address Group -->
+      <text x="716" y="1078" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="500" fill="${p.text_primary}">
+        ${(c.contact.address && c.contact.address[0]) || ''}
+      </text>
+      <text x="716" y="1092" text-anchor="end" font-family="${font}" font-size="${t.scale.footer.size}" font-weight="400" fill="${p.text_secondary}">
+        ${(c.contact.address && c.contact.address[1]) || ''}
+      </text>
+      <!-- Map Pin Badge at x=726 y=1074 -->
+      <rect x="726" y="1074" width="22" height="22" rx="4" fill="${p.gradient_accent[1]}" />
+      <path d="M 737 1079 C 734.8 1079 733 1080.8 733 1083 C 733 1086 737 1091 737 1091 C 737 1091 741 1086 741 1083 C 741 1080.8 739.2 1079 737 1079 Z" fill="#FFFFFF" />
+      <circle cx="737" cy="1083" r="1.3" fill="${p.gradient_accent[1]}" />
+
+      <!-- Bottom Edge: Mirrored procedural art curves from activeArtPreset -->
+      <path d="${activeArtPreset.footerPrimary}" 
+            fill="url(#gradPrimary)" />
+      
+      <path d="${activeArtPreset.footerAccent}" 
+            fill="url(#gradAccent)" 
+            opacity="0.8" />
+            
+      <path d="${activeArtPreset.footerNeutral}" 
+            fill="${p.neutral_shape}" 
+            opacity="0.5" />
+    </g>
+
+    <!-- LAYER 8: Guides (Optional/Display Toggleable) -->
+    <g id="Layer_8_Guides_Hidden" style="display: ${includeGuides ? 'inline' : 'none'}; pointer-events: none;">
+      <!-- Bleed Box (Red/Rose dashed line) -->
+      <rect x="0.5" y="0.5" width="816.7" height="1145.5" 
+            fill="none" 
+            stroke="#F43F5E" 
+            stroke-width="1.2" 
+            stroke-dasharray="6,4" />
+      <text x="6" y="10" font-family="${font}" font-size="8" fill="#F43F5E" font-weight="700">BLEED EDGE (0,0 to 817.7, 1146.5)</text>
+
+      <!-- Trim Box (Blue solid line) -->
+      <rect x="${s.trim_box.x}" y="${s.trim_box.y}" width="${s.trim_box.width}" height="${s.trim_box.height}" 
+            fill="none" 
+            stroke="#2563EB" 
+            stroke-width="1.2" />
+      <text x="${s.trim_box.x + 4}" y="${s.trim_box.y + 10}" font-family="${font}" font-size="8" fill="#2563EB" font-weight="700">TRIM LINE (A4 CUT)</text>
+
+      <!-- Safe Area (Emerald dashed line) -->
+      <rect x="${s.safe_area.x}" y="${s.safe_area.y}" width="${s.safe_area.width}" height="${s.safe_area.height}" 
+            fill="none" 
+            stroke="#10B981" 
+            stroke-width="1" 
+            stroke-dasharray="4,4" />
+      <text x="${s.safe_area.x + 4}" y="${s.safe_area.y + 10}" font-family="${font}" font-size="8" fill="#10B981" font-weight="700">SAFE AREA BOUNDARY (ALL CONTENT STAYS INSIDE)</text>
+
+      <!-- Corner crop marks -->
+      <g stroke="#2563EB" stroke-width="0.8">
+        <!-- Top Left -->
+        <line x1="0" y1="12" x2="8" y2="12" />
+        <line x1="12" y1="0" x2="12" y2="8" />
+        <!-- Top Right -->
+        <line x1="817.7" y1="12" x2="809.7" y2="12" />
+        <line x1="805.7" y1="0" x2="805.7" y2="8" />
+        <!-- Bottom Left -->
+        <line x1="0" y1="1134.5" x2="8" y2="1134.5" />
+        <line x1="12" y1="1146.5" x2="12" y2="1138.5" />
+        <!-- Bottom Right -->
+        <line x1="817.7" y1="1134.5" x2="809.7" y2="1134.5" />
+        <line x1="805.7" y1="1146.5" x2="805.7" y2="1138.5" />
+      </g>
+    </g>
+
+  </g>
+</svg>`;
+    }
+
+    function updatePreview() {
+      const svgMarkup = generateVectorLetterheadSVG(currentSpec, showGuides);
+      const container = document.getElementById('svgContainer');
+      container.innerHTML = svgMarkup;
+
+      // Update paper scale and dimensions
+      const paper = document.getElementById('paperWrapper');
+      paper.style.transform = `scale(${currentZoom})`;
+
+      // Status info
+      document.getElementById('statusBarTheme').textContent = `Theme: ${currentSpec.meta.style} (${currentSpec.meta.mood})`;
+    }
+
+    // Populate form inputs from spec
+    function syncSpecToForm() {
+      const c = currentSpec.content;
+      document.getElementById('inputBrandName').value = c.company.name || '';
+      document.getElementById('inputBrandTagline').value = c.company.tagline || '';
+      
+      document.getElementById('inputRecipientLabel').value = c.recipient.label || '';
+      document.getElementById('inputRecipientName').value = c.recipient.name || '';
+      document.getElementById('inputRecipientTitle').value = c.recipient.title || '';
+      document.getElementById('inputLetterDate').value = currentSpec.content.date || '';
+      document.getElementById('inputRecipientAddress').value = c.recipient.address || '';
+      document.getElementById('inputRecipientEmailWeb').value = c.recipient.email_web || '';
+      document.getElementById('inputRecipientPhone').value = c.recipient.phone || '';
+      document.getElementById('inputSubject').value = currentSpec.content.subject || '';
+
+      document.getElementById('inputSalutation').value = c.salutation || '';
+      if (Array.isArray(c.body.paragraphs)) {
+        document.getElementById('inputBodyText').value = c.body.paragraphs.join('\n\n');
+      } else {
+        document.getElementById('inputBodyText').value = c.body.text || '';
+      }
+
+      document.getElementById('inputClosing').value = c.closing || '';
+      document.getElementById('inputSenderName').value = c.sender.name || '';
+      document.getElementById('inputSenderTitle').value = c.sender.title || '';
+
+      document.getElementById('inputContactPhone').value = (c.contact.phone || []).join(', ');
+      document.getElementById('inputContactEmail').value = c.contact.email || '';
+      document.getElementById('inputContactWeb').value = c.contact.web || '';
+      document.getElementById('inputContactAddress').value = (c.contact.address || []).join(', ');
+
+      // Also sync code editor
+      document.getElementById('jsonCodeEditor').value = JSON.stringify(currentSpec, null, 2);
+    }
+
+    // Read form inputs into currentSpec
+    function syncFormToSpec() {
+      const c = currentSpec.content;
+      c.company.name = document.getElementById('inputBrandName').value;
+      c.company.tagline = document.getElementById('inputBrandTagline').value;
+
+      c.recipient.label = document.getElementById('inputRecipientLabel').value;
+      c.recipient.name = document.getElementById('inputRecipientName').value;
+      c.recipient.title = document.getElementById('inputRecipientTitle').value;
+      currentSpec.content.date = document.getElementById('inputLetterDate').value;
+      c.recipient.address = document.getElementById('inputRecipientAddress').value;
+      c.recipient.email_web = document.getElementById('inputRecipientEmailWeb').value;
+      c.recipient.phone = document.getElementById('inputRecipientPhone').value;
+      currentSpec.content.subject = document.getElementById('inputSubject').value;
+
+      c.salutation = document.getElementById('inputSalutation').value;
+      
+      const bodyRaw = document.getElementById('inputBodyText').value;
+      c.body.paragraphs = bodyRaw.split('\n\n').filter(p => p.trim().length > 0);
+
+      c.closing = document.getElementById('inputClosing').value;
+      c.sender.name = document.getElementById('inputSenderName').value;
+      c.sender.title = document.getElementById('inputSenderTitle').value;
+
+      c.contact.phone = document.getElementById('inputContactPhone').value.split(',').map(s => s.trim()).filter(Boolean);
+      c.contact.email = document.getElementById('inputContactEmail').value;
+      c.contact.web = document.getElementById('inputContactWeb').value;
+      c.contact.address = document.getElementById('inputContactAddress').value.split(',').map(s => s.trim()).filter(Boolean);
+
+      document.getElementById('jsonCodeEditor').value = JSON.stringify(currentSpec, null, 2);
+      updatePreview();
+    }
+
+    function initThemes() {
+      const list = document.getElementById('presetsList');
+      list.innerHTML = '';
+      presetThemes.forEach(theme => {
+        const item = document.createElement('div');
+        item.className = 'p-3 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-cyan-500/50 cursor-pointer transition-all flex items-center justify-between group';
+        item.innerHTML = `
+          <div>
+            <div class="text-xs font-semibold text-white group-hover:text-cyan-300 transition-colors">${theme.name}</div>
+            <div class="text-[10px] text-slate-400 capitalize">${theme.mood}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full border border-white/20" style="background:${theme.palette.gradient_primary[1]}"></span>
+            <span class="w-4 h-4 rounded-full border border-white/20" style="background:${theme.palette.gradient_accent[0]}"></span>
+            <span class="w-4 h-4 rounded-full border border-white/20" style="background:${theme.palette.gradient_accent[1]}"></span>
+          </div>
+        `;
+        item.addEventListener('click', () => {
+          currentSpec.palette = JSON.parse(JSON.stringify(theme.palette));
+          currentSpec.meta.style = theme.name;
+          currentSpec.meta.mood = theme.mood;
+          syncSpecToForm();
+          updatePreview();
+          showToast(`Switched theme to ${theme.name}`);
+        });
+        list.appendChild(item);
+      });
+    }
+
+    function attachEventListeners() {
+      // Form input change listeners
+      const inputs = document.querySelectorAll('#tabContentForm input, #tabContentForm textarea');
+      inputs.forEach(input => {
+        input.addEventListener('input', syncFormToSpec);
+      });
+
+      // Tab switcher
+      const tabFormBtn = document.getElementById('tabFormBtn');
+      const tabJsonBtn = document.getElementById('tabJsonBtn');
+      const tabThemesBtn = document.getElementById('tabThemesBtn');
+      
+      const tabForm = document.getElementById('tabContentForm');
+      const tabJson = document.getElementById('tabContentJson');
+      const tabThemes = document.getElementById('tabContentThemes');
+
+      function switchTab(activeBtn, activeContent) {
+        [tabFormBtn, tabJsonBtn, tabThemesBtn].forEach(btn => {
+          btn.classList.remove('border-cyan-400', 'text-cyan-400');
+          btn.classList.add('border-transparent', 'text-slate-400');
+        });
+        [tabForm, tabJson, tabThemes].forEach(content => {
+          content.classList.add('hidden');
+          content.classList.remove('flex');
+        });
+        activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        activeBtn.classList.add('border-cyan-400', 'text-cyan-400');
+        activeContent.classList.remove('hidden');
+        if (activeContent === tabJson) activeContent.classList.add('flex');
+      }
+
+      tabFormBtn.addEventListener('click', () => switchTab(tabFormBtn, tabForm));
+      tabJsonBtn.addEventListener('click', () => switchTab(tabJsonBtn, tabJson));
+      tabThemesBtn.addEventListener('click', () => switchTab(tabThemesBtn, tabThemes));
+
+      // One-click Regenerate Art Handlers
+      const triggerRegenerateArt = () => {
+        const styleSelect = document.getElementById('artStyleSelect');
+        const selectedStyle = styleSelect ? styleSelect.value : 'random';
+        generateNewArtwork(selectedStyle);
+        updatePreview();
+        showToast('🎨 নতুন হেডার এবং ফুটার আর্ট তৈরি করা হয়েছে!');
+      };
+
+      const regenArtTopBtn = document.getElementById('regenArtTopBtn');
+      if (regenArtTopBtn) regenArtTopBtn.addEventListener('click', triggerRegenerateArt);
+
+      const regenArtFormBtn = document.getElementById('regenArtFormBtn');
+      if (regenArtFormBtn) regenArtFormBtn.addEventListener('click', triggerRegenerateArt);
+
+      const artStyleSelect = document.getElementById('artStyleSelect');
+      if (artStyleSelect) {
+        artStyleSelect.addEventListener('change', () => {
+          triggerRegenerateArt();
+        });
+      }
+
+      // JSON editor live parsing
+      const jsonEditor = document.getElementById('jsonCodeEditor');
+      const errorBar = document.getElementById('jsonErrorBar');
+      
+      jsonEditor.addEventListener('input', () => {
+        try {
+          const parsed = JSON.parse(jsonEditor.value);
+          currentSpec = parsed;
+          errorBar.classList.add('hidden');
+          updatePreview();
+          // Update inputs without recursive json update
+          const c = currentSpec.content;
+          if (c && c.company) {
+            document.getElementById('inputBrandName').value = c.company.name || '';
+            document.getElementById('inputBrandTagline').value = c.company.tagline || '';
+          }
+        } catch (err) {
+          errorBar.textContent = 'JSON Syntax Error: ' + err.message;
+          errorBar.classList.remove('hidden');
+        }
+      });
+
+      // Reset JSON Spec
+      document.getElementById('resetJsonBtn').addEventListener('click', () => {
+        currentSpec = JSON.parse(JSON.stringify(initialPromptSpec));
+        syncSpecToForm();
+        updatePreview();
+        showToast('Reset to original specification');
+      });
+
+      // Guides Toggle
+      const toggleGuidesBtn = document.getElementById('toggleGuidesBtn');
+      const guidesBtnLabel = document.getElementById('guidesBtnLabel');
+      toggleGuidesBtn.addEventListener('click', () => {
+        showGuides = !showGuides;
+        guidesBtnLabel.textContent = `Guides: ${showGuides ? 'ON' : 'OFF'}`;
+        toggleGuidesBtn.classList.toggle('bg-slate-800', showGuides);
+        toggleGuidesBtn.classList.toggle('text-slate-400', !showGuides);
+        updatePreview();
+        showToast(showGuides ? 'Artwork guides enabled' : 'Artwork guides hidden');
+      });
+
+      // Zoom Controls
+      const zoomDisplay = document.getElementById('zoomLevelDisplay');
+      function applyZoom(delta) {
+        currentZoom = Math.min(Math.max(0.3, currentZoom + delta), 1.6);
+        zoomDisplay.textContent = Math.round(currentZoom * 100) + '%';
+        const paper = document.getElementById('paperWrapper');
+        paper.style.transform = `scale(${currentZoom})`;
+      }
+
+      document.getElementById('zoomInBtn').addEventListener('click', () => applyZoom(0.1));
+      document.getElementById('zoomOutBtn').addEventListener('click', () => applyZoom(-0.1));
+      document.getElementById('zoomFitBtn').addEventListener('click', () => {
+        currentZoom = 0.72;
+        zoomDisplay.textContent = 'Fit';
+        const paper = document.getElementById('paperWrapper');
+        paper.style.transform = `scale(${currentZoom})`;
+      });
+
+      // Copy SVG Action
+      document.getElementById('copySvgBtn').addEventListener('click', () => {
+        // Generate clean production SVG without guide layer active
+        const cleanSvg = generateVectorLetterheadSVG(currentSpec, false);
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = cleanSvg;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        try {
+          document.execCommand('copy');
+          showToast('Clean Production SVG copied to clipboard!');
+        } catch (err) {
+          showToast('Failed to copy SVG');
+        }
+        document.body.removeChild(tempTextarea);
+      });
+
+      // Download SVG File
+      document.getElementById('downloadSvgBtn').addEventListener('click', () => {
+        const cleanSvg = generateVectorLetterheadSVG(currentSpec, false);
+        const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        const filename = `${currentSpec.content.company.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_letterhead.svg`;
+        downloadLink.href = url;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+        showToast(`Saved ${filename}`);
+      });
+
+      // Print / PDF Trigger
+      document.getElementById('printBtn').addEventListener('click', () => {
+        // Open clean print window
+        const cleanSvg = generateVectorLetterheadSVG(currentSpec, false);
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          showToast('Pop-up blocked. Please allow pop-ups to print.');
+          return;
+        }
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${currentSpec.content.company.name} Letterhead</title>
+              <style>
+                @page { size: A4 portrait; margin: 0; }
+                body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: white; }
+                svg { width: 100vw; height: 100vh; max-width: 100%; max-height: 100%; }
+              </style>
+            </head>
+            <body>
+              ${cleanSvg}
+              <script>
+                window.onload = function() {
+                  window.focus();
+                  window.print();
+                  window.close();
+                };
+              <\/script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initThemes();
+      syncSpecToForm();
+      attachEventListeners();
+      updatePreview();
+    });
+  </script>
+</body>
+</html>

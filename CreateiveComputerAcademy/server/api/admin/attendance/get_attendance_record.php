@@ -1,9 +1,5 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
+require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
 
 $database = new Database();
@@ -25,7 +21,7 @@ if ($stmt->rowCount() > 0) {
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // Fetch break details
-    $break_query = "SELECT MIN(start_time) as break_start, MAX(end_time) as break_end, SUM(duration_minutes) as total_break_minutes FROM employee_breaks WHERE user_id = :staff_id AND date = :date AND status = 'Completed'";
+    $break_query = "SELECT MIN(start_time) as break_start, MAX(end_time) as break_end, SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :staff_id AND date = :date AND status = 'Completed'";
     $break_stmt = $db->prepare($break_query);
     $break_stmt->execute([':staff_id' => $staff_id, ':date' => $date]);
     $break_res = $break_stmt->fetch(PDO::FETCH_ASSOC);

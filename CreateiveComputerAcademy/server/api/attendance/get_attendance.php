@@ -1,9 +1,5 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
+require_once '../../config/cors.php';
 require_once '../../config/database.php';
 
 $database = new Database();
@@ -45,7 +41,7 @@ if($today_stmt->rowCount() > 0) {
 }
 
 // Get Total Break Time Today
-$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM employee_breaks WHERE user_id = :user_id AND date = :today";
+$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :user_id AND date = :today";
 $break_stmt = $db->prepare($break_query);
 $break_stmt->bindParam(':user_id', $user_id);
 $break_stmt->bindParam(':today', $today);
@@ -73,7 +69,7 @@ while($h = $hol_stmt->fetch(PDO::FETCH_ASSOC)) {
 
 // Get Monthly Breaks
 $monthly_breaks = [];
-$mb_query = "SELECT date, SUM(duration_minutes) as total_mins FROM employee_breaks WHERE user_id = :user_id AND MONTH(date) = :month AND YEAR(date) = :year AND status = 'Completed' GROUP BY date";
+$mb_query = "SELECT date, SUM(duration_minutes) as total_mins FROM user_breaks WHERE user_id = :user_id AND MONTH(date) = :month AND YEAR(date) = :year AND status = 'Completed' GROUP BY date";
 $mb_stmt = $db->prepare($mb_query);
 $mb_stmt->bindParam(':user_id', $user_id);
 $mb_stmt->bindParam(':month', $current_month);

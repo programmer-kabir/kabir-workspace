@@ -23,7 +23,7 @@ $admin_id = isset($data->admin_id) ? (int)$data->admin_id : null;
 
 try {
     // 1. Fetch break record
-    $stmt = $db->prepare("SELECT eb.*, u.name as user_name FROM employee_breaks eb 
+    $stmt = $db->prepare("SELECT eb.*, u.name as user_name FROM user_breaks eb 
                           LEFT JOIN users u ON eb.user_id = u.id 
                           WHERE eb.id = :id LIMIT 1");
     $stmt->execute([':id' => $break_id]);
@@ -40,11 +40,11 @@ try {
     }
 
     $staffUserId = (int)$breakRecord['user_id'];
-    $staffName = $breakRecord['user_name'] ?: "Staff #{$staffUserId}";
+    $staffName = $breakRecord['user_name'] ?: "User #{$staffUserId}";
     $now = date('Y-m-d H:i:s');
 
     if ($action === 'approve') {
-        $upd = $db->prepare("UPDATE employee_breaks 
+        $upd = $db->prepare("UPDATE user_breaks 
                              SET status = 'Active', 
                                  start_time = :now, 
                                  approved_by = :admin_id, 
@@ -69,7 +69,7 @@ try {
             "server_time" => $now
         ];
 
-        // Pusher Realtime Notification to Staff
+        // Pusher Realtime Notification to User
         try {
             $pusher = new PusherHelper();
             $pusher->trigger('staff-breaks', 'break-approved', $payload);
@@ -102,7 +102,7 @@ try {
         ]);
 
     } else if ($action === 'reject') {
-        $upd = $db->prepare("UPDATE employee_breaks 
+        $upd = $db->prepare("UPDATE user_breaks 
                              SET status = 'Rejected', 
                                  end_time = :now, 
                                  approved_by = :admin_id, 

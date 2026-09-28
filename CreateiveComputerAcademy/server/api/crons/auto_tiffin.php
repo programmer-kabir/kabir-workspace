@@ -49,14 +49,18 @@ $log = "[{$now}] [ACTION: {$action}] Auto Tiffin Cron started.\n";
 try {
     if ($action === 'start') {
         // ── 1. START PHASE (1:20 PM) ──
-        // Find all staff who checked in today and have tiffin break enabled (excluding user_id 2)
-        $query = "SELECT a.user_id, u.name, e.tiffin_start_time, e.tiffin_end_time, e.tiffin_duration_minutes 
+        // Find all staff and students who checked in today and have tiffin break enabled (excluding user_id 2)
+        $query = "SELECT a.user_id, u.name, 
+                         COALESCE(e.tiffin_start_time, st.tiffin_start_time, '13:20:00') as tiffin_start_time, 
+                         COALESCE(e.tiffin_end_time, st.tiffin_end_time, '14:00:00') as tiffin_end_time, 
+                         COALESCE(e.tiffin_duration_minutes, st.tiffin_duration_minutes, 40) as tiffin_duration_minutes 
                   FROM attendance a
-                  JOIN employees e ON a.user_id = e.user_id
                   JOIN users u ON a.user_id = u.id
+                  LEFT JOIN employees e ON a.user_id = e.user_id
+                  LEFT JOIN students st ON a.user_id = st.user_id
                   WHERE a.date = :date 
                     AND a.check_in IS NOT NULL 
-                    AND e.has_tiffin_break = 1 
+                    AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)
                     AND a.user_id != 2";
         $stmt = $db->prepare($query);
         $stmt->execute([':date' => $date]);
@@ -72,13 +76,13 @@ try {
             $start_datetime = $date . ' ' . $tiffin_start;
 
             // Check if any tiffin record already exists for today
-            $check = $db->prepare("SELECT id, status FROM employee_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' LIMIT 1");
+            $check = $db->prepare("SELECT id, status FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' LIMIT 1");
             $check->execute([':user_id' => $user_id, ':date' => $date]);
             $existing = $check->fetch(PDO::FETCH_ASSOC);
 
             if (!$existing) {
                 // Insert as ACTIVE break
-                $insert = $db->prepare("INSERT INTO employee_breaks 
+                $insert = $db->prepare("INSERT INTO user_breaks 
                     (user_id, date, break_type, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
                     VALUES (:user_id, :date, :break_type, :start_time, NULL, NULL, 'Active', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
                 $insert->execute([
@@ -107,7 +111,7 @@ try {
                     ];
                     PusherHelper::trigger('staff-breaks', 'break-approved', $pusherPayload);
                     PusherHelper::trigger("user-channel-{$user_id}", 'break-approved', $pusherPayload);
-                } catch (Exception $pe) {}
+                } catch (\Throwable $pe) {}
 
             } else {
                 $already_active++;
@@ -128,10 +132,13 @@ try {
     } else {
         // ── 2. END PHASE (2:00 PM) ──
         // A. Find all active tiffin breaks for today
-        $query = "SELECT eb.id, eb.user_id, eb.start_time, u.name, e.tiffin_end_time, e.tiffin_duration_minutes 
-                  FROM employee_breaks eb
+        $query = "SELECT eb.id, eb.user_id, eb.start_time, u.name, 
+                         COALESCE(e.tiffin_end_time, st.tiffin_end_time, '14:00:00') as tiffin_end_time, 
+                         COALESCE(e.tiffin_duration_minutes, st.tiffin_duration_minutes, 40) as tiffin_duration_minutes 
+                  FROM user_breaks eb
                   JOIN users u ON eb.user_id = u.id
                   LEFT JOIN employees e ON eb.user_id = e.user_id
+                  LEFT JOIN students st ON eb.user_id = st.user_id
                   WHERE eb.date = :date 
                     AND eb.break_type = 'Tiffin' 
                     AND eb.status = 'Active'";
@@ -159,7 +166,7 @@ try {
             }
 
             // Update to Completed
-            $upd = $db->prepare("UPDATE employee_breaks 
+            $upd = $db->prepare("UPDATE user_breaks 
                                  SET end_time = :end_time, 
                                      duration_minutes = :duration, 
                                      status = 'Completed', 
@@ -188,17 +195,21 @@ try {
                 ];
                 PusherHelper::trigger('staff-breaks', 'break-ended', $pusherPayload);
                 PusherHelper::trigger("user-channel-{$user_id}", 'break-ended', $pusherPayload);
-            } catch (Exception $pe) {}
+            } catch (\Throwable $pe) {}
         }
 
-        // B. Safety Net: Check if any checked-in staff missed the 1:20 start cron
-        $missedQuery = "SELECT a.user_id, u.name, e.tiffin_start_time, e.tiffin_end_time, e.tiffin_duration_minutes 
+        // B. Safety Net: Check if any checked-in staff or students missed the 1:20 start cron
+        $missedQuery = "SELECT a.user_id, u.name, 
+                               COALESCE(e.tiffin_start_time, st.tiffin_start_time, '13:20:00') as tiffin_start_time, 
+                               COALESCE(e.tiffin_end_time, st.tiffin_end_time, '14:00:00') as tiffin_end_time, 
+                               COALESCE(e.tiffin_duration_minutes, st.tiffin_duration_minutes, 40) as tiffin_duration_minutes 
                         FROM attendance a
-                        JOIN employees e ON a.user_id = e.user_id
                         JOIN users u ON a.user_id = u.id
+                        LEFT JOIN employees e ON a.user_id = e.user_id
+                        LEFT JOIN students st ON a.user_id = st.user_id
                         WHERE a.date = :date 
                           AND a.check_in IS NOT NULL 
-                          AND e.has_tiffin_break = 1 
+                          AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)
                           AND a.user_id != 2";
         $mStmt = $db->prepare($missedQuery);
         $mStmt->execute([':date' => $date]);
@@ -208,7 +219,7 @@ try {
         foreach ($all_eligible as $u) {
             $user_id = (int)$u['user_id'];
             $staff_name = $u['name'];
-            $chk = $db->prepare("SELECT id FROM employee_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' LIMIT 1");
+            $chk = $db->prepare("SELECT id FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' LIMIT 1");
             $chk->execute([':user_id' => $user_id, ':date' => $date]);
             if ($chk->rowCount() == 0) {
                 // Create completed entry directly
@@ -216,7 +227,7 @@ try {
                 $tiffin_end = !empty($u['tiffin_end_time']) ? $u['tiffin_end_time'] : '14:00:00';
                 $duration = !empty($u['tiffin_duration_minutes']) ? (int)$u['tiffin_duration_minutes'] : 40;
 
-                $ins = $db->prepare("INSERT INTO employee_breaks 
+                $ins = $db->prepare("INSERT INTO user_breaks 
                     (user_id, date, break_type, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
                     VALUES (:user_id, :date, 'Tiffin', :start_time, :end_time, :duration, 'Completed', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
                 $ins->execute([

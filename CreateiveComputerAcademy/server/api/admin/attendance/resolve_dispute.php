@@ -68,7 +68,7 @@ if($stmt->execute()) {
 
         // Handle break times by overwriting existing breaks
         if ($break_start !== null && $break_start !== '' && $break_end !== null && $break_end !== '') {
-            $del_break = $db->prepare("DELETE FROM employee_breaks WHERE user_id = :staff_id AND date = :date");
+            $del_break = $db->prepare("DELETE FROM user_breaks WHERE user_id = :staff_id AND date = :date");
             $del_break->execute([':staff_id' => $dispute_data['staff_id'], ':date' => $dispute_data['date']]);
 
             // Calculate duration in minutes
@@ -77,7 +77,7 @@ if($stmt->execute()) {
             $duration_minutes = floor(($end_timestamp - $start_timestamp) / 60);
 
             if ($duration_minutes > 0) {
-                $ins_break = $db->prepare("INSERT INTO employee_breaks (user_id, date, duration_minutes, status, break_type, start_time, end_time) VALUES (:staff_id, :date, :mins, 'Completed', :break_type, :start_time, :end_time)");
+                $ins_break = $db->prepare("INSERT INTO user_breaks (user_id, date, duration_minutes, status, break_type, start_time, end_time) VALUES (:staff_id, :date, :mins, 'Completed', :break_type, :start_time, :end_time)");
                 $ins_break->execute([
                     ':staff_id' => $dispute_data['staff_id'], 
                     ':date' => $dispute_data['date'], 

@@ -1,10 +1,6 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
 require_once '../../config/database.php';
+require_once '../../config/cors.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -85,7 +81,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
 // Get Breaks for this period
 $breaks_by_date = [];
-$break_query = "SELECT date, SUM(duration_minutes) as total_mins FROM employee_breaks WHERE user_id = :user_id AND date >= :start_date AND date <= :end_date AND status = 'Completed' GROUP BY date";
+$break_query = "SELECT date, SUM(duration_minutes) as total_mins FROM user_breaks WHERE user_id = :user_id AND date >= :start_date AND date <= :end_date AND status = 'Completed' GROUP BY date";
 $break_stmt = $db->prepare($break_query);
 $break_stmt->bindParam(':user_id', $user_id);
 $break_stmt->bindParam(':start_date', $start_date);

@@ -19,9 +19,10 @@ const DashboardReport = () => {
     roleStats,
     openingCash,
   } = useDashboardData();
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-  }).format(new Date());
+  // const today = new Intl.DateTimeFormat("en-CA", {
+  //   timeZone: "Asia/Dhaka",
+  // }).format(new Date());
+  const today = '2026-09-10'
 
   const monthlyInstallments = customerInstallmentPayments?.filter((item) => {
     const card = customerInstallmentCards?.find(
@@ -133,16 +134,15 @@ const DashboardReport = () => {
   const cashOut =
     totalExpense +
     totalProductPurchase +
-    totalInvestorWithdraw 
+    totalInvestorWithdraw
 
   // Net Cash
   const totalCash = openingCash + cashIn - cashOut;
   const printRef = useRef(null);
   const [year, month, day] = today.split("-");
 
-  const formattedDate = `${
-    MONTHS.find((m) => m.value === Number(month))?.label
-  } ${Number(day)}, ${year}`;
+  const formattedDate = `${MONTHS.find((m) => m.value === Number(month))?.label
+    } ${Number(day)}, ${year}`;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -192,20 +192,19 @@ const DashboardReport = () => {
                 <div className="flex justify-between pt-2 text-xl">
                   <span className="font-bold">💵 Net Cash</span>
                   <span
-                    className={`font-bold ${
-                      totalCash >= 0 ? "text-blue-600" : "text-red-600"
-                    }`}
+                    className={`font-bold ${totalCash >= 0 ? "text-blue-600" : "text-red-600"
+                      }`}
                   >
                     ৳ {totalCash.toLocaleString()}
                   </span>
                 </div>
               </div>
             </div>
-         
+
             <div className="page-break" />
           </div>
 
-            {/* Daily Investment */}
+          {/* Daily Investment */}
           <div className="report-page">
             <ReportTable
               title="Today's Investment Report"
@@ -235,7 +234,7 @@ const DashboardReport = () => {
                 ];
               }}
             />
-     
+
           </div>
 
           <div className="page-break" />
@@ -295,7 +294,7 @@ const DashboardReport = () => {
                 ];
               }}
             />
-           
+
           </div>
           <div className="page-break" />
           {/* Monthly Installment Report */}
@@ -322,7 +321,7 @@ const DashboardReport = () => {
               const user = users.find(
                 (u) => Number(u.id) === Number(card?.user_id),
               );
-              
+
               return [
                 index + 1,
                 user?.name || "-",
@@ -398,11 +397,11 @@ const DashboardReport = () => {
               ];
             }}
           />
-       
+
 
         </div>
       </div>
-      
+
       <style>{`
       
 .dashboard-report-print{

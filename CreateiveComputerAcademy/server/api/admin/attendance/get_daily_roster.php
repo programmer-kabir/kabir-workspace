@@ -44,7 +44,7 @@ try {
         // Calculate total break minutes for this staff on this date
         $break_stmt = $db->prepare("
             SELECT SUM(duration_minutes) as total_break_minutes 
-            FROM employee_breaks 
+            FROM user_breaks 
             WHERE user_id = :user_id AND date = :date AND status = 'Completed'
         ");
         $break_stmt->execute([':user_id' => $row['user_id'], ':date' => $date]);
