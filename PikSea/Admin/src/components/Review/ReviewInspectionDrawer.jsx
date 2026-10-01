@@ -29,15 +29,15 @@ const REJECTION_PRESETS = [
   { id: 'source', title: 'Missing or Corrupt Source File', note: 'The uploaded EPS, AI, or source archive is missing, damaged, or uneditable.' },
   { id: 'copyright', title: 'Copyright / Trademark Infringement', note: 'Asset contains recognizable brand logos, trademarks, or copyrighted elements without authorization.' },
   { id: 'metadata', title: 'Incorrect Metadata or Irrelevant Tags', note: 'Title, category, or tags are misleading, stuffed, or improperly categorized.' },
-  { id: 'duplicate', title: 'Duplicate / Spam Submission', note: 'This asset or a nearly identical variation has already been submitted.' },
-  { id: 'guidelines', title: 'Content Guidelines Violation', note: 'Asset violates DayalStock community standards and submission guidelines.' }
+  { id: 'duplicate', title: 'Duplicate Asset', note: 'This asset or a nearly identical variation has already been published.' },
+  { id: 'guidelines', title: 'Content Guidelines Violation', note: 'Asset violates PikSea community standards and quality guidelines.' }
 ];
 
-const IMG_BASE = import.meta.env.VITE_IMG_KEY || 'https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev';
+const IMG_BASE = import.meta.env.VITE_IMG_KEY || '';
 
 const getPreviewSrc = (content) => {
   if (!content) return null;
-  const path = content.author_preview_url || content.preview_image || content.image_url || content.image;
+  const path = content.preview_image || content.image_url || content.image;
   if (!path) return null;
   return path.startsWith('http') ? path : `${IMG_BASE.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 };
@@ -299,21 +299,21 @@ const ReviewInspectionDrawer = ({
             
             <div className="space-y-5">
               
-              {/* AUTHOR CARD */}
+              {/* ASSET SPECIFICATIONS */}
               <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] space-y-3">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Contributor Details</span>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-800 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center font-bold text-white text-sm">
-                    {currentContent.author_avatar ? (
-                      <img src={currentContent.author_avatar.startsWith('http') ? currentContent.author_avatar : `${IMG_BASE}/${currentContent.author_avatar}`} alt={currentContent.author_name} className="w-full h-full object-cover" />
-                    ) : (
-                      currentContent.author_name?.charAt(0) || 'C'
-                    )}
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Asset Information</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/20">
+                      {currentContent.content_type?.toUpperCase() || 'ASSET'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {currentContent.file_type?.toUpperCase() || 'ZIP'}
+                    </span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white text-sm">{currentContent.author_name || 'Contributor'}</span>
-                    <span className="text-xs text-gray-400">{currentContent.author_email || 'Verified Author'}</span>
-                  </div>
+                  <span className="text-xs text-emerald-400 font-medium">
+                    {currentContent.is_premium ? 'Pro Asset' : 'Free Asset'}
+                  </span>
                 </div>
               </div>
 
@@ -383,7 +383,7 @@ const ReviewInspectionDrawer = ({
                     rows="3"
                     value={reviewerNote}
                     onChange={(e) => setReviewerNote(e.target.value)}
-                    placeholder="Provide specific feedback for the creator..."
+                    placeholder="Provide rejection or internal note..."
                     className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-gray-300 outline-none focus:border-rose-500 resize-none"
                   />
 
@@ -393,7 +393,7 @@ const ReviewInspectionDrawer = ({
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/20 transition cursor-pointer disabled:opacity-50"
                   >
                     <XCircle size={15} />
-                    <span>Confirm Reject & Notify Author</span>
+                    <span>Confirm Rejection</span>
                   </button>
                 </div>
               )}

@@ -91,11 +91,11 @@ const NotFound = () => {
             </Link>
 
             <Link
-              to="/dashboard/users/author-level-rules"
+              to="/dashboard/allusers"
               className="flex items-center justify-center gap-2 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-purple-500/30 text-gray-300 hover:text-purple-300 transition group"
             >
               <Sparkles size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
-              <span>Level Rules</span>
+              <span>User Management</span>
             </Link>
           </div>
         </div>
@@ -103,7 +103,7 @@ const NotFound = () => {
         {/* FOOTER NOTICE */}
         <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
           <ShieldAlert size={13} className="text-gray-400" />
-          <span>DayalStock Admin Control • Restricted & Encrypted Gateway</span>
+          <span>PikSea Admin Console • Restricted & Encrypted Gateway</span>
         </div>
 
       </div>

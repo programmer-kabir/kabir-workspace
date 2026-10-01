@@ -1,9 +1,7 @@
 import {
   LayoutDashboard,
   Users,
-  UserRoundCheck,
   FolderOpen,
-  Clock3,
   FileX2,
   BadgeCheck,
   Files,
@@ -13,7 +11,6 @@ import {
   DollarSign,
   BarChart3,
   Settings,
-  ShieldCheck,
   MessageSquareWarning,
   Mail,
   FileText,
@@ -22,10 +19,10 @@ import {
   Bell,
   HelpCircle,
   Globe,
-  ShieldQuestion,
   Layers,
   Headset,
-  Award
+  UploadCloud,
+  Sparkles
 } from "lucide-react";
 
 export const AdminNavMenu = [
@@ -46,24 +43,14 @@ export const AdminNavMenu = [
     icon: FolderOpen,
     children: [
       {
+        name: "Upload Assets",
+        path: "/dashboard/content/upload",
+        icon: UploadCloud,
+      },
+      {
         name: "All Contents",
         path: "/dashboard/allcontent",
         icon: Files,
-      },
-      {
-        name: "Pending Review",
-        path: "/dashboard/content/pending",
-        icon: Clock3,
-      },
-      {
-        name: "Published Contents",
-        path: "/dashboard/content/published",
-        icon: BadgeCheck,
-      },
-      {
-        name: "Rejected Contents",
-        path: "/dashboard/content/rejected",
-        icon: FileX2,
       },
       {
         name: "Exclusive Buyout",
@@ -79,34 +66,10 @@ export const AdminNavMenu = [
   },
 
   {
-    name: "Users",
+    name: "User Management",
+    path: "/dashboard/allusers",
     icon: Users,
-    children: [
-      {
-        name: "All Users",
-        path: "/dashboard/allusers",
-        icon: Users,
-      },
-      {
-        name: "Contributors",
-        path: "/dashboard/users/contributors",
-        icon: UserRoundCheck,
-      },
-    ],
   },
-
-  {
-    name: "Author Limits",
-    path: "/dashboard/users/author-limits",
-    icon: ShieldCheck,
-  },
-
-  {
-    name: "Author Level Rules",
-    path: "/dashboard/users/author-level-rules",
-    icon: Award,
-  },
-
 
   {
     name: "Categories & Tags",
@@ -206,6 +169,11 @@ export const AdminNavMenu = [
         icon: Settings,
       },
       {
+        name: "AI API Keys",
+        path: "/dashboard/settings/ai-keys",
+        icon: Sparkles,
+      },
+      {
         name: "SEO Management",
         path: "/dashboard/settings/seo",
         icon: Globe,
@@ -228,4 +196,3 @@ export const AdminNavMenu = [
     icon: MessageSquareWarning,
   },
 ];
-

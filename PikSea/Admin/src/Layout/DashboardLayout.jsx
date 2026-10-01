@@ -244,10 +244,10 @@ const DashboardLayout = () => {
 
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-xs text-[#FF6B6B] font-bold">
-                  PRO CONTRIBUTOR
+                <p className="text-xs text-[#00D4FF] font-bold font-outfit uppercase tracking-wider">
+                  SUPER ADMIN
                 </p>
-                <p className="text-xs text-gray-400 font-medium">ID: DS-9824</p>
+                <p className="text-xs text-gray-400 font-medium">Platform Governance</p>
               </div>
             </div>
           </div>

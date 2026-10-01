@@ -17,8 +17,8 @@ const YourCollections = () => {
   if (collections.length === 0 && !isLoading) return null;
 
   return (
-    <section className="bg-white dark:bg-[#0A0A0A] py-12 relative overflow-hidden border-t border-gray-200 dark:border-white/5 transition-colors duration-300">
-      <div className="mx-auto  px-4 lg:px-8 relative z-10">
+    <section className="w-full bg-white dark:bg-[#0A0A0A] py-14 relative overflow-hidden border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
         <div className="mb-12 text-center relative">
           <span className="inline-block rounded-full border border-[#00D4FF]/30 bg-[#00D4FF]/10 px-4 py-1.5 text-xs font-outfit font-bold text-[#00D4FF] mb-4 uppercase tracking-widest">
             Organize & Create

@@ -12,7 +12,8 @@ import {
   Download, 
   Upload, 
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authFetch } from '../../api/authFetch';
@@ -123,15 +124,15 @@ const PlatformPulseWidget = () => {
         {/* 4 TELEMETRY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
           
-          {/* 1. Cloudflare R2 Storage */}
+          {/* 1. Asset Storage */}
           <div className="rounded-2xl border border-gray-800/80 bg-gray-900/60 p-4 flex flex-col justify-between hover:border-gray-700 transition">
             <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
-              <span>Cloudflare R2</span>
+              <span>Asset Storage</span>
               <HardDrive size={15} className="text-cyan-400" />
             </div>
             <div className="my-2">
-              <span className="text-2xl font-black text-white">{storage.r2_size_gb} <span className="text-xs font-normal text-gray-400">GB</span></span>
-              <p className="text-[11px] text-gray-400 mt-0.5">{storage.r2_objects} objects stored</p>
+              <span className="text-2xl font-black text-white">{storage.r2_size_gb || storage.storage_gb || 0} <span className="text-xs font-normal text-gray-400">GB</span></span>
+              <p className="text-[11px] text-gray-400 mt-0.5">{storage.r2_objects || storage.object_count || 0} objects stored</p>
             </div>
             <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
               <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${Math.min(100, Math.max(8, storage.r2_size_gb * 10))}%` }} />
@@ -165,40 +166,40 @@ const PlatformPulseWidget = () => {
             </div>
           </div>
 
-          {/* 3. Pending Reviews & Quick Jump */}
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 flex flex-col justify-between hover:border-amber-500/40 transition">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
-              <span>Pending Review</span>
-              <Clock size={15} className="text-amber-400" />
+          {/* 3. Published Assets */}
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 flex flex-col justify-between hover:border-emerald-500/40 transition">
+            <div className="flex items-center justify-between text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <span>Published Assets</span>
+              <Layers size={15} className="text-emerald-400" />
             </div>
             <div className="my-2">
-              <span className="text-2xl font-black text-white">{today.pending_reviews}</span>
-              <p className="text-[11px] text-gray-400 mt-0.5">Assets awaiting approval</p>
+              <span className="text-2xl font-black text-white">{today.total_published}</span>
+              <p className="text-[11px] text-gray-400 mt-0.5">Live on marketplace</p>
             </div>
             <button
-              onClick={() => navigate('/dashboard/content/pending')}
-              className="flex items-center justify-between text-[11px] font-bold text-amber-300 hover:text-amber-200 transition group cursor-pointer"
+              onClick={() => navigate('/dashboard/allcontent')}
+              className="flex items-center justify-between text-[11px] font-bold text-emerald-300 hover:text-emerald-200 transition group cursor-pointer"
             >
-              <span>Fast Review Queue</span>
+              <span>Explore Library</span>
               <ArrowUpRight size={13} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
           </div>
 
-          {/* 4. Active Creators & Rules */}
-          <div className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.04] p-4 flex flex-col justify-between hover:border-purple-500/40 transition">
-            <div className="flex items-center justify-between text-xs font-bold text-purple-400 uppercase tracking-wider">
-              <span>Contributors</span>
-              <Award size={15} className="text-purple-400" />
+          {/* 4. Instant Asset Upload */}
+          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4 flex flex-col justify-between hover:border-cyan-500/40 transition">
+            <div className="flex items-center justify-between text-xs font-bold text-[#00D4FF] uppercase tracking-wider">
+              <span>Upload Center</span>
+              <Upload size={15} className="text-[#00D4FF]" />
             </div>
             <div className="my-2">
-              <span className="text-2xl font-black text-white">{today.total_contributors}</span>
-              <p className="text-[11px] text-gray-400 mt-0.5">{today.total_published} assets live</p>
+              <span className="text-2xl font-black text-white">Direct</span>
+              <p className="text-[11px] text-gray-400 mt-0.5">Batch publish assets</p>
             </div>
             <button
-              onClick={() => navigate('/dashboard/users/author-level-rules')}
-              className="flex items-center justify-between text-[11px] font-bold text-purple-300 hover:text-purple-200 transition group cursor-pointer"
+              onClick={() => navigate('/dashboard/content/upload')}
+              className="flex items-center justify-between text-[11px] font-bold text-cyan-300 hover:text-cyan-200 transition group cursor-pointer"
             >
-              <span>Manage Level Rules</span>
+              <span>Upload Assets</span>
               <ArrowUpRight size={13} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
           </div>
@@ -223,23 +224,23 @@ const PlatformPulseWidget = () => {
 
             <div className="space-y-2">
               <button
-                onClick={() => navigate('/dashboard/content/pending')}
-                className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-800/60 border border-gray-700/60 hover:border-indigo-500/50 hover:bg-gray-800 transition text-left cursor-pointer group"
+                onClick={() => navigate('/dashboard/content/upload')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-800/60 border border-gray-700/60 hover:border-cyan-500/50 hover:bg-gray-800 transition text-left cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
-                    <Clock size={16} />
+                  <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
+                    <Upload size={16} />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-white block">Review Submissions</span>
-                    <span className="text-[10px] text-gray-400">{today.pending_reviews} files pending</span>
+                    <span className="text-xs font-bold text-white block">Upload Assets</span>
+                    <span className="text-[10px] text-gray-400">Vectors, Videos & Images</span>
                   </div>
                 </div>
                 <ArrowUpRight size={15} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition" />
               </button>
 
               <button
-                onClick={() => navigate('/dashboard/users/author-level-rules')}
+                onClick={() => navigate('/dashboard/allcontent')}
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-800/60 border border-gray-700/60 hover:border-purple-500/50 hover:bg-gray-800 transition text-left cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
@@ -247,15 +248,15 @@ const PlatformPulseWidget = () => {
                     <Award size={16} />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-white block">Author Level Rules</span>
-                    <span className="text-[10px] text-gray-400">Manage ranks & history</span>
+                    <span className="text-xs font-bold text-white block">Asset Library</span>
+                    <span className="text-[10px] text-gray-400">Manage all marketplace assets</span>
                   </div>
                 </div>
                 <ArrowUpRight size={15} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition" />
               </button>
 
               <button
-                onClick={() => navigate('/dashboard/settings/system-health')}
+                onClick={() => navigate('/dashboard/system-health')}
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-800/60 border border-gray-700/60 hover:border-emerald-500/50 hover:bg-gray-800 transition text-left cursor-pointer group"
               >
                 <div className="flex items-center gap-3">

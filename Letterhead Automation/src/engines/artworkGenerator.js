@@ -6,7 +6,7 @@ function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export let activeArtPreset = {
+export const defaultArtPreset = {
   type: "waves",
   headerPrimary: "M 0 0 L 817.7 0 L 817.7 85 C 680 135 520 70 380 92 C 240 114 120 148 0 105 Z",
   headerAccent: "M 0 0 L 817.7 0 L 817.7 58 C 710 112 590 62 460 76 C 310 92 180 132 0 88 Z",
@@ -21,8 +21,20 @@ export let activeArtPreset = {
   gradAngle: 45
 };
 
+export let activeArtPreset = JSON.parse(JSON.stringify(defaultArtPreset));
+
 export function generateNewArtwork(preferredStyle = "random") {
-  const styles = ["waves", "tech_angles", "ribbons", "minimal_arcs", "origami_folds", "cyber_mesh"];
+  const styles = [
+    "waves", 
+    "tech_angles", 
+    "ribbons", 
+    "minimal_arcs", 
+    "origami_folds", 
+    "cyber_mesh",
+    "diagonal_slash",
+    "chevron_cuts",
+    "bauhaus_arcs"
+  ];
   const style = preferredStyle === "random" ? randomChoice(styles) : preferredStyle;
   const badges = ["hexagon", "diamond", "cyber_circles", "quad_cross", "quantum_star", "shield_badge"];
   const chosenBadge = randomChoice(badges);
@@ -75,6 +87,37 @@ export function generateNewArtwork(preferredStyle = "random") {
     footerAccent = `M 0 ${H} L ${W} ${H} L ${W} ${f2R} L ${f2Mid} ${f2MidY} L 0 ${f2L} Z`;
     footerNeutral = `M 0 ${H} L ${W} ${H} L ${W} ${f3R} L ${f3Mid} ${f3MidY} L 0 ${f3L} Z`;
   }
+  else if (style === "diagonal_slash") {
+    // Sharp blade angular diagonal slashes
+    const cutY1 = randomRange(95, 145);
+    const cutY2 = randomRange(35, 75);
+    const cutY3 = randomRange(120, 165);
+
+    headerPrimary = `M 0 0 L ${W} 0 L ${W} ${cutY2} L 0 ${cutY1} Z`;
+    headerAccent = `M 0 0 L ${W} 0 L ${W} ${cutY2 + 25} L 0 ${cutY3} Z`;
+    headerNeutral = `M 0 0 L ${W} 0 L ${W} ${cutY2 + 45} L 0 ${cutY3 + 20} Z`;
+
+    const fCutY1 = H - randomRange(40, 75);
+    const fCutY2 = H - randomRange(80, 120);
+
+    footerPrimary = `M 0 ${H} L ${W} ${H} L ${W} ${fCutY2} L 0 ${fCutY1} Z`;
+    footerAccent = `M 0 ${H} L ${W} ${H} L ${W} ${fCutY2 - 20} L 0 ${fCutY1 - 25} Z`;
+    footerNeutral = `M 0 ${H} L ${W} ${H} L ${W} ${H - 14} L 0 ${H - 20} Z`;
+  }
+  else if (style === "chevron_cuts") {
+    // Futuristic chevron notch cuts
+    const midX = randomRange(380, 480);
+    const tipY = randomRange(110, 155);
+
+    headerPrimary = `M 0 0 L ${W} 0 L ${W} ${randomRange(55, 85)} L ${midX} ${tipY} L 0 ${randomRange(55, 85)} Z`;
+    headerAccent = `M 0 0 L ${W} 0 L ${W} ${randomRange(30, 55)} L ${midX} ${tipY - 25} L 0 ${randomRange(30, 55)} Z`;
+    headerNeutral = `M 0 0 L ${W} 0 L ${W} 20 L ${midX} ${tipY - 50} L 0 20 Z`;
+
+    const fTipY = H - randomRange(55, 95);
+    footerPrimary = `M 0 ${H} L ${W} ${H} L ${W} ${H - randomRange(40, 70)} L ${midX} ${fTipY} L 0 ${H - randomRange(40, 70)} Z`;
+    footerAccent = `M 0 ${H} L ${W} ${H} L ${W} ${H - randomRange(20, 40)} L ${midX} ${fTipY + 22} L 0 ${H - randomRange(20, 40)} Z`;
+    footerNeutral = `M 0 ${H} L ${W} ${H} L ${W} ${H - 12} L ${midX} ${H - 20} L 0 ${H - 12} Z`;
+  }
   else if (style === "origami_folds") {
     // Sharp layered origami folds with steep dynamic diagonals
     const slantX1 = randomRange(420, 580);
@@ -114,9 +157,9 @@ export function generateNewArtwork(preferredStyle = "random") {
     footerAccent = `M 0 ${H} L ${W} ${H} L ${W} ${H - randomRange(25, 45)} C ${f1cp1x - 30} ${f1cp1y + 15} ${f1cp2x + 30} ${f1cp2y + 20} 0 ${H - randomRange(35, 55)} Z`;
     footerNeutral = `M 0 ${H} L ${W} ${H} L ${W} ${H - 15} C 520 ${H - 22} 260 ${H - 12} 0 ${H - 18} Z`;
   }
-  else if (style === "minimal_arcs") {
+  else if (style === "minimal_arcs" || style === "bauhaus_arcs") {
     // Bauhaus geometric clean arc curves
-    const arcDepth1 = randomRange(85, 125);
+    const arcDepth1 = randomRange(85, 135);
     const arcDepth2 = arcDepth1 - randomRange(22, 35);
     const arcDepth3 = arcDepth2 - randomRange(18, 28);
     const inflectionX = randomRange(380, 520);
@@ -212,7 +255,7 @@ export function generateNewArtwork(preferredStyle = "random") {
   const frameMargin = randomRange(26, 36);
   const cornerSize = randomRange(35, 55);
 
-  activeArtPreset = {
+  const preset = {
     type: style,
     headerPrimary,
     headerAccent,
@@ -227,20 +270,27 @@ export function generateNewArtwork(preferredStyle = "random") {
     gradAngle: randomChoice([30, 45, 60, 120, 135, 150]),
     // Multi-layout parameters
     diag: {
+      shapeType: style,
       topX1: diagTopX1, topX2: diagTopX2, topX3: diagTopX3,
       topY1: diagTopY1, topY2: diagTopY2, topY3: diagTopY3,
       botX1: diagBotX1, botX2: diagBotX2, botX3: diagBotX3,
-      botY1: diagBotY1, botY2: diagBotY2, botY3: diagBotY3
+      botY1: diagBotY1, botY2: diagBotY2, botY3: diagBotY3,
+      arcRadius: randomRange(260, 360),
+      stepOffset: randomRange(35, 65)
     },
     inv: {
+      shapeType: style,
       topX1: invTopX1, topX2: invTopX2, topX3: invTopX3,
       topY1: invTopY1, topY2: invTopY2, topY3: invTopY3,
       botX1: invBotX1, botX2: invBotX2, botX3: invBotX3,
-      botY1: invBotY1, botY2: invBotY2, botY3: invBotY3
+      botY1: invBotY1, botY2: invBotY2, botY3: invBotY3,
+      arcRadius: randomRange(260, 360),
+      stepOffset: randomRange(35, 65)
     },
     sidebar: {
       width: sidebarW,
       accentWidth: sidebarAccentW,
+      shapeType: style,
       watermarkY: randomRange(850, 1020)
     },
     frame: {
@@ -249,7 +299,18 @@ export function generateNewArtwork(preferredStyle = "random") {
     }
   };
 
-  return { activeArtPreset, style, chosenBadge, chosenWatermark };
+  activeArtPreset = preset;
+  return { activeArtPreset: preset, preset, style, chosenBadge, chosenWatermark };
+}
+
+export function createArtworkPreset(preferredStyle = "random", customOptions = {}) {
+  const result = generateNewArtwork(preferredStyle);
+  const presetCopy = JSON.parse(JSON.stringify(result.preset));
+  if (customOptions.diag) Object.assign(presetCopy.diag, customOptions.diag);
+  if (customOptions.inv) Object.assign(presetCopy.inv, customOptions.inv);
+  if (customOptions.sidebar) Object.assign(presetCopy.sidebar, customOptions.sidebar);
+  if (customOptions.frame) Object.assign(presetCopy.frame, customOptions.frame);
+  return presetCopy;
 }
 
 export function renderTechBadge(p, pos, type) {

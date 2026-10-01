@@ -2,7 +2,6 @@
 
 require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/r2_config.php';
 require_once __DIR__ . '/../middleware/auth.php'; // SECURE: Verify Firebase Token
 require_once __DIR__ . '/../helper/email_helper.php';
 
@@ -314,7 +313,7 @@ function createWatermarkedWebp($sourcePath, $destinationPath, $assetId = '') {
     
     $fontSize = max(30, min($width, $height) * 0.07); // bigger: 0.07 instead of 0.05
     $angle = 45;
-    $text = "DayalStock";
+    $text = "PikSea";
     
     if (file_exists($fontPath)) {
         $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
@@ -334,9 +333,9 @@ function createWatermarkedWebp($sourcePath, $destinationPath, $assetId = '') {
         }
     }
 
-    // ── Bottom-left label: "Dayal Stock | [assetId]" ──
+    // ── Bottom-left label: "PikSea | [assetId]" ──
     if (file_exists($fontPath)) {
-        $labelText = 'Dayal Stock' . ($assetId ? ' | ' . $assetId : '');
+        $labelText = 'PikSea' . ($assetId ? ' | ' . $assetId : '');
         $labelFontSize = max(12, min($width, $height) * 0.025);
         
         $labelBbox = imagettfbbox($labelFontSize, 0, $fontPath, $labelText);
@@ -520,63 +519,26 @@ try {
         throw new Exception('Database connection পাওয়া যায়নি। config/db.php-তে $mysqli থাকতে হবে।');
     }
 
-    // SECURE: Get Author ID securely from authenticated email
-    $userEmail = $GLOBALS['user']['email'];
+    // Authenticated user ID resolution
+    $userEmail = $GLOBALS['user']['email'] ?? null;
     if (!$userEmail) throw new Exception("Unauthorized. Please log in.");
     
-    $authStmt = $mysqli->prepare("SELECT authors.id AS author_id, users.id AS user_id, users.name AS user_name FROM authors INNER JOIN users ON authors.user_id = users.id WHERE users.email = ? LIMIT 1");
-    $authStmt->bind_param("s", $userEmail);
-    $authStmt->execute();
-    $authRes = $authStmt->get_result();
-    
-    if ($authRes->num_rows === 0) {
-        throw new Exception('You are not authorized to upload content. Author account required.');
-    }
-    
-    $authRow = $authRes->fetch_assoc();
-    $authorId = (int) $authRow['author_id'];
-    $authorUserId = (int) $authRow['user_id'];
-    $authorDisplayName = $authRow['user_name'] ?? 'Contributor';
-    $authStmt->close();
+    $authorId = 1;
+    $authorUserId = 1;
+    $authorDisplayName = 'Admin';
 
-    // --- Upload Limit Checking (Saturday to Friday cycle) ---
-    $limitStmt = $mysqli->prepare("SELECT id, permission_type, weekly_upload_limit, uploads_this_week, last_upload_date FROM author_upload_limits WHERE author_id = ? LIMIT 1");
-    $limitStmt->bind_param("i", $authorId);
-    $limitStmt->execute();
-    $limitRes = $limitStmt->get_result();
-    
-    if ($limitRes->num_rows > 0) {
-        $limitRow = $limitRes->fetch_assoc();
-        $limitId = $limitRow['id'];
-        $permissionType = $limitRow['permission_type'];
-        $weeklyLimit = (int) $limitRow['weekly_upload_limit'];
-        $uploadsThisWeek = (int) $limitRow['uploads_this_week'];
-        $lastUploadDate = $limitRow['last_upload_date'];
-        
-        $now = new DateTime();
-        $dayOfWeek = (int) $now->format('w'); // 0 (Sun) to 6 (Sat)
-        
-        $startOfWeek = clone $now;
-        if ($dayOfWeek == 6) {
-            $startOfWeek->setTime(0, 0, 0);
-        } else {
-            $startOfWeek->modify('last saturday')->setTime(0, 0, 0);
+    $uStmt = $mysqli->prepare("SELECT id, name FROM users WHERE email = ? LIMIT 1");
+    if ($uStmt) {
+        $uStmt->bind_param("s", $userEmail);
+        $uStmt->execute();
+        $uRes = $uStmt->get_result();
+        if ($uRow = $uRes->fetch_assoc()) {
+            $authorUserId = (int)$uRow['id'];
+            $authorId = $authorUserId;
+            $authorDisplayName = $uRow['name'] ?? 'Admin';
         }
-        
-        if ($lastUploadDate) {
-            $lastUploadTime = new DateTime($lastUploadDate);
-            if ($lastUploadTime < $startOfWeek) {
-                // New week! Reset uploads_this_week
-                $uploadsThisWeek = 0;
-            }
-        }
-        
-        if ($permissionType === 'limited' && $uploadsThisWeek >= $weeklyLimit) {
-            throw new Exception("Upload Limit Reached: You have exhausted your weekly upload limit! It will renew next Saturday.");
-        }
+        $uStmt->close();
     }
-    $limitStmt->close();
-    // --------------------------------------------------------
 
     $isDraft = filter_var($_POST['is_draft'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -880,7 +842,7 @@ try {
        Contents Table Insert
     =========================== */
     $isPremium = $licenseType === 'premium' ? 1 : 0;
-    $status = $isDraft ? 'draft' : 'pending';
+    $status = 'published';
     
     // Default value
     $watermarkedVideoDatabasePath = null;
@@ -890,7 +852,6 @@ try {
 
     $contentQuery = "
         INSERT INTO contents (
-            author_id,
             asset_id,
             main_category_id,
             subcategory_id,
@@ -903,7 +864,6 @@ try {
             thumbnail_url,
             preview_600_url,
             preview_1200_url,
-            author_preview_url,
             content_type,
             is_premium,
             license_type,
@@ -912,8 +872,9 @@ try {
             height,
             orientation,
             status,
-            exclusive_price
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            exclusive_price,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ";
 
     $contentStatement = $mysqli->prepare($contentQuery);
@@ -927,8 +888,7 @@ try {
       s = string
     */
     $contentStatement->bind_param(
-        'isiisssssssssssissiissd',
-        $authorId,
+        'siissssssssssisiiissd',
         $assetId,
         $categoryId,
         $subcategoryId,
@@ -941,7 +901,6 @@ try {
         $thumbnailDatabasePath,
         $preview600DatabasePath,
         $preview1200DatabasePath,
-        $authorPreviewDatabasePath,
         $contentType,
         $isPremium,
         $licenseType,
@@ -982,20 +941,19 @@ try {
     $previewDatabasePath      = $dbBase . $previewFileName;
     $previewFullPath          = $finalUploadDirectory . $previewFileName; // UPDATE PREVIEW FULL PATH
     $watermarkDatabasePath    = file_exists($finalUploadDirectory . $watermarkFileName)   ? $dbBase . $watermarkFileName   : null;
-    $authorPreviewDatabasePath= file_exists($finalUploadDirectory . $authorPreviewFileName) ? $dbBase . $authorPreviewFileName : null;
     $thumbnailDatabasePath    = file_exists($finalUploadDirectory . 'preview-300.webp')   ? $dbBase . 'preview-300.webp'   : null;
     $preview600DatabasePath   = file_exists($finalUploadDirectory . 'preview-600.webp')   ? $dbBase . 'preview-600.webp'   : null;
     $preview1200DatabasePath  = file_exists($finalUploadDirectory . 'preview-1200.webp')  ? $dbBase . 'preview-1200.webp'  : null;
 
     // Update the contents row with the correct file paths
     $updatePaths = $mysqli->prepare(
-        "UPDATE contents SET preview_image=?, watermarked_preview_image=?, thumbnail_url=?, preview_600_url=?, preview_1200_url=?, author_preview_url=? WHERE id=?"
+        "UPDATE contents SET preview_image=?, watermarked_preview_image=?, thumbnail_url=?, preview_600_url=?, preview_1200_url=? WHERE id=?"
     );
     if (!$updatePaths) throw new Exception('Path update query error: ' . $mysqli->error);
-    $updatePaths->bind_param('ssssssi',
+    $updatePaths->bind_param('sssssi',
         $previewDatabasePath, $watermarkDatabasePath,
         $thumbnailDatabasePath, $preview600DatabasePath, $preview1200DatabasePath,
-        $authorPreviewDatabasePath, $contentId
+        $contentId
     );
     if (!$updatePaths->execute()) throw new Exception('Path update failed: ' . $updatePaths->error);
     $updatePaths->close();
@@ -1008,8 +966,6 @@ try {
         }
         unset($pmf);
     }
-
-    // CLOUDFLARE R2 UPLOAD moved to end of file
 
     /* ===========================
        Content Files Table
@@ -1118,11 +1074,11 @@ if ($mainFile['error'] !== UPLOAD_ERR_OK) {
             pathinfo($mainFile['name'], PATHINFO_EXTENSION)
         );
 
-        $allowedMainExtensions = ['eps', 'svg', 'ai', 'psd', 'zip', 'mp4', 'mov', 'webm'];
+        $allowedMainExtensions = ['eps', 'svg', 'ai', 'psd', 'zip', 'png', 'jpg', 'jpeg', 'webp', 'mp4', 'mov', 'webm'];
 
         if (!in_array($mainExtension, $allowedMainExtensions, true)) {
             throw new Exception(
-                'Main file must be EPS, SVG, AI, PSD, ZIP or Video (MP4/MOV/WEBM).'
+                'Main file must be EPS, SVG, AI, PSD, ZIP, PNG, JPG, WEBP or Video (MP4/MOV/WEBM).'
             );
         }
 
@@ -1373,43 +1329,13 @@ if ($mainFile['error'] !== UPLOAD_ERR_OK) {
     $newTagStatement->close();
     $contentTagStatement->close();
 
-    // --- CLOUDFLARE R2 UPLOAD ---
-    // Iterate over all successfully processed files and upload them to R2
-    foreach ($uploadedFiles as $localFilePath) {
-        if (file_exists($localFilePath)) {
-            $fileName = basename($localFilePath);
-            $r2Key = 'uploads/contents/' . $contentId . '/' . $fileName;
-            
-            $mime = mime_content_type($localFilePath);
-            if (!$mime) $mime = 'application/octet-stream';
-            if (pathinfo($localFilePath, PATHINFO_EXTENSION) === 'svg') $mime = 'image/svg+xml';
-            
-            $uploadSuccess = R2Helper::uploadFile($localFilePath, $r2Key, $mime);
-            
-            if ($uploadSuccess) {
-                unlink($localFilePath);
-            }
-        }
-    }
-    @rmdir($finalUploadDirectory);
-    // -----------------------------
+    // Files are saved directly to Hostinger server storage: uploads/contents/{contentId}/
 
     $mysqli->commit();
-
-    // --- Increment Upload Limit Counter ---
-    if (isset($limitId)) {
-        $newUploadCount = $uploadsThisWeek + 1;
-        $updateLimitStmt = $mysqli->prepare("UPDATE author_upload_limits SET uploads_this_week = ?, last_upload_date = NOW() WHERE id = ?");
-        $updateLimitStmt->bind_param("ii", $newUploadCount, $limitId);
-        $updateLimitStmt->execute();
-        $updateLimitStmt->close();
-    }
-    // --------------------------------------
 
     sendResponse(true, 'Content uploaded successfully.', [
         'content_id' => $contentId,
         'preview_image' => $previewDatabasePath,
-        'author_preview_url' => $authorPreviewDatabasePath,
         'thumbnail_url' => $thumbnailDatabasePath,
         'extracted_title' => $extractedMeta['title'] ?? '',
         'extracted_description' => $extractedMeta['description'] ?? '',

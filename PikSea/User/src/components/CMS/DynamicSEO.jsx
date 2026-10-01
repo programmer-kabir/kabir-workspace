@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 const DynamicSEO = ({ pageData }) => {
     if (!pageData) return null;
 
-    const title = pageData.meta_title || pageData.title || 'DayalStock';
+    const title = pageData.meta_title || pageData.title || 'PikSea — Pure Stock Photography';
     const description = pageData.meta_description || '';
     const keywords = pageData.meta_keywords || '';
     const canonical = pageData.canonical_url || '';

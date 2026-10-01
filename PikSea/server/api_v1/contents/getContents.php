@@ -19,8 +19,7 @@ $offset = ($page - 1) * $limit;
 
 // ─── WHERE Clause ────────────────────────────────────────────────
 $whereConditions = [
-    "c.status = 'published'",
-    "COALESCE(u.status, u_direct.status, 'active') = 'active'"
+    "c.status = 'published'"
 ];
 
 if (!empty($_GET['category_id'])) {
@@ -30,17 +29,38 @@ if (!empty($_GET['subcategory_id'])) {
     $whereConditions[] = "c.subcategory_id = " . (int)$_GET['subcategory_id'];
 }
 if (!empty($_GET['license_type']) && $_GET['license_type'] !== 'all') {
-    $whereConditions[] = "c.license_type = '" . $mysqli->real_escape_string($_GET['license_type']) . "'";
+    $lic = strtolower(trim($_GET['license_type']));
+    if ($lic === 'free') {
+        $whereConditions[] = "(c.license_type = 'free' OR c.is_premium = 0)";
+    } elseif ($lic === 'premium' || $lic === 'pro') {
+        $whereConditions[] = "(c.license_type = 'premium' OR c.is_premium = 1)";
+    } else {
+        $whereConditions[] = "c.license_type = '" . $mysqli->real_escape_string($lic) . "'";
+    }
+}
+if (isset($_GET['is_premium']) && $_GET['is_premium'] !== '' && $_GET['is_premium'] !== 'all') {
+    $isPrem = ($_GET['is_premium'] === '1' || $_GET['is_premium'] === 'true' || $_GET['is_premium'] === 'pro') ? 1 : 0;
+    $whereConditions[] = "c.is_premium = $isPrem";
 }
 if (!empty($_GET['ai_generated']) && $_GET['ai_generated'] !== 'all') {
-    $ai_val = ($_GET['ai_generated'] === 'true' || $_GET['ai_generated'] === '1') ? 1 : 0;
+    $ai_val = ($_GET['ai_generated'] === 'true' || $_GET['ai_generated'] === '1' || $_GET['ai_generated'] === 'yes') ? 1 : 0;
     $whereConditions[] = "c.ai_generated = $ai_val";
 }
-if (!empty($_GET['orientation'])) {
-    $whereConditions[] = "c.orientation = '" . $mysqli->real_escape_string($_GET['orientation']) . "'";
+if (!empty($_GET['orientation']) && $_GET['orientation'] !== 'all') {
+    $ori = strtolower(trim($_GET['orientation']));
+    if ($ori === 'landscape' || $ori === 'horizontal') {
+        $whereConditions[] = "c.orientation IN ('horizontal', 'landscape', 'panoramic')";
+    } elseif ($ori === 'portrait' || $ori === 'vertical') {
+        $whereConditions[] = "c.orientation IN ('vertical', 'portrait')";
+    } elseif ($ori === 'square') {
+        $whereConditions[] = "c.orientation = 'square'";
+    } else {
+        $whereConditions[] = "c.orientation = '" . $mysqli->real_escape_string($ori) . "'";
+    }
 }
-if (!empty($_GET['author_id'])) {
-    $whereConditions[] = "c.author_id = " . (int)$_GET['author_id'];
+if (!empty($_GET['color']) || !empty($_GET['dominant_color'])) {
+    $colorVal = $mysqli->real_escape_string(ltrim($_GET['color'] ?? $_GET['dominant_color'], '#'));
+    $whereConditions[] = "c.dominant_color LIKE '%$colorVal%'";
 }
 if (!empty($_GET['content_type']) && strtolower($_GET['content_type']) !== 'all') {
     $whereConditions[] = "c.content_type = '" . $mysqli->real_escape_string(strtolower($_GET['content_type'])) . "'";
@@ -56,9 +76,6 @@ $where = "WHERE " . implode(" AND ", $whereConditions);
 $countSql = "
     SELECT COUNT(c.id) AS total 
     FROM contents c
-    LEFT JOIN authors a ON a.id = c.author_id
-    LEFT JOIN users u ON u.id = a.user_id
-    LEFT JOIN users u_direct ON u_direct.id = c.author_id
     $where
 ";
 $countResult = $mysqli->query($countSql);
@@ -69,19 +86,19 @@ $totalPages = (int)ceil($total / $limit);
 // ─── Main Query ──────────────────────────────────────────────────
 $sql = "
     SELECT
-        c.id, c.author_id, c.main_category_id, c.subcategory_id,
+        c.id, c.main_category_id, c.subcategory_id,
         c.title, c.slug, c.description, c.preview_image,
         c.watermarked_preview_image, c.watermarked_preview_video,
-        c.thumbnail_url, c.preview_600_url, c.preview_1200_url, c.author_preview_url,
+        c.thumbnail_url, c.preview_600_url, c.preview_1200_url,
         c.views_count, c.downloads_count, c.likes_count, c.content_type,
         c.is_premium, c.license_type, c.ai_generated, c.width, c.height,
         c.orientation, c.dominant_color, c.status, c.published_at,
         c.updated_at, c.created_at,
 
-        COALESCE(NULLIF(u.name, ''), NULLIF(u_direct.name, ''), 'Contributor') AS author_name,
-        COALESCE(NULLIF(u.username, ''), NULLIF(u_direct.username, ''), '') AS author_username,
-        COALESCE(NULLIF(u.photo, ''), NULLIF(u_direct.photo, ''), '') AS author_avatar,
-        COALESCE(u.email, u_direct.email, '') AS author_email,
+        'PikSea Studio' AS author_name,
+        '' AS author_username,
+        '' AS author_avatar,
+        '' AS author_email,
 
         main_file.file_url AS image_url,
         main_file.file_name,
@@ -95,10 +112,6 @@ $sql = "
         ) AS tags_concat
 
     FROM contents c
-
-    LEFT JOIN authors a ON a.id = c.author_id
-    LEFT JOIN users u ON u.id = a.user_id
-    LEFT JOIN users u_direct ON u_direct.id = c.author_id
 
     LEFT JOIN (
         SELECT content_id, MAX(file_url) as file_url, MAX(file_name) as file_name, MAX(file_type) as file_type
@@ -117,7 +130,17 @@ $sql = "
 
     GROUP BY c.id
     
-    ORDER BY " . (!empty($_GET['sort']) && $_GET['sort'] === 'Most Popular' ? 'c.views_count DESC, c.id DESC' : 'c.id DESC') . "
+    ORDER BY " . (function() {
+        $sort = strtolower(trim($_GET['sort'] ?? ''));
+        if ($sort === 'popular' || $sort === 'most popular' || $sort === 'downloads') {
+            return 'c.downloads_count DESC, c.views_count DESC, c.id DESC';
+        } elseif ($sort === 'trending' || $sort === 'views') {
+            return '(c.downloads_count * 2 + c.views_count) DESC, c.id DESC';
+        } elseif ($sort === 'oldest') {
+            return 'c.id ASC';
+        }
+        return 'c.id DESC';
+    })() . "
 
     LIMIT $limit OFFSET $offset
 ";
@@ -154,7 +177,7 @@ while ($row = $result->fetch_assoc()) {
 
     $contents[] = [
         "id"                        => (int)$row["id"],
-        "author_id"                 => (int)$row["author_id"],
+        "author_id"                 => 1,
         "author_name"               => $row["author_name"],
         "author_username"           => $row["author_username"],
         "author_avatar"             => $row["author_avatar"],
@@ -170,7 +193,6 @@ while ($row = $result->fetch_assoc()) {
         "thumbnail_url"             => $row["thumbnail_url"],
         "preview_600_url"           => $row["preview_600_url"],
         "preview_1200_url"          => $row["preview_1200_url"],
-        "author_preview_url"        => $row["author_preview_url"],
         "views_count"               => (int)$row["views_count"],
         "downloads_count"           => (int)$row["downloads_count"],
         "likes_count"               => (int)$row["likes_count"],

@@ -105,13 +105,6 @@ if ($eventName === 'subscription_created' || $eventName === 'subscription_update
         if ($eventName === 'order_created' && isset($customData['type']) && $customData['type'] === 'exclusive_buyout') {
             $contentId = intval($customData['content_id'] ?? 0);
             if ($contentId > 0) {
-                // Fetch author_id from contents
-                $contentStmt = $mysqli->prepare("SELECT author_id FROM contents WHERE id = ?");
-                $contentStmt->bind_param("i", $contentId);
-                $contentStmt->execute();
-                $contentRes = $contentStmt->get_result()->fetch_assoc();
-                $authorId = $contentRes['author_id'] ?? 0;
-
                 // 1. Mark content as sold
                 $updateContent = $mysqli->prepare("UPDATE contents SET is_exclusive_sold = 1, status = 'exclusive_buyout' WHERE id = ?");
                 $updateContent->bind_param("i", $contentId);
@@ -127,7 +120,7 @@ if ($eventName === 'subscription_created' || $eventName === 'subscription_update
                 // 3. Update payment_transactions with the buyout source_id and payment_source
                 $updateTx = $mysqli->prepare("UPDATE payment_transactions SET payment_source = 'exclusive_buyout', source_id = ? WHERE id = ?");
                 $updateTx->bind_param("ii", $buyoutId, $paymentTransactionId);
-                // 4. Record 100% Company/Admin earnings for the buyout (Staff model - 0% contributor split)
+                // 4. Record 100% Company/Admin earnings for the buyout
                 $companyCut = $amount; // 100% to admin
                 $earningMonth = date('Y-m');
                 $companyEarningsSql = "

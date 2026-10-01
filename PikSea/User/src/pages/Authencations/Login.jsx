@@ -21,7 +21,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // OTP state
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpType, setOtpType] = useState("registration"); // 'registration' | 'password_reset'
@@ -290,7 +290,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#030303] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-inter transition-colors duration-300">
-      
+
       {/* Background Ambient Mesh Light Spheres */}
       <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-[#ff7900]/20 via-[#ff9400]/10 to-transparent rounded-full filter blur-[140px] pointer-events-none opacity-80 dark:opacity-40 animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-gradient-to-tl from-[#00D4FF]/20 via-[#8B5CF6]/15 to-transparent rounded-full filter blur-[140px] pointer-events-none opacity-80 dark:opacity-40" style={{ animationDelay: '3s' }} />
@@ -300,11 +300,11 @@ const Login = () => {
 
       {/* Main Container */}
       <div className="max-w-5xl w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
+
         {/* ============================================================ */}
         {/* LEFT COLUMN: BRAND & CREATIVE HIGHLIGHTS (Visible on lg+) */}
         {/* ============================================================ */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
@@ -327,7 +327,7 @@ const Login = () => {
 
           {/* Floating Feature Badges */}
           <div className="space-y-4">
-            <motion.div 
+            <motion.div
               whileHover={{ x: 6 }}
               className="flex items-center gap-4 p-4 rounded-2xl bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl border border-gray-200/80 dark:border-white/10 shadow-sm"
             >
@@ -340,7 +340,7 @@ const Login = () => {
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               whileHover={{ x: 6 }}
               className="flex items-center gap-4 p-4 rounded-2xl bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl border border-gray-200/80 dark:border-white/10 shadow-sm"
             >
@@ -353,7 +353,7 @@ const Login = () => {
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               whileHover={{ x: 6 }}
               className="flex items-center gap-4 p-4 rounded-2xl bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl border border-gray-200/80 dark:border-white/10 shadow-sm"
             >
@@ -385,7 +385,7 @@ const Login = () => {
         {/* ============================================================ */}
         {/* RIGHT COLUMN: AUTHENTICATION CARD */}
         {/* ============================================================ */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -406,7 +406,7 @@ const Login = () => {
           {/* Premium Glass Card */}
           <div className="relative rounded-[28px] p-1 bg-gradient-to-b from-gray-200/80 via-gray-100/50 to-transparent dark:from-white/15 dark:via-white/5 dark:to-transparent shadow-[0_20px_50px_rgba(0,0,0,0.06)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-3xl">
             <div className="bg-white/95 dark:bg-[#0B0B0C]/90 rounded-[26px] p-6 sm:p-9 relative overflow-hidden min-h-[480px]">
-              
+
               {/* Ultra-Premium In-Card Frosted Loader Overlay */}
               <AnimatePresence>
                 {isSubmitting && (
@@ -418,7 +418,7 @@ const Login = () => {
               <div className="absolute top-0 left-10 right-10 h-[2px] bg-gradient-to-r from-transparent via-[#ff7900] to-transparent opacity-80" />
 
               <AnimatePresence mode="wait">
-                
+
                 {/* ──────────────────────────────────────────────────────────── */}
                 {/* 1. SIGN IN & SIGN UP SCREENS */}
                 {/* ──────────────────────────────────────────────────────────── */}
@@ -436,8 +436,8 @@ const Login = () => {
                         {mode === "signin" ? "Welcome Back" : "Join PikSea"}
                       </h3>
                       <p className="mt-1.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                        {mode === "signin" 
-                          ? "Sign in to access your saved downloads & collections" 
+                        {mode === "signin"
+                          ? "Sign in to access your saved downloads & collections"
                           : "Create an account with instant 6-digit email verification"}
                       </p>
                     </div>
@@ -447,11 +447,10 @@ const Login = () => {
                       <button
                         type="button"
                         onClick={() => setMode("signin")}
-                        className={`relative flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 z-10 ${
-                          mode === "signin"
+                        className={`relative flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 z-10 ${mode === "signin"
                             ? "text-gray-900 dark:text-white"
                             : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                        }`}
+                          }`}
                       >
                         {mode === "signin" && (
                           <motion.div
@@ -466,11 +465,10 @@ const Login = () => {
                       <button
                         type="button"
                         onClick={() => setMode("signup")}
-                        className={`relative flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 z-10 ${
-                          mode === "signup"
+                        className={`relative flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 z-10 ${mode === "signup"
                             ? "text-gray-900 dark:text-white"
                             : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                        }`}
+                          }`}
                       >
                         {mode === "signup" && (
                           <motion.div
@@ -484,7 +482,7 @@ const Login = () => {
                     </div>
 
                     {/* Google 1-Click Button */}
-                    <button 
+                    <button
                       type="button"
                       onClick={handleGoogleLogin}
                       disabled={isSubmitting}

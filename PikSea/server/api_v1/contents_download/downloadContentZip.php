@@ -78,35 +78,18 @@ $files  = [];
 while ($row = $result->fetch_assoc()) { $files[] = $row; }
 if (count($files) === 0) { exit("No files found for this content"); }
 
-// ── Fetch content meta for ZIP naming & notification ────────────────────────
+// ── Fetch content meta for ZIP naming ────────────────────────
 $contentSql = "
-    SELECT c.slug, c.title, c.license_type, a.user_id as author_user_id
+    SELECT c.slug, c.title, c.license_type
     FROM contents c
-    LEFT JOIN authors a ON c.author_id = a.id
     WHERE c.id = ? LIMIT 1
 ";
 $contentStmt = $mysqli->prepare($contentSql);
 $contentStmt->bind_param("i", $contentId);
 $contentStmt->execute();
 $content        = $contentStmt->get_result()->fetch_assoc();
-$slug           = $content["slug"]           ?? "dayalstock-content";
-$title          = $content["title"]          ?? "DayalStock Asset";
-$author_user_id = $content["author_user_id"] ?? null;
-
-if ($author_user_id && $author_user_id != $user_id) {
-    sendNotification($mysqli, [
-        'user_id'     => $author_user_id,
-        'sender_id'   => $user_id,
-        'sender_type' => 'user',
-        'target_role' => 'user',
-        'type'        => 'general',
-        'title'       => 'New Download!',
-        'message'     => 'Your content "' . $title . '" has just been downloaded.',
-        'icon'        => 'download',
-        'link'        => '/content/' . $slug,
-        'priority'    => 'low'
-    ]);
-}
+$slug           = $content["slug"]           ?? "piksea-content";
+$title          = $content["title"]          ?? "PikSea Asset";
 
 // ── Build ZIP ────────────────────────────────────────────────────────────────
 $publicRoot   = realpath(__DIR__ . "/../../");
@@ -139,36 +122,14 @@ foreach ($files as $file) {
         }
     }
     
-    $added = false;
     $realFilePath = rtrim($publicRoot, "/") . "/" . $relativePath;
     if (file_exists($realFilePath)) {
         if ($zip->addFile($realFilePath, $file["file_name"])) { 
             $addedFiles++; 
-            $added = true;
         }
     } elseif (file_exists(rtrim(dirname($publicRoot), "/") . "/" . $relativePath)) {
         if ($zip->addFile(rtrim(dirname($publicRoot), "/") . "/" . $relativePath, $file["file_name"])) { 
             $addedFiles++; 
-            $added = true;
-        }
-    }
-    
-    // Fallback to CDN if local file not found
-    if (!$added) {
-        $cdnUrl = (strpos($fileUrl, 'http') === 0) ? $fileUrl : "https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/" . ltrim($relativePath, "/");
-        $tempFile = tempnam(sys_get_temp_dir(), 'zipdl_');
-        $fp = @fopen($cdnUrl, 'rb');
-        if ($fp) {
-            $dest = fopen($tempFile, 'wb');
-            stream_copy_to_stream($fp, $dest);
-            fclose($fp);
-            fclose($dest);
-            if ($zip->addFile($tempFile, $file["file_name"])) {
-                $addedFiles++;
-                $tempFiles[] = $tempFile;
-            } else {
-                unlink($tempFile);
-            }
         }
     }
 }
@@ -179,12 +140,6 @@ $licenseIsPrem   = $perm['is_premium'];
 $licensePdfBytes = generateDayalStockLicensePDF($title, $email, $licenseId, $downloadDate, $licenseIsPrem);
 $zip->addFromString('LICENSE.pdf', $licensePdfBytes);
 $zip->close();
-
-if (isset($tempFiles) && is_array($tempFiles)) {
-    foreach ($tempFiles as $t) {
-        if (file_exists($t)) @unlink($t);
-    }
-}
 
 if ($addedFiles === 0) {
     if (file_exists($zipPath)) unlink($zipPath);

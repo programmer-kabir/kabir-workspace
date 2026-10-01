@@ -10,7 +10,7 @@ const PendingReview = () => {
   return (
     <ContentPageLayout
       title="Pending Review"
-      subtitle="Review and moderate contributor submissions awaiting approval"
+      subtitle="Review and moderate draft assets awaiting approval"
       icon={<Clock size={22} />}
       accentColor="#F59E0B"
       contents={pending}

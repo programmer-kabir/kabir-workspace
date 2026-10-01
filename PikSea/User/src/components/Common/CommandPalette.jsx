@@ -335,7 +335,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
               to select
             </span>
           </div>
-          <span className="text-gray-400 dark:text-gray-500 hidden sm:inline">DayalStock Instant Spotlight</span>
+          <span className="text-gray-400 dark:text-gray-500 hidden sm:inline">PikSea Instant Spotlight</span>
         </div>
       </div>
     </div>

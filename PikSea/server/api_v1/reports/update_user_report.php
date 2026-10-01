@@ -124,7 +124,7 @@ try {
             while ($uRow = $usersRes->fetch_assoc()) {
                 $targetUserId = (int)$uRow['target_user_id'];
                 if ($targetUserId > 0) {
-                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'Contributor';
+                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'User';
                     $userEmail = !empty($uRow['email']) ? $uRow['email'] : '';
                     $reasonText = !empty($uRow['reason']) ? $uRow['reason'] : 'Terms Violation';
                     $noteText = !empty($adminNote) ? $adminNote : (!empty($uRow['description']) ? $uRow['description'] : 'Please review our platform guidelines to ensure compliance.');
@@ -168,7 +168,7 @@ try {
             while ($uRow = $usersRes->fetch_assoc()) {
                 $targetUserId = (int)$uRow['target_user_id'];
                 if ($targetUserId > 0) {
-                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'Contributor';
+                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'User';
                     $userEmail = !empty($uRow['email']) ? $uRow['email'] : '';
                     $reasonText = !empty($uRow['reason']) ? $uRow['reason'] : 'Terms Violation';
                     $noteText = !empty($adminNote) ? $adminNote : (!empty($uRow['description']) ? $uRow['description'] : 'Serious terms of service violation.');
@@ -231,7 +231,7 @@ try {
             while ($uRow = $usersRes->fetch_assoc()) {
                 $targetUserId = (int)$uRow['target_user_id'];
                 if ($targetUserId > 0) {
-                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'Contributor';
+                    $userName = !empty($uRow['name']) ? $uRow['name'] : 'User';
                     $userEmail = !empty($uRow['email']) ? $uRow['email'] : '';
                     $reasonText = !empty($uRow['reason']) ? $uRow['reason'] : 'Multiple Policy Violations';
                     $noteText = !empty($adminNote) ? $adminNote : 'Account permanently banned due to repeated warnings.';

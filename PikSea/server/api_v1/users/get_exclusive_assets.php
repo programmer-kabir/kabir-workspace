@@ -27,11 +27,10 @@ try {
             eb.amount, 
             eb.transaction_id, 
             eb.created_at,
-            u.username as author_username,
-            u.name as author_name
+            'piksea' as author_username,
+            'PikSea Official' as author_name
         FROM exclusive_buyouts eb
         JOIN contents c ON eb.content_id = c.id
-        LEFT JOIN users u ON c.author_id = u.id
         LEFT JOIN (
             SELECT content_id, MAX(file_url) as file_url, MAX(file_type) as file_type
             FROM content_files

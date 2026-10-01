@@ -65,8 +65,7 @@ async function generateTransparentLogo() {
 
   const targetDirs = [
     'c:\\Users\\DAYALGURU\\Desktop\\KABIR\\PikSea\\User\\public',
-    'c:\\Users\\DAYALGURU\\Desktop\\KABIR\\PikSea\\Admin\\public',
-    'c:\\Users\\DAYALGURU\\Desktop\\KABIR\\PikSea\\Contributor\\public'
+    'c:\\Users\\DAYALGURU\\Desktop\\KABIR\\PikSea\\Admin\\public'
   ];
 
   for (const dir of targetDirs) {
@@ -85,7 +84,7 @@ async function generateTransparentLogo() {
     await sharp(birdIconBuffer).resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(dir, 'favicon-32x32.png'));
   }
 
-  console.log('All transparent PNG and WebP logos generated and saved successfully across User, Admin, and Contributor!');
+  console.log('All transparent PNG and WebP logos generated and saved successfully across User and Admin!');
 }
 
 generateTransparentLogo().catch(err => {

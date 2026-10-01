@@ -31,7 +31,7 @@ const Account = ({ userData, setActiveTab }) => {
     });
 
     const [previewImage, setPreviewImage] = useState(
-        profile?.photo ? `https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/${profile?.photo}` : null
+        profile?.photo ? (profile.photo.startsWith('http') ? profile.photo : `${import.meta.env.VITE_IMG_KEY || ''}/${profile.photo}`) : null
     );
 
     useEffect(() => {
@@ -43,7 +43,7 @@ const Account = ({ userData, setActiveTab }) => {
             photo: null
         });
         setPreviewImage(
-            p?.photo ? (p.photo.startsWith('http') ? p.photo : `https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/${p?.photo}`) : null
+            p?.photo ? (p.photo.startsWith('http') ? p.photo : `${import.meta.env.VITE_IMG_KEY || ''}/${p?.photo}`) : null
         );
     }, [userData, user]);
 
@@ -113,7 +113,7 @@ const Account = ({ userData, setActiveTab }) => {
                         <div className="relative">
                             {profile?.photo ? (
                                 <img
-                                    src={profile.photo.startsWith('http') ? profile.photo : `https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/${profile?.photo}`}
+                                    src={profile.photo.startsWith('http') ? profile.photo : `${import.meta.env.VITE_IMG_KEY || ''}/${profile?.photo}`}
                                     alt="Profile"
                                     className="w-28 h-28 rounded-full object-cover border-4 border-gray-100 dark:border-[#111] shadow-[0_0_20px_rgba(0,212,255,0.2)]"
                                 />

@@ -1,1 +1,1 @@
-{"data":{"viewer":{"accounts":[{"r2OperationsAdaptiveGroups":[{"dimensions":{"actionType":"GetObject"},"sum":{"requests":1701}},{"dimensions":{"actionType":"ListObjects"},"sum":{"requests":1}},{"dimensions":{"actionType":"PutObject"},"sum":{"requests":116}},{"dimensions":{"actionType":"ListBuckets"},"sum":{"requests":2}}]}]}},"errors":null}
+{"success":false,"errors":[{"code":10000,"message":"Authentication error"}],"messages":[],"result":null}

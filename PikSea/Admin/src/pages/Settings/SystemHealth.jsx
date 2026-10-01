@@ -142,9 +142,9 @@ const SystemHealth = () => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <StatCard 
-              title="Cloudflare R2" 
-              value={`${healthData?.r2?.size_gb || 0} GB`} 
-              total="Unlimited" 
+              title="Asset Storage" 
+              value={`${healthData?.storage_stats?.size_gb ?? healthData?.r2?.size_gb ?? 0} GB`} 
+              total="Hostinger Storage" 
               icon={Cloud} 
               color="cyan" 
             />
@@ -189,42 +189,26 @@ const SystemHealth = () => {
             <div className="bg-[#151521] border border-white/5 rounded-2xl p-6">
                <h4 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
                  <Cloud className="text-cyan-400" size={20} />
-                 Cloudflare R2 Details
+                 Asset Storage Details
                </h4>
                
                <div className="space-y-6">
                  <div>
                    <div className="flex justify-between text-sm mb-1">
-                     <span className="text-gray-400">R2 Total Size</span>
-                     <span className="text-white font-medium">{healthData?.r2?.size_gb || 0} GB</span>
+                     <span className="text-gray-400">Total Uploads Size</span>
+                     <span className="text-white font-medium">{healthData?.storage_stats?.size_gb ?? healthData?.r2?.size_gb ?? 0} GB</span>
                    </div>
                  </div>
                  <div>
                    <div className="flex justify-between text-sm mb-1">
                      <span className="text-gray-400">Total Objects (Files)</span>
-                     <span className="text-white font-medium">{healthData?.r2?.objects || 0} files</span>
+                     <span className="text-white font-medium">{healthData?.storage_stats?.objects ?? healthData?.r2?.objects ?? 0} files</span>
                    </div>
                  </div>
                  <div className="pt-4 border-t border-white/5">
                    <div className="flex justify-between text-sm mb-1">
-                     <div>
-                       <span className="text-gray-400">Class A Operations</span>
-                       <p className="text-[11px] text-gray-500">Upload, Copy, List Files</p>
-                     </div>
-                     <div className="text-right">
-                       <span className="text-white font-medium">{healthData?.r2?.class_a || 0}</span>
-                       <span className="text-gray-500 text-xs ml-1">/ 1M (Free)</span>
-                     </div>
-                   </div>
-                   <div className="flex justify-between text-sm mt-3">
-                     <div>
-                       <span className="text-gray-400">Class B Operations</span>
-                       <p className="text-[11px] text-gray-500">View, Download, Read Files</p>
-                     </div>
-                     <div className="text-right">
-                       <span className="text-white font-medium">{healthData?.r2?.class_b || 0}</span>
-                       <span className="text-gray-500 text-xs ml-1">/ 10M (Free)</span>
-                     </div>
+                     <span className="text-gray-400">Storage Location</span>
+                     <span className="text-white font-medium">Local Server Storage</span>
                    </div>
                  </div>
                </div>

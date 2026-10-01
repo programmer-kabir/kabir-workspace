@@ -12,3 +12,15 @@
 2026-09-13 11:42:35 - Call to undefined function imagecreatefrompng()
 2026-09-13 11:42:36 - Call to undefined function imagecreatefrompng()
 2026-09-13 11:43:14 - Call to undefined function imagecreatefromjpeg()
+2026-09-30 13:10:09 - The number of elements in the type definition string must match the number of bind variables
+2026-09-30 13:15:47 - Main file must be EPS, SVG, AI, PSD, ZIP or Video (MP4/MOV/WEBM).
+2026-09-30 14:01:20 - At least a main file or preview file is required.
+2026-10-01 11:37:39 - Content folder rename করা যায়নি (temp → 3)।
+2026-10-01 11:37:51 - Content folder rename করা যায়নি (temp → 5)।
+2026-10-01 11:37:56 - Content folder rename করা যায়নি (temp → 6)।
+2026-10-01 11:38:00 - Content folder rename করা যায়নি (temp → 7)।
+2026-10-01 11:38:04 - Content folder rename করা যায়নি (temp → 8)।
+2026-10-01 11:38:10 - Content folder rename করা যায়নি (temp → 9)।
+2026-10-01 11:38:15 - Content folder rename করা যায়নি (temp → 10)।
+2026-10-01 11:38:18 - Content folder rename করা যায়নি (temp → 11)।
+2026-10-01 11:38:44 - Content folder rename করা যায়নি (temp → 12)।

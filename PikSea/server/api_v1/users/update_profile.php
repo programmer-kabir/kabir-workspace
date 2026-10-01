@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/r2_config.php';
 require_once __DIR__ . '/../middleware/auth.php'; // SECURE: Verify Firebase Token
 
 header("Content-Type: application/json");
@@ -63,13 +62,6 @@ try {
         if ($image !== false) {
             if (imagewebp($image, $filePath, 80)) {
                 $dbPhotoPath = 'uploads/users/' . $fileName;
-                
-                if (class_exists('R2Helper')) {
-                    $uploadSuccess = R2Helper::uploadFile($filePath, $dbPhotoPath, 'image/webp');
-                    if ($uploadSuccess) {
-                        @unlink($filePath);
-                    }
-                }
             }
             imagedestroy($image);
         }

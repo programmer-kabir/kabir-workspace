@@ -23,7 +23,7 @@ if ($userId <= 0 || empty($roles)) {
     exit;
 }
 
-$allowedRoles = ['admin', 'manager', 'author', 'contributor', 'user', 'pro', 'premium'];
+$allowedRoles = ['admin', 'manager', 'user', 'pro', 'premium'];
 $validRoles = [];
 
 foreach ($roles as $r) {
@@ -67,32 +67,6 @@ try {
     }
     $stmt2->close();
 
-    // 3. If any role is author/contributor, ensure they exist in authors table
-    if (in_array('author', $validRoles) || in_array('contributor', $validRoles)) {
-        $stmtAuthorCheck = $mysqli->prepare("SELECT id FROM authors WHERE user_id = ?");
-        $stmtAuthorCheck->bind_param("i", $userId);
-        $stmtAuthorCheck->execute();
-        $resAuthorCheck = $stmtAuthorCheck->get_result();
-        
-        if ($resAuthorCheck->num_rows === 0) {
-            // Does not exist, create an empty profile
-            $stmtInsertAuthor = $mysqli->prepare("INSERT INTO authors (user_id) VALUES (?)");
-            $stmtInsertAuthor->bind_param("i", $userId);
-            if (!$stmtInsertAuthor->execute()) {
-                throw new Exception("Failed to insert author: " . $stmtInsertAuthor->error);
-            }
-            $newAuthorId = $stmtInsertAuthor->insert_id;
-            $stmtInsertAuthor->close();
-            
-            // Set default limits to 50
-            $stmtInsertLimit = $mysqli->prepare("INSERT INTO author_upload_limits (author_id, permission_type, weekly_upload_limit, max_file_size_mb) VALUES (?, 'limited', 50, 10)");
-            $stmtInsertLimit->bind_param("i", $newAuthorId);
-            $stmtInsertLimit->execute();
-            $stmtInsertLimit->close();
-        }
-        $stmtAuthorCheck->close();
-    }
-
     $mysqli->commit();
 
     // Send Notification to the User
@@ -105,7 +79,7 @@ try {
         'type'        => 'general',
         'title'       => 'Role Updated',
         'message'     => "Your account role has been updated. You are now: $rolesStr.",
-        'link'        => 'https://contributor.dayalstock.com/login', // optional link
+        'link'        => '/accounts',
         'priority'    => 'normal'
     ]);
 

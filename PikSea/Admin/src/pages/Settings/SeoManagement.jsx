@@ -19,7 +19,7 @@ const SeoManagement = () => {
   };
 
   return (
-    <div className="p-6 mx-auto space-y-6">
+    <div className="">
       <div>
         <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
           <Globe className="text-[#6C4FE0]" />

@@ -238,7 +238,7 @@ const RejectModal = ({ content, onClose, onConfirm, loading }) => {
 /* ──────────────────────────────────────────────── */
 /*  PREVIEW MODAL                                   */
 /* ──────────────────────────────────────────────── */
-const PreviewModal = ({ content, onClose, onPublish, onReject, loading, showActions, authorName }) => {
+const PreviewModal = ({ content, onClose, onPublish, onReject, loading, showActions }) => {
   const [imgZoomed, setImgZoomed] = useState(false);
 
   // Admin sees the clean preview_image (no watermark)
@@ -377,10 +377,10 @@ const PreviewModal = ({ content, onClose, onPublish, onReject, loading, showActi
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <div className="flex items-center gap-2 text-sm">
-                  <User size={14} className="text-[#6C4FE0] flex-shrink-0" />
-                  <span className="text-gray-400">Contributor:</span>
-                  <span className="text-gray-200 truncate">
-                    <Link to={`/dashboard/author/${content?.author_username || content?.author_id}`} className="text-blue-400 hover:underline">{authorName || content?.author_name || "Unknown"}</Link>
+                  <User size={14} className="text-[#00D4FF] flex-shrink-0" />
+                  <span className="text-gray-400">Publisher:</span>
+                  <span className="text-gray-200 truncate font-medium">
+                    PikSea Official
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -640,7 +640,7 @@ const PreviewModal = ({ content, onClose, onPublish, onReject, loading, showActi
 /* ──────────────────────────────────────────────── */
 /*  MAIN CARD                                       */
 /* ──────────────────────────────────────────────── */
-const ContentCard = ({ content, onPublish, onReject, loading, showActions = true, authors, isSelected, onToggleSelect, onQuickInspect }) => {
+const ContentCard = ({ content, onPublish, onReject, loading, showActions = true, isSelected, onToggleSelect, onQuickInspect }) => {
   const [hovered, setHovered] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -649,11 +649,6 @@ const ContentCard = ({ content, onPublish, onReject, loading, showActions = true
   const status = content?.status || "pending";
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const StatusIcon = cfg.icon;
-
-  const itemAuthor = authors?.find(a => String(a._id) === String(content?.author_id) || String(a.id) === String(content?.author_id) || String(a.user_id) === String(content?.author_id));
-  const authorName = itemAuthor?.name || itemAuthor?.username || itemAuthor?.full_name || content?.author_name || content?.author_username || content?.author_email || "Unknown";
-  const authorAvatar = itemAuthor?.avatar || itemAuthor?.avater || itemAuthor?.photo || content?.author_avatar;
-  const authorImgUrl = authorAvatar ? (authorAvatar.startsWith('http') ? authorAvatar : `${import.meta.env.VITE_IMG_KEY}/${authorAvatar.startsWith('/') ? authorAvatar.slice(1) : authorAvatar}`) : null;
   const mainFileCount = (content?.files || []).filter((f) => !f.is_main_file).length;
 
   const handlePublish = () => {
@@ -784,21 +779,11 @@ const ContentCard = ({ content, onPublish, onReject, loading, showActions = true
           <h3 className="text-white font-semibold text-sm truncate mb-1">
             {content?.title || "Untitled"}
           </h3>
-          <div className="flex items-center gap-2 mb-3">
-            <div
-              className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 overflow-hidden"
-              style={{ background: "linear-gradient(135deg,#6C4FE0,#FF6B6B)" }}
-            >
-              {authorImgUrl ? (
-                <img src={authorImgUrl} alt={authorName} className="w-full h-full object-cover" />
-              ) : (
-                authorName[0]?.toUpperCase() || "U"
-              )}
-            </div>
-            <span className="text-gray-400 text-xs truncate">
-              By <Link to={`/dashboard/author/${itemAuthor?.username || content?.author_username || itemAuthor?.id || content?.author_id}`} className="text-blue-400 hover:underline">{authorName}</Link>
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+            <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-gray-300 font-medium">
+              {content?.category_name || "Uncategorized"}
             </span>
-            <span className="ml-auto text-gray-600 text-xs flex-shrink-0">
+            <span className="text-gray-500">
               {content?.created_at
                 ? new Date(content.created_at).toLocaleDateString("en-US", {
                   month: "short",
@@ -883,7 +868,6 @@ const ContentCard = ({ content, onPublish, onReject, loading, showActions = true
           onReject={handleRejectOpen}
           loading={loading}
           showActions={showActions}
-          authorName={authorName}
         />
       )}
       {rejectOpen && (

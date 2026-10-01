@@ -55,28 +55,80 @@ html, body {
 
 /* Interactive Canvas Drag & Drop Styles */
 .interactive-drag-enabled [data-draggable] {
-  cursor: grab;
-  transition: opacity 0.15s ease, filter 0.15s ease;
-  user-select: none;
+  cursor: default;
+  transition: opacity 0.15s ease;
 }
 
 .interactive-drag-enabled [data-draggable]:hover {
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.45));
-  outline: 1px dashed rgba(34, 211, 238, 0.5);
-  outline-offset: 4px;
+  outline: 1px dashed rgba(6, 182, 212, 0.6);
+  outline-offset: 3px;
+  cursor: pointer;
 }
 
 .interactive-drag-enabled [data-draggable].draggable-hover {
-  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.6));
+  outline: 1.5px dashed #06b6d4;
+  outline-offset: 4px;
 }
 
 .interactive-drag-enabled [data-draggable].is-dragging {
   cursor: grabbing !important;
-  opacity: 0.85;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 12px rgba(34, 211, 238, 0.8)) !important;
+  opacity: 0.9;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.25)) !important;
 }
 
 .interactive-drag-enabled [data-draggable] * {
   pointer-events: all;
 }
+
+/* Adobe / Canva In-Place Type Tool Active State */
+.adobe-type-active {
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+  caret-color: #00c6ff !important;
+  resize: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.adobe-type-active::selection {
+  background: rgba(0, 198, 255, 0.35);
+  color: inherit;
+}
+
+.adobe-type-wrapper {
+  position: absolute;
+  pointer-events: auto;
+  background: transparent !important;
+  border: 1.5px solid #00c6ff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.2);
+  padding: 0px !important;
+  margin: 0px !important;
+  box-sizing: border-box;
+  z-index: 50;
+  transition: box-shadow 0.15s ease;
+}
+
+/* Hide underlying SVG element completely when in-place Type Tool is editing that layer */
+.layer-editing-now {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Selection Transform Bounding Box (Canva / Illustrator Style) */
+#canvasSelectionOverlay {
+  border: 1.5px solid #06b6d4;
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.2), 0 4px 12px rgba(6, 182, 212, 0.15);
+  background: rgba(6, 182, 212, 0.03);
+}
+
+.canva-resize-handle {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+
+
 

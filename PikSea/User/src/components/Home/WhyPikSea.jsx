@@ -1,89 +1,97 @@
+import { Camera, ShieldCheck, Sparkles, Zap, Award, Compass } from "lucide-react";
 import ScrollReveal from "../FramerMotion/ScrollReveal";
-import {
-  Camera,
-  BadgeCheck,
-  Sparkles,
-  Zap,
-} from "lucide-react";
-import useSiteSettings from "../../utlis/Hooks/useSiteSettings";
-
-const iconMap = { Camera, BadgeCheck, Sparkles, Zap };
 
 const features = [
   {
     icon: Camera,
-    title: "Pure Stock Photography",
-    description:
-      "Curated high-resolution stock photos captured by world-class photographers with crystal clear sharpness.",
+    badge: "Optical Perfection",
+    title: "Pure Photography Standard",
+    description: "Every photograph is reviewed for optical sharpness, chromatic balance, dynamic range, and authentic composition.",
   },
   {
-    icon: BadgeCheck,
-    title: "Commercial Licensing",
-    description:
-      "Simple, royalty-free commercial and editorial licenses for marketing, ads, and digital publishing.",
+    icon: ShieldCheck,
+    badge: "100% Cleared",
+    title: "Universal Commercial License",
+    description: "Worry-free commercial & editorial rights with zero attribution requirements. Built for global brand campaigns.",
   },
   {
     icon: Sparkles,
-    title: "Fresh Daily Shots",
-    description:
-      "Authentic, unposed photography and diverse perspectives added daily across every category.",
+    badge: "Human Curated",
+    title: "Transparent & Verified Assets",
+    description: "Clear AI vs Camera shot tags, complete EXIF camera parameters, and curated collections by professional visual editors.",
   },
   {
     icon: Zap,
-    title: "Instant 4K & 8K Downloads",
-    description:
-      "High-speed CDN delivery of full-resolution original image files with complete EXIF camera data.",
+    badge: "Ultra Fast",
+    title: "Lossless 8K & RAW Downloads",
+    description: "Lightning-speed edge CDN delivery of uncompressed original files ready for massive billboards and 4K displays.",
   },
 ];
 
 const WhyPikSea = () => {
-  const { data: settings = {} } = useSiteSettings();
-  const activeFeatures = settings?.why_ds_features || features;
   return (
     <ScrollReveal>
-      <section className="bg-gray-50 dark:bg-[#070B12] py-24 relative overflow-hidden transition-colors duration-300">
-        {/* Ocean Decorative background circle */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#0284C7]/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <section className="bg-white dark:bg-[#05070D] py-28 relative overflow-hidden transition-colors duration-300">
         
-        <div className="relative mx-auto max-w-[1600px] px-4 lg:px-8 z-10">
-          {/* Heading */}
-          <div className="text-center mb-16">
-            <span className="inline-block rounded-full border border-[#0284C7]/30 bg-[#0284C7]/10 px-4 py-1.5 text-xs font-outfit font-bold text-[#0284C7] mb-6 uppercase tracking-widest">
-              {settings?.why_ds_badge || "Why Choose PikSea"}
-            </span>
-            <h2 className="text-4xl font-outfit font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl tracking-tight">
-              {settings?.why_ds_title || "Pure Photography. Infinite Inspiration."}
+        {/* Geometric Light Cones in Background */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#00D4FF]/5 rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#0284C7]/5 rounded-full blur-[160px] pointer-events-none" />
+
+        <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 xl:px-12 z-10">
+          
+          {/* Section Heading */}
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[#00D4FF] text-xs font-bold uppercase tracking-widest mb-4">
+              <Award size={14} />
+              <span>The PikSea Distinction</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+              Engineered for Creators Who Demand Perfection.
             </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base mt-4">
+              We ditched generic vector graphics and low-res illustrations to focus 100% on pure, world-class stock photography.
+            </p>
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {activeFeatures.map((feature, index) => {
-              const Icon = typeof feature.icon === "string" ? iconMap[feature.icon] || Camera : feature.icon;
-
+          {/* 4 Architectural Feature Pillars */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((item, idx) => {
+              const Icon = item.icon;
               return (
                 <div
-                  key={index}
-                  className="group relative rounded-3xl bg-white dark:bg-[#0F172A] p-8 transition-all duration-500 hover:shadow-[0_8px_30px_rgba(2,132,199,0.15)] hover:-translate-y-2 text-center border border-gray-200 dark:border-white/5 hover:border-[#0284C7]/40"
+                  key={idx}
+                  className="group relative rounded-3xl p-8 bg-gray-50 dark:bg-[#0A0E1A] border border-gray-200 dark:border-white/10 hover:border-[#00D4FF]/50 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-950/20 flex flex-col justify-between"
                 >
-                  <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-50 dark:bg-[#070B12] border border-gray-200 dark:border-white/10 transition-colors duration-500 group-hover:border-[#0284C7]/50 group-hover:bg-[#0284C7]/10">
-                    <Icon
-                      size={36}
-                      className="text-gray-400 transition-colors duration-500 group-hover:text-[#0284C7]"
-                    />
+                  <div>
+                    {/* Top Icon & Badge */}
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-800 dark:text-white group-hover:bg-[#00D4FF] group-hover:text-black group-hover:border-transparent transition-all duration-300 shadow-sm">
+                        <Icon size={24} />
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2.5 py-1 rounded-md bg-gray-200/50 dark:bg-white/5">
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-[#00D4FF] transition-colors mb-3">
+                      {item.title}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
 
-                  <h3 className="mb-4 text-xl font-outfit font-semibold text-gray-900 dark:text-white transition-colors duration-300 group-hover:text-[#0284C7]">
-                    {feature.title}
-                  </h3>
-
-                  <p className="text-gray-600 dark:text-gray-400 font-inter leading-relaxed text-sm">
-                    {feature.description}
-                  </p>
+                  {/* Bottom Index Accent */}
+                  <div className="mt-8 pt-6 border-t border-gray-200 dark:border-white/5 flex items-center justify-between text-xs text-gray-400 font-mono">
+                    <span>STANDARD // 0{idx + 1}</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00D4FF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
               );
             })}
           </div>
+
         </div>
       </section>
     </ScrollReveal>

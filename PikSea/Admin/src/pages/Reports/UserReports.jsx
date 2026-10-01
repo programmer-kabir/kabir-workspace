@@ -164,7 +164,7 @@ const UserReports = () => {
             <Users className="text-[#6C4FE0]" size={32} />
             User Reports
           </h1>
-          <p className="text-gray-400">Review and investigate reports against contributor and user accounts.</p>
+          <p className="text-gray-400">Review and investigate reports against user accounts and flagged violations.</p>
         </div>
 
         <button

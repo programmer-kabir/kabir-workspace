@@ -16,15 +16,15 @@ if (empty($slug)) {
     exit;
 }
 
-// Only fetch published content from active authors via this public detail API
-$where = "WHERE c.slug = '$slug' AND c.status = 'published' AND COALESCE(u.status, u_direct.status, 'active') = 'active'";
+// Only fetch published content via this public detail API
+$where = "WHERE c.slug = '$slug' AND c.status = 'published'";
 
 $sql = "
     SELECT
-        c.id, c.author_id, c.main_category_id, c.subcategory_id,
+        c.id, c.main_category_id, c.subcategory_id,
         c.title, c.slug, c.description, c.preview_image,
         c.watermarked_preview_image, c.watermarked_preview_video,
-        c.thumbnail_url, c.preview_600_url, c.preview_1200_url, c.author_preview_url,
+        c.thumbnail_url, c.preview_600_url, c.preview_1200_url,
         c.views_count, c.downloads_count, c.likes_count,
         c.content_type, c.is_premium, c.license_type,
         c.ai_generated, c.width, c.height, c.orientation, c.dominant_color,
@@ -39,10 +39,6 @@ $sql = "
 
     FROM contents c
 
-    LEFT JOIN authors a ON a.id = c.author_id
-    LEFT JOIN users u ON u.id = a.user_id
-    LEFT JOIN users u_direct ON u_direct.id = c.author_id
-
     LEFT JOIN content_tags ct
         ON ct.content_id = c.id
 
@@ -52,10 +48,10 @@ $sql = "
     $where
 
     GROUP BY
-        c.id, c.author_id, c.main_category_id, c.subcategory_id,
+        c.id, c.main_category_id, c.subcategory_id,
         c.title, c.slug, c.description, c.preview_image,
         c.watermarked_preview_image, c.watermarked_preview_video,
-        c.thumbnail_url, c.preview_600_url, c.preview_1200_url, c.author_preview_url,
+        c.thumbnail_url, c.preview_600_url, c.preview_1200_url,
         c.views_count, c.downloads_count, c.likes_count,
         c.content_type, c.is_premium, c.license_type,
         c.ai_generated, c.width, c.height, c.orientation, c.dominant_color,
@@ -128,7 +124,7 @@ if ($filesStmt) {
 
 $contentData = [
     "id"                        => (int)$row["id"],
-    "author_id"                 => (int)$row["author_id"],
+    "author_id"                 => 1,
     "main_category_id"          => $row["main_category_id"] ? (int)$row["main_category_id"] : null,
     "subcategory_id"            => $row["subcategory_id"]   ? (int)$row["subcategory_id"]   : null,
     "title"                     => $row["title"],
@@ -140,7 +136,6 @@ $contentData = [
     "thumbnail_url"             => $row["thumbnail_url"],
     "preview_600_url"           => $row["preview_600_url"],
     "preview_1200_url"          => $row["preview_1200_url"],
-    "author_preview_url"        => $row["author_preview_url"],
     "views_count"               => (int)$row["views_count"],
     "downloads_count"           => (int)$row["downloads_count"],
     "likes_count"               => (int)$row["likes_count"],

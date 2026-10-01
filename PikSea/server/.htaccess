@@ -1,4 +1,4 @@
-<IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+# Apache root htaccess
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 </IfModule>

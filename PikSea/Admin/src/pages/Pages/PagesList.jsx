@@ -39,7 +39,7 @@ const PagesList = () => {
     { title: "Licensing", slug: "licensing" },
     { title: "Privacy Policy", slug: "privacy-policy" },
     { title: "Terms of Use", slug: "terms-of-use" },
-    { title: "Contributor Guidelines", slug: "contributor-guidelines" },
+    { title: "Creator Guidelines", slug: "creator-guidelines" },
     { title: "DMCA Policy", slug: "dmca" }
   ];
 

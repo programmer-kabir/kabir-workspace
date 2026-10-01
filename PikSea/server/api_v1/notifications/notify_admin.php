@@ -24,7 +24,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 
 $type    = $input['type']    ?? 'file_upload';
 $title   = trim($input['title']   ?? 'New File Uploaded');
-$message = trim($input['message'] ?? 'A contributor has uploaded new files.');
+$message = trim($input['message'] ?? 'New files uploaded to platform.');
 $icon    = $input['icon']    ?? null;
 $link    = $input['link']    ?? null;
 
@@ -32,7 +32,7 @@ $link    = $input['link']    ?? null;
 $notif_id = sendNotification($mysqli, [
     'user_id'     => null, // Admin sees it based on target_role='admin'
     'sender_id'   => $user_id,
-    'sender_type' => 'author',
+    'sender_type' => 'user',
     'target_role' => 'admin',
     'type'        => $type,
     'title'       => $title,

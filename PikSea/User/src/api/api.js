@@ -166,6 +166,7 @@ export const getAllContents = async ({
   ai_generated,
   orientation,
   search,
+  sort,
 }) => {
   let url = `${API_URL}/contents/getContents.php?page=${page}&limit=${limit}`;
   if (subcategory_id) url += `&subcategory_id=${subcategory_id}`;
@@ -174,6 +175,7 @@ export const getAllContents = async ({
   if (ai_generated) url += `&ai_generated=${ai_generated}`;
   if (orientation) url += `&orientation=${orientation}`;
   if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (sort) url += `&sort=${encodeURIComponent(sort)}`;
 
   const res = await fetch(url, {
     headers: await getHeaders(),
@@ -193,20 +195,6 @@ export const getContentBySlug = async (slug) => {
   const res = await fetch(url, { headers: await getHeaders() });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);
-  return data.data;
-};
-
-
-export const getAllAuthor = async () => {
-  const url = `${API_URL}/author/get_author.php`;
-
-  const res = await fetch(url, { headers: await getHeaders() });
-  const data = await res.json();
-
-  if (!data.success) {
-    throw new Error(data.message);
-  }
-
   return data.data;
 };
 
@@ -359,23 +347,6 @@ export const getUserDownloads = async (email) => {
     throw new Error(data.message);
   }
   return data.data; // array of downloads
-};
-
-export const applyContributor = async (applicationData) => {
-  if (!applicationData) return null;
-  const url = `${API_URL}/author/apply_contributor.php`;
-  
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getHeaders(),
-    body: JSON.stringify(applicationData)
-  });
-  
-  const data = await res.json();
-  if (!data.success) {
-    throw new Error(data.message);
-  }
-  return data;
 };
 
 // =======================

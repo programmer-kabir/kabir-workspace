@@ -89,7 +89,7 @@ try {
             c.slug AS content_slug,
             c.preview_image AS content_preview,
             c.status AS content_status,
-            COALESCE(u_author.name, u_direct_author.name, 'Contributor') AS content_author_name,
+            'PikSea Official' AS content_author_name,
             cr.reporter_id,
             cr.reporter_name,
             cr.reporter_email,
@@ -105,9 +105,6 @@ try {
             (SELECT COUNT(*) FROM content_reports cr_sub WHERE cr_sub.content_id = cr.content_id) AS reports_count
         FROM content_reports cr
         LEFT JOIN contents c ON c.id = cr.content_id
-        LEFT JOIN authors a ON a.id = c.author_id
-        LEFT JOIN users u_author ON u_author.id = a.user_id
-        LEFT JOIN users u_direct_author ON u_direct_author.id = c.author_id
         WHERE $whereSql
         ORDER BY $orderBy
         LIMIT ? OFFSET ?

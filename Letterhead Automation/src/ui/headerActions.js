@@ -84,20 +84,74 @@ export function setupHeaderActions(onSpecUpdated) {
     });
   }
 
-  // Guides Toggle
-  const toggleGuidesBtn = document.getElementById('toggleGuidesBtn');
-  const guidesBtnLabel = document.getElementById('guidesBtnLabel');
-  if (toggleGuidesBtn) {
-    toggleGuidesBtn.addEventListener('click', () => {
-      const isGuidesOn = store.toggleGuides();
-      if (guidesBtnLabel) {
-        guidesBtnLabel.textContent = `Guides: ${isGuidesOn ? 'ON' : 'OFF'}`;
+
+
+  // Undo / Redo Actions
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const topModeBadge = document.getElementById('topModeBadge');
+
+  function updateUndoRedoUi() {
+    if (undoBtn) undoBtn.disabled = !store.canUndo();
+    if (redoBtn) redoBtn.disabled = !store.canRedo();
+    if (topModeBadge) {
+      const isEdit = store.getAppMode() === 'edit';
+      topModeBadge.classList.toggle('hidden', !isEdit);
+      topModeBadge.classList.toggle('flex', !isEdit ? false : true);
+    }
+  }
+
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      if (store.undo()) {
+        if (onSpecUpdated) onSpecUpdated();
+        updateUndoRedoUi();
+        showToast('↩️ পূর্বের অবস্থায় ফিরে যাওয়া হয়েছে (Undo)');
       }
-      toggleGuidesBtn.classList.toggle('bg-slate-800', isGuidesOn);
-      toggleGuidesBtn.classList.toggle('text-slate-400', !isGuidesOn);
-      showToast(isGuidesOn ? 'Artwork guides enabled' : 'Artwork guides hidden');
     });
   }
+
+  if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+      if (store.redo()) {
+        if (onSpecUpdated) onSpecUpdated();
+        updateUndoRedoUi();
+        showToast('↪️ পুনরায় প্রয়োগ করা হয়েছে (Redo)');
+      }
+    });
+  }
+
+  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y / Ctrl+Shift+Z for Redo)
+  window.addEventListener('keydown', (e) => {
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable) {
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (store.undo()) {
+          if (onSpecUpdated) onSpecUpdated();
+          updateUndoRedoUi();
+          showToast('↩️ Undo (Ctrl+Z)');
+        }
+      } else if ((e.key === 'y' && !e.shiftKey) || ((e.key === 'z' || e.key === 'Z') && e.shiftKey)) {
+        e.preventDefault();
+        if (store.redo()) {
+          if (onSpecUpdated) onSpecUpdated();
+          updateUndoRedoUi();
+          showToast('↪️ Redo (Ctrl+Y)');
+        }
+      }
+    }
+  });
+
+  store.subscribe(() => {
+    updateUndoRedoUi();
+  });
+
+  updateUndoRedoUi();
 
   // Copy SVG Button
   const copySvgBtn = document.getElementById('copySvgBtn');
@@ -128,20 +182,22 @@ export function setupHeaderActions(onSpecUpdated) {
   const tabFormBtn = document.getElementById('tabFormBtn');
   const tabJsonBtn = document.getElementById('tabJsonBtn');
   const tabThemesBtn = document.getElementById('tabThemesBtn');
+  const tabEditBtn = document.getElementById('tabEditBtn');
   
   const tabAi = document.getElementById('tabContentAi');
   const tabForm = document.getElementById('tabContentForm');
   const tabJson = document.getElementById('tabContentJson');
   const tabThemes = document.getElementById('tabContentThemes');
+  const tabEdit = document.getElementById('tabContentEdit');
 
   function switchTab(activeBtn, activeContent) {
-    [tabAiBtn, tabFormBtn, tabJsonBtn, tabThemesBtn].forEach(btn => {
+    [tabAiBtn, tabFormBtn, tabJsonBtn, tabThemesBtn, tabEditBtn].forEach(btn => {
       if (btn) {
         btn.classList.remove('border-cyan-400', 'text-cyan-400', 'font-semibold');
         btn.classList.add('border-transparent', 'text-slate-400');
       }
     });
-    [tabAi, tabForm, tabJson, tabThemes].forEach(content => {
+    [tabAi, tabForm, tabJson, tabThemes, tabEdit].forEach(content => {
       if (content) {
         content.classList.add('hidden');
         content.classList.remove('flex');
@@ -157,8 +213,31 @@ export function setupHeaderActions(onSpecUpdated) {
     }
   }
 
+  function syncTabVisibility() {
+    const isEdit = store.getAppMode() === 'edit';
+    if (tabEditBtn) {
+      tabEditBtn.classList.toggle('hidden', !isEdit);
+      tabEditBtn.classList.toggle('flex', isEdit);
+    }
+    if (!isEdit && tabEdit && !tabEdit.classList.contains('hidden')) {
+      switchTab(tabAiBtn, tabAi);
+    }
+  }
+
   if (tabAiBtn && tabAi) tabAiBtn.addEventListener('click', () => switchTab(tabAiBtn, tabAi));
   if (tabFormBtn && tabForm) tabFormBtn.addEventListener('click', () => switchTab(tabFormBtn, tabForm));
   if (tabJsonBtn && tabJson) tabJsonBtn.addEventListener('click', () => switchTab(tabJsonBtn, tabJson));
   if (tabThemesBtn && tabThemes) tabThemesBtn.addEventListener('click', () => switchTab(tabThemesBtn, tabThemes));
+  if (tabEditBtn && tabEdit) tabEditBtn.addEventListener('click', () => switchTab(tabEditBtn, tabEdit));
+
+  window.addEventListener('app:switchToEditTab', () => {
+    syncTabVisibility();
+    if (tabEditBtn && tabEdit) switchTab(tabEditBtn, tabEdit);
+  });
+
+  store.subscribe(() => {
+    syncTabVisibility();
+  });
+
+  syncTabVisibility();
 }

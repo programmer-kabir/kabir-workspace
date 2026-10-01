@@ -14,8 +14,7 @@ $staticRoutes = [
     '/search' => '0.8',
     '/join-pro' => '0.8',
     '/faqs' => '0.7',
-    '/contact-us' => '0.7',
-    '/become-contributor' => '0.8'
+    '/contact-us' => '0.7'
 ];
 
 foreach ($staticRoutes as $route => $priority) {
@@ -45,25 +44,6 @@ if ($stmt) {
         echo "\n  </url>";
     }
     $stmt->close();
-}
-
-// Public Author Profiles
-$authorStmt = $mysqli->prepare("SELECT username, updated_at FROM authors WHERE role IN ('contributor', 'admin')");
-if ($authorStmt) {
-    $authorStmt->execute();
-    $authorResult = $authorStmt->get_result();
-    while ($authorRow = $authorResult->fetch_assoc()) {
-        echo "\n  <url>";
-        echo "\n    <loc>" . htmlspecialchars($frontendUrl . '/author/' . $authorRow['username']) . "</loc>";
-        if (!empty($authorRow['updated_at'])) {
-            $date = new DateTime($authorRow['updated_at']);
-            echo "\n    <lastmod>" . $date->format('c') . "</lastmod>";
-        }
-        echo "\n    <changefreq>weekly</changefreq>";
-        echo "\n    <priority>0.6</priority>";
-        echo "\n  </url>";
-    }
-    $authorStmt->close();
 }
 
 echo "\n</urlset>";

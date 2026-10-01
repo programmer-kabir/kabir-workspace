@@ -111,45 +111,8 @@ try {
 
     $idList = implode(",", $ids);
 
-    // Execute unpublish content action & send notification to content author
+    // Execute unpublish content action
     if ($actionTaken === 'unpublish_content') {
-        $contentsRes = $mysqli->query("
-            SELECT c.id, c.title, c.author_id, COALESCE(a.user_id, c.author_id) AS user_id, u.name, u.email 
-            FROM contents c 
-            LEFT JOIN authors a ON a.id = c.author_id 
-            LEFT JOIN users u ON u.id = COALESCE(a.user_id, c.author_id)
-            INNER JOIN content_reports cr ON cr.content_id = c.id 
-            WHERE cr.id IN ($idList)
-        ");
-
-        if ($contentsRes) {
-            while ($cRow = $contentsRes->fetch_assoc()) {
-                $authorUserId = (int)$cRow['user_id'];
-                $authorName = !empty($cRow['name']) ? $cRow['name'] : 'Contributor';
-                $authorEmail = !empty($cRow['email']) ? $cRow['email'] : '';
-                $contentTitle = $cRow['title'];
-                
-                if ($authorUserId > 0) {
-                    $detailsText = !empty($adminNote) ? $adminNote : 'Violation of content licensing guidelines';
-                    $notifMsg = "Dear Contributor, your submission '$contentTitle' has been unpublished following a compliance review. Reason/Details: $detailsText. Please ensure future submissions adhere strictly to platform standards.";
-                    
-                    // 1. In-App Notification
-                    $notifStmt = $mysqli->prepare("
-                        INSERT INTO notifications (user_id, sender_id, sender_type, target_role, type, title, message, priority, is_read, is_deleted, created_at)
-                        VALUES (?, ?, 'admin', 'user', 'content_unpublished', 'Asset Removal Notice', ?, 'high', 0, 0, NOW())
-                    ");
-                    $notifStmt->bind_param("iis", $authorUserId, $adminId, $notifMsg);
-                    $notifStmt->execute();
-                    $notifStmt->close();
-
-                    // 2. Real Email Notification & DB Logging
-                    if (!empty($authorEmail)) {
-                        sendReportEmail($authorEmail, $authorName, "Asset Removal Notice - DayalStock", "Asset Removal Notice", $notifMsg, $authorUserId, "content_unpublished");
-                    }
-                }
-            }
-        }
-
         $mysqli->query("
             UPDATE contents c
             INNER JOIN content_reports cr ON cr.content_id = c.id

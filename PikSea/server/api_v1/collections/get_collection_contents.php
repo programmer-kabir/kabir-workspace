@@ -52,12 +52,10 @@ try {
     $sql = "
         SELECT 
             c.id, c.title, c.slug, c.preview_image, c.thumbnail_url, c.content_type, c.is_premium,
-            u.name as author_name, u.photo as author_avatar,
+            'PikSea Studio' as author_name, '' as author_avatar,
             cat.slug as category_slug
         FROM collection_items ci
         JOIN contents c ON ci.content_id = c.id
-        LEFT JOIN authors a ON c.author_id = a.id
-        LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN categories cat ON c.main_category_id = cat.id
         WHERE ci.collection_id = ?
         ORDER BY ci.added_at DESC

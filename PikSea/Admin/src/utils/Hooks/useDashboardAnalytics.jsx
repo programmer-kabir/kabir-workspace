@@ -6,7 +6,6 @@ const useDashboardAnalytics = () => {
     const [analytics, setAnalytics] = useState({
         today: { downloads: 0, revenue: 0, new_users: 0, sales: 0, subscriptions: 0 },
         chart_data: [],
-        top_contributors: [],
         top_contents: []
     });
     const [isLoading, setIsLoading] = useState(true);

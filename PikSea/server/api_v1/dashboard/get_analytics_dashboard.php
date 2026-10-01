@@ -18,7 +18,6 @@ $response = [
         'subscriptions' => 0
     ],
     'chart_data' => [], // array of { date, downloads, revenue, new_users }
-    'top_contributors' => [],
     'top_contents' => []
 ];
 
@@ -133,27 +132,10 @@ if ($res_billing) {
 // Convert chart associative array to indexed array
 $response['chart_data'] = array_values($response['chart_data']);
 
-// 4. Fetch Top 5 Contributors by total_downloads
-$top_authors_query = "
-    SELECT a.id, a.user_id, a.total_downloads, u.name, u.email
-    FROM authors a
-    LEFT JOIN users u ON a.user_id = u.id
-    ORDER BY a.total_downloads DESC 
-    LIMIT 5
-";
-$res_authors = $mysqli->query($top_authors_query);
-if ($res_authors) {
-    while ($row = $res_authors->fetch_assoc()) {
-        $response['top_contributors'][] = $row;
-    }
-}
-
 // 5. Fetch Top 5 Most Downloaded Contents
 $top_contents_query = "
-    SELECT c.id, c.title, c.slug, c.author_id, c.downloads_count, c.preview_image, u.name as author_name
+    SELECT c.id, c.title, c.slug, c.downloads_count, c.preview_image, 'PikSea Official' as author_name
     FROM contents c
-    LEFT JOIN authors a ON c.author_id = a.id
-    LEFT JOIN users u ON a.user_id = u.id
     ORDER BY c.downloads_count DESC 
     LIMIT 5
 ";

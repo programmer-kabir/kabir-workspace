@@ -43,6 +43,7 @@ export function setupCanvasController() {
     paper.style.height = `${PAPER_HEIGHT}px`;
     paper.style.transform = `scale(${zoom})`;
     paper.style.transformOrigin = 'top center';
+    paper.classList.toggle('app-mode-edit', store.getAppMode() === 'edit');
 
     // Synchronize viewport footprint so parent scrollbar matches exactly
     if (viewport) {

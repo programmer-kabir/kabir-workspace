@@ -72,18 +72,17 @@ const QuickViewModal = ({ item, isOpen, onClose, onSaveCollection }) => {
               </h2>
             </div>
 
-            {/* Author details */}
+            {/* Publisher details */}
             <div className="flex items-center gap-3 py-2 border-y border-gray-200 dark:border-white/10">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D4FF] to-[#6C4FE0] flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                {item.author_avatar ? (
-                  <img src={item.author_avatar} alt={item.author_name} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={18} />
-                )}
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D4FF] to-[#6C4FE0] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-cyan-500/20">
+                <Sparkles size={18} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.author_name || item.author_username || "Verified Contributor"}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Published Creator</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  PikSea Studio
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Verified Original Asset</p>
               </div>
             </div>
 

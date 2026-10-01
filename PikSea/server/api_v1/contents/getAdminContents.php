@@ -60,7 +60,6 @@ foreach (['published', 'pending', 'rejected'] as $s) {
 $sql = "
     SELECT
         c.id,
-        c.author_id,
         c.main_category_id,
         c.subcategory_id,
         c.title,
@@ -72,7 +71,6 @@ $sql = "
         c.thumbnail_url,
         c.preview_600_url,
         c.preview_1200_url,
-        c.author_preview_url,
         c.views_count,
         c.downloads_count,
         c.likes_count,
@@ -93,10 +91,10 @@ $sql = "
         c.updated_at,
         c.created_at,
 
-        COALESCE(NULLIF(u.name, ''), NULLIF(u_direct.name, ''), 'Contributor') AS author_name,
-        COALESCE(NULLIF(u.username, ''), NULLIF(u_direct.username, ''), '') AS author_username,
-        COALESCE(NULLIF(u.photo, ''), NULLIF(u_direct.photo, ''), '') AS author_avatar,
-        COALESCE(u.email, u_direct.email, '') AS author_email,
+        'PikSea Official' AS author_name,
+        'piksea' AS author_username,
+        '' AS author_avatar,
+        '' AS author_email,
 
         main_file.file_url AS image_url,
         main_file.file_name,
@@ -110,10 +108,6 @@ $sql = "
         ) AS tags_concat
 
     FROM contents c
-
-    LEFT JOIN authors a ON a.id = c.author_id
-    LEFT JOIN users u ON u.id = a.user_id
-    LEFT JOIN users u_direct ON u_direct.id = c.author_id
 
     LEFT JOIN (
         SELECT content_id, MAX(file_url) as file_url, MAX(file_name) as file_name, MAX(file_type) as file_type
@@ -209,7 +203,7 @@ while ($row = $result->fetch_assoc()) {
 
     $contents[] = [
         "id"                        => (int)$row["id"],
-        "author_id"                 => (int)$row["author_id"],
+        "author_id"                 => 1,
         "author_name"               => $row["author_name"],
         "author_username"           => $row["author_username"],
         "author_avatar"             => $row["author_avatar"],
@@ -225,7 +219,6 @@ while ($row = $result->fetch_assoc()) {
         "thumbnail_url"             => $row["thumbnail_url"] ?? null,
         "preview_600_url"           => $row["preview_600_url"] ?? null,
         "preview_1200_url"          => $row["preview_1200_url"] ?? null,
-        "author_preview_url"        => $row["author_preview_url"] ?? null,
         "views_count"               => (int)$row["views_count"],
         "downloads_count"           => (int)$row["downloads_count"],
         "likes_count"               => (int)$row["likes_count"],

@@ -24,9 +24,6 @@ const apiMap = {
   'deleteUser': 'userApi',
   'updateUserRole': 'userApi',
   'updateUserStatus': 'userApi',
-  'getAllAuthor': 'authorApi',
-  'getContributorApplications': 'authorApi',
-  'updateApplicationStatus': 'authorApi',
   'getAdminNotifications': 'notificationApi',
   'markNotificationAsRead': 'notificationApi'
 };

@@ -171,7 +171,7 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
     const url = window.location.href;
     if (navigator.share) {
       navigator.share({
-        title: currentData?.title || "DayalStock Asset",
+        title: currentData?.title || "PikSea Asset",
         url: url
       }).catch(() => { });
     } else {
@@ -333,9 +333,9 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
     return <NotFound />;
   }
 
-  const pageTitle = `${currentData.title} - ${currentData.is_premium ? 'Premium' : 'Free'} ${currentData.content_type || 'Asset'} | DayalStock`;
-  const seoDescription = currentData.tags ? `Download ${currentData.title}. Related to: ${currentData.tags.map(t => t.name).join(', ')}` : `Download ${currentData.title} on DayalStock.`;
-  const canonicalUrl = `https://dayalstock.com/${category || currentData.content_type || 'images'}/${currentData.slug}`;
+  const pageTitle = `${currentData.title} - ${currentData.is_premium ? 'Premium' : 'Free'} ${currentData.content_type || 'Asset'} | PikSea`;
+  const seoDescription = currentData.tags ? `Download ${currentData.title}. Related to: ${currentData.tags.map(t => t.name).join(', ')}` : `Download ${currentData.title} on PikSea.`;
+  const canonicalUrl = `https://piksea.com/${category || currentData.content_type || 'images'}/${currentData.slug}`;
 
   const seoData = {
     title: pageTitle,
@@ -354,14 +354,14 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
     "@context": "https://schema.org/",
     "@type": "ImageObject",
     "contentUrl": getPreviewImage(currentData),
-    "license": currentData.license_type === "free" ? "https://dayalstock.com/licensing" : "https://dayalstock.com/licensing#premium",
+    "license": currentData.license_type === "free" ? "https://piksea.com/licensing" : "https://piksea.com/licensing#premium",
     "acquireLicensePage": canonicalUrl,
     "creator": {
       "@type": "Organization",
-      "name": "DayalStock"
+      "name": "PikSea"
     },
-    "creditText": "DayalStock",
-    "copyrightNotice": "DayalStock",
+    "creditText": "PikSea",
+    "copyrightNotice": "PikSea",
     "name": currentData.title,
     "description": seoDescription
   };
@@ -541,11 +541,11 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
               <div className="flex items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-[#00D4FF]/10 flex items-center justify-center text-[#0088b3] dark:text-[#00D4FF] font-bold text-xs font-outfit">
-                    DS
+                    PS
                   </div>
                   <div>
                     <h5 className="text-xs font-bold text-gray-900 dark:text-white font-outfit flex items-center gap-1.5">
-                      DayalStock Original
+                      PikSea Studio Original
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     </h5>
                     <p className="text-[11px] text-gray-400">Verified Quality Asset</p>
@@ -753,7 +753,7 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
           <div className="flex items-center justify-between mb-8">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-[#0088b3] dark:text-[#00D4FF] font-outfit">Explore More</span>
-              <h3 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mt-1">Similar Resources Across DayalStock</h3>
+              <h3 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mt-1">Similar Resources Across PikSea</h3>
             </div>
             <Link
               to={`/${category || 'explore'}`}
@@ -931,7 +931,7 @@ const SingleContentPage = ({ categorySlug, contentSlug }) => {
                   <div>
                     <h3 className="text-orange-500 dark:text-orange-400 font-bold mb-2">What you MUST do:</h3>
                     <ul className="text-gray-600 dark:text-gray-300 space-y-1 text-sm list-disc pl-5">
-                      <li><strong>Attribution Required:</strong> You must provide a link back to DayalStock or credit the author.</li>
+                      <li><strong>Attribution Required:</strong> You must provide a link back to PikSea.</li>
                     </ul>
                   </div>
                   <div>

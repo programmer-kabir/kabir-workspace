@@ -255,7 +255,7 @@ const SupportTicketDetails = ({ ticketId, onBack }) => {
                 }`}>
                   {isAdmin && (
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs font-bold text-[#0088b3] dark:text-[#00D4FF]">DayalStock Support</span>
+                      <span className="text-xs font-bold text-[#0088b3] dark:text-[#00D4FF]">PikSea Support</span>
                     </div>
                   )}
                   

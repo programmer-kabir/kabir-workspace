@@ -17,7 +17,7 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $count = (int)($input['count'] ?? 1);
     
-    $authStmt = $mysqli->prepare("SELECT users.id, users.full_name FROM authors INNER JOIN users ON authors.user_id = users.id WHERE users.email = ? LIMIT 1");
+    $authStmt = $mysqli->prepare("SELECT id, name AS full_name FROM users WHERE email = ? LIMIT 1");
     $authStmt->bind_param("s", $userEmail);
     $authStmt->execute();
     $authRes = $authStmt->get_result();
@@ -25,7 +25,7 @@ try {
     if ($authRes->num_rows > 0) {
         $row = $authRes->fetch_assoc();
         $authorUserId = (int)$row['id'];
-        $authorDisplayName = $row['full_name'] ?? 'Contributor';
+        $authorDisplayName = $row['full_name'] ?? 'Admin';
         
         file_put_contents(__DIR__ . '/debug_log.txt', date('Y-m-d H:i:s') . " - Calling sendEmail for $userEmail with count $count\n", FILE_APPEND);
         

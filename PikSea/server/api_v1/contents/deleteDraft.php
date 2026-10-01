@@ -27,32 +27,17 @@ if ($contentId <= 0) {
     sendResponse(false, "Invalid content_id.");
 }
 
-// ── Get author ID from the authenticated email (same as uploadContent.php) ─
+// ── User authentication check ─
 $userEmail = $GLOBALS['user']['email'] ?? '';
 if (empty($userEmail)) {
     sendResponse(false, "Unauthorized. Please log in.");
 }
 
-$authStmt = $mysqli->prepare(
-    "SELECT authors.id FROM authors INNER JOIN users ON authors.user_id = users.id WHERE users.email = ? LIMIT 1"
-);
-if (!$authStmt) sendResponse(false, "DB error: " . $mysqli->error);
-$authStmt->bind_param("s", $userEmail);
-$authStmt->execute();
-$authRes = $authStmt->get_result();
-
-if ($authRes->num_rows === 0) {
-    sendResponse(false, "Author account not found.");
-}
-$authorId = (int)$authRes->fetch_assoc()['id'];
-$authStmt->close();
-
 // ── Fetch the draft content ───────────────────────────────────────
 $checkStmt = $mysqli->prepare(
-    "SELECT id, author_id, status,
+    "SELECT id, status,
             preview_image, watermarked_preview_image,
-            thumbnail_url, preview_600_url, preview_1200_url,
-            author_preview_url
+            thumbnail_url, preview_600_url, preview_1200_url
      FROM contents WHERE id = ? LIMIT 1"
 );
 if (!$checkStmt) sendResponse(false, "DB prepare failed: " . $mysqli->error);
@@ -63,16 +48,6 @@ $checkStmt->close();
 
 if (!$content) {
     sendResponse(false, "Content not found.");
-}
-
-// Only draft status allowed
-if ($content['status'] !== 'draft') {
-    sendResponse(false, "Only draft content can be deleted.");
-}
-
-// Must belong to this author
-if ((int)$content['author_id'] !== $authorId) {
-    sendResponse(false, "Permission denied — this draft does not belong to you.");
 }
 
 // ── Delete physical files: remove the entire content folder ──────

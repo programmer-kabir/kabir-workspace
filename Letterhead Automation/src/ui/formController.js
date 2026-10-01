@@ -1,4 +1,6 @@
 import { store } from '../state/store.js';
+import { generateNewArtwork, activeArtPreset } from '../engines/artworkGenerator.js';
+import { showToast } from '../services/toastService.js';
 
 export function setupFormController() {
   const inputs = {
@@ -22,6 +24,27 @@ export function setupFormController() {
     contactWeb: document.getElementById('inputContactWeb'),
     contactAddress: document.getElementById('inputContactAddress')
   };
+
+  const regenArtBtn = document.getElementById('regenArtFormBtn');
+  const artStyleSelect = document.getElementById('artStyleSelect');
+  const artStyleBadge = document.getElementById('artStyleBadge');
+
+  if (regenArtBtn) {
+    regenArtBtn.addEventListener('click', () => {
+      const chosenStyle = artStyleSelect ? artStyleSelect.value : 'random';
+      generateNewArtwork(chosenStyle);
+      const spec = store.getSpec();
+      // Clear custom SVG override so the newly generated procedural artwork renders cleanly
+      delete spec.custom_header_svg;
+      delete spec.custom_footer_svg;
+      store.setSpec(spec);
+
+      if (artStyleBadge && activeArtPreset?.type) {
+        artStyleBadge.textContent = activeArtPreset.type.toUpperCase();
+      }
+      showToast(`🎨 নতুন হেডার-ফুটার আর্ট লোড হয়েছে: ${activeArtPreset?.type || 'Art'}`);
+    });
+  }
 
   function syncSpecToForm() {
     const spec = store.getSpec();
@@ -55,6 +78,10 @@ export function setupFormController() {
     if (inputs.contactEmail) inputs.contactEmail.value = c.contact?.email || '';
     if (inputs.contactWeb) inputs.contactWeb.value = c.contact?.web || '';
     if (inputs.contactAddress) inputs.contactAddress.value = (c.contact?.address || []).join(', ');
+
+    if (artStyleBadge && activeArtPreset?.type) {
+      artStyleBadge.textContent = activeArtPreset.type.toUpperCase();
+    }
   }
 
   function syncFormToSpec() {

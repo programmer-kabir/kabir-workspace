@@ -192,7 +192,7 @@ function sendEmail(
  * Returns ['subject', 'title', 'body', 'icon', 'accent_color', 'cta_text', 'cta_url', 'footer_note']
  */
 function getEmailTemplate(string $type, string $recipientName, array $params = []): ?array {
-    $dashboardUrl = 'https://contributor.dayalstock.com/dashboard';
+    $dashboardUrl = 'https://piksea.com/accounts';
     $fileCount    = $params['file_count'] ?? 1;
     $contentTitle = $params['content_title'] ?? '';
     $reason       = $params['reason'] ?? '';
@@ -266,69 +266,24 @@ function getEmailTemplate(string $type, string $recipientName, array $params = [
                     '💬 If changes are needed, you\'ll be notified with feedback',
                 ]
             ],
-            'footer_note'  => 'Keep uploading! The more quality content you submit, the faster you grow as a contributor.',
+            'footer_note'  => 'Keep uploading! The more quality content you submit, the faster you grow your portfolio.',
         ],
 
-        // ═══════════════════════════════════════════
-        //  CONTRIBUTOR APPLICATION RECEIVED
-        // ═══════════════════════════════════════════
-        'contributor_application_received' => [
-            'subject'      => "Application Received — DayalStock Contributor",
-            'title'        => '🎉 Application Received!',
-            'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>Thank you for applying to become a contributor at DayalStock! We have received your application successfully.</p>
-                               <p>Our team will review your portfolio and details. We will get back to you with an update soon.</p>",
-            'icon'         => '🎉',
-            'accent_color' => '#10B981',
-            'cta_text'     => 'Visit DayalStock',
-            'cta_url'      => 'https://contributor.dayalstock.com',
-            'footer_note'  => 'We are excited to see your creativity!',
-        ],
-
-        // ═══════════════════════════════════════════
-        //  CONTRIBUTOR APPLICATION APPROVED
-        // ═══════════════════════════════════════════
-        'contributor_application_approved' => [
-            'subject'      => "Application Approved! 🎉 — DayalStock",
-            'title'        => '🎉 Welcome to DayalStock!',
-            'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>Congratulations! Your contributor application has been approved. You have been granted the Author role.</p>
-                               <p>You can now log in and start uploading your creative content to our platform.</p>",
-            'icon'         => '🎉',
-            'accent_color' => '#10B981',
-            'cta_text'     => 'Login to Contributor Hub',
-            'cta_url'      => 'https://contributor.dayalstock.com/login',
-            'footer_note'  => 'We can\'t wait to see your first upload!',
-        ],
-
-        // ═══════════════════════════════════════════
-        //  CONTRIBUTOR APPLICATION REJECTED
-        // ═══════════════════════════════════════════
-        'contributor_application_rejected' => [
-            'subject'      => "Application Status Update — DayalStock",
-            'title'        => 'Application Update',
-            'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>Thank you for your interest in becoming a contributor at DayalStock. We have reviewed your application.</p>
-                               <p>Unfortunately, we are unable to approve your application at this time. We appreciate your effort and wish you the best.</p>",
-            'icon'         => 'ℹ️',
-            'accent_color' => '#EF4444',
-            'footer_note'  => 'Keep improving your portfolio and you may apply again in the future.',
-        ],
 
         // ═══════════════════════════════════════════
         //  CONTENT APPROVED
         // ═══════════════════════════════════════════
         'content_approved' => [
-            'subject'      => "Your content has been approved! 🎉 — DayalStock",
+            'subject'      => "Your content has been approved! 🎉 — PikSea",
             'title'        => '🎉 Content Approved!',
             'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
                                <p>Great news! Your content <strong>\"" . htmlspecialchars($contentTitle) . "\"</strong> has been approved by our review team.</p>
-                               <p>It is now live on DayalStock and available for users.</p>",
+                               <p>It is now live on PikSea and available for users.</p>",
             'icon'         => '✅',
             'accent_color' => '#10B981',
-            'cta_text'     => 'View Your Dashboard',
-            'cta_url'      => 'https://contributor.dayalstock.com/dashboard/files/published',
-            'footer_note'  => 'Keep up the great work and continue uploading high-quality content!',
+            'cta_text'     => 'View Account',
+            'cta_url'      => 'https://piksea.com/accounts',
+            'footer_note'  => 'Thank you for being part of PikSea!',
         ],
 
         // ═══════════════════════════════════════════
@@ -350,15 +305,15 @@ function getEmailTemplate(string $type, string $recipientName, array $params = [
         //  IDENTITY APPROVED
         // ═══════════════════════════════════════════
         'identity_approved' => [
-            'subject'      => "Identity Verification Successful! 🎉 — DayalStock",
+            'subject'      => "Identity Verification Successful! 🎉 — PikSea",
             'title'        => '🎉 Verification Approved!',
             'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>Great news! Your identity document (NID/Passport) has been verified and approved.</p>
+                               <p>Great news! Your identity document has been verified and approved.</p>
                                <p>Your account is now fully verified. Thank you for completing this step.</p>",
             'icon'         => '✅',
             'accent_color' => '#10B981',
-            'cta_text'     => 'Go to Dashboard',
-            'cta_url'      => 'https://contributor.dayalstock.com/dashboard',
+            'cta_text'     => 'Go to Account',
+            'cta_url'      => 'https://piksea.com/accounts',
             'footer_note'  => 'Your verified status adds credibility to your profile!',
         ],
 
@@ -375,7 +330,7 @@ function getEmailTemplate(string $type, string $recipientName, array $params = [
             'icon'         => '⚠️',
             'accent_color' => '#EF4444',
             'cta_text'     => 'Re-submit Document',
-            'cta_url'      => 'https://contributor.dayalstock.com/dashboard/settings',
+            'cta_url'      => 'https://piksea.com/accounts',
             'footer_note'  => 'Ensure all details on the document are readable and match your profile.',
         ],
 
@@ -383,32 +338,32 @@ function getEmailTemplate(string $type, string $recipientName, array $params = [
         //  PAYOUT APPROVED
         // ═══════════════════════════════════════════
         'payout_approved' => [
-            'subject'      => "Withdrawal Request Processed! 💸 — DayalStock",
+            'subject'      => "Payment Processed! 💸 — PikSea",
             'title'        => '💸 Payment Sent!',
             'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>Great news! Your withdrawal request for <strong>" . htmlspecialchars($amount) . "</strong> has been processed successfully.</p>
+                               <p>Great news! Your payout request for <strong>" . htmlspecialchars($amount) . "</strong> has been processed successfully.</p>
                                <p>The funds should be available in your selected payment method (" . htmlspecialchars($method) . ") shortly.</p>",
             'icon'         => '✅',
             'accent_color' => '#10B981',
-            'cta_text'     => 'View Earnings',
-            'cta_url'      => 'https://contributor.dayalstock.com/dashboard/finance/earnings',
-            'footer_note'  => 'Thank you for your continuous contributions!',
+            'cta_text'     => 'View Billing',
+            'cta_url'      => 'https://piksea.com/accounts',
+            'footer_note'  => 'Thank you for choosing PikSea!',
         ],
 
         // ═══════════════════════════════════════════
         //  PAYOUT REJECTED
         // ═══════════════════════════════════════════
         'payout_rejected' => [
-            'subject'      => "Update on your Withdrawal Request — DayalStock",
-            'title'        => 'Withdrawal Update',
+            'subject'      => "Update on your Payment Request — PikSea",
+            'title'        => 'Payment Update',
             'body'         => "<p>Hi " . htmlspecialchars($recipientName) . ",</p>
-                               <p>We reviewed your recent withdrawal request for <strong>" . htmlspecialchars($amount) . "</strong>, but unfortunately, it was rejected.</p>" . 
+                               <p>We reviewed your recent payment request for <strong>" . htmlspecialchars($amount) . "</strong>, but unfortunately, it was rejected.</p>" . 
                                ($reason ? "<p><strong>Reason:</strong> " . htmlspecialchars($reason) . "</p>" : "") . "
-                               <p>The funds have been returned to your wallet. Please check your payout settings or contact support for help.</p>",
+                               <p>Please check your billing settings or contact support for help.</p>",
             'icon'         => '⚠️',
             'accent_color' => '#EF4444',
             'cta_text'     => 'Go to Support',
-            'cta_url'      => 'https://contributor.dayalstock.com/dashboard/support/tickets',
+            'cta_url'      => 'https://piksea.com/accounts',
             'footer_note'  => 'Ensure your payment details are correct and up-to-date.',
         ],
 
@@ -511,10 +466,10 @@ function buildEmailHtml(string $recipientName, string $title, string $body, stri
                                     <td align="center">
                                         <!-- Logo -->
                                         <p style="margin: 0; font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
-                                            Dayal<span style="opacity: 0.85;">Stock</span>
+                                            Pik<span style="color: #00D4FF;">Sea</span>
                                         </p>
                                         <p style="margin: 6px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 2px;">
-                                            Contributor Hub
+                                            Official Notification
                                         </p>
                                     </td>
                                 </tr>

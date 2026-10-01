@@ -27,7 +27,7 @@ const Footer = () => {
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#0284C7]/5 dark:bg-[#06B6D4]/10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Main Footer */}
-      <div className="relative mx-auto max-w-[1600px] px-6 lg:px-8 py-16 z-10">
+      <div className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-16 z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 md:grid-cols-4 lg:gap-16">
           {/* Our Network */}
           <div>
@@ -81,7 +81,7 @@ const Footer = () => {
 
       {/* Bottom */}
       <div className="border-t border-gray-200 dark:border-white/5 relative z-10">
-        <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-between gap-8 px-6 lg:px-8 py-8 lg:flex-row">
+        <div className="w-full flex flex-col items-center justify-between gap-8 px-4 sm:px-6 lg:px-8 xl:px-12 py-8 lg:flex-row">
           {/* Logo & Social */}
           <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
             <PikSeaLogo size="sm" />

@@ -1,8 +1,8 @@
-import { generateVectorLetterheadSVG } from '../engines/svgRenderer.js';
+import { generateVectorLetterheadSVG, ensureXmlWellFormed } from '../engines/svgRenderer.js';
 import { showToast } from './toastService.js';
 
 export async function copySvgToClipboard(spec) {
-  const cleanSvg = generateVectorLetterheadSVG(spec, false);
+  const cleanSvg = ensureXmlWellFormed(generateVectorLetterheadSVG(spec, false));
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(cleanSvg);
@@ -36,7 +36,7 @@ export async function copySvgToClipboard(spec) {
 
 export function downloadSvgFile(spec) {
   try {
-    const cleanSvg = generateVectorLetterheadSVG(spec, false);
+    const cleanSvg = ensureXmlWellFormed(generateVectorLetterheadSVG(spec, false));
     const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const downloadLink = document.createElement('a');

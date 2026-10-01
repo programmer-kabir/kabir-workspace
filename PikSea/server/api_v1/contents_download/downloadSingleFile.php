@@ -101,30 +101,19 @@ if ($pos !== false) {
 }
 
 $realFilePath = realpath(rtrim($publicRoot, "/") . "/" . $relativePath);
-$isRemote = false;
 
 if ($realFilePath === false || strpos($realFilePath, $publicRoot) !== 0) {
     $fallbackPath = realpath(rtrim(dirname($publicRoot), "/") . "/" . $relativePath);
     if ($fallbackPath !== false && strpos($fallbackPath, dirname($publicRoot)) === 0) {
         $realFilePath = $fallbackPath;
-    } else {
-        // Fallback to CDN URL
-        $cdnUrl = (strpos($fileUrl, 'http') === 0) ? $fileUrl : "https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/" . ltrim($relativePath, "/");
-        $isRemote = true;
-        $realFilePath = $cdnUrl;
     }
 }
 
-if (!$isRemote && !file_exists($realFilePath)) {
-    // If not found locally, try CDN as final fallback
-    $cdnUrl = (strpos($fileUrl, 'http') === 0) ? $fileUrl : "https://pub-8d3e60db04cc4bf9bd592995b23acefe.r2.dev/" . ltrim($relativePath, "/");
-    $isRemote = true;
-    $realFilePath = $cdnUrl;
-}
-if (!$isRemote && !file_exists($realFilePath)) {
+if (!$realFilePath || !file_exists($realFilePath)) {
     http_response_code(404);
     exit("File does not exist.");
 }
+
 if (empty($fileName)) { $fileName = basename($realFilePath); }
 
 header('Content-Description: File Transfer');
@@ -133,10 +122,7 @@ header('Content-Disposition: attachment; filename="' . $fileName . '"');
 header('Expires: 0');
 header('Cache-Control: must-revalidate');
 header('Pragma: public');
-
-if (!$isRemote) {
-    header('Content-Length: ' . filesize($realFilePath));
-}
+header('Content-Length: ' . filesize($realFilePath));
 
 readfile($realFilePath);
 exit;

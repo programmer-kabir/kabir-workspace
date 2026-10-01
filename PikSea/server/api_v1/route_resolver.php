@@ -13,9 +13,14 @@ if (empty($category_slug) || empty($slug)) {
     exit;
 }
 
-// 1. Check if it's a subcategory
-// In categories table, we match slug.
-$stmt = $mysqli->prepare("SELECT id, name FROM categories WHERE TRIM(slug) = ? LIMIT 1");
+// 1. Check if it's a subcategory under the given parent category or globally
+$stmt = $mysqli->prepare("
+    SELECT c.id, c.name, p.slug as parent_slug
+    FROM categories c
+    LEFT JOIN categories p ON c.parent_id = p.id
+    WHERE TRIM(c.slug) = ? AND c.parent_id IS NOT NULL
+    LIMIT 1
+");
 $stmt->bind_param("s", $slug);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -24,34 +29,32 @@ if ($result->num_rows > 0) {
     $data = $result->fetch_assoc();
     echo json_encode([
         'success' => true,
-        'type' => 'subcategory'
+        'type' => 'subcategory',
+        'data' => $data
     ]);
+    $stmt->close();
     exit;
 }
-
 $stmt->close();
 
-// 2. Check if it's a content/asset
-// Need to check if the table is contents or assets.
-$table = 'contents';
-
-if ($table) {
-    $stmt2 = $mysqli->prepare("SELECT id FROM $table WHERE slug = ? LIMIT 1");
-    if ($stmt2) {
-        $stmt2->bind_param("s", $slug);
-        $stmt2->execute();
-        $result2 = $stmt2->get_result();
-        
-        if ($result2->num_rows > 0) {
-            $data = $result2->fetch_assoc();
-            echo json_encode([
-                'success' => true,
-                'type' => 'content'
-            ]);
-            exit;
-        }
+// 2. Check if it's a content/asset in contents table
+$stmt2 = $mysqli->prepare("SELECT id, slug, title FROM contents WHERE slug = ? LIMIT 1");
+if ($stmt2) {
+    $stmt2->bind_param("s", $slug);
+    $stmt2->execute();
+    $result2 = $stmt2->get_result();
+    
+    if ($result2->num_rows > 0) {
+        $data = $result2->fetch_assoc();
+        echo json_encode([
+            'success' => true,
+            'type' => 'content',
+            'data' => $data
+        ]);
         $stmt2->close();
+        exit;
     }
+    $stmt2->close();
 }
 
 // 3. Not found
@@ -61,3 +64,4 @@ echo json_encode([
     'error' => 'Route not found'
 ]);
 exit;
+

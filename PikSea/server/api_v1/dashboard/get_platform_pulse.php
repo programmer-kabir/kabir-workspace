@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/r2_config.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -23,7 +22,7 @@ try {
             (SELECT COUNT(*) FROM contents WHERE DATE(created_at) = CURDATE()) AS today_uploads,
             (SELECT COUNT(*) FROM downloads_history WHERE DATE(downloaded_at) = CURDATE()) AS today_downloads,
             (SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURDATE()) AS today_new_users,
-            (SELECT COUNT(*) FROM authors) AS total_contributors,
+            (SELECT COUNT(*) FROM users) AS total_users,
             (SELECT IFNULL(SUM(downloads_count), 0) FROM contents) AS total_downloads_all_time,
             (SELECT IFNULL(SUM(file_size), 0) FROM content_files) AS total_files_bytes
         ";
@@ -62,16 +61,8 @@ try {
         ];
     }
 
-    // 4. Cloudflare R2 / Storage
+    // 4. Hostinger Server / Storage Stats
     $r2Stats = ['object_count' => (int)($stats['total_published'] ?? 0) * 2, 'storage_gb' => round(((int)($stats['total_files_bytes'] ?? 0)) / 1073741824, 2)];
-    try {
-        if (class_exists('R2Helper')) {
-            $realR2 = R2Helper::getBucketStats();
-            if (!empty($realR2)) {
-                $r2Stats = $realR2;
-            }
-        }
-    } catch (Throwable $ignore) {}
 
     // 5. Recent Platform Activity Feed
     $activity = [];
@@ -107,11 +98,9 @@ try {
             'upload' as type,
             c.title as item_title,
             c.content_type,
-            u.name as author_name,
+            'Admin' as author_name,
             c.created_at
         FROM contents c
-        INNER JOIN authors a ON c.author_id = a.id
-        INNER JOIN users u ON a.user_id = u.id
         ORDER BY c.id DESC LIMIT 4
     ";
     $upActRes = $mysqli->query($upActSql);
@@ -119,9 +108,9 @@ try {
         while ($r = $upActRes->fetch_assoc()) {
             $activity[] = [
                 'type' => 'upload',
-                'title' => ($r['author_name'] ?: 'Creator') . " uploaded new {$r['content_type']} '{$r['item_title']}'",
+                'title' => ($r['author_name'] ?: 'Admin') . " uploaded new {$r['content_type']} '{$r['item_title']}'",
                 'time' => $r['created_at'],
-                'badge' => 'SUBMISSION'
+                'badge' => 'UPLOAD'
             ];
         }
     }
@@ -153,7 +142,7 @@ try {
                 'new_users' => (int)($stats['today_new_users'] ?? 0),
                 'pending_reviews' => (int)($stats['pending_reviews'] ?? 0),
                 'total_published' => (int)($stats['total_published'] ?? 0),
-                'total_contributors' => (int)($stats['total_contributors'] ?? 0),
+                'total_users' => (int)($stats['total_users'] ?? 0),
             ],
             'velocity' => $velocityData,
             'recent_activity' => $activity

@@ -11,14 +11,11 @@ import {
   Inbox,
   CheckSquare,
   Square,
-  Users,
   ChevronLeft,
   Zap
 } from "lucide-react";
 import ContentCard from "./ContentCard";
-import { updateContentStatus, getAllContents } from "../api/contentApi";
-import { Link } from "react-router-dom";
-import useAuthors from "../utils/Hooks/useAuthors";
+import { updateContentStatus } from "../api/contentApi";
 import ReviewInspectionDrawer from "./Review/ReviewInspectionDrawer";
 
 /**
@@ -47,13 +44,11 @@ const ContentPageLayout = ({
   serverTotalPages,
 }) => {
   const queryClient = useQueryClient();
-  const { data: authors } = useAuthors();
   const [search, setSearch] = useState("");
   const [view, setView] = useState("grid");
   const [loadingId, setLoadingId] = useState(null);
   const [localPage, setLocalPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedAuthor, setSelectedAuthor] = useState("all");
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [inspectIndex, setInspectIndex] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -68,12 +63,12 @@ const ContentPageLayout = ({
   };
 
   const filtered = contents.filter((c) => {
-    const searchMatch = [c.title, c.author_name, c.author_email, c.category_name]
+    const searchMatch = [c.title, c.category_name, c.file_type, c.content_type]
+      .filter(Boolean)
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase());
-    const authorMatch = selectedAuthor === "all" || String(c.author_id) === String(selectedAuthor);
-    return searchMatch && authorMatch;
+    return searchMatch;
   });
 
   const totalPages = isServerPaginated ? serverTotalPages : Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -108,52 +103,11 @@ const ContentPageLayout = ({
     }
   };
 
-  const handleAuthorBulkPublish = async () => {
-    if (selectedAuthor === "all") return;
-    setIsBulkLoading(true);
-    try {
-      toast.info("Fetching all pending contents for author...", { autoClose: 2000 });
-      const res = await getAllContents({ status: "pending", limit: 5000 });
-      const authorContents = res.data.filter(c => String(c.author_id) === String(selectedAuthor));
-
-      if (authorContents.length === 0) {
-        toast.info("No pending contents found for this author.");
-        setIsBulkLoading(false);
-        return;
-      }
-
-      toast.info(`Approving ${authorContents.length} items...`);
-      await Promise.all(authorContents.map(c => updateContentStatus(c.id, "published")));
-      toast.success(`Successfully published all ${authorContents.length} items from this author!`);
-      setSelectedIds([]);
-      queryClient.invalidateQueries({ queryKey: ["contents"] });
-    } catch (err) {
-      toast.error(err.message || "Failed to bulk publish by author");
-    } finally {
-      setIsBulkLoading(false);
-    }
-  };
-
   const handlePublish = async (id) => {
     setLoadingId(id);
     try {
       await updateContentStatus(id, "published");
       toast.success("Content published successfully!");
-
-      // Auto-check for author level upgrade
-      const publishedContent = contents.find(c => c.id === id);
-      if (publishedContent && publishedContent.author_id) {
-        try {
-          await fetch(`${import.meta.env.VITE_LOCALHOST_KEY}/author/check_level_upgrade.php`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ author_id: publishedContent.author_id })
-          });
-        } catch (err) {
-          console.error("Level check failed:", err);
-        }
-      }
-
       queryClient.invalidateQueries({ queryKey: ["contents"] });
     } catch (err) {
       toast.error(err.message || "Failed to publish");
@@ -248,7 +202,7 @@ const ContentPageLayout = ({
       {/* TOOLBAR */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-2xl">
+        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
           <div className="relative flex-1">
             <Search
               size={16}
@@ -261,31 +215,9 @@ const ContentPageLayout = ({
                 setSearch(e.target.value);
                 handleSetPage(1);
               }}
-              placeholder="Search by title, author, category..."
+              placeholder="Search by title, publisher, category..."
               className="w-full rounded-xl border border-white/10 bg-white/5 pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-[#6C4FE0]/50 focus:ring-1 focus:ring-[#6C4FE0]/30 transition"
             />
-          </div>
-          <div className="relative flex-1">
-            <Users
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-            />
-            <select
-              value={selectedAuthor}
-              onChange={(e) => {
-                setSelectedAuthor(e.target.value);
-                handleSetPage(1);
-                setSelectedIds([]);
-              }}
-              className="w-full rounded-xl border border-white/10 bg-[#12121E] pl-9 pr-4 py-2.5 text-sm text-gray-300 outline-none focus:border-[#6C4FE0]/50 transition appearance-none cursor-pointer"
-            >
-              <option value="all">All Authors</option>
-              {authors?.map(author => (
-                <option key={author.id || author._id} value={author.id || author.user_id || author._id}>
-                  {author.name || author.username}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -406,7 +338,6 @@ const ContentPageLayout = ({
                   onReject={handleReject}
                   loading={loadingId === content.id}
                   showActions={showActions}
-                  authors={authors}
                   isSelected={selectedIds.includes(content.id)}
                   onToggleSelect={() => toggleSelect(content.id)}
                   onQuickInspect={() => {
@@ -427,7 +358,6 @@ const ContentPageLayout = ({
                   onReject={handleReject}
                   loading={loadingId === content.id}
                   showActions={showActions}
-                  authors={authors}
                   isSelected={selectedIds.includes(content.id)}
                   onToggleSelect={() => toggleSelect(content.id)}
                   onQuickInspect={() => {
@@ -525,27 +455,6 @@ const ContentPageLayout = ({
         </div>
       )}
 
-      {/* AUTHOR BULK APPROVE BUTTON */}
-      {selectedAuthor !== "all" && showActions && selectedIds.length === 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 bg-[#12121E] border border-white/10 shadow-2xl rounded-2xl px-6 py-4 animate-in slide-in-from-bottom-5">
-          <span className="text-white font-semibold flex items-center gap-2">
-            <Users size={18} className="text-[#6C4FE0]" /> Author Bulk Action
-          </span>
-          <div className="w-px h-8 bg-white/10 mx-2"></div>
-          <button
-            onClick={handleAuthorBulkPublish}
-            disabled={isBulkLoading}
-            className="flex items-center gap-2 rounded-xl py-2 px-4 text-sm font-semibold text-white transition hover:scale-105 active:scale-95"
-            style={{
-              background: "linear-gradient(135deg,#6C4FE0,#4F35C2)",
-              opacity: isBulkLoading ? 0.6 : 1,
-            }}
-          >
-            {isBulkLoading ? "Processing..." : "Publish All by this Author"}
-          </button>
-        </div>
-      )}
-
       {/* FAST REVIEW INSPECTION DRAWER (Hotkeys: A, R, J, K, Esc) */}
       <ReviewInspectionDrawer
         isOpen={isDrawerOpen}
@@ -572,7 +481,7 @@ const STATUS_CONFIG = {
 
 const IMG_BASE = import.meta.env.VITE_IMG_KEY;
 
-const ListRow = ({ content, onPublish, onReject, loading, showActions, authors, isSelected, onToggleSelect }) => {
+const ListRow = ({ content, onPublish, onReject, loading, showActions, isSelected, onToggleSelect }) => {
   const [rejectOpen, setRejectOpen] = useState(false);
   const cfg = STATUS_CONFIG[content?.status] || STATUS_CONFIG.pending;
   const src = content?.preview_image
@@ -581,8 +490,6 @@ const ListRow = ({ content, onPublish, onReject, loading, showActions, authors, 
       ? `${IMG_BASE}/${content.image_url}`
       : null;
 
-  const itemAuthor = authors?.find(a => String(a._id) === String(content?.author_id) || String(a.id) === String(content?.author_id) || String(a.user_id) === String(content?.author_id));
-  const authorName = itemAuthor?.name || itemAuthor?.username || itemAuthor?.full_name || content?.author_name || content?.author_username || content?.author_email || "Unknown";
   return (
     <>
       <div
@@ -624,8 +531,8 @@ const ListRow = ({ content, onPublish, onReject, loading, showActions, authors, 
             {content?.title || "Untitled"}
           </p>
           <p className="text-gray-500 text-xs truncate">
-            <Link to={`/dashboard/author/${itemAuthor?.username || content?.author_username || itemAuthor?.id || content?.author_id}`} className="text-blue-400 hover:underline">{authorName}</Link> ·{" "}
-            {content?.category_name || "No category"}
+            <span className="text-gray-400 font-medium">{content?.category_name || "Uncategorized"}</span> ·{" "}
+            {content?.file_type?.toUpperCase() || "Asset"}
           </p>
         </div>
         {/* Date */}

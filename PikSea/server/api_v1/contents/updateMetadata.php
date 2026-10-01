@@ -15,16 +15,8 @@ try {
     $userEmail = $GLOBALS['user']['email'];
     if (!$userEmail) throw new Exception("Unauthorized. Please log in.");
     
-    $authStmt = $mysqli->prepare("SELECT authors.id FROM authors INNER JOIN users ON authors.user_id = users.id WHERE users.email = ? LIMIT 1");
-    $authStmt->bind_param("s", $userEmail);
-    $authStmt->execute();
-    $authRes = $authStmt->get_result();
-    
-    if ($authRes->num_rows === 0) {
-        throw new Exception('You are not authorized to edit content.');
-    }
-    $authorId = (int) $authRes->fetch_assoc()['id'];
-    $authStmt->close();
+    $userRoles = $GLOBALS['user']['roles'] ?? [];
+    $isAdmin = in_array('admin', $userRoles) || in_array('super_admin', $userRoles);
 
     $contentId = !empty($_POST['content_id']) ? (int) $_POST['content_id'] : null;
     $title = trim($_POST['title'] ?? '');
@@ -41,7 +33,7 @@ try {
     }
 
     $isPremium = $licenseType === 'premium' ? 1 : 0;
-    $status = 'pending';
+    $status = 'published';
 
     // Generate base slug from title
     $baseSlug = strtolower(trim($title));
@@ -71,15 +63,6 @@ try {
 
     $mysqli->begin_transaction();
 
-    // Verify ownership
-    $checkStmt = $mysqli->prepare("SELECT id FROM contents WHERE id = ? AND author_id = ?");
-    $checkStmt->bind_param("ii", $contentId, $authorId);
-    $checkStmt->execute();
-    if ($checkStmt->get_result()->num_rows === 0) {
-        throw new Exception("Content not found or you don't have permission.");
-    }
-    $checkStmt->close();
-
     // Update contents table
     $updateQuery = "
         UPDATE contents SET 
@@ -92,14 +75,15 @@ try {
             is_premium = ?, 
             license_type = ?, 
             ai_generated = ?, 
-            status = ? 
+            status = 'published',
+            published_at = COALESCE(published_at, NOW()) 
         WHERE id = ?
     ";
     
     $updateStmt = $mysqli->prepare($updateQuery);
-    $updateStmt->bind_param("sssiisisisi", 
+    $updateStmt->bind_param("sssiisisii", 
         $title, $finalSlug, $description, $categoryId, $subcategoryId, 
-        $contentType, $isPremium, $licenseType, $aiGenerated, $status, $contentId
+        $contentType, $isPremium, $licenseType, $aiGenerated, $contentId
     );
     
     if (!$updateStmt->execute()) {

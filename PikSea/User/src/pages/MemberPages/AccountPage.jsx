@@ -79,7 +79,7 @@ const AccountPage = () => {
     // Add Company Logo/Name
     doc.setFontSize(22);
     doc.setTextColor(0, 212, 255); // #00D4FF
-    doc.text("DayalStock", 14, 20);
+    doc.text("PikSea", 14, 20);
     
     // Add Invoice Title
     doc.setFontSize(16);

@@ -29,32 +29,7 @@ if ($id <= 0 || !in_array($status, ['published', 'rejected', 'exclusive_buyout']
     exit;
 }
 
-// Fetch content details for notification
-$contentTitle = "Unknown Content";
-$authorId = null;
-$authorUserId = null;
-$authorEmail = "";
-$authorName = "";
-$contentSql = "SELECT c.title, c.author_id, a.user_id, u.email, u.name 
-               FROM contents c
-               LEFT JOIN authors a ON a.id = c.author_id
-               LEFT JOIN users u ON u.id = a.user_id
-               WHERE c.id = ?";
-if ($contentStmt = $mysqli->prepare($contentSql)) {
-    $contentStmt->bind_param("i", $id);
-    $contentStmt->execute();
-    $contentResult = $contentStmt->get_result();
-    if ($contentRow = $contentResult->fetch_assoc()) {
-        $contentTitle = $contentRow['title'];
-        $authorId = (int)$contentRow['author_id'];
-        $authorUserId = (int)$contentRow['user_id'];
-        $authorEmail = $contentRow['email'] ?? '';
-        $authorName = $contentRow['name'] ?? 'Contributor';
-    }
-    $contentStmt->close();
-}
-
-$admin_id = isset($GLOBALS['user']['id']) ? (int)$GLOBALS['user']['id'] : 1; // Get real user id instead of hardcoded
+$admin_id = isset($GLOBALS['user']['id']) ? (int)$GLOBALS['user']['id'] : 1;
 $currentTime = date('Y-m-d H:i:s');
 $publishedAt = null;
 
@@ -84,37 +59,7 @@ if (!$stmt) {
 $stmt->bind_param("ssisssi", $status, $rejectionReason, $admin_id, $currentTime, $finalReviewerNote, $publishedAt, $id);
 
 if ($stmt->execute()) {
-    if ($stmt->affected_rows > 0) {
-        // Send Notification to the author
-        if ($authorUserId > 0) {
-            $notifTitle = ($status === 'published') ? "Content Published!" : "Content Rejected";
-            $notifMessage = ($status === 'published') 
-                ? "Your content '{$contentTitle}' has been published successfully." 
-                : "Your content '{$contentTitle}' was rejected.";
-            if ($status === 'rejected' && !empty($reason)) {
-                $notifMessage .= " Reason: {$reason}";
-            }
-            sendNotification($mysqli, [
-                'user_id'     => $authorUserId,
-                'sender_id'   => $admin_id,
-                'sender_type' => 'admin',
-                'target_role' => 'author',
-                'type'        => 'content_review',
-                'title'       => $notifTitle,
-                'message'     => $notifMessage,
-                'priority'    => ($status === 'rejected') ? 'high' : 'normal',
-                'link'        => 'https://contributor.dayalstock.com/dashboard/files/published' // optional link for author
-            ]);
-
-            // Send Email Notification
-            if (!empty($authorEmail)) {
-                $emailType = ($status === 'published') ? 'content_approved' : 'content_rejected';
-                sendEmail($mysqli, $authorEmail, $authorName, $emailType, [
-                    'content_title' => $contentTitle,
-                    'reason'        => $reason
-                ], $authorUserId, $admin_id, 'Admin');
-            }
-        }
+    if ($stmt->affected_rows >= 0) {
         echo json_encode(["success" => true, "message" => "Content status updated successfully"]);
     } else {
         echo json_encode(["success" => false, "message" => "Content not found or no changes made"]);

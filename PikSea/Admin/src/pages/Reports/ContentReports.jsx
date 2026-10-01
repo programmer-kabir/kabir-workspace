@@ -386,7 +386,7 @@ const ContentReports = () => {
                               {item.content_title || `Content #${item.content_id}`}
                             </span>
                             <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                              <span>By {item.content_author_name}</span>
+                              <span>Asset ID: #{item.content_id}</span>
                               {item.reports_count > 1 && (
                                 <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded text-[10px] font-bold">
                                   🔥 {item.reports_count} Reports
@@ -507,7 +507,7 @@ const ContentReports = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-base font-bold text-white truncate">{selectedReport.content_title || `Content #${selectedReport.content_id}`}</h4>
-                <p className="text-xs text-gray-400">By {selectedReport.content_author_name}</p>
+                <p className="text-xs text-gray-400">Asset ID: #{selectedReport.content_id}</p>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400">
                   Status: {selectedReport.content_status || "published"}
                 </span>

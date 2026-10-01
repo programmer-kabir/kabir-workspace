@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/Logger.php';
-require_once __DIR__ . '/../config/r2_config.php';
 
 $response = [
     'success' => true,
@@ -95,65 +94,25 @@ try {
     }
     $response['data']['logs'] = $logs;
     
-    // 6. Cloudflare R2 Stats (S3 API + GraphQL API)
-    $r2Stats = R2Helper::getBucketStats();
-    
-    $classA = 0;
-    $classB = 0;
-    
-    // Cloudflare GraphQL API for Operations count
-    $cfAccountId = 'b88add0e4d3eae3a5a32ad34b2cc0096';
-    $cfToken = 'cfut_GqMuxKDmTShEhGOaXNEbNQfGBnVkocfYLoz7b14xf60dc71b';
-    
-    // Cloudflare GraphQL API requires a datetime filter
-    $datetimeGeq = gmdate('Y-m-d\TH:i:s\Z', strtotime('-30 days'));
-    $datetimeLeq = gmdate('Y-m-d\TH:i:s\Z');
-    
-    $query = '{"query": "{ viewer { accounts(filter: { accountTag: \"' . $cfAccountId . '\" }) { r2OperationsAdaptiveGroups(limit: 1000, filter: { datetime_geq: \"' . $datetimeGeq . '\", datetime_leq: \"' . $datetimeLeq . '\" }) { sum { requests } dimensions { actionType } } } } }"}';
-    
-    $ch = curl_init('https://api.cloudflare.com/client/v4/graphql');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $cfToken,
-        'Content-Type: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $query);
-    $cfResponse = curl_exec($ch);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-    
-    if ($cfResponse) {
-        file_put_contents(__DIR__ . '/cf_debug.json', $cfResponse);
-    } else {
-        file_put_contents(__DIR__ . '/cf_debug.json', 'CURL ERROR: ' . $curlError);
-    }
-    
-    if ($cfResponse) {
-        $cfData = json_decode($cfResponse, true);
-        if (isset($cfData['data']['viewer']['accounts'][0]['r2OperationsAdaptiveGroups'])) {
-            $ops = $cfData['data']['viewer']['accounts'][0]['r2OperationsAdaptiveGroups'];
-            $classATypes = ['PutObject', 'ListObjects', 'CopyObject', 'CompleteMultipartUpload', 'CreateMultipartUpload', 'UploadPart'];
-            
-            foreach ($ops as $op) {
-                $type = $op['dimensions']['actionType'];
-                $count = $op['sum']['requests'];
-                if (in_array($type, $classATypes)) {
-                    $classA += $count;
-                } else {
-                    $classB += $count;
-                }
-            }
+    // 6. Hostinger Server Local Storage Stats
+    $uploadsDir = realpath(__DIR__ . '/../../../uploads') ?: (realpath(__DIR__ . '/../../uploads') ?: __DIR__ . '/../../uploads');
+    $totalSize = 0;
+    $objectCount = 0;
+    if (is_dir($uploadsDir)) {
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadsDir, FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $file) {
+            $totalSize += $file->getSize();
+            $objectCount++;
         }
     }
     
-    $response['data']['r2'] = [
-        'size_gb' => round($r2Stats['totalSize'] / 1073741824, 2),
-        'size_mb' => round($r2Stats['totalSize'] / 1048576, 2),
-        'objects' => $r2Stats['objectCount'],
-        'class_a' => $classA,
-        'class_b' => $classB
+    $storageStats = [
+        'size_gb' => round($totalSize / 1073741824, 2),
+        'size_mb' => round($totalSize / 1048576, 2),
+        'objects' => $objectCount
     ];
+    $response['data']['storage_stats'] = $storageStats;
+    $response['data']['r2'] = $storageStats;
     
 } catch (Exception $e) {
     Logger::log("System health error: " . $e->getMessage(), 'ERROR');

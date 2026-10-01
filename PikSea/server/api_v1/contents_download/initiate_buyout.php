@@ -52,7 +52,7 @@ if ($content_id <= 0) {
 }
 
 // Check if content exists and is available
-$content_stmt = $mysqli->prepare("SELECT id, author_id, exclusive_price, is_exclusive_sold FROM contents WHERE id = ? LIMIT 1");
+$content_stmt = $mysqli->prepare("SELECT id, exclusive_price, is_exclusive_sold FROM contents WHERE id = ? LIMIT 1");
 $content_stmt->bind_param("i", $content_id);
 $content_stmt->execute();
 $content_res = $content_stmt->get_result();
@@ -75,7 +75,6 @@ if (empty($content['exclusive_price']) || $content['exclusive_price'] <= 0) {
 }
 
 $price = $content['exclusive_price'];
-$author_id = $content['author_id'];
 
 // Start Transaction
 $mysqli->begin_transaction();
@@ -104,7 +103,7 @@ try {
     $update_buyout->bind_param("si", $payment_transaction_id, $buyout_id);
     $update_buyout->execute();
 
-    // 4. Record 100% Company/Admin earnings for the buyout (Staff model - 0% contributor split)
+    // 4. Record 100% Company/Admin earnings for the buyout
     $company_cut = $price; // 100% to admin
     $earning_month = date('Y-m');
     $company_earnings_sql = "

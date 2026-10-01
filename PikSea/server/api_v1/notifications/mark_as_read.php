@@ -31,16 +31,16 @@ if ($notification_id && $isAdmin) {
     $stmt->bind_param("i", $notification_id);
 
 } elseif ($notification_id && $user_id) {
-    // User: নিজের specific notification (target_role='user' or 'author')
+    // User: নিজের specific notification
     $sql  = "UPDATE notifications SET is_read = 1, read_at = NOW()
-             WHERE id = ? AND user_id = ? AND target_role IN ('user', 'author')";
+             WHERE id = ? AND user_id = ? AND target_role = 'user'";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("ii", $notification_id, $user_id);
 
 } elseif (!$notification_id && $user_id) {
     // User: নিজের সব unread notifications mark করবে
     $sql  = "UPDATE notifications SET is_read = 1, read_at = NOW()
-             WHERE user_id = ? AND target_role IN ('user', 'author') AND is_read = 0";
+             WHERE user_id = ? AND target_role = 'user' AND is_read = 0";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("i", $user_id);
 

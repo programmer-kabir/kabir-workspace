@@ -48,11 +48,6 @@ const RoleBadge = ({ roles = [] }) => {
           text = "text-indigo-400";
           border = "border-indigo-500/20";
           Icon = Shield;
-        } else if (roleLower === "author" || roleLower === "contributor") {
-          bg = "bg-emerald-500/10";
-          text = "text-emerald-400";
-          border = "border-emerald-500/20";
-          Icon = UserIcon;
         } else if (roleLower === "premium" || roleLower === "pro") {
           bg = "bg-amber-500/10";
           text = "text-amber-400";
@@ -543,7 +538,6 @@ const AllUsers = () => {
               <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin pr-2">
                 {[
                   { id: 'user', label: 'User' },
-                  { id: 'author', label: 'Contributor / Author' },
                   { id: 'admin', label: 'Admin' },
                   { id: 'manager', label: 'Manager' },
                   { id: 'pro', label: 'Pro User' },

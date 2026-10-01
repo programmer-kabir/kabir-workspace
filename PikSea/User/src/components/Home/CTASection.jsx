@@ -1,40 +1,55 @@
-import ScrollReveal from "../FramerMotion/ScrollReveal";
 import { Link } from "react-router-dom";
-import useSiteSettings from "../../utlis/Hooks/useSiteSettings";
+import { Sparkles, Camera, ArrowRight } from "lucide-react";
+import ScrollReveal from "../FramerMotion/ScrollReveal";
 
 const CTASection = () => {
-  const { data: settings = {} } = useSiteSettings();
-
   return (
     <ScrollReveal>
-      <section className="relative overflow-hidden py-32 bg-white dark:bg-[#050505] transition-colors duration-300">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#00D4FF]/5" />
+      <section className="relative overflow-hidden py-32 bg-gray-50 dark:bg-[#05070D] text-gray-900 dark:text-white border-t border-gray-200 dark:border-white/10 transition-colors duration-300">
+        
+        {/* Background Visual Texture */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-5 dark:opacity-15 filter blur-[2px] scale-105"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=2000&q=80')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-gray-50/80 to-gray-50 dark:from-[#05070D] dark:via-[#05070D]/80 dark:to-[#05070D]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#00D4FF]/10 rounded-full blur-[160px]" />
+        </div>
 
-        {/* Shapes for premium feel */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-gradient-to-r from-[#00D4FF]/20 to-[#8B5CF6]/20 rounded-[100%] blur-[120px] pointer-events-none" />
+        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md shadow-xs">
+            <Camera size={14} className="text-[#00D4FF]" />
+            <span>Join The Movement</span>
+          </div>
 
-        {/* Content */}
-        <div className="relative z-10 mx-auto max-w-4xl px-4 text-center">
-          <h2 className="text-4xl font-outfit font-bold text-gray-900 dark:text-white sm:text-5xl lg:text-7xl leading-tight tracking-tight">
-            {settings?.cta_title || "Ready to Elevate Your Projects?"}
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+            Ready to Build with World-Class Visuals?
           </h2>
 
-          <p className="mx-auto mt-8 max-w-2xl text-lg font-inter text-gray-600 dark:text-gray-400 sm:text-xl">
-            {settings?.cta_description || "Join thousands of creators using our premium stock assets to build beautiful websites, apps, and designs faster."}
+          <p className="mx-auto mt-6 max-w-2xl text-sm sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-normal">
+            Whether you're crafting the next viral brand campaign, editorial layout, or modern web app — start downloading pure photography today.
           </p>
 
-          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to={settings?.cta_primary_btn_link || "/login"} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] px-10 py-4 text-lg font-outfit font-semibold text-[#050505] shadow-[0_0_20px_rgba(0,212,255,0.3)] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] inline-block">
-              {settings?.cta_primary_btn_text || "Create Free Account"}
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/join-pro"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#00D4FF] to-[#0284C7] text-black font-black text-sm hover:brightness-110 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+            >
+              <span>Get Started with Pro</span>
+              <ArrowRight size={16} />
             </Link>
-            <Link to={settings?.cta_secondary_btn_link || "/join-pro"} className="w-full sm:w-auto rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-10 py-4 text-lg font-outfit font-semibold text-gray-900 dark:text-white backdrop-blur-md transition-all duration-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:border-[#00D4FF]/50 dark:hover:border-[#00D4FF]/50 hover:scale-105 inline-block">
-              {settings?.cta_secondary_btn_text || "Explore Pro Plans"}
+            <Link
+              to="/search"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 rounded-2xl bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/15 text-gray-800 dark:text-white font-bold text-sm backdrop-blur-md transition-all shadow-xs"
+            >
+              Explore Free Library
             </Link>
           </div>
 
-          <p className="mt-10 text-sm font-inter text-gray-500 uppercase tracking-widest">
-            {settings?.cta_footer_text || "No credit card required for free accounts."}
+          <p className="mt-8 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+            Commercial rights included • No attribution needed • Instant 8K access
           </p>
         </div>
       </section>

@@ -91,7 +91,10 @@ const ExclusiveAssets = () => {
 
                             <div className="p-5 flex-1 flex flex-col">
                                 <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1 line-clamp-1" title={asset.title}>{asset.title}</h3>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">By {asset.author_name || asset.author_username}</p>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 font-medium flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00D4FF]"></span>
+                                    PikSea Studio Official
+                                </p>
 
                                 <div className="mt-auto pt-4 border-t border-gray-200 dark:border-white/5 flex items-center justify-between transition-colors">
                                     <div className="text-xs text-gray-500 font-medium">

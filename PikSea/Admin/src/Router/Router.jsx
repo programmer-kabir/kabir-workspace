@@ -30,8 +30,8 @@ const AdminDashboard = lazy(() => import("../pages/Dashboards/AdminDashboard"));
 const Notifications = lazy(() => import("../pages/Dashboards/Notifications"));
 
 // Content Management
+const UploadFiles = lazy(() => import("../pages/ContentManagement/UploadFiles"));
 const AllContents = lazy(() => import("../pages/ContentManagement/AllContents"));
-const PendingReview = lazy(() => import("../pages/ContentManagement/PendingReview"));
 const Published = lazy(() => import("../pages/ContentManagement/Published"));
 const Rejected = lazy(() => import("../pages/ContentManagement/Rejected"));
 const ExclusiveBuyout = lazy(() => import("../pages/ContentManagement/ExclusiveBuyout"));
@@ -39,13 +39,6 @@ const Collections = lazy(() => import("../pages/ContentManagement/Collections"))
 
 // Users
 const AllUsers = lazy(() => import("../pages/Users/AllUsers"));
-const Contributors = lazy(() => import("../pages/Users/Contributors"));
-const VerificationRequests = lazy(() => import("../pages/Users/VerificationRequests"));
-
-// Author
-const AuthorProfile = lazy(() => import("../pages/Author/AuthorProfile"));
-const AuthorLimits = lazy(() => import("../pages/Author/AuthorLimits"));
-const AuthorLevelRules = lazy(() => import("../pages/Author/AuthorLevelRules"));
 
 // Categories & Tags
 const Categories = lazy(() => import("../pages/Categories/Categories"));
@@ -66,6 +59,7 @@ const Settings = lazy(() => import("../pages/Settings/Settings"));
 const Testimonials = lazy(() => import("../pages/Settings/Testimonials"));
 const SeoManagement = lazy(() => import("../pages/Settings/SeoManagement"));
 const SystemHealth = lazy(() => import("../pages/Settings/SystemHealth"));
+const AIKeysManager = lazy(() => import("../pages/Settings/AIKeysManager"));
 
 // Pages
 const PagesList = lazy(() => import("../pages/Pages/PagesList"));
@@ -104,20 +98,24 @@ const routes = createBrowserRouter([
         element: S(AdminDashboard),
       },
       {
+        path: "dashboard/upload",
+        element: S(UploadFiles),
+      },
+      {
+        path: "dashboard/content/upload",
+        element: S(UploadFiles),
+      },
+      {
         path: "dashboard/allcontent",
         element: S(AllContents),
       },
       {
-        path: "dashboard/content/pending",
-        element: S(PendingReview),
-      },
-      {
         path: "dashboard/content/published",
-        element: S(Published),
+        element: S(AllContents),
       },
       {
         path: "dashboard/content/rejected",
-        element: S(Rejected),
+        element: S(AllContents),
       },
       {
         path: "dashboard/content/exclusive-buyout",
@@ -126,18 +124,6 @@ const routes = createBrowserRouter([
       {
         path: "dashboard/allusers",
         element: S(AllUsers),
-      },
-      {
-        path: "dashboard/users/contributors",
-        element: S(Contributors),
-      },
-      {
-        path: "dashboard/users/author-limits",
-        element: S(AuthorLimits),
-      },
-      {
-        path: "dashboard/users/author-level-rules",
-        element: S(AuthorLevelRules),
       },
       {
         path: "dashboard/categories",
@@ -172,6 +158,10 @@ const routes = createBrowserRouter([
         element: S(Settings),
       },
       {
+        path: "dashboard/settings/ai-keys",
+        element: S(AIKeysManager),
+      },
+      {
         path: "dashboard/pages",
         element: S(PagesList),
       },
@@ -186,10 +176,6 @@ const routes = createBrowserRouter([
       {
         path: "dashboard/billing-invoices",
         element: S(BillingInvoices),
-      },
-      {
-        path: "dashboard/author/:id",
-        element: S(AuthorProfile),
       },
       {
         path: "dashboard/testimonials",
@@ -210,10 +196,6 @@ const routes = createBrowserRouter([
       {
         path: "dashboard/content/collections",
         element: S(Collections),
-      },
-      {
-        path: "dashboard/users/verifications",
-        element: S(VerificationRequests),
       },
       {
         path: "dashboard/notifications",

@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../middleware/auth.php';
-require_once __DIR__ . '/../config/r2_config.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -47,14 +46,6 @@ try {
                 // Already WebP, just copy it
                 if (move_uploaded_file($file['tmp_name'], $filePath)) {
                     $dbPath = 'uploads/support/' . $fileName;
-                    
-                    if (class_exists('R2Helper')) {
-                        $uploadSuccess = R2Helper::uploadFile($filePath, $dbPath, 'image/webp');
-                        if ($uploadSuccess) {
-                            @unlink($filePath); // Remove local copy
-                        }
-                    }
-
                     echo json_encode(['success' => true, 'url' => $dbPath]);
                     exit;
                 }
@@ -70,12 +61,6 @@ try {
             imagedestroy($image);
 
             $dbPath = 'uploads/support/' . $fileName;
-            if (class_exists('R2Helper')) {
-                $uploadSuccess = R2Helper::uploadFile($filePath, $dbPath, 'image/webp');
-                if ($uploadSuccess) {
-                    @unlink($filePath); // Remove local copy
-                }
-            }
         } else {
              echo json_encode(['success' => false, 'message' => 'Failed to process image']);
              exit;
