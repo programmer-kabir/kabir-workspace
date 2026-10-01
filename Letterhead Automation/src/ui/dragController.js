@@ -4,10 +4,9 @@ import { showToast } from '../services/toastService.js';
 export function setupDragController(onSpecUpdated) {
   const container = document.getElementById('svgContainer');
   const paper = document.getElementById('paperWrapper');
-  const toggleDragBtn = document.getElementById('toggleDragModeBtn');
-  const toggleSnapBtn = document.getElementById('toggleSnapGridBtn');
+  const modePreviewBtn = document.getElementById('modePreviewBtn');
+  const modeEditBtn = document.getElementById('modeEditBtn');
   const resetPosBtn = document.getElementById('resetPositionsBtn');
-  const dragStatusBadge = document.getElementById('dragStatusBadge');
 
   let activeElement = null;
   let activeKey = null;
@@ -61,7 +60,6 @@ export function setupDragController(onSpecUpdated) {
     try {
       const bbox = elem.getBBox();
       const coords = getElementCoordinates(elem);
-      const zoom = store.getZoom();
 
       // Position relative to paperWrapper
       const left = coords.x + bbox.x - 4;
@@ -81,35 +79,37 @@ export function setupDragController(onSpecUpdated) {
 
   function updateToolbarState() {
     const isDrag = store.getDragMode();
-    const isSnap = store.getSnapGrid();
+    const appMode = store.getAppMode();
 
-    if (toggleDragBtn) {
-      toggleDragBtn.classList.toggle('bg-cyan-500/20', isDrag);
-      toggleDragBtn.classList.toggle('border-cyan-400/80', isDrag);
-      toggleDragBtn.classList.toggle('text-cyan-300', isDrag);
-      toggleDragBtn.classList.toggle('text-slate-400', !isDrag);
+    if (modePreviewBtn) {
+      const isPreview = appMode === 'preview';
+      modePreviewBtn.classList.toggle('bg-cyan-500', isPreview);
+      modePreviewBtn.classList.toggle('text-slate-950', isPreview);
+      modePreviewBtn.classList.toggle('font-bold', isPreview);
+      modePreviewBtn.classList.toggle('shadow-sm', isPreview);
+      modePreviewBtn.classList.toggle('text-slate-400', !isPreview);
+      modePreviewBtn.classList.toggle('hover:text-slate-200', !isPreview);
     }
 
-    if (toggleSnapBtn) {
-      toggleSnapBtn.classList.toggle('bg-cyan-500/20', isSnap);
-      toggleSnapBtn.classList.toggle('border-cyan-400/80', isSnap);
-      toggleSnapBtn.classList.toggle('text-cyan-300', isSnap);
-      toggleSnapBtn.classList.toggle('text-slate-400', !isSnap);
-    }
-
-    if (dragStatusBadge) {
-      if (isDrag) {
-        dragStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span> Drag: ON`;
-        dragStatusBadge.className = "flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-mono";
-      } else {
-        dragStatusBadge.innerHTML = `Drag: OFF`;
-        dragStatusBadge.className = "text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono";
-      }
+    if (modeEditBtn) {
+      const isEdit = appMode === 'edit';
+      modeEditBtn.classList.toggle('bg-gradient-to-r', isEdit);
+      modeEditBtn.classList.toggle('from-cyan-400', isEdit);
+      modeEditBtn.classList.toggle('to-blue-500', isEdit);
+      modeEditBtn.classList.toggle('text-slate-950', isEdit);
+      modeEditBtn.classList.toggle('font-bold', isEdit);
+      modeEditBtn.classList.toggle('shadow-md', isEdit);
+      modeEditBtn.classList.toggle('text-slate-400', !isEdit);
+      modeEditBtn.classList.toggle('hover:text-slate-200', !isEdit);
     }
 
     // Toggle pointer styling on svg
     if (container) {
       container.classList.toggle('interactive-drag-enabled', isDrag);
+    }
+
+    if (!isDrag && selectionBox) {
+      selectionBox.classList.add('hidden');
     }
   }
 
