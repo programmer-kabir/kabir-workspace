@@ -95,13 +95,13 @@ export const sidebarMenu = [
     children: [
       {
         label: "All Users",
-        path: "users/all_sers",
+        path: "/users/all_sers",
         icon: FaUser,
         roles: ["admin", "developer", "manager", "staff"],
       },
       {
         label: "Add User",
-        path: "users/add_user",
+        path: "/users/add_user",
         icon: AiOutlineUserAdd,
         roles: ["admin", "developer", "manager", "staff"],
       },
@@ -263,49 +263,40 @@ export const sidebarMenu = [
     children: [
       {
         label: "Inventory List",
-        path: "inventory/inventory_list",
+        path: "/inventory/inventory_list",
         icon: MdOutlineInventory2,
         roles: ["admin", "developer", "manager", "staff"],
       },
       {
         label: "Supplier Payments",
-        path: "inventory/supplier_payments",
+        path: "/inventory/supplier_payments",
         icon: MdPayments,
         roles: ["admin", "developer", "manager", "staff"],
       }
     ],
   },
 
-  // COMPANY
-
-  // {
-  //   type: "collapse",
-  //   label: "Finance",
-  //   icon: IoStatsChart,
-  //   roles: ["admin", "developer", "manager"],
-  //   children: [
-  //     {
-  //       label: "Finance Overview",
-  //       path: "/finance/finance_overview",
-  //       icon: IoStatsChart,
-  //       roles: ["admin", "developer", "manager"],
-  //     },
-  //     {
-  //       label: "Company Health",
-  //       path: "/finance/company-health",
-  //       icon: BsGraphUpArrow,
-  //       roles: ["admin", "developer", "manager"],
-  //     },
-  //   ],
-  // },
-  // DEVELOPER
-
+  // FINANCE
+  {
+    type: "collapse",
+    label: "Finance",
+    icon: IoStatsChart,
+    roles: ["admin", "developer", "manager"],
+    children: [
+      {
+        label: "Finance Overview",
+        path: "/finance/finance_overview",
+        icon: IoStatsChart,
+        roles: ["admin", "developer", "manager"],
+      },
       {
         label: "Company Health",
         path: "/finance/company-health",
         icon: BsGraphUpArrow,
         roles: ["admin", "developer", "manager"],
       },
+    ],
+  },
   {
     type: "collapse",
     label: "Installment Files",

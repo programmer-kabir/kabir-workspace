@@ -16,7 +16,7 @@ const CategoryDispatcher = () => {
     const resolveRoute = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`${import.meta.env.VITE_LOCALHOST_KEY || 'https://api.dayalstock.com/api_v1'}/route_resolver.php?category=${encodeURIComponent(category)}&slug=${encodeURIComponent(slugOrSub)}&api_key=${import.meta.env.VITE_APP_SECRET}`);
+        const res = await fetch(`${import.meta.env.VITE_LOCALHOST_KEY || 'https://api.piksea.com/api_v1'}/route_resolver.php?category=${encodeURIComponent(category)}&slug=${encodeURIComponent(slugOrSub)}&api_key=${import.meta.env.VITE_APP_SECRET}`);
         const data = await res.json();
         
         if (isMounted) {

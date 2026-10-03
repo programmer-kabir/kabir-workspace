@@ -10,7 +10,7 @@ import Masonry from "react-masonry-css";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getPreviewImage = (item) => {
   const src =
@@ -118,7 +118,7 @@ export default function SearchPage() {
       
       {/* ─── Search & Category Header ────────────────────────────────────────── */}
       <div className="bg-white dark:bg-[#0D0D15] border-b border-gray-200 dark:border-white/10 sticky top-0 z-30 shadow-sm pt-20 transition-colors">
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-4 space-y-3">
+        <div className="mx-auto px-4 lg:px-8 py-4 space-y-3">
           
           {/* Main Search Input & Category Dropdown */}
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2.5 items-center">
@@ -284,7 +284,7 @@ export default function SearchPage() {
       </div>
 
       {/* ─── Gallery Content Section ────────────────────────────────────────── */}
-      <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-8">
+      <div className="mx-auto px-4 lg:px-8 py-8">
         
         {/* Title & Count Bar */}
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-gray-200 dark:border-white/5 pb-4">

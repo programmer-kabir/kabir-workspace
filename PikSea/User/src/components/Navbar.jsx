@@ -11,7 +11,7 @@ import NotificationBell from "./NotificationBell";
 import { useTheme } from "../context/ThemeContext";
 import PikSeaLogo from "./Common/PikSeaLogo";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const Navbar = ({ onOpenCommandPalette }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

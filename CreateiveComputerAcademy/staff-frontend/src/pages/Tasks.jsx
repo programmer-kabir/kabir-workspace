@@ -15,7 +15,7 @@ import CascadingCategoryFilter from '../components/CascadingCategoryFilter';
 import DailyProgressBar from '../components/DailyProgressBar';
 import EmptyState from '../components/EmptyState';
 import Toast from '../components/Toast';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 
 const stripHtml = (html) => {
@@ -297,7 +297,18 @@ const DescriptionRenderer = React.memo(({ htmlContent, onImageClick }) => {
 const Tasks = () => {
   const { currentUser } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+  const deptName = currentUser?.department_name ? currentUser.department_name.toLowerCase() : '';
+  const isContentTeam = deptName.includes('content') || deptName.includes('video');
+
+  useEffect(() => {
+    if (isContentTeam) {
+      navigate('/content-studio', { replace: true });
+    }
+  }, [isContentTeam, navigate]);
+
   const [tasks, setTasks] = useState([]);
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'To-Do');
   const [loading, setLoading] = useState(true);

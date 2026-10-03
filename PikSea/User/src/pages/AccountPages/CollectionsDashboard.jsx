@@ -6,7 +6,7 @@ import ConfirmationModal from "../../components/Modals/ConfirmationModal";
 import { toast } from "react-toastify";
 import DayalLoader from "../../components/Common/DayalLoader";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getCoverImage = (url) => {
   if (!url) return null;

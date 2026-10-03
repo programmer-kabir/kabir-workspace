@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 const fetchSettings = async () => {
-  const res = await fetch(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/settings/getSettings.php`);
+  const res = await fetch(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/settings/getSettings.php`, {
+    headers: {
+      'x-api-key': import.meta.env.VITE_APP_SECRET
+    }
+  });
   if (!res.ok) {
     throw new Error("Failed to fetch site settings");
   }

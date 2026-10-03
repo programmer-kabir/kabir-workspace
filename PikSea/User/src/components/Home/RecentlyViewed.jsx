@@ -5,7 +5,7 @@ import { getRecentlyViewed } from "../../utlis/recentActivity";
 import useCategories from "../../utlis/Hooks/useCategories";
 import QuickViewModal from "../Modals/QuickViewModal";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "http://localhost/PikSea_Server";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getPreviewImage = (item) => {
   const src =

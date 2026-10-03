@@ -68,7 +68,7 @@ const NotFound = () => {
             <div className="relative flex items-center bg-white dark:bg-[#111] rounded-full border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
               <input
                 type="text"
-                placeholder="Search for photos, vectors, videos..."
+                placeholder="Search for high-resolution stock photos..."
                 className="w-full pl-6 pr-4 py-4 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none text-base sm:text-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

@@ -12,7 +12,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import QuickViewModal from "../../components/Modals/QuickViewModal";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getPreviewImage = (item) => {
   const src =

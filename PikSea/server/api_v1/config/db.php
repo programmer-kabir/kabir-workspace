@@ -20,14 +20,23 @@ $DB_USER = getenv('DB_USER') ?: '';
 $DB_PASS = getenv('DB_PASS') ?: '';
 $DB_NAME = getenv('DB_NAME') ?: '';
 
-$mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
-$mysqli->query("SET time_zone = '+06:00'");
+// Try primary connection
+mysqli_report(MYSQLI_REPORT_OFF);
+$mysqli = @new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+
+// If running locally (XAMPP / localhost) and production credentials failed, fallback to local root
+if ($mysqli->connect_errno && in_array($_SERVER['SERVER_ADDR'] ?? '127.0.0.1', ['127.0.0.1', '::1']) || in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1'])) {
+    if ($mysqli->connect_errno) {
+        $mysqli = @new mysqli('localhost', 'root', '', 'u647959341_dayaldb');
+    }
+}
 
 if ($mysqli->connect_errno) {
     $errorMsg = "DB connect failed: ({$mysqli->connect_errno}) {$mysqli->connect_error}";
     Logger::log($errorMsg, 'FATAL');
     
     header('Content-Type: application/json; charset=utf-8');
+    http_response_code(500);
     if (DEBUG) {
         echo json_encode(['success' => false, 'error' => $errorMsg]);
     } else {

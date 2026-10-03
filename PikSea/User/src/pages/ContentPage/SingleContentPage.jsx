@@ -32,7 +32,7 @@ import DynamicSEO from "../../components/CMS/DynamicSEO";
 import { saveToRecentlyViewed } from "../../utlis/recentActivity";
 import DownloadCelebration from "../../components/Common/DownloadCelebration";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const breakpointColumnsObj = {
   default: 5,

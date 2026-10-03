@@ -27,20 +27,19 @@ const InvestorDetails = () => {
   const [searchParams] = useSearchParams();
   const cardIdRaw = searchParams.get("card_id");
   const cardId = Number(cardIdRaw);
-const [showProfitDetails, setShowProfitDetails] = useState(false);
+  const [showProfitDetails, setShowProfitDetails] = useState(false);
   const { isUsersLoading, users = [], isUsersError } = useUsers();
   const {
     inInvestInstallmentsLoading,
     investInstallments = [],
     isInvestInstallmentsError,
   } = useInvestInstallment();
-
   const {
     investmentCards = [],
     isInvestmentCardsError,
     isInvestmentCardsLoading,
   } = useInvestmentCards();
-  
+
   const isLoading =
     isUsersLoading || inInvestInstallmentsLoading || isInvestmentCardsLoading;
 
@@ -104,9 +103,25 @@ const [showProfitDetails, setShowProfitDetails] = useState(false);
     return idx === -1 ? 0 : idx + 1;
   }, [investInstallments, cardId]);
 
+  // ✅ 6) profits & balance calculations
+  const currentCardProfit = useMemo(() => {
+    if (Array.isArray(investorCard?.profits)) return investorCard.profits;
+    if (Array.isArray(investorCard?.profit_history)) return investorCard.profit_history;
+    if (Array.isArray(investorCard?.monthly_profits)) return investorCard.monthly_profits;
+    return [];
+  }, [investorCard]);
 
-  const currentBalance =
-  Number(investorCard?.investment_amount || 0) + totalProfit;
+  const totalProfit = useMemo(() => {
+    const directProfit = Number(investorCard?.total_profit ?? investorCard?.profit);
+    if (Number.isFinite(directProfit) && directProfit > 0) {
+      return directProfit;
+    }
+    return currentCardProfit.reduce((sum, p) => sum + toNum(p?.profit_amount || p?.amount || 0), 0);
+  }, [investorCard, currentCardProfit]);
+
+  const currentBalance = useMemo(() => {
+    return deposit + totalProfit;
+  }, [deposit, totalProfit]);
 
   /* ---------------- AFTER ALL HOOKS: returns ---------------- */
 
@@ -149,7 +164,9 @@ const [showProfitDetails, setShowProfitDetails] = useState(false);
       />
     );
   }
-const normalizeStatus = (s) => String(s ?? "").toLowerCase().trim();
+
+  const normalizeStatus = (s) => String(s ?? "").toLowerCase().trim();
+
   return (
     <div className="mx-auto">
       <BackButton />
@@ -158,35 +175,34 @@ const normalizeStatus = (s) => String(s ?? "").toLowerCase().trim();
           <h1 className="text-2xl font-bold mb-6">Investor Details</h1>
 
           <div className="flex items-center gap-5 mb-8">
-         <div className="w-20 h-20 rounded-full p-[2px] bg-white/20">
-  <img
-    className="w-full h-full object-cover rounded-full"
-    src={`https://management.supplylinkbd.com/${investor?.photo}`}
-    alt=""
-  />
-</div>
+            <div className="w-20 h-20 rounded-full p-[2px] bg-white/20">
+              <img
+                className="w-full h-full object-cover rounded-full"
+                src={`https://management.supplylinkbd.com/${investor?.photo}`}
+                alt=""
+              />
+            </div>
 
             <div>
               <h2 className="text-xl font-semibold">{investor.name}</h2>
               <p className="text-sm text-slate-400">{investor.mobile}</p>
 
-             {(() => {
-  const status = normalizeStatus(investorCard?.status);
-  const isClosed = status === "closed" || status === "close";
+              {(() => {
+                const status = normalizeStatus(investorCard?.status);
+                const isClosed = status === "closed" || status === "close";
 
-  return (
-    <span
-      className={`inline-block mt-2 px-3 py-1 text-xs rounded-full border ${
-        isClosed
-          ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
-          : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-      }`}
-    >
-      {isClosed ? "Closed Card" : "Active Investor"}
-    </span>
-  );
-})()}
-
+                return (
+                  <span
+                    className={`inline-block mt-2 px-3 py-1 text-xs rounded-full border ${
+                      isClosed
+                        ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                        : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                    }`}
+                  >
+                    {isClosed ? "Closed Card" : "Active Investor"}
+                  </span>
+                );
+              })()}
 
               <p className="mt-2 text-xs text-white/50">
                 Card: {investorCard?.card_name ?? investorCard?.id} (ID: {cardId})
@@ -209,84 +225,93 @@ const normalizeStatus = (s) => String(s ?? "").toLowerCase().trim();
             <Info label="NID" value={investor.id_number ?? "-"} />
             <Info label="Address" value={investor.address ?? "-"} />
             <Info
-              label="Current Balance "
-              value={currentBalance}
+              label="Current Balance"
+              value={`৳ ${Number(currentBalance).toLocaleString()}`}
+              highlight
             />
           </div>
-<div
-  onClick={() => setShowProfitDetails(!showProfitDetails)}
-  className="mt-6 cursor-pointer rounded-xl border border-green-500/30 bg-green-500/10 p-4"
->
-  <div className="flex justify-between items-center">
-    <div>
-      <p className="text-sm text-green-300">Total Profit</p>
-      <h3 className="text-2xl font-bold">
-        ৳ {totalProfit.toFixed(2)}
-      </h3>
-    </div>
 
-    <div className="text-xl">
-      {showProfitDetails ? "▲" : "▼"}
-    </div>
-  </div>
-</div>
-{showProfitDetails && (
-  <div className="mt-4 rounded-xl border border-white/10 bg-slate-800 p-4">
-    <h3 className="text-lg font-semibold mb-4">
-      Monthly Profit History
-    </h3>
+          <div
+            onClick={() => setShowProfitDetails(!showProfitDetails)}
+            className="mt-6 cursor-pointer rounded-xl border border-green-500/30 bg-green-500/10 p-4"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-green-300">Total Profit</p>
+                <h3 className="text-2xl font-bold">
+                  ৳ {Number(totalProfit).toFixed(2)}
+                </h3>
+              </div>
 
-    <div className="space-y-2">
-      {currentCardProfit.map((profit) => (
-        <div
-          key={profit.id}
-          className="flex justify-between items-center rounded-lg bg-slate-900 p-3"
-        >
-          <div>
-            <p className="font-medium">
-              {new Date(
-                profit.profit_year,
-                profit.profit_month - 1
-              ).toLocaleString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-
-            <p className="text-xs text-slate-400">
-              Status: {profit.status}
-            </p>
+              <div className="text-xl">
+                {showProfitDetails ? "▲" : "▼"}
+              </div>
+            </div>
           </div>
 
-          <div className="text-green-400 font-bold">
-            ৳ {Number(profit.profit_amount).toFixed(2)}
-          </div>
-        </div>
-      ))}
-    </div>
+          {showProfitDetails && (
+            <div className="mt-4 rounded-xl border border-white/10 bg-slate-800 p-4">
+              <h3 className="text-lg font-semibold mb-4">
+                Monthly Profit History
+              </h3>
 
-    <div className="mt-5 border-t border-white/10 pt-4">
-      <div className="flex justify-between text-lg font-semibold">
-        <span>Total Profit</span>
-        <span className="text-green-400">
-          ৳ {totalProfit.toFixed(2)}
-        </span>
-      </div>
+              <div className="space-y-2">
+                {currentCardProfit.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-3">কোনো প্রফিট হিস্ট্রি পাওয়া যায়নি</p>
+                ) : (
+                  currentCardProfit.map((profit, idx) => (
+                    <div
+                      key={profit?.id || idx}
+                      className="flex justify-between items-center rounded-lg bg-slate-900 p-3"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {profit?.profit_year && profit?.profit_month
+                            ? new Date(
+                                profit.profit_year,
+                                profit.profit_month - 1
+                              ).toLocaleString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : profit?.month_name || profit?.date || "Profit"}
+                        </p>
 
-      <div className="flex justify-between mt-2 text-xl font-bold">
-        <span>Current Balance</span>
-        <span className="text-blue-400">
-          ৳ {currentBalance.toFixed(2)}
-        </span>
-      </div>
-    </div>
-  </div>
-)}
+                        <p className="text-xs text-slate-400">
+                          Status: {profit?.status || "Disbursed"}
+                        </p>
+                      </div>
+
+                      <div className="text-green-400 font-bold">
+                        ৳ {Number(profit?.profit_amount || profit?.amount || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Total Profit</span>
+                  <span className="text-green-400">
+                    ৳ {Number(totalProfit).toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between mt-2 text-xl font-bold">
+                  <span>Current Balance</span>
+                  <span className="text-blue-400">
+                    ৳ {Number(currentBalance).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           <p className="mt-6 text-sm text-white/60">
             Payments found for this card: {cardPayments.length}
           </p>
         </div>
-        
+
       </div>
     </div>
   );
@@ -294,11 +319,10 @@ const normalizeStatus = (s) => String(s ?? "").toLowerCase().trim();
 
 const Info = ({ label, value, highlight }) => (
   <div
-    className={`rounded-xl p-4 border transition ${
-      highlight
+    className={`rounded-xl p-4 border transition ${highlight
         ? "bg-indigo-500/10 border-indigo-500/30"
         : "bg-slate-800/60 border-white/5"
-    }`}
+      }`}
   >
     <p className="text-xs text-slate-400 mb-1">{label}</p>
     <p className="text-lg font-medium break-words">{value}</p>

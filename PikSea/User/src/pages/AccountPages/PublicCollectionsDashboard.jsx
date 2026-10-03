@@ -4,7 +4,7 @@ import { Folder } from "lucide-react";
 import { usePublicCollections } from "../../utlis/Hooks/useCollections";
 import DayalLoader from "../../components/Common/DayalLoader";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getCoverImage = (url) => {
   if (!url) return null;

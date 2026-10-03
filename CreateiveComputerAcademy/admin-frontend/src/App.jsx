@@ -27,6 +27,7 @@ import DatabaseManager from './pages/DatabaseManager';
 import BrandResources from './pages/BrandResources';
 import AcademyBlog from './pages/AcademyBlog';
 import BlogDetails from './pages/BlogDetails';
+import ContentStudioAdmin from './pages/ContentStudioAdmin';
 import NotFound from './pages/NotFound';
 
 // Mock empty pages to avoid errors
@@ -55,6 +56,12 @@ function App() {
           <Route path="/messages" element={
             <ProtectedRoute>
               <AdminLayout><Messages /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/content-studio" element={
+            <ProtectedRoute>
+              <AdminLayout><ContentStudioAdmin /></AdminLayout>
             </ProtectedRoute>
           } />
 

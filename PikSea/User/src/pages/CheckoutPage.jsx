@@ -51,18 +51,30 @@ const CheckoutPage = () => {
     };
   }, []);
 
-  // Temporary Map for Lemon Squeezy Variant IDs (You will replace these with real IDs)
+  // Map for Lemon Squeezy Variant IDs (Can be set in .env or configured per plan)
   const getVariantId = (slug) => {
-    const variants = {
-      'starter': '810e3875-02f0-45e7-a1fc-8b315ebab310',
-      'premium': '12346',
-      'pro': '12347',
-      'pro-plus': '12348'
+    const cleanSlug = (slug || '').toLowerCase().replace(/-yearly$/, '').trim();
+    const envVariants = {
+      'starter': import.meta.env.VITE_LEMON_VARIANT_STARTER,
+      'premium': import.meta.env.VITE_LEMON_VARIANT_PREMIUM,
+      'pro': import.meta.env.VITE_LEMON_VARIANT_PRO,
+      'pro-plus': import.meta.env.VITE_LEMON_VARIANT_PRO_PLUS,
+      'pro+': import.meta.env.VITE_LEMON_VARIANT_PRO_PLUS
     };
-    return variants[slug] || '00000';
+
+    const fallbackVariants = {
+      'starter': 'f61549eb-903b-4b20-ac04-42f3dcaed57c',
+      'premium': '0e36146c-118c-457b-bb83-b1ffa3ef69b8',
+      'pro': '473f3c1b-a035-4140-a5d1-37a07e062cbd',
+      'pro-plus': '6aa0cbd8-0ce4-433e-9191-09fe51bfadbc'
+    };
+
+    return envVariants[cleanSlug] || plan?.lemon_variant_id || fallbackVariants[cleanSlug] || 'f61549eb-903b-4b20-ac04-42f3dcaed57c';
   };
 
-  const checkoutUrl = `https://dayalstock.lemonsqueezy.com/checkout/buy/${getVariantId(plan.slug)}?embed=1&checkout[email]=${user?.email || ''}&checkout[custom][user_id]=${user?.uid || ''}&checkout[custom][plan_id]=${plan?.id || ''}&dark=1`;
+  let rawSubdomain = import.meta.env.VITE_LEMON_SQUEEZY_STORE_SUBDOMAIN || 'pikseeeeeea';
+  const storeSubdomain = rawSubdomain.replace(/^https?:\/\//, '').replace(/\.lemonsqueezy\.com.*$/, '').replace(/\/+$/, '') || 'pikseeeeeea';
+  const checkoutUrl = `https://${storeSubdomain}.lemonsqueezy.com/checkout/buy/${getVariantId(plan.slug)}?embed=1&checkout[email]=${encodeURIComponent(user?.email || '')}&checkout[custom][user_id]=${user?.uid || ''}&checkout[custom][plan_id]=${plan?.id || ''}&dark=1`;
 
   const handleCheckoutClick = (e) => {
     e.preventDefault();

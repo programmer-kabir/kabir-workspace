@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../helpers/cash_helper.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -247,6 +248,28 @@ try {
     $historyStmt->execute();
     $historyStmt->close();
   }
+
+  // 6. Auto-sync with Cash In table
+  $cardIdForCash = (int)$oldPayment['card_id'];
+  $dueAmountForCash = (float)$oldPayment['due_amount'];
+  $effectivePaidDate = !empty($paid_date) ? $paid_date : (!empty($oldPayment['paid_date']) ? $oldPayment['paid_date'] : date("Y-m-d"));
+  $effectiveStatus = $status !== null ? $status : ($oldPayment['status'] ?? 'Unpaid');
+  $effectiveMethod = $payment_method !== null ? $payment_method : ($oldPayment['payment_method'] ?? 'Cash');
+  $effectiveReceipt = $receipt_number !== null ? $receipt_number : ($oldPayment['receipt_number'] ?? '');
+  $tagForCash = !empty($oldPayment['tag']) ? $oldPayment['tag'] : "কিস্তি #{$oldPayment['installment_no']}";
+
+  syncInstallmentPaymentCash(
+    $mysqli,
+    $id,
+    $cardIdForCash,
+    $dueAmountForCash,
+    $effectivePaidDate,
+    $effectiveStatus,
+    $effectiveMethod,
+    $effectiveReceipt,
+    $collected_by,
+    $tagForCash
+  );
 
   $mysqli->commit();
 

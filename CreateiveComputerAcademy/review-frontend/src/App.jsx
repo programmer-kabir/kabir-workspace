@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Reports from './pages/Reports';
 import Credits from './pages/Credits';
 import BrandResources from './pages/BrandResources';
+import VideoReviewQA from './pages/VideoReviewQA';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -29,6 +30,12 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <ReviewerLayout><Dashboard /></ReviewerLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/video-review" element={
+            <ProtectedRoute>
+              <ReviewerLayout><VideoReviewQA /></ReviewerLayout>
             </ProtectedRoute>
           } />
 

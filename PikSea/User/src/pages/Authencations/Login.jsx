@@ -292,7 +292,7 @@ const Login = () => {
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#030303] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-inter transition-colors duration-300">
 
       {/* Background Ambient Mesh Light Spheres */}
-      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-[#ff7900]/20 via-[#ff9400]/10 to-transparent rounded-full filter blur-[140px] pointer-events-none opacity-80 dark:opacity-40 animate-pulse" />
+      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-[#0284C7]/20 via-[#00D4FF]/10 to-transparent rounded-full filter blur-[140px] pointer-events-none opacity-80 dark:opacity-40 animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-gradient-to-tl from-[#00D4FF]/20 via-[#8B5CF6]/15 to-transparent rounded-full filter blur-[140px] pointer-events-none opacity-80 dark:opacity-40" style={{ animationDelay: '3s' }} />
 
       {/* Background Subtle Grid Pattern */}
@@ -393,14 +393,7 @@ const Login = () => {
         >
           {/* Mobile Header Logo */}
           <div className="lg:hidden flex justify-center mb-6 text-center">
-            <Link to="/" className="inline-flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#ff7900] to-[#ffaa00] flex items-center justify-center shadow-md">
-                <span className="text-white font-black text-xl font-outfit">D</span>
-              </div>
-              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white font-outfit">
-                Dayal<span className="text-[#ff7900]">Stock</span>
-              </h1>
-            </Link>
+            <PikSeaLogo size="md" />
           </div>
 
           {/* Premium Glass Card */}
@@ -415,7 +408,7 @@ const Login = () => {
               </AnimatePresence>
 
               {/* Top Card Ambient Gradient Line */}
-              <div className="absolute top-0 left-10 right-10 h-[2px] bg-gradient-to-r from-transparent via-[#ff7900] to-transparent opacity-80" />
+              <div className="absolute top-0 left-10 right-10 h-[2px] bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-80" />
 
               <AnimatePresence mode="wait">
 

@@ -926,9 +926,42 @@ try {
     =========================== */
     $finalFolderName = (string)$contentId;
     $finalUploadDirectory = $contentsBaseDir . $finalFolderName . '/';
-    if (!rename($uploadDirectory, $finalUploadDirectory)) {
-        throw new Exception('Content folder rename করা যায়নি (temp → ' . $contentId . ')।');
+    
+    // If target directory already exists from an old run, clean it up first
+    if (is_dir($finalUploadDirectory)) {
+        $oldFiles = glob($finalUploadDirectory . '*');
+        if ($oldFiles) {
+            foreach ($oldFiles as $f) {
+                if (is_file($f)) @unlink($f);
+            }
+        }
+        @rmdir($finalUploadDirectory);
     }
+
+    $movedSuccessfully = @rename($uploadDirectory, $finalUploadDirectory);
+    if (!$movedSuccessfully) {
+        // Fallback: Manual recursive copy & clean
+        if (!is_dir($finalUploadDirectory)) {
+            @mkdir($finalUploadDirectory, 0775, true);
+        }
+        $dirHandle = @opendir($uploadDirectory);
+        if ($dirHandle) {
+            while (($fName = readdir($dirHandle)) !== false) {
+                if ($fName !== '.' && $fName !== '..') {
+                    @copy($uploadDirectory . $fName, $finalUploadDirectory . $fName);
+                    @unlink($uploadDirectory . $fName);
+                }
+            }
+            closedir($dirHandle);
+            @rmdir($uploadDirectory);
+            $movedSuccessfully = true;
+        }
+    }
+
+    if (!$movedSuccessfully && !is_dir($finalUploadDirectory)) {
+        throw new Exception('Content folder move করা যায়নি (temp → ' . $contentId . ')।');
+    }
+
     // Update $uploadDirectory so any further file ops use the right path
     $uploadDirectory = $finalUploadDirectory;
     // Update $uploadedFiles paths to reflect the new directory

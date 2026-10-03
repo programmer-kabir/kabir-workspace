@@ -26,7 +26,7 @@ import Swal from "sweetalert2";
 import { authFetch } from "../../api/authFetch";
 
 const BASE_URL = import.meta.env.VITE_LOCALHOST_KEY;
-const IMG_BASE = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const IMG_BASE = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const UserReports = () => {
   const [reports, setReports] = useState([]);

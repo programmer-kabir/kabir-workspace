@@ -326,7 +326,7 @@ const EmailLogs = () => {
             {/* Rendered Email Card Preview */}
             <div className="bg-white text-gray-900 rounded-2xl p-6 shadow-xl space-y-4 font-sans">
               <div className="text-center border-b pb-4">
-                <h2 className="text-xl font-black text-[#6C4FE0] tracking-tight">DayalStock</h2>
+                <h2 className="text-xl font-black text-[#00D4FF] tracking-tight">PikSea</h2>
                 <h4 className="text-base font-bold text-gray-800 mt-1">{selectedMail.message_title || selectedMail.subject}</h4>
               </div>
 
@@ -338,8 +338,8 @@ const EmailLogs = () => {
               </div>
 
               <div className="border-t pt-4 text-center text-xs text-gray-400">
-                &copy; {new Date().getFullYear()} DayalStock. All rights reserved.<br />
-                Official communication dispatched via DayalStock Compliance Desk.
+                &copy; {new Date().getFullYear()} PikSea. All rights reserved.<br />
+                Official communication dispatched via PikSea Compliance Desk.
               </div>
             </div>
 

@@ -4,9 +4,31 @@ import useCustomerInstallmentPayments from "../../../../utils/Hooks/Customers/us
 import useInvestInstallment from "../../../../utils/Investors/useInvestInstallment";
 import useInvestmentCards from "../../../../utils/Investors/useInvestmentCards";
 import useCashReports from "../../../../utils/Hooks/cash/useCashReports";
+import useMobileInventory from "../../../../utils/Hooks/useMobileInventory";
+import useSupplierPayments from "../../../../utils/Hooks/useSupplierPayments";
+import useUsers from "../../../../utils/Hooks/useUsers";
 import Loader from "../../../../components/Loader/Loader";
 import { FinanceModal } from "./FinanceModal";
-import useUsers from "../../../../utils/Hooks/useUsers";
+import {
+  FaWallet,
+  FaBoxes,
+  FaHandHoldingUsd,
+  FaUsers,
+  FaChartLine,
+  FaMoneyBillWave,
+  FaFileInvoiceDollar,
+  FaBalanceScale,
+  FaArrowUp,
+  FaArrowDown,
+  FaShieldAlt,
+  FaStore,
+  FaLayerGroup,
+  FaCalendarAlt,
+  FaSearch,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaInfoCircle,
+} from "react-icons/fa";
 
 /* ---------- helpers ---------- */
 const toNum = (v) => {
@@ -20,96 +42,163 @@ const formatBDT = (n) =>
     maximumFractionDigits: 2,
   });
 
+const formatBDTShort = (n) =>
+  toNum(n).toLocaleString("en-US", {
+    maximumFractionDigits: 0,
+  });
+
 const StatCard = ({
   title,
   value,
   accent = "emerald",
-  icon = "💠",
+  icon,
   subtitle,
+  onClick,
+  badge,
 }) => {
   const accentMap = {
-    emerald: "border-emerald-500/40 bg-emerald-500/5 text-emerald-300",
-    indigo: "border-indigo-500/40 bg-indigo-500/5 text-indigo-300",
-    amber: "border-amber-500/40 bg-amber-500/5 text-amber-300",
-    rose: "border-rose-500/40 bg-rose-500/5 text-rose-300",
-    red: "border-red-500/40 bg-red-500/5 text-red-300",
-    sky: "border-sky-500/40 bg-sky-500/5 text-sky-300",
-    slate: "border-slate-500/40 bg-slate-500/5 text-slate-200",
+    emerald: {
+      border: "border-emerald-500/30 hover:border-emerald-500/60",
+      bg: "bg-emerald-950/20",
+      iconBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      text: "text-emerald-400",
+    },
+    indigo: {
+      border: "border-indigo-500/30 hover:border-indigo-500/60",
+      bg: "bg-indigo-950/20",
+      iconBg: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+      text: "text-indigo-400",
+    },
+    amber: {
+      border: "border-amber-500/30 hover:border-amber-500/60",
+      bg: "bg-amber-950/20",
+      iconBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      text: "text-amber-400",
+    },
+    rose: {
+      border: "border-rose-500/30 hover:border-rose-500/60",
+      bg: "bg-rose-950/20",
+      iconBg: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+      text: "text-rose-400",
+    },
+    cyan: {
+      border: "border-cyan-500/30 hover:border-cyan-500/60",
+      bg: "bg-cyan-950/20",
+      iconBg: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+      text: "text-cyan-400",
+    },
+    blue: {
+      border: "border-blue-500/30 hover:border-blue-500/60",
+      bg: "bg-blue-950/20",
+      iconBg: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+      text: "text-blue-400",
+    },
+    purple: {
+      border: "border-purple-500/30 hover:border-purple-500/60",
+      bg: "bg-purple-950/20",
+      iconBg: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      text: "text-purple-400",
+    },
   };
 
-  const accentCls = accentMap[accent] || accentMap.emerald;
+  const style = accentMap[accent] || accentMap.emerald;
 
   return (
     <div
-      className={[
-        "group relative rounded-2xl border p-4 shadow-sm",
-        "bg-white/5 backdrop-blur",
-        "hover:bg-white/7 hover:border-white/20 transition",
-        "h-full flex flex-col justify-between", // ✅ height fix
-        // "min-h-[150px]", // ✅ (optional) hard lock height
-        accentCls,
-      ].join(" ")}
+      onClick={onClick}
+      className={`group relative rounded-3xl border p-5 shadow-xl bg-gradient-to-b from-slate-900/95 via-[#0B132B]/90 to-slate-950/95 backdrop-blur-md transition-all duration-300 flex flex-col justify-between ${
+        style.border
+      } ${onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.99]" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-slate-200/90">{title}</p>
-          {subtitle ? (
-            <p className="mt-1 text-xs text-slate-400 leading-snug">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider truncate">
+              {title}
+            </p>
+            {badge && (
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">
+                {badge}
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p className="mt-1 text-[11px] text-slate-400 leading-snug">
               {subtitle}
             </p>
-          ) : null}
+          )}
         </div>
 
-        <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-2.5 py-1.5 text-sm">
-          <span className="opacity-90">{icon}</span>
+        <div
+          className={`shrink-0 rounded-2xl border p-2.5 text-base flex items-center justify-center shadow-inner ${style.iconBg}`}
+        >
+          {icon}
         </div>
       </div>
 
-      <div className="mt-3 flex items-end justify-between">
-        <p className="text-2xl font-bold tracking-tight text-slate-50">
-          ৳ {formatBDT(value)}
-        </p>
+      <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-end justify-between">
+        <div>
+          <p className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${style.text}`}>
+            ৳ {formatBDT(value)}
+          </p>
+        </div>
+        {onClick && (
+          <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-300 transition flex items-center gap-1">
+            বিস্তারিত ➔
+          </span>
+        )}
       </div>
     </div>
   );
 };
 
-const Section = ({ title, hint, children }) => (
-  <section className="space-y-3">
-    <div className="flex items-end justify-between gap-3">
-      <div>
-        <h3 className="text-base font-semibold text-slate-100">{title}</h3>
-        {hint ? <p className="text-xs text-slate-400 mt-0.5">{hint}</p> : null}
-      </div>
-    </div>
-    {children}
-  </section>
-);
-
 const FinanceOverview = () => {
+  const [activeTab, setActiveTab] = useState("all"); // all, assets, collections, dues, investors, suppliers, expenses
+  const [openModalType, setOpenModalType] = useState(null); // closedCards, expenses, suppliers, inventory, cashDetails
+
   const {
     isCustomerInstallmentsCardsLoading,
-    customerInstallmentCards,
+    customerInstallmentCards = [],
     isCustomerInstallmentsCardsError,
   } = useCustomerInstallmentCards();
 
   const {
     isCustomerInstallmentsPaymentsLoading,
-    customerInstallmentPayments,
+    customerInstallmentPayments = [],
     isCustomerInstallmentsPaymentsError,
   } = useCustomerInstallmentPayments();
 
   const {
     inInvestInstallmentsLoading,
-    investInstallments,
+    investInstallments = [],
     isInvestInstallmentsError,
   } = useInvestInstallment();
 
-  const { investmentCards, isInvestmentCardsError, isInvestmentCardsLoading } =
-    useInvestmentCards();
-  const { users, isUsersError, isUsersLoading } = useUsers();
-  const { CashReports, isCashReportsError, isCashReportsLoading } =
-    useCashReports();
+  const {
+    investmentCards = [],
+    isInvestmentCardsError,
+    isInvestmentCardsLoading,
+  } = useInvestmentCards();
+
+  const { users = [], isUsersError, isUsersLoading } = useUsers();
+
+  const {
+    CashReports = [],
+    isCashReportsError,
+    isCashReportsLoading,
+  } = useCashReports();
+
+  const {
+    stockMobiles = [],
+    isStockMobilesLoading,
+    isStockMobilesError,
+  } = useMobileInventory();
+
+  const {
+    supplierPayments = [],
+    isSupplierPaymentsLoading,
+    isSupplierPaymentsError,
+  } = useSupplierPayments();
 
   const loading =
     isCustomerInstallmentsCardsLoading ||
@@ -117,7 +206,9 @@ const FinanceOverview = () => {
     inInvestInstallmentsLoading ||
     isUsersLoading ||
     isInvestmentCardsLoading ||
-    isCashReportsLoading;
+    isCashReportsLoading ||
+    isStockMobilesLoading ||
+    isSupplierPaymentsLoading;
 
   const hasError =
     isCustomerInstallmentsCardsError ||
@@ -131,338 +222,627 @@ const FinanceOverview = () => {
   const payments = customerInstallmentPayments || [];
   const invests = investInstallments || [];
   const invCards = investmentCards || [];
-  const Expenses = useMemo(() => {
-    return Array.isArray(CashReports)
-      ? CashReports.filter(
-        (cash) =>
-          cash.source === "company-expense" &&
-          (cash.approval_status === "approved" || !cash.approval_status)
-      )
-      : [];
-  }, [CashReports]);
-  const WithdrawnHistory = [];
-  /* ---------- metrics ---------- */
-  const {
-    totalCostPrice,
-    totalSalePrice,
-    totalProfit,
-    WithdrawnProfit,
-    totalDuePaid,
-    totalPaidPrincipal,
-    paidProfit,
+  const cashList = Array.isArray(CashReports) ? CashReports : [];
+  const inventoryList = Array.isArray(stockMobiles) ? stockMobiles : [];
+  const supplierList = Array.isArray(supplierPayments) ? supplierPayments : [];
 
-    totalDueUnPaid,
-    totalUnPaidPrincipal,
-    totalUnPaidProfit,
-
-    totalInvestment,
-    totalClosedInvestment,
-    activeInvestment,
-    currentCash,
-    totalCompanyExpenses,
-  } = useMemo(() => {
-    const totalCostPrice = cards.reduce(
-      (sum, c) => sum + toNum(c.cost_price),
-      0,
-    );
-    const totalSalePrice = cards.reduce(
-      (sum, c) => sum + toNum(c.sale_price),
-      0,
-    );
-    const totalProfit = cards.reduce((sum, c) => sum + toNum(c.profit), 0);
-
-    // paid_date based collected (safe)
-    const totalDuePaid = payments.reduce(
-      (sum, p) => (p.paid_date ? sum + toNum(p.due_amount) : sum),
-      0,
-    );
-    const totalPaidPrincipal = payments.reduce(
-      (sum, p) => (p.paid_date ? sum + toNum(p.principal_amount) : sum),
-      0,
-    );
-    const paidProfit = payments.reduce(
-      (sum, p) => (p.paid_date ? sum + toNum(p.profit_amount) : sum),
-      0,
+  /* ========================================================== */
+  /* 📊 MASTER COMPREHENSIVE FINANCIAL CALCULATION ENGINE      */
+  /* ========================================================== */
+  const finance = useMemo(() => {
+    // 1. CASH IN / OUT / BALANCE
+    const approvedCash = cashList.filter(
+      (c) => c.approval_status === "approved" || !c.approval_status
     );
 
-    const unpaidPayments = payments.filter(
-      (p) => String(p.status) === "Unpaid",
-    );
-    const totalDueUnPaid = unpaidPayments.reduce(
-      (sum, p) => sum + toNum(p.due_amount),
-      0,
-    );
-    const totalUnPaidPrincipal = unpaidPayments.reduce(
-      (sum, p) => sum + toNum(p.principal_amount),
-      0,
-    );
-    const totalUnPaidProfit = unpaidPayments.reduce(
-      (sum, p) => sum + toNum(p.profit_amount),
-      0,
-    );
+    const totalCashIn = approvedCash
+      .filter((c) => c.type === "in")
+      .reduce((sum, item) => sum + toNum(item.amount), 0);
 
-    const totalInvestment = invests.reduce(
-      (sum, r) => sum + toNum(r.amount),
-      0,
+    const totalCashOut = approvedCash
+      .filter((c) => c.type === "out")
+      .reduce((sum, item) => sum + toNum(item.amount), 0);
+
+    const availableCashBalance = totalCashIn - totalCashOut;
+
+    // 2. INVENTORY STOCK VALUE
+    const availableStockItems = inventoryList.filter(
+      (item) => String(item.status || "available").toLowerCase() === "available"
     );
-
-
-    // closed investment (card based)
-    const totalClosedInvestment = invCards
-      .filter((c) => String(c.status).toLowerCase() === "closed")
-      .reduce((sum, c) => sum + toNum(c.investment_amount), 0);
-
-    const activeInvestment = totalInvestment - totalClosedInvestment;
-
-    const totalCompanyExpenses = Expenses.reduce(
-      (sum, r) => sum + toNum(r.amount),
-      0,
+    const totalStockUnits = availableStockItems.length;
+    const totalStockValue = availableStockItems.reduce(
+      (sum, item) => sum + toNum(item.purchase_price || item.cost_price || item.price),
+      0
     );
 
-    const currentCash =
-      activeInvestment +
-      totalDuePaid -
-      totalCostPrice -
-      totalCompanyExpenses;
+    // 3. CUSTOMER PORTFOLIO (Sales, Collected, Due)
+    const totalSalesValue = cards.reduce((sum, c) => sum + toNum(c.sale_price), 0);
+    const totalCostValue = cards.reduce((sum, c) => sum + toNum(c.cost_price), 0);
+    const projectedGrossProfit = cards.reduce((sum, c) => sum + toNum(c.profit || (c.sale_price - c.cost_price)), 0);
+
+    // Collections (Paid installments)
+    const collectedPayments = payments.filter((p) => p.paid_date || String(p.status).toLowerCase() === "paid");
+    const totalCollectedSales = collectedPayments.reduce((sum, p) => sum + toNum(p.due_amount || p.amount), 0);
+    const totalCollectedPrincipal = collectedPayments.reduce((sum, p) => sum + toNum(p.principal_amount), 0);
+    const totalCollectedProfit = collectedPayments.reduce((sum, p) => sum + toNum(p.profit_amount), 0);
+
+    // Outstanding Customer Dues (Unpaid installments)
+    const unpaidPayments = payments.filter((p) => !p.paid_date && String(p.status).toLowerCase() !== "paid");
+    const totalCustomerReceivables = unpaidPayments.reduce((sum, p) => sum + toNum(p.due_amount || p.amount), 0);
+    const customerDuePrincipal = unpaidPayments.reduce((sum, p) => sum + toNum(p.principal_amount), 0);
+    const customerDueProfit = unpaidPayments.reduce((sum, p) => sum + toNum(p.profit_amount), 0);
+
+    // 4. INVESTOR LIABILITIES & CAPITAL
+    const totalInvestmentDeposited = invests.reduce((sum, r) => sum + toNum(r.amount), 0);
+    const closedInvestmentCards = invCards.filter((c) => String(c.status).toLowerCase() === "closed");
+    const totalClosedInvestment = closedInvestmentCards.reduce((sum, c) => sum + toNum(c.investment_amount), 0);
+
+    const activeInvestmentCards = invCards.filter((c) => String(c.status).toLowerCase() !== "closed");
+    const activeInvestmentCapital = activeInvestmentCards.reduce(
+      (sum, c) => sum + toNum(c.investment_amount),
+      0
+    );
+
+    const activeInvestorProfits = activeInvestmentCards.reduce(
+      (sum, c) => sum + toNum(c.profit || c.total_profit),
+      0
+    );
+    const totalInvestorLiabilities = activeInvestmentCapital + activeInvestorProfits;
+
+    // 5. SUPPLIER & DEALER DEBTS
+    const totalSupplierPurchases = supplierList.reduce((sum, s) => sum + toNum(s.total_amount), 0);
+    const totalSupplierPaid = supplierList.reduce((sum, s) => sum + toNum(s.paid), 0);
+    const totalSupplierDue = supplierList.reduce((sum, s) => sum + toNum(s.due), 0);
+
+    // 6. COMPANY OPERATING EXPENSES
+    const companyExpensesList = approvedCash.filter(
+      (cash) =>
+        cash.type === "out" &&
+        (cash.source === "company-expense" ||
+          cash.category?.toLowerCase() === "expense" ||
+          cash.category?.toLowerCase() === "office-expense")
+    );
+    const totalCompanyExpenses = companyExpensesList.reduce((sum, r) => sum + toNum(r.amount), 0);
+
+    // 7. BALANCE SHEET PILLARS
+    // Total Assets = Available Cash + Stock Valuation + Customer Receivables
+    const totalCompanyAssets = availableCashBalance + totalStockValue + totalCustomerReceivables;
+
+    // Total Liabilities = Active Investor Capital + Supplier Due
+    const totalOutsideLiabilities = activeInvestmentCapital + Math.max(0, totalSupplierDue);
+
+    // Net Company Equity (Net Worth) = Assets - Liabilities
+    const netCompanyEquity = totalCompanyAssets - totalOutsideLiabilities;
+
+    // Realized Net Company Profit = Collected Profit - Office Expenses
+    const realizedNetProfit = totalCollectedProfit - totalCompanyExpenses;
+
     return {
-      totalCostPrice,
-      totalSalePrice,
-      totalProfit,
-      WithdrawnProfit: 0,
-      totalDuePaid,
-      totalPaidPrincipal,
-      paidProfit,
-
-      totalDueUnPaid,
-      totalUnPaidPrincipal,
-      totalUnPaidProfit,
-
-      totalInvestment,
+      totalCashIn,
+      totalCashOut,
+      availableCashBalance,
+      totalStockUnits,
+      totalStockValue,
+      totalSalesValue,
+      totalCostValue,
+      projectedGrossProfit,
+      totalCollectedSales,
+      totalCollectedPrincipal,
+      totalCollectedProfit,
+      totalCustomerReceivables,
+      customerDuePrincipal,
+      customerDueProfit,
+      totalInvestmentDeposited,
       totalClosedInvestment,
-      activeInvestment,
-      currentCash,
+      activeInvestmentCapital,
+      activeInvestorProfits,
+      totalInvestorLiabilities,
+      totalSupplierPurchases,
+      totalSupplierPaid,
+      totalSupplierDue,
       totalCompanyExpenses,
+      companyExpensesList,
+      totalCompanyAssets,
+      totalOutsideLiabilities,
+      netCompanyEquity,
+      realizedNetProfit,
+      closedInvestmentCards,
     };
-  }, [cards, payments, invests, invCards, Expenses]);
-  const [openClosedModal, setOpenClosedModal] = useState(false);
-  const [openProfitModal, setOpenProfitModal] = useState(false);
-  const [openExpensesModal, setOpenExpensesModal] = useState(false);
-  const withdrawnProfitRows = useMemo(() => {
-    if (!WithdrawnHistory.length || !users.length) return [];
-
-    return WithdrawnHistory.map((r) => {
-      const uid = r.user_id || r.investor_id;
-      const user = users.find((u) => Number(u.id) === Number(uid));
-
-      return {
-        id: r.id || `${uid}-${r.created_at}`,
-        name: user?.name || `User #${uid}`,
-        amount: toNum(r.amount),
-        date: r.created_at || "",
-        cardId: r?.card_id,
-      };
-    }).sort((a, b) => b.amount - a.amount);
-  }, [WithdrawnHistory, users]);
-
-  const closedCards = useMemo(() => {
-    return invCards.filter((c) => String(c.status).toLowerCase() === "closed");
-  }, [invCards]);
+  }, [cards, payments, invests, invCards, cashList, inventoryList, supplierList]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[70vh] bg-[#050811]">
         <Loader />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto  px-4 sm:px-6 py-6 pb-24">
-        {/* Header */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-black/30">
-                <span className="text-lg">👁️</span>
-              </div>
+    <main className="min-h-screen bg-gradient-to-b from-[#050811] via-[#080E1E] to-[#050811] text-slate-100 p-3 md:p-6 space-y-6 pb-28">
+      {/* ==================================================== */}
+      {/* 🌟 1. EXECUTIVE MASTER BALANCE SHEET BANNER          */}
+      {/* ==================================================== */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-[#0B132B] to-slate-900 border border-slate-800 p-6 md:p-8 shadow-2xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">
-                  Financial Snapshot
-                </h2>
-                <p className="text-sm text-slate-400">
-                  এক নজরে সামগ্রিক আর্থিক চিত্র (Sales • Collections • Dues •
-                  Cash)
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">
-                Updated: Live
-              </span>
-              {hasError ? (
-                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200">
-                  Data error (check API)
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+          <div className="flex items-center gap-4">
+            <span className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/25">
+              <FaBalanceScale className="text-2xl" />
+            </span>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                  Finance Master Overview
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                  LIVE SYNC
                 </span>
-              ) : null}
+              </div>
+              <p className="text-xs md:text-sm text-slate-400 mt-1">
+                প্রতিষ্ঠানের সামগ্রিক আর্থিক হিসাব, সম্পদ, দায়-দেনা, কিস্তি ও নিট মুনাফার পূর্ণাঙ্গ ড্যাশবোর্ড
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Status Pill */}
+          <div className="flex items-center gap-3 bg-slate-950/80 border border-slate-800/90 px-4 py-2.5 rounded-2xl shadow-inner">
+            <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">Company Health</span>
+              <span className="text-xs font-black text-emerald-400">
+                {finance.netCompanyEquity >= 0 ? "উদ্বৃত্ত ও শক্তিশালী (Solvent)" : "দায়বদ্ধ (Requires Attention)"}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* KPI Row (top 3) */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
-            title="Total Cost Price"
-            subtitle="সকল কাস্টমার কার্ডের ক্রয়মূল্য"
-            value={totalCostPrice}
-            accent="emerald"
-            icon="🧾"
-          />
-          <StatCard
-            title="Total Sale Price"
-            subtitle="সকল কাস্টমার কার্ডের বিক্রয়মূল্য"
-            value={totalSalePrice}
-            accent="indigo"
-            icon="🏷️"
-          />
-          <StatCard
-            title="Total Profit"
-            subtitle="Profit = Sale - Cost"
-            value={totalProfit}
-            accent="amber"
-            icon="📈"
-          />
-        </div>
+        {/* The 4 Executive Pillars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          {/* Pillar 1: Total Assets */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-emerald-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                মোট কোম্পানি সম্পদ (Assets)
+              </span>
+              <FaWallet className="text-emerald-400" />
+            </div>
+            <div className="mt-3">
+              <h2 className="text-2xl font-black font-mono text-emerald-400">
+                ৳ {formatBDTShort(finance.totalCompanyAssets)}
+              </h2>
+              <p className="text-[10px] text-slate-500 mt-1">
+                ক্যাশ (৳ {formatBDTShort(finance.availableCashBalance)}) + স্টক + কাস্টমার বাকি
+              </p>
+            </div>
+          </div>
 
-        {/* Collections */}
-        <div className="mt-6">
-          <Section title="Collections" hint="Paid date অনুযায়ী আদায়কৃত হিসাব">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatCard
-                title="Collected Sale (Total)"
-                subtitle="মোট আদায়কৃত বিক্রয় মূল্য"
-                value={totalDuePaid}
-                accent="sky"
-                icon="✅"
-              />
-              <StatCard
-                title="Collected Principal"
-                subtitle="মোট আদায়কৃত মূলধন"
-                value={totalPaidPrincipal}
-                accent="slate"
-                icon="💰"
-              />
-              <StatCard
-                title="Collected Profit"
-                subtitle="মোট আদায়কৃত লাভ"
-                value={paidProfit}
-                accent="emerald"
-                icon="✨"
-              />
+          {/* Pillar 2: Total Outside Liabilities */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                মোট দায় ও দেনা (Liabilities)
+              </span>
+              <FaHandHoldingUsd className="text-amber-400" />
             </div>
-          </Section>
-        </div>
+            <div className="mt-3">
+              <h2 className="text-2xl font-black font-mono text-amber-400">
+                ৳ {formatBDTShort(finance.totalOutsideLiabilities)}
+              </h2>
+              <p className="text-[10px] text-slate-500 mt-1">
+                ইনভেস্টর মূলধন (৳ {formatBDTShort(finance.activeInvestmentCapital)}) + সাপ্লায়ার বাকি
+              </p>
+            </div>
+          </div>
 
-        {/* Dues */}
-        <div className="mt-6">
-          <Section title="Dues" hint="Unpaid status অনুযায়ী বকেয়া হিসাব">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatCard
-                title="Total Due"
-                subtitle="মোট বকেয়া"
-                value={totalDueUnPaid}
-                accent="red"
-                icon="⏳"
-              />
-              <StatCard
-                title="Due Principal"
-                subtitle="মোট বকেয়া মূলধন"
-                value={totalUnPaidPrincipal}
-                accent="rose"
-                icon="📌"
-              />
-              <StatCard
-                title="Due Profit"
-                subtitle="মোট বকেয়া লাভ"
-                value={totalUnPaidProfit}
-                accent="red"
-                icon="⚠️"
-              />
+          {/* Pillar 3: Net Equity */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-indigo-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                নিট কোম্পানির মূলধন (Net Worth)
+              </span>
+              <FaBalanceScale className="text-indigo-400" />
             </div>
-          </Section>
-        </div>
-        {/* Expenses */}
-        <div className="mt-6">
-          <Section title="Expenses" hint="কোম্পানির মোট খরচ">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div
-                onClick={() => setOpenExpensesModal(true)}
-                className="cursor-pointer"
-              >
-                <StatCard
-                  title="Total Expenses"
-                  subtitle="কোম্পানির মোট অনুমোদিত খরচ (Details)"
-                  value={totalCompanyExpenses}
-                  accent="red"
-                  icon="💸"
-                />
-              </div>
+            <div className="mt-3">
+              <h2 className="text-2xl font-black font-mono text-indigo-300">
+                ৳ {formatBDTShort(finance.netCompanyEquity)}
+              </h2>
+              <p className="text-[10px] text-slate-500 mt-1">
+                (মোট সম্পদ − মোট দায়-দেনা)
+              </p>
             </div>
-          </Section>
-        </div>
+          </div>
 
-        {/* Investment & Cash */}
-        <div className="mt-6">
-          <Section
-            title="Investments & Cash"
-            hint="Investor collections, closed investment, active investment, cash"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <StatCard
-                title="Total Investment Collected"
-                subtitle="মোট সংগ্রহীত বিনিয়োগ"
-                value={totalInvestment}
-                accent="emerald"
-                icon="👥"
-              />
-            
-             
+          {/* Pillar 4: Realized Net Profit */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                আদায়কৃত নিট লাভ (Net Profit)
+              </span>
+              <FaChartLine className="text-cyan-400" />
             </div>
-          </Section>
+            <div className="mt-3">
+              <h2 className="text-2xl font-black font-mono text-cyan-400">
+                ৳ {formatBDTShort(finance.realizedNetProfit)}
+              </h2>
+              <p className="text-[10px] text-slate-500 mt-1">
+                আদায়কৃত লাভ (৳ {formatBDTShort(finance.totalCollectedProfit)}) − অফিস খরচ
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* ==================================================== */}
+      {/* 🌟 2. CATEGORY TABS                                  */}
+      {/* ==================================================== */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {[
+          { id: "all", label: "সব হিসাব (All Summary)", icon: <FaLayerGroup /> },
+          { id: "cash", label: "ক্যাশ ও প্রবাহ (Cash Flow)", icon: <FaWallet /> },
+          { id: "customers", label: "গ্রাহক কিস্তি (Installments)", icon: <FaUsers /> },
+          { id: "stock", label: "স্টক পণ্য (Stock Assets)", icon: <FaBoxes /> },
+          { id: "investors", label: "ইনভেস্টর হিসাব (Investors)", icon: <FaHandHoldingUsd /> },
+          { id: "suppliers", label: "সাপ্লায়ার বাকি (Suppliers)", icon: <FaStore /> },
+          { id: "expenses", label: "অফিস খরচ (Expenses)", icon: <FaFileInvoiceDollar /> },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-md ${
+              activeTab === tab.id
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25"
+                : "bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ==================================================== */}
+      {/* 🌟 3. FINANCIAL SECTIONS GRID                        */}
+      {/* ==================================================== */}
+
+      {/* SECTION A: Cash & Liquidity */}
+      {(activeTab === "all" || activeTab === "cash") && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaWallet className="text-emerald-400" />
+              <span>নগদ ক্যাশ ও তহবিল প্রবাহ (Cash & Liquidity)</span>
+            </h3>
+            <span className="text-xs text-slate-400 font-mono">
+              Available: ৳ {formatBDT(finance.availableCashBalance)}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Available Cash Balance"
+              subtitle="বর্তমান ক্যাশ ইন হ্যান্ড (ক্যাশ ইন − ক্যাশ আউট)"
+              value={finance.availableCashBalance}
+              accent="emerald"
+              icon={<FaWallet />}
+              badge="In Hand"
+            />
+            <StatCard
+              title="Total Cash Received"
+              subtitle="অনুমোদিত সর্বমোট ক্যাশ ইন (Inflow)"
+              value={finance.totalCashIn}
+              accent="cyan"
+              icon={<FaArrowDown />}
+            />
+            <StatCard
+              title="Total Cash Disbursed"
+              subtitle="অনুমোদিত সর্বমোট ক্যাশ আউট (Outflow)"
+              value={finance.totalCashOut}
+              accent="rose"
+              icon={<FaArrowUp />}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* SECTION B: Customer Installment Portfolio */}
+      {(activeTab === "all" || activeTab === "customers") && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaUsers className="text-blue-400" />
+              <span>গ্রাহক কিস্তি পোর্টফোলিও (Customer Portfolio)</span>
+            </h3>
+            <span className="text-xs text-slate-400">
+              মোট কার্ড: {cards.length} টি
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Total Sale Value"
+              subtitle="সকল কাস্টমার কার্ডের বিক্রয়মূল্য"
+              value={finance.totalSalesValue}
+              accent="indigo"
+              icon={<FaMoneyBillWave />}
+            />
+            <StatCard
+              title="Total Product Cost"
+              subtitle="বিক্রীত পণ্যের মোট ক্রয়মূল্য"
+              value={finance.totalCostValue}
+              accent="blue"
+              icon={<FaBoxes />}
+            />
+            <StatCard
+              title="Projected Margin"
+              subtitle="কিস্তির মোট সম্ভাব্য লাভ (Sale − Cost)"
+              value={finance.projectedGrossProfit}
+              accent="purple"
+              icon={<FaChartLine />}
+            />
+
+            <StatCard
+              title="Collected Sales"
+              subtitle="গ্রাহকদের নিকট থেকে মোট আদায়কৃত টাকা"
+              value={finance.totalCollectedSales}
+              accent="emerald"
+              icon={<FaCheckCircle />}
+              badge="Collected"
+            />
+            <StatCard
+              title="Collected Principal"
+              subtitle="আদায়কৃত বিক্রয়ের মূলধন অংশ"
+              value={finance.totalCollectedPrincipal}
+              accent="cyan"
+              icon={<FaShieldAlt />}
+            />
+            <StatCard
+              title="Collected Profit"
+              subtitle="আদায়কৃত বিক্রয়ের লাভ অংশ"
+              value={finance.totalCollectedProfit}
+              accent="emerald"
+              icon={<FaChartLine />}
+              badge="Realized"
+            />
+
+            <StatCard
+              title="Outstanding Receivables"
+              subtitle="গ্রাহকদের কাছে বর্তমান মোট বকেয়া কিস্তি"
+              value={finance.totalCustomerReceivables}
+              accent="rose"
+              icon={<FaHandHoldingUsd />}
+              badge="Due"
+            />
+            <StatCard
+              title="Due Principal"
+              subtitle="বকেয়া কিস্তির আটকে থাকা মূলধন"
+              value={finance.customerDuePrincipal}
+              accent="amber"
+              icon={<FaBalanceScale />}
+            />
+            <StatCard
+              title="Due Profit"
+              subtitle="ভবিষ্যতে কিস্তিতে আসার অপেক্ষায় থাকা লাভ"
+              value={finance.customerDueProfit}
+              accent="rose"
+              icon={<FaChartLine />}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* SECTION C: Stock & Inventory Assets */}
+      {(activeTab === "all" || activeTab === "stock") && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaBoxes className="text-cyan-400" />
+              <span>মজুদ পণ্য ও সম্পদ মূল্যায়ন (Inventory & Stock Assets)</span>
+            </h3>
+            <span className="text-xs text-slate-400">
+              মজুদ ইউনিট: {finance.totalStockUnits} টি
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Available Stock Valuation"
+              subtitle="দোকানে মজুত সকল অবিক্রীত পণ্যের মোট ক্রয়মূল্য"
+              value={finance.totalStockValue}
+              accent="cyan"
+              icon={<FaBoxes />}
+              badge={`${finance.totalStockUnits} Units`}
+            />
+            <StatCard
+              title="Total Liquid & Stock Assets"
+              subtitle="ক্যাশ ব্যালেন্স + মজুত পণ্যের ক্রয়মূল্য"
+              value={finance.availableCashBalance + finance.totalStockValue}
+              accent="emerald"
+              icon={<FaShieldAlt />}
+            />
+            <StatCard
+              title="Total Company Assets"
+              subtitle="ক্যাশ + মজুত স্টক + কাস্টমার বকেয়া"
+              value={finance.totalCompanyAssets}
+              accent="indigo"
+              icon={<FaBalanceScale />}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* SECTION D: Investor Capital & Liabilities */}
+      {(activeTab === "all" || activeTab === "investors") && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaHandHoldingUsd className="text-amber-400" />
+              <span>ইনভেস্টর মূলধন ও হিসাব (Investor Capital & Liabilities)</span>
+            </h3>
+            <button
+              onClick={() => setOpenModalType("closedCards")}
+              className="text-xs text-amber-400 hover:text-amber-300 font-bold underline"
+            >
+              Closed Cards ({finance.closedInvestmentCards.length})
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Active Investment Capital"
+              subtitle="সক্রিয় চলমান ইনভেস্টর মূলধন"
+              value={finance.activeInvestmentCapital}
+              accent="amber"
+              icon={<FaUsers />}
+              badge="Active"
+            />
+            <StatCard
+              title="Active Investor Profit"
+              subtitle="ইনভেস্টরদের প্রদেয় বকেয়া লভ্যাংশ"
+              value={finance.activeInvestorProfits}
+              accent="amber"
+              icon={<FaChartLine />}
+            />
+            <StatCard
+              title="Total Investor Debt"
+              subtitle="ইনভেস্টর মূলধন + পাওনা লাভ"
+              value={finance.totalInvestorLiabilities}
+              accent="rose"
+              icon={<FaHandHoldingUsd />}
+            />
+            <StatCard
+              title="Closed Investment"
+              subtitle="পরিশোধিত / সমাপ্ত ইনভেস্টমেন্ট কার্ড"
+              value={finance.totalClosedInvestment}
+              accent="slate"
+              icon={<FaCheckCircle />}
+              onClick={() => setOpenModalType("closedCards")}
+              badge="Closed"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* SECTION E: Supplier & Dealer Dues */}
+      {(activeTab === "all" || activeTab === "suppliers") && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaStore className="text-purple-400" />
+              <span>সাপ্লায়ার ও ডিলার খতিয়ান (Supplier & Dealer Ledger)</span>
+            </h3>
+            <span className="text-xs text-slate-400">
+              মেমো সংখ্যা: {supplierList.length} টি
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Total Supplier Purchase"
+              subtitle="সাপ্লায়ারদের নিকট থেকে মোট ক্রয়কৃত মেমো"
+              value={finance.totalSupplierPurchases}
+              accent="purple"
+              icon={<FaStore />}
+            />
+            <StatCard
+              title="Total Supplier Paid"
+              subtitle="সাপ্লায়ারদের মোট পরিশোধিত টাকা"
+              value={finance.totalSupplierPaid}
+              accent="emerald"
+              icon={<FaCheckCircle />}
+            />
+            <StatCard
+              title="Current Supplier Due"
+              subtitle="সাপ্লায়ার ও ডিলারদের কাছে বর্তমান বকেয়া দেনা"
+              value={finance.totalSupplierDue}
+              accent="rose"
+              icon={<FaHandHoldingUsd />}
+              badge="Debt"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* SECTION F: Office Expenses & Net Profit */}
+      {(activeTab === "all" || activeTab === "expenses") && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <FaFileInvoiceDollar className="text-rose-400" />
+              <span>অফিস খরচ ও নিট কোম্পানি মুনাফা (Expenses & Net Profit)</span>
+            </h3>
+            <button
+              onClick={() => setOpenModalType("expenses")}
+              className="text-xs text-rose-400 hover:text-rose-300 font-bold underline"
+            >
+              সকল খরচ তালিকা ({finance.companyExpensesList.length})
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Total Office Expenses"
+              subtitle="অনুমোদিত অফিস ও পরিচালনা মোট খরচ"
+              value={finance.totalCompanyExpenses}
+              accent="rose"
+              icon={<FaFileInvoiceDollar />}
+              onClick={() => setOpenModalType("expenses")}
+              badge="Expense"
+            />
+            <StatCard
+              title="Realized Net Profit"
+              subtitle="আদায়কৃত লাভ − অফিস পরিচালনা খরচ"
+              value={finance.realizedNetProfit}
+              accent="cyan"
+              icon={<FaChartLine />}
+              badge="Net Profit"
+            />
+            <StatCard
+              title="Net Company Equity"
+              subtitle="কোম্পানির নিট সার্বিক সম্পদ (Assets − Liabilities)"
+              value={finance.netCompanyEquity}
+              accent="indigo"
+              icon={<FaBalanceScale />}
+              badge="Net Worth"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ==================================================== */}
+      {/* 🌟 4. DETAIL BREAKDOWN MODALS                         */}
+      {/* ==================================================== */}
+
+      {/* Closed Cards Modal */}
       <FinanceModal
-        open={openClosedModal}
-        onClose={() => setOpenClosedModal(false)}
-        title="Closed Investment Cards"
+        open={openModalType === "closedCards"}
+        onClose={() => setOpenModalType(null)}
+        title="Closed Investment Cards (সমাপ্ত ইনভেস্টমেন্ট কার্ডসমূহ)"
       >
-        {closedCards.length === 0 ? (
-          <p className="text-center text-slate-400 py-6">
-            কোনো closed card পাওয়া যায়নি
+        {finance.closedInvestmentCards.length === 0 ? (
+          <p className="text-center text-slate-400 py-6 text-xs">
+            কোনো Closed Card পাওয়া যায়নি
           </p>
         ) : (
-          <div className="overflow-x-auto  overflow-y-scroll h-[90%]">
-            <table className="w-full text-sm border border-white/10 rounded-xl overflow-hidden">
-              <thead className="bg-white/5 text-slate-300">
+          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-xs border border-slate-800 rounded-xl overflow-hidden">
+              <thead className="bg-slate-900 text-slate-300">
                 <tr>
-                  <th className="px-3 py-2 text-left">Card ID</th>
-                  <th className="px-3 py-2 text-left">Card Name</th>
-                  <th className="px-3 py-2 text-right">Amount (৳)</th>
+                  <th className="px-3 py-2.5 text-left">Card ID</th>
+                  <th className="px-3 py-2.5 text-left">Card Name</th>
+                  <th className="px-3 py-2.5 text-left">Investor</th>
+                  <th className="px-3 py-2.5 text-right">Amount (৳)</th>
                 </tr>
               </thead>
-              <tbody>
-                {closedCards.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-t border-white/10 hover:bg-white/5"
-                  >
-                    <td className="px-3 py-2 text-slate-300">#{c.id}</td>
-                    <td className="px-3 py-2 text-slate-200 font-medium">
-                      {c.card_name || "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-amber-300">
+              <tbody className="divide-y divide-slate-800/80">
+                {finance.closedInvestmentCards.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-800/40">
+                    <td className="px-3 py-2 text-slate-400 font-mono">#{c.id}</td>
+                    <td className="px-3 py-2 text-slate-200 font-bold">{c.card_name || "—"}</td>
+                    <td className="px-3 py-2 text-slate-300">{c.investor_name || `Investor #${c.investor_id}`}</td>
+                    <td className="px-3 py-2 text-right font-mono font-bold text-amber-300">
                       ৳ {formatBDT(c.investment_amount)}
                     </td>
                   </tr>
@@ -472,89 +852,39 @@ const FinanceOverview = () => {
           </div>
         )}
       </FinanceModal>
+
+      {/* Expenses Modal */}
       <FinanceModal
-        open={openProfitModal}
-        onClose={() => setOpenProfitModal(false)}
-        title="Withdrawn Profit Details"
+        open={openModalType === "expenses"}
+        onClose={() => setOpenModalType(null)}
+        title="Company Office Expenses (কোম্পানির মোট অনুমোদিত খরচ)"
       >
-        {withdrawnProfitRows.length === 0 ? (
-          <p className="text-center text-slate-400 py-6">
-            কোনো withdrawn profit পাওয়া যায়নি
+        {finance.companyExpensesList.length === 0 ? (
+          <p className="text-center text-slate-400 py-6 text-xs">
+            কোনো খরচের তালিকা পাওয়া যায়নি
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border border-white/10 rounded-xl overflow-hidden">
-              <thead className="bg-white/5 text-slate-300">
+          <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
+            <table className="w-full text-xs border border-slate-800 rounded-xl overflow-hidden">
+              <thead className="bg-slate-900 text-slate-300">
                 <tr>
-                  <th className="px-3 py-2 text-left">Card Id</th>
-                  <th className="px-3 py-2 text-left">Investor</th>
-                  <th className="px-3 py-2 text-right">Amount (৳)</th>
-                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2.5 text-left">#</th>
+                  <th className="px-3 py-2.5 text-left">Date</th>
+                  <th className="px-3 py-2.5 text-left">Purpose</th>
+                  <th className="px-3 py-2.5 text-left">Category</th>
+                  <th className="px-3 py-2.5 text-right">Amount (৳)</th>
                 </tr>
               </thead>
-              <tbody>
-                {withdrawnProfitRows.map((row) => (
-                  <tr
-                    key={row?.id}
-                    className="border-t border-white/10 hover:bg-white/5"
-                  >
-                    <td className="px-3 py-2 text-slate-200 font-medium">
-                      {row?.cardId}
-                    </td>
-                    <td className="px-3 py-2 text-slate-200 font-medium">
-                      {row?.name}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-rose-300">
-                      ৳ {formatBDT(row?.amount)}
-                    </td>
-                    <td className="px-3 py-2 text-slate-400">
-                      {row?.date ? row?.date?.slice(0, 10) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </FinanceModal>
-      <FinanceModal
-        open={openExpensesModal}
-        onClose={() => setOpenExpensesModal(false)}
-        title="Company Expenses Details"
-      >
-        {Expenses.length === 0 ? (
-          <p className="text-center text-slate-400 py-6">
-            কোনো খরচ পাওয়া যায়নি
-          </p>
-        ) : (
-          <div className="overflow-x-auto overflow-y-scroll max-h-[70vh]">
-            <table className="w-full text-sm border border-white/10 rounded-xl overflow-hidden">
-              <thead className="bg-white/5 text-slate-300">
-                <tr>
-                  <th className="px-3 py-2 text-left">#</th>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Purpose</th>
-                  <th className="px-3 py-2 text-left">Remarks</th>
-                  <th className="px-3 py-2 text-right">Amount (৳)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Expenses.map((exp, index) => (
-                  <tr
-                    key={exp?.id || index}
-                    className="border-t border-white/10 hover:bg-white/5"
-                  >
-                    <td className="px-3 py-2 text-slate-400">{index + 1}</td>
-                    <td className="px-3 py-2 text-slate-300">
+              <tbody className="divide-y divide-slate-800/80">
+                {finance.companyExpensesList.map((exp, index) => (
+                  <tr key={exp?.id || index} className="hover:bg-slate-800/40">
+                    <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                    <td className="px-3 py-2 text-slate-300 font-mono">
                       {exp?.date ? exp.date.split(" ")[0] : "—"}
                     </td>
-                    <td className="px-3 py-2 text-slate-200 font-medium">
-                      {exp?.purpose || "—"}
-                    </td>
-                    <td className="px-3 py-2 text-slate-400">
-                      {exp?.remarks || "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-rose-300">
+                    <td className="px-3 py-2 text-slate-200 font-medium">{exp?.purpose || "—"}</td>
+                    <td className="px-3 py-2 text-slate-400">{exp?.category || exp?.source || "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono font-bold text-rose-400">
                       ৳ {formatBDT(exp?.amount)}
                     </td>
                   </tr>
@@ -569,3 +899,4 @@ const FinanceOverview = () => {
 };
 
 export default FinanceOverview;
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -66,6 +66,7 @@ const AdminSidebar = ({ isOpen = true }) => {
     { name: 'Dashboard', path: '/', icon: <FiGrid size={18} /> },
     { name: 'Staff Directory', path: '/staff', icon: <FiUsers size={18} /> },
     { name: 'Reviewer Directory', path: '/reviewers', icon: <FiAward size={18} /> },
+    { name: 'Content Studio', path: '/content-studio', icon: <FiVideo size={18} className="text-rose-500" /> },
     {
       name: 'Students & Academics',
       icon: <FiBookOpen size={18} />,

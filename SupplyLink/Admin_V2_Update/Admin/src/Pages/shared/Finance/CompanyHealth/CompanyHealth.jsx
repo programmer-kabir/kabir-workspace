@@ -266,8 +266,132 @@ const CompanyHealth = () => {
   }, [supplierPayments]);
 
   // ==========================================
-  // 6. OVERALL BALANCE SHEET & NET EQUITY
+  // 6. 15 MASTER FINANCIAL METRICS (MANAGER FRIENDLY)
   // ==========================================
+  const masterMetrics = useMemo(() => {
+    const approvedCash = Array.isArray(CashReports)
+      ? CashReports.filter((c) => c.approval_status === "approved" && (c.is_deleted === 0 || c.is_deleted === "0" || !c.is_deleted))
+      : [];
+
+    const cards = Array.isArray(customerInstallmentCards) ? customerInstallmentCards : [];
+    const payments = Array.isArray(customerInstallmentPayments) ? customerInstallmentPayments : [];
+    const invCards = Array.isArray(investmentCards) ? investmentCards : [];
+    const invests = Array.isArray(investInstallments) ? investInstallments : [];
+
+    // 1. Total Cash Received
+    const totalCashReceived = approvedCash
+      .filter((c) => c.type === "in")
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    // Total Cash Out
+    const totalCashOut = approvedCash
+      .filter((c) => c.type === "out")
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    // 2. Total Products Purchase (from cards cost price or supplier purchases)
+    const totalProductsPurchase = cards.reduce(
+      (sum, c) => sum + (parseFloat(c.cost_price || c.purchase_price) || 0),
+      0
+    );
+
+    // 3. Investor Capital Returned
+    const investorCapitalReturned = approvedCash
+      .filter((c) => c.type === "out" && (
+        c.category?.toLowerCase() === "investor-return" ||
+        c.category?.toLowerCase() === "investor-capital" ||
+        c.purpose?.toLowerCase()?.includes("capital return") ||
+        c.remarks?.includes("মূলধন")
+      ))
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    // 4. Investor Profit Distributed
+    const investorProfitDistributed = approvedCash
+      .filter((c) => c.type === "out" && (
+        c.category?.toLowerCase() === "investor-payout" ||
+        c.category?.toLowerCase() === "profit-payout" ||
+        c.purpose?.toLowerCase()?.includes("profit") ||
+        c.remarks?.includes("লাভ")
+      ))
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    // 5. Available Cash Balance (Cash in hand)
+    const availableCashBalance = totalCashReceived - totalCashOut;
+
+    // 6. Outstanding Customer Receivables
+    const totalContractValue = cards.reduce(
+      (sum, c) => sum + (parseFloat(c.total_amount || c.sale_price) || 0),
+      0
+    );
+    const totalCollected = cards.reduce((sum, c) => sum + (parseFloat(c.down_payment) || 0), 0) +
+      payments.filter((p) => (p.status || "").toLowerCase() === "paid").reduce((sum, p) => sum + (parseFloat(p.due_amount || p.amount) || 0), 0);
+    const outstandingCustomerReceivables = Math.max(0, totalContractValue - totalCollected);
+
+    // 7. Total Liquid & Receivable Assets
+    const totalLiquidAndReceivableAssets = availableCashBalance + outstandingCustomerReceivables;
+
+    // 8. Active Investment Amount
+    const activeInvestmentAmount = invCards
+      .filter((c) => (c.status || "").toLowerCase() === "running")
+      .reduce((sum, c) => sum + (parseFloat(c.investment_amount) || 0), 0);
+
+    // 9. Active Investor Profit
+    const activeInvestorProfit = invCards
+      .filter((c) => (c.status || "").toLowerCase() === "running")
+      .reduce((sum, c) => {
+        const totalP = parseFloat(c.total_profit || c.profit_amount || 0);
+        const paidP = parseFloat(c.paid_profit || 0);
+        return sum + Math.max(0, totalP - paidP);
+      }, 0);
+
+    // 10. Total Investor Assets (Liabilities)
+    const totalInvestorAssets = activeInvestmentAmount + activeInvestorProfit;
+
+    // 11. Net Company Assets
+    const netCompanyAssets = totalLiquidAndReceivableAssets - totalInvestorAssets;
+
+    // 15. Company Expenses
+    const companyExpenses = approvedCash
+      .filter((c) => c.type === "out" && (
+        c.source === "company-expense" ||
+        c.category?.toLowerCase() === "expense" ||
+        c.category?.toLowerCase() === "office-expense"
+      ))
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    // 12. Company Profit
+    const totalInstallmentProfit = cards.reduce(
+      (sum, c) => sum + (parseFloat(c.profit || (c.sale_price - c.cost_price)) || 0),
+      0
+    );
+    const companyProfit = totalInstallmentProfit - companyExpenses;
+
+    // 13. Company Investment Balance
+    const companyInvestmentBalance = invCards
+      .filter((c) => (c.investor_name || "").toLowerCase().includes("company") || (c.investor_name || "").toLowerCase().includes("owner") || Number(c.investor_id) === 1)
+      .reduce((sum, c) => sum + (parseFloat(c.investment_amount) || 0), 0);
+
+    // 14. Total Company Assets
+    const totalCompanyAssetsVal = companyProfit + companyInvestmentBalance;
+
+    return {
+      totalCashReceived,
+      totalProductsPurchase,
+      investorCapitalReturned,
+      investorProfitDistributed,
+      availableCashBalance,
+      outstandingCustomerReceivables,
+      totalLiquidAndReceivableAssets,
+      activeInvestmentAmount,
+      activeInvestorProfit,
+      totalInvestorAssets,
+      netCompanyAssets,
+      companyProfit,
+      companyInvestmentBalance,
+      totalCompanyAssetsVal,
+      companyExpenses,
+    };
+  }, [CashReports, customerInstallmentCards, customerInstallmentPayments, investmentCards, investInstallments]);
+
   const balanceSheet = useMemo(() => {
     // Current Liquid & Tangible Assets
     const liquidCash = Math.max(0, cashStats.balance);
@@ -391,143 +515,161 @@ const CompanyHealth = () => {
         </div>
       </div>
 
-      {/* Health Score & Solvency Alert Banner */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-slate-900/90 via-[#0a152d] to-slate-900/90 border border-slate-800/90 backdrop-blur-md shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40 flex flex-col items-center justify-center shrink-0">
-            <span className="text-xl font-black text-emerald-400 font-mono">
-              {balanceSheet.healthScore}%
-            </span>
-            <span className="text-[9px] uppercase font-bold text-slate-400">Score</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-              <h3 className="text-sm md:text-base font-bold text-white">
-                {balanceSheet.healthScore >= 80
-                  ? "আর্থিক সক্ষমতা অত্যন্ত শক্তিশালী ও নিরাপদ (Excellent Solvency)"
-                  : balanceSheet.healthScore >= 50
-                  ? "আর্থিক সক্ষমতা স্থিতিশীল (Stable Solvency)"
-                  : "দায়-দেনার চাপ বিদ্যমান (Requires Attention)"}
+      {/* ==================================================== */}
+      {/* 🌟 15 MASTER FINANCIAL METRICS (MANAGER DASHBOARD)   */}
+      {/* ==================================================== */}
+      <div className="space-y-4">
+        {/* ROW 1: Historical Cash & Capital Outflow (4 Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 md:p-5 rounded-2xl border border-emerald-500/20 bg-[#0c1527]/90 hover:border-emerald-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Total Cash Received</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.totalCashReceived).toLocaleString()}
               </h3>
+              <p className="text-[10px] text-slate-500 mt-1">অনুমোদিত মোট ক্যাশ ইন</p>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              প্রতিষ্ঠানটির মোট কার্যকরী সম্পদ দায়-দেনার চেয়ে{" "}
-              <span className="text-emerald-400 font-bold font-mono">
-                ৳ {balanceSheet.netCompanyEquity.toLocaleString()}
-              </span>{" "}
-              উদ্বৃত্ত রয়েছে।
-            </p>
+          </div>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-blue-500/20 bg-[#0c1527]/90 hover:border-blue-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Total Products Purchase</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.totalProductsPurchase).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">মোট ক্রয়কৃত পণ্যের মূল্য</p>
+            </div>
+          </div>
+
+
+
+          <div className="p-4 md:p-5 rounded-2xl border border-cyan-500/20 bg-[#0c1527]/90 hover:border-cyan-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Investor Profit Distributed</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.investorProfitDistributed).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">ইনভেস্টরদের বণ্টিত মোট লাভ</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="px-3.5 py-2 rounded-2xl bg-slate-950/80 border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-400 uppercase font-bold block">Asset / Debt Ratio</span>
-            <span className="text-xs font-black text-cyan-400 font-mono">
-              {(balanceSheet.totalCompanyAssets / Math.max(1, balanceSheet.totalLiabilities)).toFixed(2)}x
-            </span>
-          </div>
-          <div className="px-3.5 py-2 rounded-2xl bg-slate-950/80 border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-400 uppercase font-bold block">Liquid Cash Ratio</span>
-            <span className="text-xs font-black text-emerald-400 font-mono">
-              {((balanceSheet.liquidCash / Math.max(1, balanceSheet.totalCompanyAssets)) * 100).toFixed(1)}%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* The Big 4 Pillars: Assets, Liabilities, Net Equity, & Profit */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Assets Card */}
-        <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-xl flex flex-col justify-between group hover:border-emerald-500/40 transition duration-300">
-          <div className="flex items-center justify-between">
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <FaWallet className="text-xl" />
+        {/* ROW 2: Liquid Cash & Receivables Assets (3 Cards) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 md:p-5 rounded-2xl border border-emerald-500/20 bg-[#0c1527]/90 hover:border-emerald-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Available Cash Balance</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.availableCashBalance).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">বর্তমান নগদ ক্যাশ ইন হ্যান্ড</p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Assets
-            </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              মোট কোম্পানি সম্পদ (Total Assets)
-            </p>
-            <h2 className="text-2xl md:text-3xl font-black text-emerald-400 font-mono mt-1">
-              ৳ {balanceSheet.totalCompanyAssets.toLocaleString()}
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-              <span>ক্যাশ</span> + <span>স্টক পণ্য</span> + <span>কাস্টমার কিস্তি পাওনা</span>
-            </p>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-blue-500/20 bg-[#0c1527]/90 hover:border-blue-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Outstanding Customer Receivables</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.outstandingCustomerReceivables).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">গ্রাহকদের কাছে বাকি কিস্তি পাওনা</p>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-cyan-500/20 bg-[#0c1527]/90 hover:border-cyan-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Total Liquid & Receivable Assets</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.totalLiquidAndReceivableAssets).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">ক্যাশ ব্যালেন্স + কাস্টমার বাকি</p>
+            </div>
           </div>
         </div>
 
-        {/* Total Liabilities Card */}
-        <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-xl flex flex-col justify-between group hover:border-amber-500/40 transition duration-300">
-          <div className="flex items-center justify-between">
-            <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <FaHandHoldingUsd className="text-xl" />
+        {/* ROW 3: Investor Liabilities & Net Company Assets (4 Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 md:p-5 rounded-2xl border border-amber-500/20 bg-[#0c1527]/90 hover:border-amber-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Active Investment Amount</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.activeInvestmentAmount).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">সক্রিয় রানিং ইনভেস্টর মূলধন</p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Liabilities
-            </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              মোট দায় ও দেনা (Total Liabilities)
-            </p>
-            <h2 className="text-2xl md:text-3xl font-black text-amber-400 font-mono mt-1">
-              ৳ {balanceSheet.totalLiabilities.toLocaleString()}
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-              <span>ইনভেস্টর মূলধন</span> + <span>সাপ্লায়ার বাকি</span>
-            </p>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-amber-500/20 bg-[#0c1527]/90 hover:border-amber-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Active Investor Profit</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.activeInvestorProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">ইনভেস্টরদের বকেয়া লভ্যাংশ</p>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-amber-500/20 bg-[#0c1527]/90 hover:border-amber-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Total Investor Assets</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.totalInvestorAssets).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">ইনভেস্টর মূলধন + পাওনা লাভ</p>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-indigo-500/20 bg-[#0c1527]/90 hover:border-indigo-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Net Company Assets</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.netCompanyAssets).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">তরল সম্পদ − ইনভেস্টর মোট দায়</p>
+            </div>
           </div>
         </div>
 
-        {/* Net Company Equity */}
-        <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-xl flex flex-col justify-between group hover:border-indigo-500/40 transition duration-300">
-          <div className="flex items-center justify-between">
-            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <FaBalanceScale className="text-xl" />
+        {/* ROW 4: Company Profit, Capital & Expenses (4 Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 md:p-5 rounded-2xl border border-emerald-500/20 bg-[#0c1527]/90 hover:border-emerald-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Company Profit</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.companyProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">কিস্তির মোট মুনাফা − অফিস খরচ</p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              Net Equity
-            </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              নিট কোম্পানির সম্পদ (Net Worth)
-            </p>
-            <h2 className="text-2xl md:text-3xl font-black text-indigo-300 font-mono mt-1">
-              ৳ {balanceSheet.netCompanyEquity.toLocaleString()}
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-1">
-              (মোট সম্পদ − মোট দায় দেনা)
-            </p>
-          </div>
-        </div>
 
-        {/* Projected Gross Profit */}
-        <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-xl flex flex-col justify-between group hover:border-cyan-500/40 transition duration-300">
-          <div className="flex items-center justify-between">
-            <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <FaChartLine className="text-xl" />
+          <div className="p-4 md:p-5 rounded-2xl border border-blue-500/20 bg-[#0c1527]/90 hover:border-blue-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Company Investment Balance</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.companyInvestmentBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">কোম্পানির নিজস্ব মূলধন ব্যালেন্স</p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              Margin
-            </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              সম্ভাব্য সেলস লাভ (Installment Margin)
-            </p>
-            <h2 className="text-2xl md:text-3xl font-black text-cyan-400 font-mono mt-1">
-              ৳ {customerStats.projectedGrossProfit.toLocaleString()}
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-1">
-              কিস্তির মোট মূল্য − পণ্যের ক্রয়মূল্য
-            </p>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-indigo-500/20 bg-[#0c1527]/90 hover:border-indigo-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Total Company Assets</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.totalCompanyAssetsVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">কোম্পানি প্রফিট + নিজস্ব মূলধন</p>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-5 rounded-2xl border border-rose-500/20 bg-[#0c1527]/90 hover:border-rose-500/40 shadow-lg flex flex-col justify-between transition">
+            <p className="text-xs text-slate-300 font-semibold">Company Expenss</p>
+            <div className="mt-2.5">
+              <h3 className="text-xl md:text-2xl font-black font-mono text-emerald-400">
+                ৳ {Number(masterMetrics.companyExpenses).toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">অফিস ও পরিচালনা মোট খরচ</p>
+            </div>
           </div>
         </div>
       </div>

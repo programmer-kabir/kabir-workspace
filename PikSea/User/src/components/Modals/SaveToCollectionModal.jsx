@@ -3,7 +3,7 @@ import { X, FolderPlus, Plus, Bookmark, Trash2 } from "lucide-react";
 import { useUserCollections, useCreateCollection, useToggleCollectionItem } from "../../utlis/Hooks/useCollections";
 import { toast } from "react-toastify";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 export default function SaveToCollectionModal({ isOpen, onClose, contentId }) {
   const { data: collections = [], isLoading } = useUserCollections(contentId);

@@ -20,6 +20,7 @@ const Credits = React.lazy(() => import('./pages/Credits'));
 const Breaks = React.lazy(() => import('./pages/Breaks'));
 const BlogFeed = React.lazy(() => import('./pages/BlogFeed'));
 const BlogDetails = React.lazy(() => import('./pages/BlogDetails'));
+const ContentStudio = React.lazy(() => import('./pages/ContentStudio'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -52,6 +53,14 @@ function App() {
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <Tasks />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/content-studio" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <ContentStudio />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

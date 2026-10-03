@@ -147,12 +147,12 @@ const InventoryList = () => {
 
   // Overall & Filtered KPI stats
   const stats = useMemo(() => {
-    const list = stockMobiles || [];
+    const list = Array.isArray(stockMobiles) ? stockMobiles : [];
     const totalItems = list.length;
-    const availableItems = list.filter((i) => i.status === "available").length;
-    const soldItems = list.filter((i) => i.status === "sold").length;
-    const totalPurchase = list.reduce((acc, curr) => acc + (parseFloat(curr.purchase_price) || 0), 0);
-    const totalMRP = list.reduce((acc, curr) => acc + (parseFloat(curr.mrp) || 0), 0);
+    const availableItems = list.filter((i) => i && i.status === "available").length;
+    const soldItems = list.filter((i) => i && i.status === "sold").length;
+    const totalPurchase = list.reduce((acc, curr) => acc + (parseFloat(curr?.purchase_price) || 0), 0);
+    const totalMRP = list.reduce((acc, curr) => acc + (parseFloat(curr?.mrp) || 0), 0);
 
     return { totalItems, availableItems, soldItems, totalPurchase, totalMRP };
   }, [stockMobiles]);
@@ -429,7 +429,7 @@ const InventoryList = () => {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400">মোট ক্রয়মূল্য</p>
             <h3 className="text-lg md:text-xl font-black text-amber-400 mt-1">
-              ৳ {stats.totalPurchase.toLocaleString()}
+              ৳ {(stats.totalPurchase || 0).toLocaleString()}
             </h3>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -442,7 +442,7 @@ const InventoryList = () => {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">মোট বিক্রয়মূল্য (MRP)</p>
             <h3 className="text-lg md:text-xl font-black text-cyan-400 mt-1">
-              ৳ {stats.totalMRP.toLocaleString()}
+              ৳ {(stats.totalMRP || 0).toLocaleString()}
             </h3>
           </div>
           <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -464,7 +464,7 @@ const InventoryList = () => {
           <FaBoxes className="text-sm" />
           <span>সব ক্যাটাগরি (All Products)</span>
           <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-slate-950/60 font-mono">
-            {stockMobiles?.length || 0}
+            {Array.isArray(stockMobiles) ? stockMobiles.length : 0}
           </span>
         </button>
 
@@ -472,9 +472,9 @@ const InventoryList = () => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
           const count =
-            stockMobiles?.filter(
-              (i) => (i.category || "Mobile").toLowerCase() === cat.id.toLowerCase()
-            ).length || 0;
+            (Array.isArray(stockMobiles) ? stockMobiles : []).filter(
+              (i) => (i?.category || "Mobile").toLowerCase() === cat.id.toLowerCase()
+            ).length;
 
           return (
             <button

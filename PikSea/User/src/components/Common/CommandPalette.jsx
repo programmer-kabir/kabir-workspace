@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Search, 
-  Sparkles, 
-  ArrowRight, 
-  FolderHeart, 
-  Tag, 
-  Layers, 
-  Zap, 
-  ShieldCheck, 
-  HelpCircle, 
-  Clock, 
+import {
+  Search,
+  Sparkles,
+  ArrowRight,
+  FolderHeart,
+  Tag,
+  Layers,
+  Zap,
+  ShieldCheck,
+  HelpCircle,
+  Clock,
   X,
   Compass,
   FileImage,
@@ -25,14 +25,14 @@ const CommandPalette = ({ isOpen, onClose }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("dayalstock_recent_searches") || "[]");
+      return JSON.parse(localStorage.getItem("piksea_recent_searches") || localStorage.getItem("dayalstock_recent_searches") || "[]");
     } catch {
       return [];
     }
   });
   const [liveResults, setLiveResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const listRef = useRef(null);
@@ -104,7 +104,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
       navigate(`/search?q=${encodeURIComponent(item.query)}`);
     } else if (item.type === "asset") {
       saveRecent(item.title);
-      navigate(`/${item.category_slug || 'vector'}/${item.slug}`);
+      navigate(`/${item.category_slug || 'photo'}/${item.slug}`);
     } else if (item.type === "category") {
       navigate(`/${item.slug}`);
     } else if (item.type === "nav") {
@@ -118,13 +118,14 @@ const CommandPalette = ({ isOpen, onClose }) => {
     const updated = [searchTerm, ...recentSearches.filter(s => s.toLowerCase() !== searchTerm.toLowerCase())].slice(0, 5);
     setRecentSearches(updated);
     try {
-      localStorage.setItem("dayalstock_recent_searches", JSON.stringify(updated));
-    } catch (e) {}
+      localStorage.setItem("piksea_recent_searches", JSON.stringify(updated));
+    } catch (e) { }
   };
 
   const clearRecent = (e) => {
     e.stopPropagation();
     setRecentSearches([]);
+    localStorage.removeItem("piksea_recent_searches");
     localStorage.removeItem("dayalstock_recent_searches");
   };
 
@@ -151,11 +152,11 @@ const CommandPalette = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/50 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div 
+      <div
         className="w-full max-w-2xl bg-white dark:bg-[#0D0E15] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl shadow-gray-400/20 dark:shadow-cyan-500/10 overflow-hidden flex flex-col backdrop-blur-xl animate-in zoom-in-95 duration-200 text-gray-900 dark:text-white"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
@@ -171,11 +172,11 @@ const CommandPalette = ({ isOpen, onClose }) => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Search stock vectors, photos, categories, or tools..."
+            placeholder="Search stock photos, categories, or tools..."
             className="w-full bg-transparent text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none font-medium"
           />
           {query && (
-            <button 
+            <button
               onClick={() => setQuery("")}
               className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors mr-2 cursor-pointer"
             >
@@ -189,7 +190,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
 
         {/* Search Results / Suggestions List */}
         <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10">
-          
+
           {/* Query Live Assets Results */}
           {liveResults.length > 0 && (
             <div>
@@ -202,23 +203,22 @@ const CommandPalette = ({ isOpen, onClose }) => {
                   <button
                     key={item.id}
                     onClick={() => handleSelect({ type: "asset", ...item })}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
-                      selectedIndex === (query.trim() ? 1 + idx : idx)
-                        ? "bg-[#00D4FF]/10 dark:bg-gradient-to-r dark:from-[#00D4FF]/20 dark:to-[#6C4FE0]/20 border border-[#00D4FF]/40 text-gray-900 dark:text-white" 
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${selectedIndex === (query.trim() ? 1 + idx : idx)
+                        ? "bg-[#00D4FF]/10 dark:bg-gradient-to-r dark:from-[#00D4FF]/20 dark:to-[#6C4FE0]/20 border border-[#00D4FF]/40 text-gray-900 dark:text-white"
                         : "hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 border border-transparent"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 flex-shrink-0 border border-gray-200 dark:border-white/10">
-                        <img 
-                          src={item.thumbnail_url || item.preview_url} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover" 
+                        <img
+                          src={item.thumbnail_url || item.preview_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="truncate">
                         <p className="text-sm font-semibold truncate">{item.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{item.content_type || 'Vector'} • {item.is_premium ? '⭐ Premium' : 'Free'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{item.content_type || 'Photo'} • {item.is_premium ? '⭐ Premium' : 'Free'}</p>
                       </div>
                     </div>
                     <ArrowRight size={16} className="text-gray-400 opacity-60 flex-shrink-0 ml-2" />

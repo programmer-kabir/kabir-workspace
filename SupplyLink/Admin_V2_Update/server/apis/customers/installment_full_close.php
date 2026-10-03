@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../helpers/cash_helper.php';
 
 header("Content-Type: application/json");
 
@@ -82,6 +83,9 @@ try {
     if (!$stmt3->execute()) {
         throw new Exception($stmt3->error);
     }
+
+    // ✅ 4. Auto-sync with Cash In table
+    syncFullSettlementCash($mysqli, $card_id, $due_amount, $principal, $profit, date('Y-m-d'));
 
     // ================= COMMIT =================
     $mysqli->commit();

@@ -20,7 +20,7 @@ import {
   X
 } from "lucide-react";
 
-const IMG_BASE = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const IMG_BASE = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getInitials = (name) => {
   if (!name) return "U";

@@ -17,7 +17,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import QuickViewModal from "../Modals/QuickViewModal";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getPreviewImage = (item) => {
   const src =
@@ -219,8 +219,8 @@ export default function ContentArea({
               onClick={() => setView("grid")}
               title="Grid view"
               className={`flex h-11 w-11 items-center justify-center transition-colors ${view === "grid"
-                  ? "bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
+                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200"
                 }`}
             >
               <FiGrid className="text-xl" />
@@ -230,8 +230,8 @@ export default function ContentArea({
               onClick={() => setView("list")}
               title="List view"
               className={`flex h-11 w-11 items-center justify-center transition-colors border-l border-gray-200 dark:border-white/10 ${view === "list"
-                  ? "bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
+                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200"
                 }`}
             >
               <FiList className="text-xl" />
@@ -279,8 +279,8 @@ export default function ContentArea({
                 key={tag.id}
                 onClick={() => handleTagClick(tag.name)}
                 className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 ${searchQuery === tag.name
-                    ? "border-[#00D4FF]/50 bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
-                    : "border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-[#00D4FF]/30 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm"
+                  ? "border-[#00D4FF]/50 bg-[#00D4FF]/10 text-[#0088b3] dark:text-[#00D4FF]"
+                  : "border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-[#00D4FF]/30 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm"
                   }`}
               >
                 {tag.name}
@@ -386,7 +386,7 @@ export default function ContentArea({
                     {item?.title}
                   </p>
                   <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-white/10 text-[11px] text-gray-300">
-                    <span className="capitalize text-gray-300">{item?.content_type || 'Vector'}</span>
+                    <span className="capitalize text-gray-300">{item?.content_type || 'Photo'}</span>
                     <span className="text-[#00D4FF] font-semibold flex items-center gap-1">
                       <Download size={11} /> Download
                     </span>

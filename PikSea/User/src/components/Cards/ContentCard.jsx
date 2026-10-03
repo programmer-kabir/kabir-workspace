@@ -4,7 +4,7 @@ import { FaCrown } from "react-icons/fa";
 import { Eye, Heart, Download, Sparkles } from "lucide-react";
 import QuickViewModal from "../Modals/QuickViewModal";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getPreviewImage = (item) => {
   const src =
@@ -19,7 +19,7 @@ export default function ContentCard({ data, onSaveCollection }) {
   const navigate = useNavigate();
 
   if (!data) return null;
-  const category = data.category_slug || "explore"; 
+  const category = data.category_slug || "explore";
 
   const handleQuickView = (e) => {
     e.preventDefault();
@@ -83,7 +83,7 @@ export default function ContentCard({ data, onSaveCollection }) {
               {data?.title}
             </p>
             <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-white/10 text-[11px] text-gray-300">
-              <span className="capitalize text-gray-300">{data?.content_type || 'Vector'}</span>
+              <span className="capitalize text-gray-300">{data?.content_type || 'Photo'}</span>
               <span className="text-[#00D4FF] font-semibold flex items-center gap-1">
                 <Download size={11} /> Download
               </span>

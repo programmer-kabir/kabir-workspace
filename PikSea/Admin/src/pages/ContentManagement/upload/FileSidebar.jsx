@@ -15,7 +15,7 @@ const FileSidebar = () => {
     handleFileChange,
   } = useUpload();
 
-  const countableExts = ["jpg", "jpeg", "png", "webp", "svg", "eps", "ai", "psd", "zip", "mp4", "mov", "webm"];
+  const countableExts = ["jpg", "jpeg", "png", "webp"];
   const countable = selectedFiles.filter(f => countableExts.includes(f.name.split(".").pop().toLowerCase()));
   const readyCount = countable.filter(f => getMetadataStatus(filesMetadata[f.name] || {}).isComplete).length;
   const uploadingCount = selectedFiles.filter(f => draftIds[f.name] === "uploading").length;
@@ -203,7 +203,7 @@ const FileSidebar = () => {
           id="file-upload"
           className="hidden"
           onChange={handleFileChange}
-          accept=".svg,.eps,.ai,.psd,.jpg,.jpeg,.png,.webp,.zip,.mp4,.mov,.webm"
+          accept=".jpg,.jpeg,.png,.webp"
           multiple
         />
       </div>

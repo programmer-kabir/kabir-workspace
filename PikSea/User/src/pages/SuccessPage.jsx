@@ -18,23 +18,28 @@ const SuccessPage = () => {
     );
   }
 
-  if (!user || !plan) {
-    return <Navigate to="/" />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border border-gray-100">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#050505] flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="max-w-md w-full bg-white dark:bg-[#111] rounded-3xl shadow-2xl p-8 text-center border border-gray-100 dark:border-white/10">
         <div className="flex justify-center mb-6">
           <div className="relative">
-            <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75"></div>
-            <CheckCircle className="relative text-green-500 w-20 h-20 bg-white rounded-full" />
+            <div className="absolute inset-0 bg-green-100 dark:bg-green-900/30 rounded-full animate-ping opacity-75"></div>
+            <CheckCircle className="relative text-green-500 w-20 h-20 bg-white dark:bg-[#111] rounded-full" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Payment Successful!</h1>
-        <p className="text-gray-600 mb-8">
-          Thank you for subscribing to the <strong className="text-gray-900">{plan.name}</strong> plan. 
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 font-outfit">Payment Successful!</h1>
+        <p className="text-gray-600 dark:text-gray-300 mb-8 text-sm">
+          {plan?.name ? (
+            <>Thank you for subscribing to the <strong className="text-gray-900 dark:text-white">{plan.name}</strong> plan.</>
+          ) : (
+            <>Thank you for your purchase. Your subscription / credits have been credited to your account.</>
+          )}
+          <br className="mb-2" />
           Your account has been upgraded and you now have premium access.
         </p>
 

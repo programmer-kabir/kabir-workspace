@@ -10,7 +10,11 @@ export const useFaqs = () => {
         const fetchFaqs = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/faqs/get.php`);
+                const response = await axios.get(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/faqs/get.php`, {
+                    headers: {
+                        'x-api-key': import.meta.env.VITE_APP_SECRET
+                    }
+                });
                 if (response.data.success) {
                     setFaqs(response.data.data);
                 } else {

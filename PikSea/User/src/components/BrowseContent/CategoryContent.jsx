@@ -32,7 +32,7 @@ export default function CategoryContent() {
     return <Navigate to="/404" replace />;
   }
 
-  const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+  const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
   return (
     <section className="max-w-[1400px] mx-auto px-4 py-12">

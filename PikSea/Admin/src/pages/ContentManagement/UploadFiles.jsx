@@ -16,7 +16,7 @@ const UploadLayout = () => {
         <div>
           <h2 className="text-2xl font-bold text-white font-outfit">Direct Asset Publishing Center</h2>
           <p className="text-sm text-gray-400 font-medium">
-            Batch upload vectors (EPS, SVG, AI), photos, PSDs, video footage, and ZIP packages directly to PikSea
+            Batch upload high-resolution stock photos and images (JPG, JPEG, PNG, WebP) directly to PikSea
           </p>
         </div>
         
@@ -58,7 +58,7 @@ const UploadLayout = () => {
             id="file-upload"
             className="hidden"
             onChange={handleFileChange}
-            accept=".svg,.eps,.ai,.psd,.jpg,.jpeg,.png,.webp,.zip,.mp4,.mov,.webm"
+            accept=".jpg,.jpeg,.png,.webp"
             multiple
           />
 

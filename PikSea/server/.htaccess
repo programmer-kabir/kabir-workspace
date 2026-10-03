@@ -1,4 +1,27 @@
-# Apache root htaccess
+# PikSea Apache Production Configuration
 <IfModule mod_rewrite.c>
     RewriteEngine On
 </IfModule>
+
+# PHP Upload & Memory Optimization for High-Resolution Assets (Up to 100MB)
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 120M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 512M
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 120M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 512M
+</IfModule>
+
+# Security: Deny direct access to .env and sensitive config files
+<FilesMatch "^\.env|\.sql$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

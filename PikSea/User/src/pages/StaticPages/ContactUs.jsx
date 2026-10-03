@@ -15,7 +15,7 @@ const ContactUs = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,7 +27,7 @@ const ContactUs = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      setSubmitted(true);
+      setIsSubmitted(true);
       setFormData({ name: '', email: '', department: 'General Support', subject: '', message: '' });
     }, 800);
   };
@@ -56,8 +56,8 @@ const ContactUs = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00D4FF]/20 to-transparent" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-[#00D4FF]/5 rounded-full blur-[160px] pointer-events-none" />
 
-        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          
+        <div className=" mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
           {/* Hero Title Section */}
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#00D4FF]/10 text-[#00D4FF] rounded-full text-xs font-semibold tracking-widest uppercase mb-5 border border-[#00D4FF]/20">
@@ -74,7 +74,7 @@ const ContactUs = () => {
 
           {/* Top Quick Contact Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-14">
-            
+
             {/* Card 1: Support Email */}
             <div className="bg-gray-50 dark:bg-[#111] p-6 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-[#00D4FF]/40 transition-all duration-300 flex items-start gap-4 group">
               <div className="w-12 h-12 rounded-xl bg-[#00D4FF]/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -83,8 +83,8 @@ const ContactUs = () => {
               <div>
                 <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-1">Support Email</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">Account, billing &amp; general help</p>
-                <a 
-                  href="mailto:support@piksea.com" 
+                <a
+                  href="mailto:support@piksea.com"
                   className="text-[#0284C7] hover:underline font-medium text-sm inline-flex items-center gap-1"
                 >
                   support@piksea.com
@@ -100,8 +100,8 @@ const ContactUs = () => {
               <div>
                 <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-1">Copyright &amp; DMCA</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">Licensing &amp; IP inquiries</p>
-                <a 
-                  href="mailto:copyright@piksea.com" 
+                <a
+                  href="mailto:copyright@piksea.com"
                   className="text-[#0284C7] hover:underline font-medium text-sm inline-flex items-center gap-1"
                 >
                   copyright@piksea.com
@@ -127,26 +127,9 @@ const ContactUs = () => {
 
           {/* Main Content & Interactive Form Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            
-            {/* Left Column: Rich Text Content */}
-            <div className="lg:col-span-7 bg-gray-50 dark:bg-[#111] p-8 sm:p-10 rounded-3xl border border-gray-200 dark:border-white/10 shadow-lg">
-              <div className="mb-6 pb-5 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-outfit">
-                  Help &amp; Documentation
-                </h2>
-                <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-white/5 px-3 py-1 rounded-full border border-gray-200 dark:border-white/10">
-                  Official Guidelines
-                </span>
-              </div>
-
-              <div className="prose prose-lg dark:prose-invert max-w-none">
-                <SafeRichText content={pageData.content} />
-              </div>
-            </div>
-
             {/* Right Column: Interactive Form & Help Box */}
             <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-28">
-              
+
               {/* Form Card */}
               <div className="bg-gray-50 dark:bg-[#111] p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-lg relative overflow-hidden">
                 <div className="mb-6">
@@ -187,7 +170,7 @@ const ContactUs = () => {
                         value={formData.name}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-[#00D4FF]/20 focus:border-[#00D4FF] bg-white dark:bg-[#181818] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-sm transition-all"
-                        placeholder="e.g. Dayal Stock"
+                        placeholder="e.g. Alex Morgan"
                       />
                     </div>
 
@@ -292,6 +275,23 @@ const ContactUs = () => {
               </div>
 
             </div>
+            {/* Left Column: Rich Text Content */}
+            <div className="lg:col-span-7 bg-gray-50 dark:bg-[#111] p-8 sm:p-10 rounded-3xl border border-gray-200 dark:border-white/10 shadow-lg">
+              <div className="mb-6 pb-5 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-outfit">
+                  Help &amp; Documentation
+                </h2>
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-white/5 px-3 py-1 rounded-full border border-gray-200 dark:border-white/10">
+                  Official Guidelines
+                </span>
+              </div>
+
+              <div className="prose prose-lg dark:prose-invert max-w-none">
+                <SafeRichText content={pageData.content} />
+              </div>
+            </div>
+
+
 
           </div>
 

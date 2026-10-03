@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../helpers/cash_helper.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -51,6 +52,9 @@ try {
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->close();
+
+    // Auto-sync with Cash In table (soft delete)
+    syncDailyInstallmentCash($mysqli, $id, 0, 0, 0, '', '', true);
 
     echo json_encode([
         "success" => true,

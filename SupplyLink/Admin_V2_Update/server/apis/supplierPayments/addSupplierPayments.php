@@ -21,16 +21,19 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
   exit;
 }
 
-// 🔹 Get data
-$memo_no = $_POST['memo_no'] ?? '';
-$date = $_POST['date'] ?? '';
-$shop_name = $_POST['shop_name'] ?? '';
-$supplier = $_POST['supplier'] ?? '';
-$brand = $_POST['brand'] ?? '';
-$total_amount = $_POST['total_amount'] ?? 0;
-$paid = $_POST['paid'] ?? 0;
-$due = $_POST['due'] ?? 0;
-$remarks = $_POST['remarks'] ?? '';
+// 🔹 Handle JSON or POST
+$jsonData = json_decode(file_get_contents("php://input"), true);
+
+$memo_no = $_POST['memo_no'] ?? ($jsonData['memo_no'] ?? '');
+$date = $_POST['date'] ?? ($jsonData['date'] ?? date('Y-m-d'));
+$shop_name = $_POST['shop_name'] ?? ($jsonData['shop_name'] ?? '');
+$supplier = $_POST['supplier'] ?? ($jsonData['supplier'] ?? '');
+$brand = $_POST['brand'] ?? ($jsonData['brand'] ?? '');
+$total_amount = floatval($_POST['total_amount'] ?? ($jsonData['total_amount'] ?? 0));
+$paid = floatval($_POST['paid'] ?? ($jsonData['paid'] ?? 0));
+$due = floatval($_POST['due'] ?? ($jsonData['due'] ?? ($total_amount - $paid)));
+$remarks = $_POST['remarks'] ?? ($jsonData['remarks'] ?? '');
+$auto_cash_out = isset($_POST['auto_cash_out']) ? filter_var($_POST['auto_cash_out'], FILTER_VALIDATE_BOOLEAN) : (isset($jsonData['auto_cash_out']) ? filter_var($jsonData['auto_cash_out'], FILTER_VALIDATE_BOOLEAN) : true);
 
 // 🔹 Upload folder
 $uploadDir = __DIR__ . "/../../uploads/supplier_payments/";
@@ -98,38 +101,73 @@ if ($uploadKey) {
   }
 }
 
+// Auto fix missing AUTO_INCREMENT on table if needed
+try {
+  @$mysqli->query("ALTER TABLE supplier_payment MODIFY id INT NOT NULL AUTO_INCREMENT");
+} catch (Throwable $t) {}
+
 // Ensure history table exists
-$mysqli->query("CREATE TABLE IF NOT EXISTS supplier_payment_history (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    payment_id INT NOT NULL,
-    action VARCHAR(50) DEFAULT 'Updated',
-    changes JSON NULL,
-    note VARCHAR(255) NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX (payment_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+try {
+  @$mysqli->query("CREATE TABLE IF NOT EXISTS supplier_payment_history (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      payment_id INT NOT NULL,
+      action VARCHAR(50) DEFAULT 'Updated',
+      changes JSON NULL,
+      note VARCHAR(255) NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX (payment_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+  @$mysqli->query("ALTER TABLE supplier_payment_history MODIFY id INT NOT NULL AUTO_INCREMENT");
+} catch (Throwable $t) {}
 
-// 🔥 Insert query
+// Calculate next safe ID in case AUTO_INCREMENT is missing
+$nextIdRes = $mysqli->query("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM supplier_payment");
+$nextIdRow = $nextIdRes ? $nextIdRes->fetch_assoc() : null;
+$nextId = $nextIdRow ? (int)$nextIdRow['next_id'] : 1;
+if ($nextId <= 0) $nextId = 1;
+
+// 🔥 Insert query with explicit ID to guarantee no duplicate '0'
 $stmt = $mysqli->prepare("INSERT INTO supplier_payment 
-(memo_no, date, shop_name, supplier, brand, total_amount, paid, due, image, remarks) 
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+(id, memo_no, date, shop_name, supplier, brand, total_amount, paid, due, image, remarks) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-$stmt->bind_param(
-  "sssssdddss",
-  $memo_no,
-  $date,
-  $shop_name,
-  $supplier,
-  $brand,
-  $total_amount,
-  $paid,
-  $due,
-  $dbPath,
-  $remarks
-);
+if (!$stmt) {
+  // Fallback if id column format differs
+  $stmt = $mysqli->prepare("INSERT INTO supplier_payment 
+  (memo_no, date, shop_name, supplier, brand, total_amount, paid, due, image, remarks) 
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  $stmt->bind_param(
+    "sssssdddss",
+    $memo_no,
+    $date,
+    $shop_name,
+    $supplier,
+    $brand,
+    $total_amount,
+    $paid,
+    $due,
+    $dbPath,
+    $remarks
+  );
+} else {
+  $stmt->bind_param(
+    "isssssdddss",
+    $nextId,
+    $memo_no,
+    $date,
+    $shop_name,
+    $supplier,
+    $brand,
+    $total_amount,
+    $paid,
+    $due,
+    $dbPath,
+    $remarks
+  );
+}
 
 if ($stmt->execute()) {
-  $newPaymentId = $mysqli->insert_id;
+  $newPaymentId = $stmt->insert_id ?: $nextId;
 
   // Log initial creation
   $initialData = [
@@ -144,22 +182,30 @@ if ($stmt->execute()) {
     'remarks' => $remarks
   ];
   $initJson = json_encode($initialData, JSON_UNESCAPED_UNICODE);
-  $histStmt = $mysqli->prepare("INSERT INTO supplier_payment_history (payment_id, action, changes, note) VALUES (?, 'Created', ?, 'নতুন সাপ্লায়ার পেমেন্ট এন্ট্রি সম্পন্ন')");
-  if ($histStmt) {
-    $histStmt->bind_param("is", $newPaymentId, $initJson);
-    $histStmt->execute();
-    $histStmt->close();
-  }
+  $noteMsg = "নতুন পণ্য ক্রয় এন্ট্রি সম্পন্ন" . ($paid > 0 ? " (পরিশোধ: ৳" . number_format($paid) . ")" : "");
+
+  try {
+    $nextHistRes = $mysqli->query("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM supplier_payment_history");
+    $nextHistRow = $nextHistRes ? $nextHistRes->fetch_assoc() : null;
+    $nextHistId = $nextHistRow ? (int)$nextHistRow['next_id'] : 1;
+
+    $histStmt = $mysqli->prepare("INSERT INTO supplier_payment_history (id, payment_id, action, changes, note) VALUES (?, ?, 'Created', ?, ?)");
+    if ($histStmt) {
+      $histStmt->bind_param("iiss", $nextHistId, $newPaymentId, $initJson, $noteMsg);
+      $histStmt->execute();
+      $histStmt->close();
+    }
+  } catch (Throwable $t) {}
 
   echo json_encode([
     "success" => true,
-    "message" => "Payment added successfully",
+    "message" => "পণ্য ক্রয় ও পেমেন্ট সফলভাবে সম্পন্ন হয়েছে!",
     "id" => $newPaymentId
-  ]);
+  ], JSON_UNESCAPED_UNICODE);
 } else {
   echo json_encode([
     "success" => false,
     "message" => "Insert failed",
     "error" => $stmt->error
-  ]);
+  ], JSON_UNESCAPED_UNICODE);
 }

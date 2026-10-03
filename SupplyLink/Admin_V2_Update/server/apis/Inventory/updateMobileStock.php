@@ -39,7 +39,25 @@ $mrp = $_POST["mrp"] ?? 0;
 $supplier = $_POST["supplier"] ?? "";
 $status = $_POST["status"] ?? "available";
 
-// Ensure category column and image column and history table exist
+// Ensure Stock_Inventory table and columns exist
+$mysqli->query("CREATE TABLE IF NOT EXISTS Stock_Inventory (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATE NULL,
+    category VARCHAR(100) DEFAULT 'Mobile',
+    brand VARCHAR(100) NULL,
+    model VARCHAR(150) NULL,
+    image VARCHAR(255) NULL,
+    imei1 VARCHAR(100) NULL,
+    imei2 VARCHAR(100) NULL,
+    variant VARCHAR(100) NULL,
+    color VARCHAR(50) NULL,
+    purchase_price DECIMAL(12,2) DEFAULT 0,
+    mrp DECIMAL(12,2) DEFAULT 0,
+    supplier VARCHAR(150) NULL,
+    status VARCHAR(50) DEFAULT 'available',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
 $mysqli->query("ALTER TABLE Stock_Inventory ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Mobile'");
 $mysqli->query("ALTER TABLE Stock_Inventory ADD COLUMN IF NOT EXISTS image VARCHAR(255) NULL");
 $mysqli->query("ALTER TABLE Stock_Inventory ADD COLUMN IF NOT EXISTS variant VARCHAR(100) NULL");

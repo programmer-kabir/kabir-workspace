@@ -2,17 +2,29 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 export const fetchSupplierPayments = createAsyncThunk(
   "supplierPayments/fetchSupplierPayments",
-  async () => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_LOCALHOST_KEY}/supplierPayments/getSupplierPayments.php`,
       );
-      return response.data.data;
+      if (response.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      if (response.data?.data && typeof response.data.data === "object") {
+        return Object.values(response.data.data);
+      }
+      return [];
     } catch (error) {
-      return error;
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Failed to fetch supplier payments"
+      );
     }
   },
 );
+
 const SupplierPaymentAnalyticsSlice = createSlice({
   name: "supplierPayments",
   initialState: {
@@ -26,13 +38,13 @@ const SupplierPaymentAnalyticsSlice = createSlice({
     });
     builder.addCase(fetchSupplierPayments.fulfilled, (state, action) => {
       state.isSupplierPaymentsLoading = false;
-      state.supplierPayments = action.payload;
+      state.supplierPayments = Array.isArray(action.payload) ? action.payload : [];
       state.isSupplierPaymentsError = null;
     });
     builder.addCase(fetchSupplierPayments.rejected, (state, action) => {
       state.isSupplierPaymentsLoading = false;
       state.supplierPayments = [];
-      state.isSupplierPaymentsError = action.error.message;
+      state.isSupplierPaymentsError = action.payload || action.error.message;
     });
   },
 });

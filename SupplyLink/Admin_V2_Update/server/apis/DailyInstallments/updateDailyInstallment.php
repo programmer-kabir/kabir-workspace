@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../helpers/cash_helper.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 date_default_timezone_set('Asia/Dhaka');
@@ -102,6 +103,9 @@ try {
         $row['userId'] = (int)$row['userId'];
         $row['cardId'] = (int)$row['cardId'];
         $row['amount'] = (float)$row['amount'];
+
+        // Auto-sync with Cash In table
+        syncDailyInstallmentCash($mysqli, $id, $row['cardId'], $row['userId'], $row['amount'], $row['date'], $row['receiver']);
     }
 
     echo json_encode([

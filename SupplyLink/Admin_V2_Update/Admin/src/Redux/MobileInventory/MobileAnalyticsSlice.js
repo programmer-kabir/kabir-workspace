@@ -2,17 +2,29 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 export const fetchStockMobiles = createAsyncThunk(
   "stockMobiles/fetchStockMobiles",
-  async () => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_LOCALHOST_KEY}/Inventory/getMobileStocks.php`,
       );
-      return response.data.data;
+      if (response.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      if (response.data?.data && typeof response.data.data === "object") {
+        return Object.values(response.data.data);
+      }
+      return [];
     } catch (error) {
-      return error;
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Failed to fetch stock mobiles"
+      );
     }
   },
 );
+
 const MobileAnalyticsSlice = createSlice({
   name: "stockMobiles",
   initialState: {
@@ -26,13 +38,13 @@ const MobileAnalyticsSlice = createSlice({
     });
     builder.addCase(fetchStockMobiles.fulfilled, (state, action) => {
       state.isStockMobilesLoading = false;
-      state.stockMobiles = action.payload;
+      state.stockMobiles = Array.isArray(action.payload) ? action.payload : [];
       state.isStockMobilesError = null;
     });
     builder.addCase(fetchStockMobiles.rejected, (state, action) => {
       state.isStockMobilesLoading = false;
       state.stockMobiles = [];
-      state.isStockMobilesError = action.error.message;
+      state.isStockMobilesError = action.payload || action.error.message;
     });
   },
 });

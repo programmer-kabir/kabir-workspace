@@ -56,13 +56,22 @@ const PricingPage = () => {
   }, [isLoading, plans]);
 
   const getVariantId = (slug) => {
-    const variants = {
-      'starter': '810e3875-02f0-45e7-a1fc-8b315ebab310',
-      'premium': '12',
-      'pro': '12',
-      'pro-plus': '12'
+    const cleanSlug = (slug || '').toLowerCase().replace(/-yearly$/, '').trim();
+    const envVariants = {
+      'starter': import.meta.env.VITE_LEMON_VARIANT_STARTER,
+      'premium': import.meta.env.VITE_LEMON_VARIANT_PREMIUM,
+      'pro': import.meta.env.VITE_LEMON_VARIANT_PRO,
+      'pro-plus': import.meta.env.VITE_LEMON_VARIANT_PRO_PLUS,
+      'pro+': import.meta.env.VITE_LEMON_VARIANT_PRO_PLUS
     };
-    return variants[slug] || '00000';
+
+    const fallbackVariants = {
+      'starter': 'f61549eb-903b-4b20-ac04-42f3dcaed57c',
+      'premium': '0e36146c-118c-457b-bb83-b1ffa3ef69b8',
+      'pro': '473f3c1b-a035-4140-a5d1-37a07e062cbd',
+      'pro-plus': '6aa0cbd8-0ce4-433e-9191-09fe51bfadbc'
+    };
+    return envVariants[cleanSlug] || fallbackVariants[cleanSlug] || 'f61549eb-903b-4b20-ac04-42f3dcaed57c';
   };
 
   const handleUpgrade = (plan) => {
@@ -77,7 +86,10 @@ const PricingPage = () => {
       return;
     }
 
-    const checkoutUrl = `https://dayalstock.lemonsqueezy.com/checkout/buy/${getVariantId(plan.slug)}?embed=1&checkout[email]=${user?.email || ''}&checkout[custom][user_id]=${userData?.id || user?.uid || ''}&checkout[custom][plan_id]=${plan.id}&dark=1`;
+    let rawSubdomain = import.meta.env.VITE_LEMON_SQUEEZY_STORE_SUBDOMAIN || 'pikseeeeeea';
+    const storeSubdomain = rawSubdomain.replace(/^https?:\/\//, '').replace(/\.lemonsqueezy\.com.*$/, '').replace(/\/+$/, '') || 'pikseeeeeea';
+    const userId = userData?.id || user?.id || user?.uid || '';
+    const checkoutUrl = `https://${storeSubdomain}.lemonsqueezy.com/checkout/buy/${getVariantId(plan.slug)}?embed=1&checkout[email]=${encodeURIComponent(user?.email || '')}&checkout[custom][user_id]=${userId}&checkout[custom][plan_id]=${plan.id}&dark=1`;
 
     // Check if Lemon Squeezy is loaded properly
     if (window.LemonSqueezy && window.LemonSqueezy.Url) {
@@ -210,19 +222,16 @@ const PricingPage = () => {
                   )}
                 </div>
 
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleUpgrade(plan);
-                  }}
-                  className={`mt-2 w-full block rounded-xl py-3.5 px-4 text-center text-sm font-bold transition-all duration-200 lemonsqueezy-button ${isPopular
+                <button
+                  type="button"
+                  onClick={() => handleUpgrade(plan)}
+                  className={`mt-2 w-full block rounded-xl py-3.5 px-4 text-center text-sm font-bold transition-all duration-200 cursor-pointer ${isPopular
                     ? 'bg-[#00D4FF] text-[#050505] hover:bg-[#33DEFF] shadow-[0_0_15px_rgba(0,212,255,0.2)]'
                     : 'bg-gray-100 dark:bg-white/5 text-[#0088b3] dark:text-[#00D4FF] border border-[#00D4FF]/20 hover:bg-gray-200 dark:hover:bg-white/10'
                     }`}
                 >
                   {Number(plan.price) === 0 ? 'Start For Free' : 'Upgrade to ' + plan.name.replace('Yearly ', '')}
-                </a>
+                </button>
 
                 {/* Features List */}
                 <div className="mt-8 pt-8 border-t border-gray-200 dark:border-white/10">
@@ -347,6 +356,7 @@ const PricingPage = () => {
 const creditPlans = [
   {
     id: 'credit-1',
+    slug: 'starter',
     name: 'Starter Pack',
     description: 'Perfect for one-off projects',
     price: '9.99',
@@ -356,6 +366,7 @@ const creditPlans = [
   },
   {
     id: 'credit-2',
+    slug: 'pro',
     name: 'Pro Pack',
     description: 'Best value for freelancers',
     price: '39.99',
@@ -365,6 +376,7 @@ const creditPlans = [
   },
   {
     id: 'credit-3',
+    slug: 'pro-plus',
     name: 'Agency Pack',
     description: 'For high volume needs',
     price: '69.99',

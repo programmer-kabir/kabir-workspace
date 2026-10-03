@@ -126,7 +126,7 @@ if ($realFilePath && file_exists($realFilePath)) {
     readfile($realFilePath);
 } else {
     // Stream from remote CDN as fallback
-    $remoteUrl = "https://api.dayalstock.com/" . ltrim($relativePath, "/");
+    $remoteUrl = "https://api.piksea.com/" . ltrim($relativePath, "/");
     readfile($remoteUrl);
 }
 exit;

@@ -13,12 +13,12 @@ import {
   FaComments,
 } from "react-icons/fa";
 
-const SupplierPaymentAddModal = ({ isOpen, onClose, onSuccess }) => {
+const SupplierPaymentAddModal = ({ isOpen, onClose, onSuccess, preselectedShop }) => {
   const [formData, setFormData] = useState({
     memo_no: "",
     date: new Date().toISOString().split("T")[0],
-    shop_name: "",
-    supplier: "",
+    shop_name: preselectedShop?.shop_name || "",
+    supplier: preselectedShop?.owner_name || "",
     brand: "",
     total_amount: "",
     paid: "",
@@ -29,6 +29,16 @@ const SupplierPaymentAddModal = ({ isOpen, onClose, onSuccess }) => {
 
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (preselectedShop) {
+      setFormData((prev) => ({
+        ...prev,
+        shop_name: preselectedShop.shop_name || "",
+        supplier: preselectedShop.owner_name === "-" ? "" : preselectedShop.owner_name || "",
+      }));
+    }
+  }, [preselectedShop]);
 
   if (!isOpen) return null;
 

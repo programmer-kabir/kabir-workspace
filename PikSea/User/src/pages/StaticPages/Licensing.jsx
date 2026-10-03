@@ -94,13 +94,34 @@ const Licensing = () => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   {content.licenses && content.licenses.map((license, idx) => (
-                    <div key={idx} className={`border rounded-xl p-6 ${license.style === 'free' ? 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#050505]' : 'border-orange-200 bg-orange-50/30'}`}>
-                      <h3 className={`text-xl font-bold mb-3 ${license.style === 'free' ? 'text-gray-900 dark:text-white' : 'text-orange-600'}`}>
-                        {license.type}
-                      </h3>
-                      <ul className="space-y-2 text-gray-600 dark:text-gray-400 list-disc list-inside">
+                    <div 
+                      key={idx} 
+                      className={`border rounded-2xl p-6 transition-all ${
+                        license.style === 'free' 
+                          ? 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#111]' 
+                          : 'border-cyan-500/30 dark:border-[#00D4FF]/30 bg-cyan-500/5 dark:bg-[#00D4FF]/5 shadow-lg shadow-cyan-500/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className={`text-xl font-bold font-outfit ${
+                          license.style === 'free' 
+                            ? 'text-gray-900 dark:text-white' 
+                            : 'text-[#0284C7] dark:text-[#00D4FF]'
+                        }`}>
+                          {license.type}
+                        </h3>
+                        {license.style !== 'free' && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/20">
+                            Recommended
+                          </span>
+                        )}
+                      </div>
+                      <ul className="space-y-3 text-gray-600 dark:text-gray-400 text-sm font-inter">
                         {license.points.map((pt, i) => (
-                          <li key={i}><strong className="text-gray-800 dark:text-gray-200">{pt.label}:</strong> {pt.value}</li>
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-[#00D4FF] mt-0.5 font-bold">✓</span>
+                            <span><strong className="text-gray-900 dark:text-white">{pt.label}:</strong> {pt.value}</span>
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -140,11 +161,11 @@ const Licensing = () => {
               </section>
 
               {/* Contact Support */}
-              <div className="bg-gray-50 dark:bg-[#050505] border border-gray-200 dark:border-transparent p-6 rounded-xl text-center mt-12">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Have specific licensing questions?</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">If your use-case isn't covered here, please reach out to our support team.</p>
-                <Link to="/contact-us" className="inline-block px-6 py-2 bg-[#00D4FF] text-white font-medium rounded-lg hover:bg-[#00b8e6] transition-colors">
-                  Contact Support
+              <div className="bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-white/10 p-8 rounded-3xl text-center mt-12">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit mb-2">Have specific licensing questions?</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto text-sm">If your commercial project or enterprise use-case isn't covered here, our licensing team is ready to assist you.</p>
+                <Link to="/contact-us" className="inline-block px-8 py-3 bg-[#00D4FF] hover:bg-[#00b8e6] text-gray-950 font-bold rounded-xl shadow-lg shadow-[#00D4FF]/20 transition-all">
+                  Contact Licensing Support
                 </Link>
               </div>
 

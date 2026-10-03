@@ -7,7 +7,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import {
   FiHome, FiUsers, FiAward, FiLogOut, FiMenu, FiX, FiShield, FiClock,
   FiUser, FiSettings, FiCheckCircle, FiPieChart, FiAlertOctagon, FiSidebar,
-  FiLayers, FiChevronRight, FiActivity
+  FiLayers, FiChevronRight, FiActivity, FiVideo
 } from 'react-icons/fi';
 import { Toaster, toast } from 'sonner';
 import Pusher from 'pusher-js';
@@ -19,6 +19,7 @@ const API_BASE = rawApiBase.replace(/\/+$/, '');
 
 const navItems = [
   { to: '/', icon: FiHome, label: 'Dashboard', badgeKey: null },
+  { to: '/video-review', icon: FiVideo, label: '🎬 Video QA Review', badgeKey: null },
   { to: '/brand-resources', icon: FiLayers, label: 'Brand Resources', badgeKey: null },
   { to: '/pending', icon: FiClock, label: 'Pending Reviews', isPending: true },
   { to: '/completed', icon: FiCheckCircle, label: 'Completed Reviews', badgeKey: null },

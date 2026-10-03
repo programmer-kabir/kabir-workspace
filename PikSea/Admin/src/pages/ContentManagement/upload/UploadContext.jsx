@@ -45,9 +45,9 @@ export const UploadProvider = ({ children }) => {
   const MAX_TAGS = 50, MIN_TAGS = 5, IDEAL_TAGS = 20;
   const MAX_TITLE_LENGTH = 200, MIN_TITLE_LENGTH = 50;
   const MAX_DESCRIPTION_LENGTH = 500, MIN_DESCRIPTION_LENGTH = 100;
-  const mainExtensions = ["eps", "svg", "ai", "psd", "zip", "mp4", "mov", "webm", "jpg", "jpeg", "png", "webp"];
+  const mainExtensions = ["jpg", "jpeg", "png", "webp"];
   const previewExtensions = ["jpg", "jpeg", "png", "webp"];
-  const allowedExtensions = ["svg", "eps", "ai", "psd", "zip", "jpg", "jpeg", "png", "webp", "mp4", "mov", "webm"];
+  const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
   const SIZE_WARN_MB = 50;
   const SIZE_MAX_MB = 80;
 
@@ -236,7 +236,7 @@ export const UploadProvider = ({ children }) => {
       const autoDesc = generateAutoDescription(autoTitle, autoType);
 
       // Check if this image is a preview for an existing or incoming vector/archive file
-      const hasVectorMain = vectorOrArchiveExts.some(vExt => 
+      const hasVectorMain = vectorOrArchiveExts.some(vExt =>
         (newGrouped[base] && newGrouped[base].some(f => f.name.toLowerCase().endsWith("." + vExt))) ||
         incomingArr.some(f => getBaseName(f.name) === base && f.name.toLowerCase().endsWith("." + vExt))
       );
@@ -365,8 +365,8 @@ export const UploadProvider = ({ children }) => {
 
     if (isRealDraft) {
       try {
-        const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
-        const headers = { 
+        const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
+        const headers = {
           "Content-Type": "application/json",
           "x-api-key": import.meta.env.VITE_APP_SECRET || "dayalstock_secure_api_key_2026"
         };
@@ -401,13 +401,13 @@ export const UploadProvider = ({ children }) => {
     if (user) {
       try { token = await user.getIdToken(); } catch (e) { }
     }
-    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
 
     checkedFiles.forEach(name => {
       const remoteId = draftIds[name];
       const isRealDraft = remoteId && remoteId !== "uploading" && remoteId !== "error";
       if (isRealDraft) {
-        const headers = { 
+        const headers = {
           "Content-Type": "application/json",
           "x-api-key": import.meta.env.VITE_APP_SECRET || "dayalstock_secure_api_key_2026"
         };
@@ -513,8 +513,8 @@ export const UploadProvider = ({ children }) => {
       let tags = [];
 
       let meta;
-      try { 
-        meta = await exifr.parse(file, { xmp: true, tiff: true, iptc: true, exif: true }); 
+      try {
+        meta = await exifr.parse(file, { xmp: true, tiff: true, iptc: true, exif: true });
       } catch (e) { }
 
       if (meta) {
@@ -554,14 +554,14 @@ export const UploadProvider = ({ children }) => {
         setFilesMetadata(prev => {
           const ut = title || prev[file.name]?.title || "";
           const ud = desc || prev[file.name]?.description || "";
-          return { 
-            ...prev, 
-            [file.name]: { 
-              ...prev[file.name], 
-              title: ut, 
-              description: ud, 
-              tags: tags.length > 0 ? tags.join(", ") : prev[file.name]?.tags || "" 
-            } 
+          return {
+            ...prev,
+            [file.name]: {
+              ...prev[file.name],
+              title: ut,
+              description: ud,
+              tags: tags.length > 0 ? tags.join(", ") : prev[file.name]?.tags || ""
+            }
           };
         });
       }
@@ -750,7 +750,7 @@ export const UploadProvider = ({ children }) => {
     if (words.length === 0) { setTagSuggestions([]); return; }
     try {
       setIsLoadingTags(true);
-      const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+      const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
       const results = await Promise.all(
         words.map(w => fetch(`${API_BASE}/tags/getTags.php?search=${encodeURIComponent(w)}&limit=8`).then(r => r.json()))
       );
@@ -847,10 +847,7 @@ export const UploadProvider = ({ children }) => {
 
       const ext = asset.mainFile.name.split(".").pop().toLowerCase();
       let contentType = "image";
-      if (["eps", "svg", "ai"].includes(ext)) contentType = "vector";
-      else if (["mp4", "mov", "webm"].includes(ext)) contentType = "video";
-      else if (ext === "png") contentType = "png";
-      else if (["psd", "zip"].includes(ext)) contentType = "archive";
+      if (ext === "png") contentType = "png";
 
       formData.append("content_type", contentType);
       formData.append("preview_file", asset.previewFile);
@@ -863,7 +860,7 @@ export const UploadProvider = ({ children }) => {
         formData.append("main_files[]", asset.mainFile);
       }
 
-      const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+      const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
       const headers = {
         "x-api-key": import.meta.env.VITE_APP_SECRET || "dayalstock_secure_api_key_2026"
       };
@@ -904,8 +901,8 @@ export const UploadProvider = ({ children }) => {
         setDraftIds(prev => ({ ...prev, [metaKey]: "error" }));
         toast.error(`Upload failed: ${res.data.message || "Unknown error"}`);
       }
-    } catch (err) { 
-      setDraftIds(prev => ({ ...prev, [metaKey]: "error" })); 
+    } catch (err) {
+      setDraftIds(prev => ({ ...prev, [metaKey]: "error" }));
       toast.error(`Upload error: ${err.response?.data?.message || err.message}`);
     }
   };
@@ -916,7 +913,7 @@ export const UploadProvider = ({ children }) => {
     if (!file) return;
     const metaKey = file.name;
     const base = getBaseName(file.name);
-    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
 
     setIsGeneratingAI(true);
     const toastId = toast.loading(`✨ Generating AI metadata for ${file.name}...`);
@@ -997,7 +994,7 @@ export const UploadProvider = ({ children }) => {
       return;
     }
 
-    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
     setIsGeneratingAI(true);
     setAiProgress({ current: 0, total: targets.length });
     const toastId = toast.loading(`✨ AI processing 1 of ${targets.length} files...`);
@@ -1123,15 +1120,15 @@ export const UploadProvider = ({ children }) => {
           }
         }
         if (!generated && pf && pf.name) usedPreviews.add(pf.name);
-        
+
         const pairedPreviewVideo = pairedPreviews[base];
         const hasPreviewVideo = pairedPreviewVideo && ["mp4", "mov", "webm"].includes(
           pairedPreviewVideo.name.split(".").pop().toLowerCase()
         );
 
-        assets.push({ 
-          mainFile: mf, 
-          groupedFiles: groupedMainFiles[base] || [mf], 
+        assets.push({
+          mainFile: mf,
+          groupedFiles: groupedMainFiles[base] || [mf],
           previewFile: pf,
           previewVideo: hasPreviewVideo ? pairedPreviewVideo : null
         });
@@ -1268,7 +1265,7 @@ export const UploadProvider = ({ children }) => {
     setIsSubmitting(true);
     setUploadProgress({ current: 0, total: uploadAssets.length });
 
-    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "http://localhost/PikSea_Server/api_v1";
+    const API_BASE = import.meta.env.VITE_LOCALHOST_KEY || "https://api.piksea.com/api_v1";
 
     const submitOne = async (asset) => {
       const metaKey = asset.mainFile.name;

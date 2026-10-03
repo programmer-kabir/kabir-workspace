@@ -62,7 +62,7 @@ if (file_exists($realFilePath)) {
 } else {
     // If running locally but files are on production
     // Attempt to stream from production server
-    $remoteUrl = "https://api.dayalstock.com/" . ltrim($relativePath, "/");
+    $remoteUrl = "https://api.piksea.com/" . ltrim($relativePath, "/");
     readfile($remoteUrl);
 }
 exit;

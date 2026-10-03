@@ -148,7 +148,7 @@ const Testimonials = () => {
             </div>
             <div className="flex items-center gap-4 mb-4">
               <img
-                src={t.avatar_url ? `https://api.dayalstock.com/${t.avatar_url}` : "https://api.dayalstock.com/images/logo/dayalstock.png"}
+                src={t.avatar_url ? (t.avatar_url.startsWith('http') ? t.avatar_url : `${import.meta.env.VITE_IMG_KEY || 'https://api.piksea.com'}/${t.avatar_url}`) : "/favicon.png"}
                 alt={t.name}
                 className="w-12 h-12 rounded-full object-cover border border-gray-700 bg-gray-800"
               />

@@ -10,7 +10,11 @@ export const useDynamicPage = (slug) => {
         const fetchPage = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/pages/get.php?slug=${slug}`);
+                const response = await axios.get(`${import.meta.env.VITE_LOCALHOST_KEY}/cms/pages/get.php?slug=${slug}`, {
+                    headers: {
+                        'x-api-key': import.meta.env.VITE_APP_SECRET
+                    }
+                });
                 if (response.data.success) {
                     let content = response.data.data.content;
                     // If content is JSON format, parse it

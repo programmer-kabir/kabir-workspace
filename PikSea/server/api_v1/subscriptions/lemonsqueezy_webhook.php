@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 
-// Define your Lemon Squeezy Webhook Secret here
-define('LEMON_SQUEEZY_WEBHOOK_SECRET', 'DayalStock122333@');
+// Webhook Secret from environment (.env) with default fallback
+$webhookSecret = getenv('LEMON_SQUEEZY_WEBHOOK_SECRET') ?: 'piksea_Secret_Key_2026!';
+define('LEMON_SQUEEZY_WEBHOOK_SECRET', $webhookSecret);
 
 // 1. Get the payload and signature
 $payload = file_get_contents('php://input');
@@ -27,7 +28,7 @@ $eventName = $event['meta']['event_name'] ?? '';
 $data = $event['data'] ?? [];
 
 // Only process specific events
-if ($eventName === 'subscription_created' || $eventName === 'subscription_updated' || $eventName === 'order_created') {
+if ($eventName === 'subscription_created' || $eventName === 'subscription_updated' || $eventName === 'subscription_payment_success' || $eventName === 'order_created') {
     
     $attributes = $data['attributes'] ?? [];
     $customData = $event['meta']['custom_data'] ?? [];
@@ -156,7 +157,7 @@ if ($eventName === 'subscription_created' || $eventName === 'subscription_update
             exit;
         }
 
-        if ($eventName === 'subscription_created' || $eventName === 'subscription_updated') {
+        if ($eventName === 'subscription_created' || $eventName === 'subscription_updated' || $eventName === 'subscription_payment_success') {
             // Calculate dates
             $startDate = date('Y-m-d H:i:s');
             $endDate = date('Y-m-d H:i:s', strtotime('+1 month')); // Default to 1 month. In production, check plan duration
@@ -179,10 +180,28 @@ if ($eventName === 'subscription_created' || $eventName === 'subscription_update
                 $stmt2->execute();
             }
 
+            // Ensure Company Earnings is recorded (100% Studio Model)
+            $checkEarning = $mysqli->prepare("SELECT id FROM company_earnings WHERE source_id = ? AND transaction_type = 'subscription'");
+            $checkEarning->bind_param("i", $paymentTransactionId);
+            $checkEarning->execute();
+            $existingEarning = $checkEarning->get_result()->fetch_assoc();
+
+            if (!$existingEarning && $amount > 0) {
+                $earningMonth = date('Y-m');
+                $companyEarningsSql = "
+                    INSERT INTO company_earnings 
+                    (transaction_type, source_id, total_amount, company_earned, status, earning_month, created_at) 
+                    VALUES ('subscription', ?, ?, ?, 'completed', ?, NOW())
+                ";
+                $companyStmt = $mysqli->prepare($companyEarningsSql);
+                $companyStmt->bind_param("idds", $paymentTransactionId, $amount, $amount, $earningMonth);
+                $companyStmt->execute();
+            }
+
             $mysqli->commit();
             
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Subscription activated successfully']);
+            echo json_encode(['success' => true, 'message' => 'Subscription activated and company earnings recorded successfully']);
             exit;
         }
         

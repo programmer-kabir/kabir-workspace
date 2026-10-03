@@ -4,7 +4,7 @@ class CustomJWT {
     private static function getSecret() {
         $secret = getenv('JWT_SECRET');
         if (!$secret) {
-            $secret = 'dayalstock_jwt_super_secure_key_2026_x99a!';
+            $secret = 'piksea_jwt_super_secure_production_key_2026_x99a!';
         }
         return $secret;
     }
@@ -32,7 +32,7 @@ class CustomJWT {
         $now = time();
         $payload['iat'] = $payload['iat'] ?? $now;
         $payload['exp'] = $payload['exp'] ?? ($now + $expirySeconds);
-        $payload['iss'] = 'dayalstock';
+        $payload['iss'] = 'piksea';
 
         $headerEncoded = self::base64UrlEncode(json_encode($header));
         $payloadEncoded = self::base64UrlEncode(json_encode($payload));

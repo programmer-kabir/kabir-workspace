@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../helpers/cash_helper.php';
 
 header("Content-Type: application/json");
 
@@ -96,6 +97,24 @@ foreach ($input as $row) {
 
     if (!$stmt->execute()) {
         apiError("Insert failed", $stmt->error, 500);
+    }
+
+    $paymentId = $stmt->insert_id;
+
+    // Auto-sync with Cash In if marked Paid
+    if ($status === 'Paid') {
+        syncInstallmentPaymentCash(
+            $mysqli,
+            $paymentId,
+            $card_id,
+            $due_amount,
+            $paid_date,
+            $status,
+            $payment_method,
+            $receipt_number,
+            $collected_by,
+            $tag
+        );
     }
 
     $inserted++;

@@ -15,7 +15,7 @@ const FileGrid = () => {
   const [pageSize, setPageSize] = useState(24);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const countableExts = ["jpg", "jpeg", "png", "webp", "svg", "eps", "ai", "psd", "zip", "mp4", "mov", "webm"];
+  const countableExts = ["jpg", "jpeg", "png", "webp"];
   const countable = selectedFiles.filter(f => countableExts.includes(f.name.split(".").pop().toLowerCase()));
   const readyCount = countable.filter(f => getMetadataStatus(filesMetadata[f.name] || {}).isComplete).length;
   const errorCount = countable.length - readyCount;

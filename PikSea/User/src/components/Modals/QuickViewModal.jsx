@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { X, ExternalLink, Download, Heart, Layers, Sparkles, User, Tag, Eye } from "lucide-react";
 import { FaCrown } from "react-icons/fa";
 
-const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.dayalstock.com";
+const BASE_URL = import.meta.env.VITE_IMG_KEY || "https://api.piksea.com";
 
 const getFullImage = (item) => {
   const src =
@@ -17,7 +17,7 @@ const QuickViewModal = ({ item, isOpen, onClose, onSaveCollection }) => {
   const navigate = useNavigate();
   if (!isOpen || !item) return null;
 
-  const category = item.category_slug || "vector";
+  const category = item.category_slug || "photo";
 
   return (
     <div 
@@ -90,7 +90,7 @@ const QuickViewModal = ({ item, isOpen, onClose, onSaveCollection }) => {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5">
                 <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase">Format</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">{item.file_type?.toUpperCase() || 'ZIP / Vector'}</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{item.file_type?.toUpperCase() || 'JPG / Ultra HD'}</span>
               </div>
               <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5">
                 <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase">License</span>
