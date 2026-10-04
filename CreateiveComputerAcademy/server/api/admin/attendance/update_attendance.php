@@ -69,6 +69,14 @@ try {
         '/attendance'
     );
 
+    // Auto-sync payroll earning
+    try {
+        require_once __DIR__ . '/../../payroll/PayrollHelper.php';
+        PayrollHelper::syncAttendanceEarnings($db, $user_id);
+    } catch (Exception $e) {
+        // Non-blocking payroll sync
+    }
+
     echo json_encode(["status" => "success", "message" => "Attendance updated successfully."]);
 } catch (PDOException $e) {
     echo json_encode(["status" => "error", "message" => $e->getMessage()]);

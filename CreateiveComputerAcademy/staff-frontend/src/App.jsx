@@ -21,6 +21,7 @@ const Breaks = React.lazy(() => import('./pages/Breaks'));
 const BlogFeed = React.lazy(() => import('./pages/BlogFeed'));
 const BlogDetails = React.lazy(() => import('./pages/BlogDetails'));
 const ContentStudio = React.lazy(() => import('./pages/ContentStudio'));
+const PayrollWallet = React.lazy(() => import('./pages/PayrollWallet'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -141,6 +142,14 @@ function App() {
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <Credits />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/payroll" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <PayrollWallet />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

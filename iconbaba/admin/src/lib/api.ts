@@ -210,8 +210,16 @@ export async function bulkAdminIcons(
 export async function generateAdminAiTags(data: {
   icons: Array<{ id: string | number; name: string; category?: string }>;
   limit?: number;
+  api_key?: string;
+  model?: string;
 }) {
-  return request<{ tags: Record<string, string>; total_generated: number }>('/admin/icons/ai_generate_tags.php', {
+  return request<{
+    tags: Record<string, string>;
+    categories?: Record<string, string>;
+    category_ids?: Record<string, number>;
+    created_categories?: Array<{ id: number; name: string; slug: string }>;
+    total_generated: number;
+  }>('/admin/icons/ai_generate_tags.php', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -230,6 +238,8 @@ export interface AiIconInspectionResult {
 export async function inspectAdminAiIcons(data: {
   icons: Array<{ id: string | number; name: string; category?: string; svg?: string }>;
   limit?: number;
+  api_key?: string;
+  model?: string;
 }) {
   return request<{
     inspections: Record<string, AiIconInspectionResult>;
@@ -552,4 +562,40 @@ export async function clearAllReadAdminNotifications() {
     body: JSON.stringify({ clear_all_read: true }),
   });
 }
+
+// ==========================================
+// System & AI Settings Management
+// ==========================================
+
+export interface AdminSystemSettingsResponse {
+  gemini: {
+    api_key: string;
+    has_key: boolean;
+    is_from_db: boolean;
+    updated_at?: string;
+  };
+}
+
+export async function getAdminSettings() {
+  return request<AdminSystemSettingsResponse>('/admin/settings/get.php');
+}
+
+export async function updateAdminSettings(settings: { gemini_api_key?: string } | Record<string, any>) {
+  return request<{ saved: boolean }>('/admin/settings/update.php', {
+    method: 'POST',
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function testGeminiApiKey(apiKey?: string) {
+  return request<{
+    status: string;
+    latency_ms: number;
+    sample_tags: string;
+  }>('/admin/settings/test_gemini.php', {
+    method: 'POST',
+    body: JSON.stringify({ api_key: apiKey }),
+  });
+}
+
 

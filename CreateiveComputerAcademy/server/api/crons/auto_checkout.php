@@ -62,6 +62,14 @@ try {
             ]
         );
 
+        // Auto-sync payroll earning
+        try {
+            require_once __DIR__ . '/../payroll/PayrollHelper.php';
+            PayrollHelper::syncAttendanceEarnings($db, $user_id);
+        } catch (Exception $e) {
+            // Non-blocking payroll sync
+        }
+
         $processed_count++;
         $log .= "  -> User {$rec['name']} (ID: {$user_id}) auto checked out at {$shift_end} for date {$rec['date']}.\n";
     }

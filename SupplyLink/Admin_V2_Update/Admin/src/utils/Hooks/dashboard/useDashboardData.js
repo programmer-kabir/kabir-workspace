@@ -51,6 +51,7 @@ const useDashboardData = () => {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
   }).format(new Date());
+  // const today = '2026-10-03';
 
   const previousCashReports = approvedCashReports.filter(
     (cash) => (cash.date?.split(" ")[0] || cash.date) < today
@@ -92,7 +93,7 @@ const useDashboardData = () => {
     isCustomerInstallmentsPaymentsLoading ||
     inInvestInstallmentsLoading ||
     isCashReportsLoading ||
-    isUsersLoading || 
+    isUsersLoading ||
     loading;
 
   // 🔹 Combined error state
@@ -101,7 +102,7 @@ const useDashboardData = () => {
     isCustomerInstallmentsPaymentsError ||
     isInvestInstallmentsError ||
     isCashReportsError ||
-    isUsersError || 
+    isUsersError ||
     error;
 
   const roleStats = React.useMemo(() => {

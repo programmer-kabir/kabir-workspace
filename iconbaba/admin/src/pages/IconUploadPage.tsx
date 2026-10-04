@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getAdminCategories,
+  getAdminSettings,
   uploadAdminIcon,
   batchUploadAdminIcons,
   BatchIconUploadItem,
@@ -135,21 +136,27 @@ export default function IconUploadPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadCats() {
+    async function loadInitialData() {
       try {
-        const res = await getAdminCategories();
-        if (res.success && res.data) {
-          setCategories(res.data);
-          if (res.data.length > 0) {
-            setCategoryId(res.data[0].id);
-            setGlobalCategory(res.data[0].id);
+        const [catsRes, settingsRes] = await Promise.allSettled([
+          getAdminCategories(),
+          getAdminSettings(),
+        ]);
+
+        if (catsRes.status === 'fulfilled' && catsRes.value.success && catsRes.value.data) {
+          setCategories(catsRes.value.data);
+          if (catsRes.value.data.length > 0) {
+            setCategoryId(catsRes.value.data[0].id);
+            setGlobalCategory(catsRes.value.data[0].id);
           }
         }
+
+        // Initial data loaded cleanly
       } catch (err) {
-        console.error('Failed to load categories', err);
+        console.error('Failed to load initial upload data', err);
       }
     }
-    loadCats();
+    loadInitialData();
   }, []);
 
   // =============================================================
@@ -561,17 +568,64 @@ export default function IconUploadPage() {
       const res = await generateAdminAiTags({ icons: payload, limit: aiTagLimit });
       if (res.success && res.data?.tags) {
         const tagMap = res.data.tags;
+        const catMap = res.data.categories || {};
+        const catIdMap = res.data.category_ids || {};
+        const newCats = res.data.created_categories || [];
+
+        // Dynamically add any newly created categories to local state & dropdowns
+        if (newCats.length > 0) {
+          setCategories((prev) => {
+            const existingIds = new Set(prev.map((c) => c.id));
+            const toAdd: AdminCategoryItem[] = newCats
+              .filter((c) => !existingIds.has(c.id))
+              .map((c) => ({
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                icon_count: 0,
+                total_icons: 0,
+                published_icons: 0,
+                draft_icons: 0,
+                display_order: 99,
+                status: 'active' as const,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }));
+            return [...prev, ...toAdd];
+          });
+        }
+
         setQueue((prev) =>
           prev.map((item) => {
             const newAiTags = tagMap[item.id];
-            if (!newAiTags) return item;
+            const suggestedCatName = catMap[item.id];
+            let newCatId = catIdMap[item.id] || item.category_id;
+
+            if (!newCatId || newCatId === item.category_id) {
+              if (suggestedCatName) {
+                const matched = categories.find(
+                  (c) => c.name.toLowerCase() === suggestedCatName.toLowerCase()
+                );
+                if (matched) {
+                  newCatId = matched.id;
+                }
+              }
+            }
+
+            if (!newAiTags && newCatId === item.category_id) return item;
             return {
               ...item,
-              tags: newAiTags,
+              tags: newAiTags || item.tags,
+              category_id: newCatId,
             };
           })
         );
-        setSuccessMsg(`✨ Generated AI SEO tags (${aiTagLimit} tags/icon) for ${res.data.total_generated} icons using Gemini!`);
+
+        const newCatsCount = newCats.length;
+        const newCatsText = newCatsCount > 0 
+          ? ` & auto-created ${newCatsCount} new categor${newCatsCount > 1 ? 'ies' : 'y'} (${newCats.map(c => c.name).join(', ')})`
+          : '';
+        setSuccessMsg(`✨ Generated AI SEO tags (${aiTagLimit} tags/icon) and auto-categorized ${res.data.total_generated} icons${newCatsText}!`);
       } else {
         setErrorMsg(res.message || 'Failed to generate AI tags.');
       }
@@ -599,18 +653,59 @@ export default function IconUploadPage() {
       const res = await generateAdminAiTags({ icons: payload, limit: aiTagLimit });
       if (res.success && res.data?.tags) {
         const tagMap = res.data.tags;
+        const catMap = res.data.categories || {};
+        const catIdMap = res.data.category_ids || {};
+        const newCats = res.data.created_categories || [];
+
+        if (newCats.length > 0) {
+          setCategories((prev) => {
+            const existingIds = new Set(prev.map((c) => c.id));
+            const toAdd: AdminCategoryItem[] = newCats
+              .filter((c) => !existingIds.has(c.id))
+              .map((c) => ({
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                icon_count: 0,
+                total_icons: 0,
+                published_icons: 0,
+                draft_icons: 0,
+                display_order: 99,
+                status: 'active' as const,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }));
+            return [...prev, ...toAdd];
+          });
+        }
+
         setQueue((prev) =>
           prev.map((item) => {
             if (!selectedIds.has(item.id)) return item;
             const newAiTags = tagMap[item.id];
-            if (!newAiTags) return item;
+            const suggestedCatName = catMap[item.id];
+            let newCatId = catIdMap[item.id] || item.category_id;
+
+            if (!newCatId || newCatId === item.category_id) {
+              if (suggestedCatName) {
+                const matched = categories.find(
+                  (c) => c.name.toLowerCase() === suggestedCatName.toLowerCase()
+                );
+                if (matched) {
+                  newCatId = matched.id;
+                }
+              }
+            }
+
+            if (!newAiTags && newCatId === item.category_id) return item;
             return {
               ...item,
-              tags: newAiTags,
+              tags: newAiTags || item.tags,
+              category_id: newCatId,
             };
           })
         );
-        setSuccessMsg(`✨ Generated AI SEO tags for ${selectedItems.length} selected icons!`);
+        setSuccessMsg(`✨ Generated AI SEO tags & auto-categorized ${selectedItems.length} selected icons!`);
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error generating AI tags.');
@@ -634,7 +729,39 @@ export default function IconUploadPage() {
       });
       if (res.success && res.data?.tags?.['single']) {
         setTags(res.data.tags['single']);
-        setSuccessMsg('✨ AI SEO tags suggested successfully!');
+        const newCats = res.data.created_categories || [];
+        if (newCats.length > 0) {
+          setCategories((prev) => {
+            const existingIds = new Set(prev.map((c) => c.id));
+            const toAdd: AdminCategoryItem[] = newCats
+              .filter((c) => !existingIds.has(c.id))
+              .map((c) => ({
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                icon_count: 0,
+                total_icons: 0,
+                published_icons: 0,
+                draft_icons: 0,
+                display_order: 99,
+                status: 'active' as const,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }));
+            return [...prev, ...toAdd];
+          });
+        }
+        if (res.data.category_ids?.['single']) {
+          setCategoryId(res.data.category_ids['single']);
+        } else if (res.data.categories?.['single']) {
+          const matched = categories.find(
+            (c) => c.name.toLowerCase() === res.data.categories!['single'].toLowerCase()
+          );
+          if (matched) {
+            setCategoryId(matched.id);
+          }
+        }
+        setSuccessMsg('✨ AI SEO tags & category suggested successfully!');
       } else {
         setErrorMsg(res.message || 'Failed to suggest tags.');
       }
@@ -1064,8 +1191,8 @@ export default function IconUploadPage() {
             type="button"
             onClick={() => setMode('bulk')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'bulk'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-slate-200'
               }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -1078,8 +1205,8 @@ export default function IconUploadPage() {
             type="button"
             onClick={() => setMode('single')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'single'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              : 'text-slate-400 hover:text-slate-200'
               }`}
           >
             <span>Single Icon</span>
@@ -1125,8 +1252,8 @@ export default function IconUploadPage() {
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             className={`relative p-8 sm:p-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center group flex flex-col items-center justify-center ${isDragging
-                ? 'border-indigo-500 bg-indigo-500/10 scale-[1.005]'
-                : 'border-slate-800 bg-slate-900/60 hover:bg-slate-900/90 hover:border-slate-700'
+              ? 'border-indigo-500 bg-indigo-500/10 scale-[1.005]'
+              : 'border-slate-800 bg-slate-900/60 hover:bg-slate-900/90 hover:border-slate-700'
               }`}
           >
             <input
@@ -1467,8 +1594,8 @@ export default function IconUploadPage() {
                       type="button"
                       onClick={() => setVariantFilter('all')}
                       className={`px-3 py-1 rounded-lg transition-colors ${variantFilter === 'all'
-                          ? 'bg-slate-800 text-white font-bold'
-                          : 'text-slate-400 hover:text-white'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                     >
                       All ({queue.length})
@@ -1477,8 +1604,8 @@ export default function IconUploadPage() {
                       type="button"
                       onClick={() => setVariantFilter('paired')}
                       className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors ${variantFilter === 'paired'
-                          ? 'bg-emerald-500/20 text-emerald-300 font-bold'
-                          : 'text-slate-400 hover:text-emerald-400'
+                        ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                        : 'text-slate-400 hover:text-emerald-400'
                         }`}
                     >
                       <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -1488,8 +1615,8 @@ export default function IconUploadPage() {
                       type="button"
                       onClick={() => setVariantFilter('unpaired')}
                       className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors ${variantFilter === 'unpaired'
-                          ? 'bg-amber-500/20 text-amber-300 font-bold'
-                          : 'text-slate-400 hover:text-amber-400'
+                        ? 'bg-amber-500/20 text-amber-300 font-bold'
+                        : 'text-slate-400 hover:text-amber-400'
                         }`}
                     >
                       <span className="w-2 h-2 rounded-full bg-amber-400" />
@@ -1670,8 +1797,8 @@ export default function IconUploadPage() {
                     <div
                       key={item.id}
                       className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between relative group ${isSelected
-                          ? 'bg-indigo-950/20 border-indigo-500/80 ring-2 ring-indigo-500/40 shadow-lg'
-                          : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                        ? 'bg-indigo-950/20 border-indigo-500/80 ring-2 ring-indigo-500/40 shadow-lg'
+                        : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                         }`}
                     >
                       <div className="flex items-start gap-3">
@@ -1734,8 +1861,8 @@ export default function IconUploadPage() {
                                 );
                               }}
                               className={`px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 transition-colors ${item.is_premium
-                                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                  : 'bg-slate-950 text-slate-500 border-slate-800'
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                : 'bg-slate-950 text-slate-500 border-slate-800'
                                 }`}
                             >
                               <Crown className="w-2.5 h-2.5" />
@@ -1763,10 +1890,10 @@ export default function IconUploadPage() {
                           <div className="flex flex-wrap items-center gap-1.5 text-[10px] pt-0.5">
                             <span
                               className={`px-1.5 py-0.5 rounded font-medium ${isPaired
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                  : item.detectedVariants === 'filled'
-                                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                                    : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : item.detectedVariants === 'filled'
+                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                                  : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
                                 }`}
                             >
                               {isPaired
@@ -2130,8 +2257,8 @@ export default function IconUploadPage() {
                       type="button"
                       onClick={() => setIsPremium(false)}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${!isPremium
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
                         }`}
                     >
                       Free Tier
@@ -2140,8 +2267,8 @@ export default function IconUploadPage() {
                       type="button"
                       onClick={() => setIsPremium(true)}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${isPremium
-                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
                         }`}
                     >
                       <Crown className="w-3 h-3 text-amber-400" />
@@ -2191,8 +2318,8 @@ export default function IconUploadPage() {
                     type="button"
                     onClick={() => setStatus('published')}
                     className={`py-2.5 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${status === 'published'
-                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400'
                       }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -2202,8 +2329,8 @@ export default function IconUploadPage() {
                     type="button"
                     onClick={() => setStatus('draft')}
                     className={`py-2.5 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${status === 'draft'
-                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400'
                       }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-400" />
@@ -2339,8 +2466,8 @@ export default function IconUploadPage() {
                     type="button"
                     onClick={() => setPreviewBg('light')}
                     className={`px-2 py-0.5 rounded ${previewBg === 'light'
-                        ? 'bg-slate-200 text-slate-900 font-bold'
-                        : 'text-slate-400'
+                      ? 'bg-slate-200 text-slate-900 font-bold'
+                      : 'text-slate-400'
                       }`}
                   >
                     Light
@@ -2360,10 +2487,10 @@ export default function IconUploadPage() {
                 <div className="text-xs font-semibold text-slate-400 mb-2">Outlined Variant</div>
                 <div
                   className={`h-40 rounded-xl border flex items-center justify-center p-4 transition-colors ${previewBg === 'dark'
-                      ? 'bg-slate-950 border-slate-800 text-white'
-                      : previewBg === 'light'
-                        ? 'bg-white border-slate-300 text-slate-900'
-                        : 'bg-slate-950 border-slate-800 text-white bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px]'
+                    ? 'bg-slate-950 border-slate-800 text-white'
+                    : previewBg === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900'
+                      : 'bg-slate-950 border-slate-800 text-white bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px]'
                     }`}
                 >
                   {svgOutlined ? (
@@ -2381,10 +2508,10 @@ export default function IconUploadPage() {
                 <div className="text-xs font-semibold text-slate-400 mb-2">Filled Variant</div>
                 <div
                   className={`h-40 rounded-xl border flex items-center justify-center p-4 transition-colors ${previewBg === 'dark'
-                      ? 'bg-slate-950 border-slate-800 text-white'
-                      : previewBg === 'light'
-                        ? 'bg-white border-slate-300 text-slate-900'
-                        : 'bg-slate-950 border-slate-800 text-white bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px]'
+                    ? 'bg-slate-950 border-slate-800 text-white'
+                    : previewBg === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900'
+                      : 'bg-slate-950 border-slate-800 text-white bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px]'
                     }`}
                 >
                   {svgFilled ? (

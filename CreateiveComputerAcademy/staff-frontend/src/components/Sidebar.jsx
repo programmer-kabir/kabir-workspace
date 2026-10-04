@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText, FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo } from 'react-icons/fi';
+import { FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText, FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo, FiDollarSign } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
 import { useAuth } from '../context/AuthContext';
@@ -77,6 +77,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
       ? [{ name: 'Content Studio', transKey: 'content_studio', path: '/content-studio', icon: <FiVideo size={19} className="text-rose-500 group-hover:text-rose-400" /> }]
       : [{ name: 'Tasks', transKey: 'tasks', path: '/tasks', icon: <FiList size={19} /> }]),
     { name: 'Academy Feed', transKey: 'academy_feed', path: '/feed', icon: <FiBookOpen size={19} className="text-indigo-400 group-hover:text-indigo-300" /> },
+    { name: 'Work Wallet & Salary', transKey: 'payroll_wallet', path: '/payroll', icon: <FiDollarSign size={19} className="text-emerald-500 group-hover:text-emerald-400" /> },
     { name: 'Credit Wallet', transKey: 'credits_wallet', path: '/credits', icon: <FaCoins size={18} className="text-amber-500 group-hover:text-amber-400" /> },
     { name: 'Leave', transKey: 'leave', path: '/leave', icon: <FiCalendar size={19} /> },
     { name: 'Reports', transKey: 'reports', path: '/reports', icon: <FiFileText size={19} /> },

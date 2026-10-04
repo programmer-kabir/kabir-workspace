@@ -102,10 +102,18 @@ export default function IconDetailDrawer({
   const isDailyLimitReached = Boolean(user && quota && !quota.is_unlimited && quota.remaining <= 0);
   const isActionLocked = Boolean(!user || isIconLocked || isDailyLimitReached);
 
-  // Sync currentIcon when icon prop changes
+  // Sync currentIcon and immediately seed its SVG when icon prop changes
   useEffect(() => {
     if (icon) {
       setCurrentIcon(icon);
+      // Immediately seed variantsMap with the newly clicked icon's own SVG so there is 0 delay
+      const initialVariants: { outlined?: string; filled?: string } = (icon as any).variants
+        ? { ...(icon as any).variants }
+        : icon.svg
+          ? { [globalStyle]: icon.svg, outlined: icon.svg }
+          : {};
+      setVariantsMap(initialVariants);
+      setRelatedVariants([]);
       setLocalStyle(globalStyle);
       setLocalCustom({
         ...globalCustomization,
@@ -116,6 +124,8 @@ export default function IconDetailDrawer({
       setCanvasBg('#ffffff');
     } else {
       setCurrentIcon(null);
+      setVariantsMap({});
+      setRelatedVariants([]);
     }
   }, [icon]);
 
@@ -133,6 +143,8 @@ export default function IconDetailDrawer({
   // Handle clean close
   const handleClose = () => {
     setCurrentIcon(null);
+    setVariantsMap({});
+    setRelatedVariants([]);
     onClose();
   };
 
@@ -147,20 +159,24 @@ export default function IconDetailDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Fetch icon style variants and related sister icons
+  // Fetch icon style variants and related sister icons in background
   useEffect(() => {
     if (!currentIcon) return;
 
     let isMounted = true;
+    const currentId = currentIcon.id;
 
     // 1. Fetch single icon variants (both outlined and filled)
-    getIcon(currentIcon.id).then((res) => {
+    getIcon(currentId).then((res) => {
       if (isMounted && res.success && res.data) {
         if (res.data.variants) {
-          setVariantsMap(res.data.variants);
+          setVariantsMap((prev) => ({
+            ...prev,
+            ...res.data!.variants,
+          }));
         }
         if (res.data.is_premium !== undefined) {
-          setCurrentIcon((prev) => (prev ? { ...prev, is_premium: Boolean(res.data!.is_premium) } : null));
+          setCurrentIcon((prev) => (prev && prev.id === currentId ? { ...prev, is_premium: Boolean(res.data!.is_premium) } : prev));
         }
       }
     });
@@ -170,7 +186,7 @@ export default function IconDetailDrawer({
     if (basePrefix && basePrefix.length >= 2) {
       getIcons({ search: basePrefix, limit: 16, style: localStyle }).then((res) => {
         if (isMounted && res.success && res.data?.icons) {
-          setRelatedVariants(res.data.icons.filter((i) => i.id !== currentIcon.id));
+          setRelatedVariants(res.data.icons.filter((i) => i.id !== currentId));
         }
       });
     }
@@ -178,7 +194,7 @@ export default function IconDetailDrawer({
     return () => {
       isMounted = false;
     };
-  }, [currentIcon, localStyle]);
+  }, [currentIcon?.id, localStyle]);
 
   // Check if current icon is favorited by user
   useEffect(() => {
@@ -1092,6 +1108,12 @@ export default function IconDetailDrawer({
                     key={relIcon.id}
                     type="button"
                     onClick={() => {
+                      const initialVariants: { outlined?: string; filled?: string } = (relIcon as any).variants
+                        ? { ...(relIcon as any).variants }
+                        : relIcon.svg
+                          ? { [localStyle]: relIcon.svg, outlined: relIcon.svg }
+                          : {};
+                      setVariantsMap(initialVariants);
                       setCurrentIcon(relIcon);
                       onSelectIcon?.(relIcon);
                     }}

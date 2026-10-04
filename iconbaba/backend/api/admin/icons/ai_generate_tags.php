@@ -1,7 +1,4 @@
 <?php
-// backend/api/admin/icons/ai_generate_tags.php
-// AI-Powered SEO Tag Generator endpoint for Admin Icon Uploads
-
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../helpers/response.php';
@@ -19,6 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $data = getJsonInput();
 $iconsList = $data['icons'] ?? [];
 $limit = isset($data['limit']) ? (int)$data['limit'] : 8;
+$customApiKey = isset($data['api_key']) ? trim((string)$data['api_key']) : null;
+$customModel = isset($data['model']) ? trim((string)$data['model']) : null;
 
 if (!is_array($iconsList) || empty($iconsList)) {
     jsonResponse(false, null, 'No icons provided. Expected an array of icons with name and category.', 400);
@@ -27,11 +26,34 @@ if (!is_array($iconsList) || empty($iconsList)) {
 // Chunk icons into batches of 40 for optimal Gemini speed
 $chunks = array_chunk($iconsList, 40);
 $allGeneratedTags = [];
+$allSuggestedCategories = [];
+$allSuggestedCategoryIds = [];
+$allCreatedCategories = [];
 
 foreach ($chunks as $chunk) {
-    $batchTags = generateGeminiTags($chunk, $limit);
-    if (!empty($batchTags)) {
-        foreach ($batchTags as $k => $v) {
+    $batchRes = generateGeminiTags($chunk, $limit, $customApiKey, $customModel, $pdo);
+    
+    if (isset($batchRes['tags']) && is_array($batchRes['tags'])) {
+        foreach ($batchRes['tags'] as $k => $v) {
+            $allGeneratedTags[$k] = $v;
+        }
+        if (isset($batchRes['categories']) && is_array($batchRes['categories'])) {
+            foreach ($batchRes['categories'] as $k => $cat) {
+                $allSuggestedCategories[$k] = $cat;
+            }
+        }
+        if (isset($batchRes['category_ids']) && is_array($batchRes['category_ids'])) {
+            foreach ($batchRes['category_ids'] as $k => $catId) {
+                $allSuggestedCategoryIds[$k] = $catId;
+            }
+        }
+        if (isset($batchRes['created_categories']) && is_array($batchRes['created_categories'])) {
+            foreach ($batchRes['created_categories'] as $newCat) {
+                $allCreatedCategories[$newCat['id']] = $newCat;
+            }
+        }
+    } elseif (is_array($batchRes)) {
+        foreach ($batchRes as $k => $v) {
             $allGeneratedTags[$k] = $v;
         }
     }
@@ -51,5 +73,8 @@ foreach ($iconsList as $item) {
 
 jsonResponse(true, [
     'tags' => $allGeneratedTags,
+    'categories' => $allSuggestedCategories,
+    'category_ids' => $allSuggestedCategoryIds,
+    'created_categories' => array_values($allCreatedCategories),
     'total_generated' => count($allGeneratedTags)
-], 'AI SEO Tags generated successfully.');
+], 'AI SEO Tags and Categories generated successfully.');

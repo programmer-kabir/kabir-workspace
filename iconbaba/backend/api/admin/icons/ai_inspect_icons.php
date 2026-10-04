@@ -19,13 +19,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $data = getJsonInput();
 $iconsList = $data['icons'] ?? [];
 $limit = isset($data['limit']) ? (int)$data['limit'] : 8;
+$customApiKey = isset($data['api_key']) ? trim((string)$data['api_key']) : null;
+$customModel = isset($data['model']) ? trim((string)$data['model']) : null;
 
 if (!is_array($iconsList) || empty($iconsList)) {
     jsonResponse(false, null, 'No icons provided. Expected an array of icons with name, category, and svg.', 400);
 }
 
-if (empty(GEMINI_API_KEY)) {
-    jsonResponse(false, null, 'Google Gemini API key is missing. Please set GEMINI_API_KEY in backend/.env.', 500);
+$apiKey = getActiveGeminiApiKey($pdo, $customApiKey);
+if (empty($apiKey)) {
+    jsonResponse(false, null, 'Google Gemini API key is missing. Please configure it in Admin Settings or backend/.env.', 400);
 }
 
 // Chunk into batches of 10 for optimal multimodal SVG analysis & prompt response speed
@@ -34,7 +37,7 @@ $allInspections = [];
 $mismatchCount = 0;
 
 foreach ($chunks as $chunk) {
-    $batchResults = inspectGeminiVisuals($chunk, $limit);
+    $batchResults = inspectGeminiVisuals($chunk, $limit, $customApiKey, $customModel, $pdo);
     if (!empty($batchResults)) {
         foreach ($batchResults as $k => $v) {
             $allInspections[$k] = $v;

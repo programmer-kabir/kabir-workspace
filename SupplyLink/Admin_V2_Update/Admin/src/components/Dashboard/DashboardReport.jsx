@@ -24,7 +24,7 @@ const DashboardReport = () => {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
   }).format(new Date());
-
+  // const today = '2026-10-03';
   const allCash = approvedCashReports || cashReports || [];
 
   const monthlyInstallments = customerInstallmentPayments?.filter((item) => {
@@ -127,7 +127,7 @@ const DashboardReport = () => {
       (item.date?.split(" ")[0] === today || item.date === today) &&
       item.type === "out" &&
       (item.category?.toLowerCase()?.trim() === "profit-withdraw" ||
-       item.category?.toLowerCase()?.trim() === "profit-payout")
+        item.category?.toLowerCase()?.trim() === "profit-payout")
   );
 
   const totalInstallmentCollection =
@@ -197,7 +197,7 @@ const DashboardReport = () => {
   const dailyMonthlyInstallments = customerInstallmentPayments?.filter(
     (item) => {
       const card = customerInstallmentCards?.find(
-        (c) => Number(c.card_number) === Number(item.card_id),
+        (c) => Number(c.card_id) === Number(item.card_id)
       );
 
       return (
@@ -236,9 +236,8 @@ const DashboardReport = () => {
   const printRef = useRef(null);
   const [year, month, day] = today.split("-");
 
-  const formattedDate = `${
-    MONTHS.find((m) => m.value === Number(month))?.label
-  } ${Number(day)}, ${year}`;
+  const formattedDate = `${MONTHS.find((m) => m.value === Number(month))?.label
+    } ${Number(day)}, ${year}`;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -289,9 +288,8 @@ const DashboardReport = () => {
                 <div className="flex justify-between pt-2 text-xl">
                   <span className="font-bold">💵 Net Cash</span>
                   <span
-                    className={`font-bold ${
-                      totalCash >= 0 ? "text-blue-600" : "text-red-600"
-                    }`}
+                    className={`font-bold ${totalCash >= 0 ? "text-blue-600" : "text-red-600"
+                      }`}
                   >
                     ৳ {totalCash.toLocaleString()}
                   </span>
@@ -361,22 +359,17 @@ const DashboardReport = () => {
               totalColSpan={5}
               renderRow={(item, index) => {
                 const card = customerInstallmentCards?.find(
-                  (c) =>
-                    Number(c.card_id) === Number(item.card_id) ||
-                    Number(c.id) === Number(item.card_id) ||
-                    Number(c.card_number) === Number(item.card_id),
+                  (c) => Number(c.card_id) === Number(item.card_id)
                 );
 
                 const user = users?.find(
-                  (u) =>
-                    Number(u.user_id) === Number(card?.user_id) ||
-                    Number(u.id) === Number(card?.user_id),
+                  (u) => Number(u.user_id) === Number(card?.user_id)
                 );
                 return [
                   index + 1,
                   user?.name || "-",
-                  user?.user_id || user?.id || card?.user_id || "-",
-                  card?.card_id || card?.id || item.card_id || "-",
+                  user?.user_id || card?.user_id || "-",
+                  card?.card_id || item.card_id || "-",
                   item?.tag,
                   Number(item.due_amount).toLocaleString(),
                 ];
@@ -400,23 +393,18 @@ const DashboardReport = () => {
               totalColSpan={6}
               renderRow={(item, index) => {
                 const card = customerInstallmentCards?.find(
-                  (c) =>
-                    Number(c.card_id) === Number(item.card_id) ||
-                    Number(c.id) === Number(item.card_id) ||
-                    Number(c.card_number) === Number(item.card_id),
+                  (c) => Number(c.card_id) === Number(item.card_id)
                 );
 
                 const user = users?.find(
-                  (u) =>
-                    Number(u.user_id) === Number(card?.user_id) ||
-                    Number(u.id) === Number(card?.user_id),
+                  (u) => Number(u.user_id) === Number(card?.user_id)
                 );
-                
+
                 return [
                   index + 1,
                   user?.name || "-",
-                  user?.user_id || user?.id || card?.user_id || "-",
-                  card?.card_id || card?.id || item.card_id || "-",
+                  user?.user_id || card?.user_id || "-",
+                  card?.card_id || item.card_id || "-",
                   item?.tag,
                   item?.payment_method || "-",
                   Number(item.due_amount).toLocaleString(),
@@ -602,7 +590,7 @@ const DashboardReport = () => {
           </div>
         </div>
       </div>
-      
+
       <style>{`
         .dashboard-report-print {
           background: #fff;

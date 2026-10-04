@@ -76,6 +76,14 @@ if($stmt->execute() && $stmt->rowCount() > 0) {
     // Log check_out device and location metadata
     AttendanceSecurityHelper::logDevicePunch($db, $attendance_id, $user_id, 'check_out', $eval);
 
+    // Auto-sync staff work-time earnings into payroll ledger
+    try {
+        require_once __DIR__ . '/../payroll/PayrollHelper.php';
+        PayrollHelper::syncAttendanceEarnings($db, $user_id);
+    } catch (Exception $e) {
+        // Non-blocking payroll sync
+    }
+
     echo json_encode([
         "status" => "success", 
         "message" => "Checked out successfully",

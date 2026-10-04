@@ -28,6 +28,7 @@ import BrandResources from './pages/BrandResources';
 import AcademyBlog from './pages/AcademyBlog';
 import BlogDetails from './pages/BlogDetails';
 import ContentStudioAdmin from './pages/ContentStudioAdmin';
+import PayrollManagement from './pages/PayrollManagement';
 import NotFound from './pages/NotFound';
 
 // Mock empty pages to avoid errors
@@ -68,6 +69,12 @@ function App() {
           <Route path="/staff" element={
             <ProtectedRoute>
               <AdminLayout><StaffDirectory /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/payroll" element={
+            <ProtectedRoute>
+              <AdminLayout><PayrollManagement /></AdminLayout>
             </ProtectedRoute>
           } />
 

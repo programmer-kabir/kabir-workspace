@@ -75,6 +75,54 @@ const CashReportPrint = () => {
       if (!isDownPayment) {
         return false;
       }
+    } else if (filterType === "monthly-installment") {
+      const cat = (cash.category || "").toLowerCase().trim();
+      const text = (cash.source || cash.purpose || cash.remarks || "").toLowerCase().trim();
+      const isDownPayment = 
+        cat.includes("downpayment") || 
+        cat.includes("down_payment") || 
+        cat.includes("down payment") || 
+        text.includes("downpayment") || 
+        text.includes("down_payment") || 
+        text.includes("down payment") || 
+        text.includes("ডাউন পেমেন্ট") || 
+        text.includes("ডাউনপেমেন্ট") || 
+        text.includes("ডাউন");
+      const isDaily = 
+        cat.includes("daily-installment") || 
+        cat.includes("daily_installment") || 
+        cat.includes("daily") || 
+        text.includes("daily") || 
+        text.includes("দৈনিক");
+      const isInstallment = 
+        cat.includes("installment") || 
+        text.includes("installment") || 
+        text.includes("কিস্তি");
+      if (!isInstallment || isDownPayment || isDaily) {
+        return false;
+      }
+    } else if (filterType === "daily-installment") {
+      const cat = (cash.category || "").toLowerCase().trim();
+      const text = (cash.source || cash.purpose || cash.remarks || "").toLowerCase().trim();
+      const isDownPayment = 
+        cat.includes("downpayment") || 
+        cat.includes("down_payment") || 
+        cat.includes("down payment") || 
+        text.includes("downpayment") || 
+        text.includes("down_payment") || 
+        text.includes("down payment") || 
+        text.includes("ডাউন পেমেন্ট") || 
+        text.includes("ডাউনপেমেন্ট") || 
+        text.includes("ডাউন");
+      const isDaily = 
+        cat.includes("daily-installment") || 
+        cat.includes("daily_installment") || 
+        cat.includes("daily") || 
+        text.includes("daily") || 
+        text.includes("দৈনিক");
+      if (!isDaily || isDownPayment) {
+        return false;
+      }
     } else if (filterType === "installment") {
       const cat = (cash.category || "").toLowerCase().trim();
       const text = (cash.source || cash.purpose || cash.remarks || "").toLowerCase().trim();
@@ -100,8 +148,11 @@ const CashReportPrint = () => {
     }
 
     // single date
-    if (selectedDate && cash.date !== selectedDate) {
-      return false;
+    if (selectedDate) {
+      const itemDate = cash.date?.split(" ")[0] || cash.date;
+      if (itemDate !== selectedDate) {
+        return false;
+      }
     }
 
     // month
@@ -155,6 +206,22 @@ const CashReportPrint = () => {
       })
       : AllCashOut;
 
+    // Single date filter
+    if (selectedDate) {
+      const targetDate = new Date(selectedDate);
+      targetDate.setHours(23, 59, 59, 999);
+
+      const cashIn = BalanceCashIn.filter(
+        (item) => new Date(item.date?.split(" ")[0] || item.date) <= targetDate,
+      ).reduce((sum, item) => sum + Number(item.amount), 0);
+
+      const cashOut = BalanceCashOut.filter(
+        (item) => new Date(item.date?.split(" ")[0] || item.date) <= targetDate,
+      ).reduce((sum, item) => sum + Number(item.amount), 0);
+
+      return cashIn - cashOut;
+    }
+
     // Month filter
     if (selectedMonth) {
       const endOfMonth = new Date(selectedMonth + "-01");
@@ -204,7 +271,7 @@ const CashReportPrint = () => {
 
   const printTransactions = React.useMemo(() => {
     return [...FilteredCashIn, ...FilteredCashOut].sort(
-      (a, b) => new Date(a.date) - new Date(b.date),
+      (a, b) => new Date(b.date) - new Date(a.date),
     );
   }, [FilteredCashIn, FilteredCashOut]);
   const COLORS = ["#22c55e", "#ef4444"];
@@ -223,6 +290,28 @@ const CashReportPrint = () => {
           {/* filters */}
           <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 shadow-2xl rounded-3xl p-5 md:p-6 print:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+              {/* date */}
+              <div>
+                <label className="text-xs text-gray-400 mb-2 block">
+                  তারিখ নির্বাচন (Date)
+                </label>
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    if (e.target.value) {
+                      setSelectedMonth("");
+                      setSelectedYear("");
+                      setStartDate("");
+                      setEndDate("");
+                    }
+                  }}
+                  className="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 text-white"
+                />
+              </div>
+
               {/* month */}
               <div>
                 <label className="text-xs text-gray-400 mb-2 block">
@@ -232,7 +321,15 @@ const CashReportPrint = () => {
                 <input
                   type="month"
                   value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedMonth(e.target.value);
+                    if (e.target.value) {
+                      setSelectedDate("");
+                      setSelectedYear("");
+                      setStartDate("");
+                      setEndDate("");
+                    }
+                  }}
                   className="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500"
                 />
               </div>
@@ -245,7 +342,15 @@ const CashReportPrint = () => {
 
                 <select
                   value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedYear(e.target.value);
+                    if (e.target.value) {
+                      setSelectedDate("");
+                      setSelectedMonth("");
+                      setStartDate("");
+                      setEndDate("");
+                    }
+                  }}
                   className="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-yellow-500 text-white"
                 >
                   <option value="">সকল বছর</option>
@@ -267,7 +372,14 @@ const CashReportPrint = () => {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (e.target.value) {
+                      setSelectedDate("");
+                      setSelectedMonth("");
+                      setSelectedYear("");
+                    }
+                  }}
                   className="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-cyan-500"
                 />
               </div>
@@ -281,13 +393,20 @@ const CashReportPrint = () => {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    if (e.target.value) {
+                      setSelectedDate("");
+                      setSelectedMonth("");
+                      setSelectedYear("");
+                    }
+                  }}
                   className="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-500"
                 />
               </div>
             </div>
 
-            {/* clear */}
+            {/* clear & buttons */}
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 onClick={() => {
@@ -301,6 +420,29 @@ const CashReportPrint = () => {
                 className="bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-2 rounded-xl text-sm font-medium hover:bg-red-500/30 transition"
               >
                 Clear Filters
+              </button>
+
+              <button
+                onClick={() => {
+                  const todayStr = new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Asia/Dhaka",
+                  }).format(new Date());
+                  setSelectedDate(todayStr);
+                  setSelectedMonth("");
+                  setSelectedYear("");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className={`px-5 py-2 rounded-xl text-sm font-medium transition border ${
+                  selectedDate ===
+                  new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Asia/Dhaka",
+                  }).format(new Date())
+                    ? "bg-amber-500 text-slate-950 border-amber-500 font-semibold shadow-lg shadow-amber-500/30"
+                    : "bg-amber-500/20 text-amber-400 border-amber-500/20 hover:bg-amber-500/30"
+                }`}
+              >
+                ⚡ আজকের রেকর্ড (Today)
               </button>
 
               <button
@@ -348,7 +490,27 @@ const CashReportPrint = () => {
                   : "bg-cyan-500/20 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/30"
                   }`}
               >
-                কিস্তি (Installment)
+                সকল কিস্তি (Installment)
+              </button>
+
+              <button
+                onClick={() => setFilterType("monthly-installment")}
+                className={`px-5 py-2 rounded-xl text-sm font-medium transition border ${filterType === "monthly-installment"
+                  ? "bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-600/30"
+                  : "bg-sky-500/20 text-sky-400 border-sky-500/20 hover:bg-sky-500/30"
+                  }`}
+              >
+                মাসিক কিস্তি (Monthly)
+              </button>
+
+              <button
+                onClick={() => setFilterType("daily-installment")}
+                className={`px-5 py-2 rounded-xl text-sm font-medium transition border ${filterType === "daily-installment"
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/30"
+                  : "bg-indigo-500/20 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/30"
+                  }`}
+              >
+                দৈনিক কিস্তি (Daily)
               </button>
 
               <button
@@ -380,23 +542,31 @@ const CashReportPrint = () => {
                   ? "ক্রয় (Purchase) রিপোর্ট"
                   : filterType === "downpayment"
                     ? "ডাউন পেমেন্ট (Down Payment) রিপোর্ট"
-                    : filterType === "installment"
-                      ? "কিস্তি আদায় (Installment) রিপোর্ট"
-                      : filterType === "exclude-expenses"
-                        ? "ক্যাশ রিপোর্ট (কোম্পানি খরচ ব্যতীত)"
-                        : "SupplyLink Cash Report"}
+                    : filterType === "monthly-installment"
+                      ? "মাসিক কিস্তি আদায় (Monthly Installment) রিপোর্ট"
+                      : filterType === "daily-installment"
+                        ? "দৈনিক কিস্তি আদায় (Daily Installment) রিপোর্ট"
+                        : filterType === "installment"
+                          ? "সকল কিস্তি আদায় (Installment) রিপোর্ট"
+                          : filterType === "exclude-expenses"
+                            ? "ক্যাশ রিপোর্ট (কোম্পানি খরচ ব্যতীত)"
+                            : "SupplyLink Cash Report"}
             </h1>
 
             <p className="text-lg mt-2 text-slate-400 print-subtitle">
-              {selectedMonth
-                ? `মাসিক রিপোর্ট (${selectedMonth})`
-                : selectedYear
-                  ? `বার্ষিক রিপোর্ট (${selectedYear})`
-                  : "সকল রিপোর্ট"}
+              {selectedDate
+                ? `দৈনিক রিপোর্ট (${selectedDate})`
+                : selectedMonth
+                  ? `মাসিক রিপোর্ট (${selectedMonth})`
+                  : selectedYear
+                    ? `বার্ষিক রিপোর্ট (${selectedYear})`
+                    : startDate && endDate
+                      ? `রিপোর্ট (${startDate} থেকে ${endDate})`
+                      : "সকল রিপোর্ট"}
             </p>
 
             <div className="mt-8 flex flex-wrap justify-center gap-4 print-summary-grid">
-              {filterType === "expenses" || filterType === "purchases" || filterType === "downpayment" || filterType === "installment" ? (
+              {filterType === "expenses" || filterType === "purchases" || filterType === "downpayment" || filterType === "installment" || filterType === "monthly-installment" || filterType === "daily-installment" ? (
                 <>
                   <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 min-w-[160px] shadow-lg print-stat-card">
                     <p className="text-sm text-slate-400 mb-1">
@@ -406,7 +576,11 @@ const CashReportPrint = () => {
                           ? "Total Purchase" 
                           : filterType === "downpayment"
                             ? "Total Down Payment"
-                            : "Total Installment"}
+                            : filterType === "monthly-installment"
+                              ? "Total Monthly Installment"
+                              : filterType === "daily-installment"
+                                ? "Total Daily Installment"
+                                : "Total Installment"}
                     </p>
                     <p className={`text-2xl font-bold print-stat-val ${filterType === "expenses" || filterType === "purchases" ? "text-red-400" : "text-emerald-400"}`}>
                       ৳ {(totalCashIn + totalCashOut).toLocaleString()}
