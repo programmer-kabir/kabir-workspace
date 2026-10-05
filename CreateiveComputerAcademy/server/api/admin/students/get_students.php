@@ -65,11 +65,10 @@ try {
     } else {
         $enrQuery = "
             SELECT 
-                s.id AS enrollment_id, s.user_id, s.course_id, s.student_code, s.guardian_phone,
+                s.id AS enrollment_id, s.user_id, NULL AS course_id, s.student_code, s.guardian_phone,
                 s.enrollment_date, s.completion_date, s.status AS enrollment_status,
-                c.title AS course_name, c.course_code
+                'General Course' AS course_name, 'GEN' AS course_code
             FROM students s
-            LEFT JOIN courses c ON s.course_id = c.id
             ORDER BY s.id DESC
         ";
     }

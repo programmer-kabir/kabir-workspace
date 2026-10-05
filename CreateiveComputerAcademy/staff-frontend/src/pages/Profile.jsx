@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   FiUser, FiMail, FiPhone, FiLock, FiCheckCircle, FiXCircle, 
   FiBriefcase, FiHash, FiCamera, FiEdit, FiX, FiImage, FiClock, FiCalendar,
-  FiActivity, FiTarget, FiInbox, FiEye
+  FiActivity, FiTarget, FiInbox, FiEye, FiCreditCard, FiDollarSign
 } from 'react-icons/fi';
 
 const Profile = () => {
@@ -24,7 +24,19 @@ const Profile = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState('profile'); // 'profile' or 'security'
+  const [modalTab, setModalTab] = useState('profile'); // 'profile' | 'payout' | 'security'
+
+  // Payout Settings State
+  const [payoutForm, setPayoutForm] = useState({
+    payment_method: 'bkash',
+    account_number: '',
+    account_holder_name: '',
+    bank_name: '',
+    branch_name: '',
+    routing_number: ''
+  });
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutMessage, setPayoutMessage] = useState(null);
 
   // Stats States
   const [stats, setStats] = useState(null);
@@ -34,6 +46,18 @@ const Profile = () => {
 
   // Fallback host
   const API_URL = (import.meta.env.VITE_API_BASE_URL) + '';
+
+  const fetchPayoutSettings = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await axios.get(`${API_URL}api/payroll/get_payout_settings.php?user_id=${currentUser.id}`);
+      if (res.data.status === 'success' && res.data.data) {
+        setPayoutForm(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching payout settings:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -51,8 +75,37 @@ const Profile = () => {
         setStatsLoading(false);
       }
     };
-    if (currentUser?.id) fetchStats();
+    if (currentUser?.id) {
+      fetchStats();
+      fetchPayoutSettings();
+    }
   }, [currentUser?.id, API_URL]);
+
+  const handleSavePayoutSettings = async (e) => {
+    if (e) e.preventDefault();
+    if (!payoutForm.account_number.trim()) {
+      setPayoutMessage({ text: 'Please enter your account number/phone number.', type: 'error' });
+      return;
+    }
+    setPayoutLoading(true);
+    setPayoutMessage(null);
+    try {
+      const res = await axios.post(`${API_URL}api/payroll/save_payout_settings.php`, {
+        user_id: currentUser.id,
+        ...payoutForm
+      });
+      if (res.data.status === 'success') {
+        setPayoutMessage({ text: 'Payout payment method saved successfully!', type: 'success' });
+        setTimeout(() => setPayoutMessage(null), 3500);
+      } else {
+        setPayoutMessage({ text: res.data.message || 'Failed to save payout method.', type: 'error' });
+      }
+    } catch (err) {
+      setPayoutMessage({ text: 'Error saving payout settings.', type: 'error' });
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
 
   // Profile Update Handler
   const handleProfileUpdate = async (e) => {
@@ -316,6 +369,53 @@ const Profile = () => {
                   </div>
                 </div>
 
+                {/* Payout & Payment Method Setup Card */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <FiCreditCard size={14} />
+                      </span>
+                      Payout Setup (উত্তোলন)
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setModalTab('payout');
+                        setIsModalOpen(true);
+                      }}
+                      className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FiEdit size={12} /> {payoutForm.account_number ? 'Edit Setup' : 'Setup Now'}
+                    </button>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/60 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-medium">Default Method:</span>
+                      <span className="font-bold uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-md">
+                        {payoutForm.payment_method || 'bKash'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-medium">Account / Phone:</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {payoutForm.account_number || 'Not Set'}
+                      </span>
+                    </div>
+                    {payoutForm.bank_name && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 font-medium">Bank & Branch:</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[150px]">
+                          {payoutForm.bank_name} {payoutForm.branch_name ? `(${payoutForm.branch_name})` : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Saved details auto-fill your withdrawal requests so you don't need to retype every time.
+                  </p>
+                </div>
+
               </div>
 
               {/* Right Column: Stats (8 cols) */}
@@ -571,13 +671,19 @@ const Profile = () => {
               <div className="flex gap-2 mb-6 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl">
                 <button 
                   onClick={() => setModalTab('profile')}
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${modalTab === 'profile' ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${modalTab === 'profile' ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
-                  Edit Profile
+                  Profile
+                </button>
+                <button 
+                  onClick={() => setModalTab('payout')}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${modalTab === 'payout' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                >
+                  💳 Payout Setup
                 </button>
                 <button 
                   onClick={() => setModalTab('security')}
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${modalTab === 'security' ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${modalTab === 'security' ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                   Security
                 </button>
@@ -657,12 +763,122 @@ const Profile = () => {
                       <button
                         type="submit"
                         disabled={profileLoading || !name}
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                       >
                         {profileLoading ? (
                           <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
                         ) : (
                           'Save Profile Changes'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Tab Content: Payout Settings */}
+              {modalTab === 'payout' && (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-5">
+                  {payoutMessage && (
+                    <div className={`p-4 rounded-xl text-sm font-bold flex items-start gap-3 ${
+                      payoutMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-800'
+                    }`}>
+                      {payoutMessage.type === 'success' ? <FiCheckCircle className="mt-0.5 text-lg shrink-0" /> : <FiXCircle className="mt-0.5 text-lg shrink-0" />}
+                      {payoutMessage.text}
+                    </div>
+                  )}
+
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800/40 text-xs text-indigo-800 dark:text-indigo-300">
+                    💡 Configure your primary withdrawal account. When you request a payout from your wallet, these details will automatically be selected.
+                  </div>
+
+                  <form onSubmit={handleSavePayoutSettings} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                        Preferred Payment Method
+                      </label>
+                      <select
+                        value={payoutForm.payment_method}
+                        onChange={(e) => setPayoutForm({ ...payoutForm, payment_method: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl p-3.5 outline-none"
+                      >
+                        <option value="bkash">bKash Personal</option>
+                        <option value="nagad">Nagad Personal</option>
+                        <option value="rocket">Rocket</option>
+                        <option value="bank">Bank Transfer</option>
+                        <option value="cash">Office Cash</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                        {payoutForm.payment_method === 'bank' ? 'Bank Account Number' : 'Mobile Banking Number / Wallet No.'}
+                      </label>
+                      <input
+                        type="text"
+                        value={payoutForm.account_number}
+                        onChange={(e) => setPayoutForm({ ...payoutForm, account_number: e.target.value })}
+                        placeholder={payoutForm.payment_method === 'bank' ? 'e.g. 2050XXXXXXXX' : 'e.g. 017XXXXXXXX'}
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl p-3.5 outline-none font-mono"
+                        required
+                      />
+                    </div>
+
+                    {payoutForm.payment_method === 'bank' && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                            Account Holder Name
+                          </label>
+                          <input
+                            type="text"
+                            value={payoutForm.account_holder_name || ''}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, account_holder_name: e.target.value })}
+                            placeholder="e.g. Kabir Hossen"
+                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl p-3.5 outline-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                              Bank Name
+                            </label>
+                            <input
+                              type="text"
+                              value={payoutForm.bank_name || ''}
+                              onChange={(e) => setPayoutForm({ ...payoutForm, bank_name: e.target.value })}
+                              placeholder="e.g. Islami Bank"
+                              className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl p-3.5 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                              Branch Name
+                            </label>
+                            <input
+                              type="text"
+                              value={payoutForm.branch_name || ''}
+                              onChange={(e) => setPayoutForm({ ...payoutForm, branch_name: e.target.value })}
+                              placeholder="e.g. Sylhet Branch"
+                              className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl p-3.5 outline-none"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-700 mt-6">
+                      <button
+                        type="submit"
+                        disabled={payoutLoading || !payoutForm.account_number}
+                        className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                      >
+                        {payoutLoading ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        ) : (
+                          'Save Payout Settings'
                         )}
                       </button>
                     </div>

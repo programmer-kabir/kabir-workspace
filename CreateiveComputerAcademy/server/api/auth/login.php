@@ -97,12 +97,11 @@ try {
         } else {
             $stu_stmt = $db->prepare(
                 "SELECT 
-                    s.student_code, s.course_id,
+                    s.student_code, NULL AS course_id,
                     s.guardian_phone, s.enrollment_date, s.completion_date, s.status AS student_status,
-                    COALESCE(c.title, 'General Course') AS course_name,
-                    c.course_code, c.category AS course_category
+                    'General Course' AS course_name,
+                    'GEN' AS course_code, 'General' AS course_category
                  FROM students s
-                 LEFT JOIN courses c ON s.course_id = c.id
                  WHERE s.user_id = :user_id LIMIT 1"
             );
         }

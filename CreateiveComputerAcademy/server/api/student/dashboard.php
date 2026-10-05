@@ -64,22 +64,21 @@ try {
                 s.id AS enrollment_id,
                 s.id AS student_record_id,
                 s.user_id,
-                s.course_id,
+                NULL AS course_id,
                 s.student_code,
                 s.enrollment_date,
                 s.completion_date,
                 s.guardian_phone,
                 s.status AS student_status,
-                COALESCE(c.title, 'General Course') AS course_name,
-                c.course_code,
-                c.category AS course_category,
-                c.duration_months,
-                c.total_classes,
-                c.thumbnail_url,
-                c.banner_url,
-                c.description AS course_description
+                'General Course' AS course_name,
+                'GEN' AS course_code,
+                'General' AS course_category,
+                0 AS duration_months,
+                0 AS total_classes,
+                NULL AS thumbnail_url,
+                NULL AS banner_url,
+                NULL AS course_description
             FROM students s
-            LEFT JOIN courses c ON s.course_id = c.id
             WHERE s.user_id = :user_id
             ORDER BY 
                 CASE WHEN s.status = 'active' THEN 0 ELSE 1 END,

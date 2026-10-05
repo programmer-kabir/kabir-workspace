@@ -58,14 +58,8 @@ try {
                            s.enrollment_date
                        ) AS enrollment_date,
                        s.guardian_phone,
-                       COALESCE(
-                           (SELECT c.title FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1),
-                           (SELECT c2.title FROM courses c2 WHERE c2.id = s.course_id)
-                       ) AS course_name,
-                       COALESCE(
-                           (SELECT c.course_code FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1),
-                           (SELECT c2.course_code FROM courses c2 WHERE c2.id = s.course_id)
-                       ) AS course_code
+                       (SELECT c.title FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1) AS course_name,
+                       (SELECT c.course_code FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1) AS course_code
                 FROM users u
                 LEFT JOIN students s ON u.id = s.user_id
                 WHERE u.id = ?
@@ -75,10 +69,9 @@ try {
             $uStmt = $db->prepare("
                 SELECT u.id, u.name, u.email, u.phone, u.profile_picture, u.status, u.created_at,
                        s.student_code, s.enrollment_date, s.guardian_phone,
-                       c.title AS course_name, c.course_code
+                       'General Course' AS course_name, 'GEN' AS course_code
                 FROM users u
                 LEFT JOIN students s ON u.id = s.user_id
-                LEFT JOIN courses c ON s.course_id = c.id
                 WHERE u.id = ?
                 LIMIT 1
             ");
@@ -207,14 +200,8 @@ try {
                        (SELECT se.enrollment_date FROM student_enrollments se WHERE se.user_id = u.id ORDER BY se.id DESC LIMIT 1),
                        s.enrollment_date
                    ) AS enrollment_date,
-                   COALESCE(
-                       (SELECT c.title FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1),
-                       (SELECT c2.title FROM courses c2 WHERE c2.id = s.course_id)
-                   ) AS course_name,
-                   COALESCE(
-                       (SELECT c.course_code FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1),
-                       (SELECT c2.course_code FROM courses c2 WHERE c2.id = s.course_id)
-                   ) AS course_code,
+                   (SELECT c.title FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1) AS course_name,
+                   (SELECT c.course_code FROM student_enrollments se JOIN courses c ON se.course_id = c.id WHERE se.user_id = u.id AND (se.status = 'active' OR se.status IS NULL) ORDER BY se.id DESC LIMIT 1) AS course_code,
                    COALESCE(pt.completed_count, 0) AS completed_stages,
                    COALESCE(pt.total_stars, 0) AS total_stars,
                    COALESCE(pt.avg_efficiency, 0) AS avg_efficiency,
@@ -242,7 +229,7 @@ try {
         $rosterQuery = "
             SELECT u.id AS user_id, u.name, u.email, u.phone, u.profile_picture, u.status,
                    s.student_code, s.enrollment_date,
-                   c.title AS course_name, c.course_code,
+                   'General Course' AS course_name, 'GEN' AS course_code,
                    COALESCE(pt.completed_count, 0) AS completed_stages,
                    COALESCE(pt.total_stars, 0) AS total_stars,
                    COALESCE(pt.avg_efficiency, 0) AS avg_efficiency,
@@ -252,7 +239,6 @@ try {
                    pt.last_practiced_at
             FROM users u
             INNER JOIN students s ON u.id = s.user_id
-            LEFT JOIN courses c ON s.course_id = c.id
             LEFT JOIN (
                 SELECT user_id,
                        COUNT(CASE WHEN is_completed = 1 THEN 1 END) AS completed_count,

@@ -3,7 +3,6 @@
 
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
-require_once __DIR__ . '/../payroll_guard.php';
 require_once __DIR__ . '/../../payroll/PayrollHelper.php';
 
 date_default_timezone_set('Asia/Dhaka');

@@ -61,28 +61,24 @@ try {
             SELECT 
                 s.id AS enrollment_id,
                 s.user_id,
-                s.course_id,
+                NULL AS course_id,
                 s.student_code,
                 s.enrollment_date,
                 s.completion_date,
                 s.status AS enrollment_status,
                 s.guardian_phone,
-                COALESCE(c.title, 'General Course') AS course_title,
-                c.course_code,
-                c.category AS course_category,
-                c.duration_months,
-                c.total_classes,
-                c.thumbnail_url,
-                c.banner_url,
-                c.description AS course_description,
-                (SELECT COUNT(*) FROM student_assignments sa WHERE sa.course_id = s.course_id) AS total_assignments,
-                (SELECT COUNT(*) FROM student_submissions sub 
-                 INNER JOIN student_assignments sa2 ON sub.assignment_id = sa2.id 
-                 WHERE sub.user_id = :user_id AND sa2.course_id = s.course_id
-                ) AS submitted_assignments,
-                (SELECT COUNT(*) FROM course_modules cm WHERE cm.course_id = s.course_id AND cm.status = 'active') AS total_modules
+                'General Course' AS course_title,
+                'GEN' AS course_code,
+                'General' AS course_category,
+                0 AS duration_months,
+                0 AS total_classes,
+                NULL AS thumbnail_url,
+                NULL AS banner_url,
+                NULL AS course_description,
+                0 AS total_assignments,
+                0 AS submitted_assignments,
+                0 AS total_modules
             FROM students s
-            LEFT JOIN courses c ON s.course_id = c.id
             WHERE s.user_id = :user_id
             ORDER BY s.id DESC
         ";

@@ -5,11 +5,11 @@ import { toast } from 'sonner';
 import {
   FiDollarSign, FiClock, FiCheckCircle, FiAlertCircle,
   FiArrowUpRight, FiTrendingUp, FiShield, FiSend, FiRefreshCw,
-  FiCalendar, FiLayers, FiInfo
+  FiCalendar, FiLayers, FiInfo, FiFileText, FiPrinter
 } from 'react-icons/fi';
 import { FaCoins } from 'react-icons/fa6';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/CCA_Server/';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputeracademy.com/';
 const R2_PUBLIC_BASE = 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev/';
 
 export const getProfileImgUrl = (pic) => {
@@ -17,7 +17,7 @@ export const getProfileImgUrl = (pic) => {
   const cleanPic = String(pic).trim();
   if (!cleanPic) return null;
   if (cleanPic.startsWith('http://') || cleanPic.startsWith('https://')) return cleanPic;
-  
+
   const r2Base = R2_PUBLIC_BASE.replace(/\/+$/, '');
   const relative = cleanPic.replace(/^\/+/, '');
   return `${r2Base}/${relative}`;
@@ -76,12 +76,36 @@ export default function PayrollWallet() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('bkash');
   const [accountDetails, setAccountDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [savedPayoutSettings, setSavedPayoutSettings] = useState(null);
+  const [autoFilled, setAutoFilled] = useState(false);
 
   const [syncing, setSyncing] = useState(false);
+
+  const fetchPayoutSettings = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await axios.get(`${API_BASE}api/payroll/get_payout_settings.php?user_id=${currentUser.id}`);
+      if (res.data.status === 'success' && res.data.data) {
+        setSavedPayoutSettings(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching payout settings:', err);
+    }
+  };
+
+  const openWithdrawModal = () => {
+    if (savedPayoutSettings && savedPayoutSettings.account_number) {
+      setPaymentMethod(savedPayoutSettings.payment_method || 'bkash');
+    } else {
+      setPaymentMethod('cash');
+    }
+    setIsModalOpen(true);
+  };
 
   const fetchPayroll = async (isSilent = false) => {
     if (!currentUser?.id) return;
@@ -104,6 +128,7 @@ export default function PayrollWallet() {
 
   useEffect(() => {
     fetchPayroll();
+    fetchPayoutSettings();
     // Auto-refresh every 60 seconds for live earning updates
     const interval = setInterval(() => {
       fetchPayroll(true);
@@ -125,9 +150,27 @@ export default function PayrollWallet() {
       return;
     }
 
-    if (!accountDetails.trim()) {
-      toast.error('Please enter your account number/phone number.');
-      return;
+    let finalDetails = '';
+    if (paymentMethod === 'cash') {
+      finalDetails = 'Office Cash In-Hand (অফিস থেকে ক্যাশ গ্রহণ)';
+    } else {
+      if (!savedPayoutSettings || !savedPayoutSettings.account_number) {
+        toast.error('আপনার প্রোফাইলে এই মেথডের তথ্য সেভ করা নেই। দয়া করে প্রোফাইলে গিয়ে সেটআপ করুন অথবা Cash নির্বাচন করুন।');
+        return;
+      }
+
+      if (paymentMethod === 'bank' || savedPayoutSettings.payment_method === 'bank') {
+        const parts = [
+          `A/C: ${savedPayoutSettings.account_number}`,
+          savedPayoutSettings.account_holder_name ? `Holder: ${savedPayoutSettings.account_holder_name}` : '',
+          savedPayoutSettings.bank_name ? `Bank: ${savedPayoutSettings.bank_name}` : '',
+          savedPayoutSettings.branch_name ? `Branch: ${savedPayoutSettings.branch_name}` : '',
+          savedPayoutSettings.routing_number ? `Routing: ${savedPayoutSettings.routing_number}` : ''
+        ].filter(Boolean);
+        finalDetails = parts.join(', ');
+      } else {
+        finalDetails = `${savedPayoutSettings.account_number} (${paymentMethod.toUpperCase()} Personal)`;
+      }
     }
 
     try {
@@ -136,14 +179,13 @@ export default function PayrollWallet() {
         user_id: currentUser.id,
         amount: amountNum,
         payment_method: paymentMethod,
-        account_details: accountDetails.trim()
+        account_details: finalDetails
       });
 
       if (res.data.status === 'success') {
         toast.success('Withdrawal request submitted successfully!');
         setIsModalOpen(false);
         setWithdrawAmount('');
-        setAccountDetails('');
         fetchPayroll();
       } else {
         toast.error(res.data.message || 'Failed to submit withdrawal.');
@@ -205,23 +247,30 @@ export default function PayrollWallet() {
         <div className="flex items-center gap-3 z-10">
           <button
             onClick={fetchPayroll}
-            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition border border-white/10"
+            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition border border-white/10 cursor-pointer"
             title="Refresh"
           >
-            <FiRefreshCw className="w-5 h-5" />
+            <FiRefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
           </button>
           {hasScheme && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              disabled={summary.available_withdrawable <= 0}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg transition duration-200 ${summary.available_withdrawable > 0
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                }`}
-            >
-              <FiArrowUpRight className="w-5 h-5" />
-              Request Withdrawal
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={openWithdrawModal}
+                disabled={!summary.can_withdraw}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg transition duration-200 ${summary.can_withdraw
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  }`}
+              >
+                <FiArrowUpRight className="w-5 h-5" />
+                Request Withdrawal
+              </button>
+              {!summary.can_withdraw && summary.available_withdrawable > 0 && (
+                <span className="text-[10px] text-amber-400 font-medium">
+                  Min. ৳{Number(summary.min_withdrawal_limit || 5000).toLocaleString()} required
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -276,12 +325,41 @@ export default function PayrollWallet() {
             </div>
           )}
 
-          {/* Main 3-Pillar Status Cards */}
+          {/* Monthly Cycle & 15th Unlock Countdown Banner */}
+          <div className="bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/80 border border-indigo-500/30 p-5 md:p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="space-y-1 z-10">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-wider border border-indigo-500/30">
+                  🗓️ Monthly 15th Payout Cycle
+                </span>
+                <span className="text-xs text-slate-400">
+                  Next Unlock: <strong className="text-white">{summary.next_payout_date || '15th'}</strong>
+                </span>
+              </div>
+              <h4 className="text-base md:text-lg font-bold text-white">
+                Monthly Earnings mature on the <span className="text-indigo-400 font-extrabold">15th of the following month</span>
+              </h4>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Earnings unlock on the 15th as integer cashouts. Fractional balance (+৳{Number(summary.fractional_rollover || 0).toFixed(2)}) rolls over seamlessly into next cycle!
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0 bg-slate-900/90 p-3.5 rounded-2xl border border-indigo-500/20 z-10">
+              <div className="text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Days Until Unlock</span>
+                <div className="text-2xl font-black text-indigo-400">
+                  {summary.days_until_next_payout ?? 0} <span className="text-xs text-slate-400 font-normal">days</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main 4 Status KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* Card 1: Hourly Rate snapshot */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Hourly Earning Rate</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Hourly Rate</span>
                 <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl text-indigo-600 dark:text-indigo-400">
                   <FiClock className="w-5 h-5" />
                 </div>
@@ -308,40 +386,48 @@ export default function PayrollWallet() {
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">hrs ({summary.total_approved_minutes || 0}m)</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Across {summary.total_sessions || 0} tracked work sessions (no 8h daily limit)
+                Across {summary.total_sessions || 0} approved work sessions
               </p>
             </div>
 
-            {/* Card 3: Total Cumulative Earned */}
+            {/* Card 3: Accruing Balance for Next Cycle */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Total Work Earned</span>
-                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-2xl text-emerald-600 dark:text-emerald-400">
-                  <FaCoins className="w-5 h-5" />
+                <span className="text-xs font-bold uppercase tracking-wider">Accruing (Next Cycle)</span>
+                <div className="p-2.5 bg-purple-50 dark:bg-purple-950/50 rounded-2xl text-purple-600 dark:text-purple-400">
+                  <FiCalendar className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 dark:text-white">
-                ৳ {Number(summary.total_earned || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="text-3xl font-black text-purple-600 dark:text-purple-400">
+                ৳ {Number(summary.accruing_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                {isYearlyContract ? `Company Cap: ৳${Number(summary.contract_target || 50000).toLocaleString()}` : 'Monthly Work Earnings'}
+                Unlocks on {summary.next_payout_date || '15th'}
               </p>
             </div>
 
-            {/* Card 4: Available for Withdrawal */}
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white p-6 rounded-3xl shadow-lg shadow-emerald-500/10 relative overflow-hidden">
-              <div className="flex items-center justify-between text-emerald-100 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Available Cashout</span>
-                <div className="p-2.5 bg-white/20 rounded-2xl text-white">
-                  <FiDollarSign className="w-5 h-5" />
+            {/* Card 4: Available for Immediate Withdrawal */}
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white p-6 rounded-3xl shadow-lg shadow-emerald-500/10 relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-emerald-100 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Available Cashout</span>
+                  <div className="p-2 bg-white/20 rounded-2xl text-white">
+                    <FiDollarSign className="w-4 h-4" />
+                  </div>
                 </div>
+                <div className="text-3xl font-black text-white">
+                  ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
+                </div>
+                {summary.fractional_rollover > 0 && (
+                  <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/15 text-[11px] font-semibold text-emerald-50">
+                    + ৳{Number(summary.fractional_rollover).toFixed(2)} rolling forward
+                  </div>
+                )}
               </div>
-              <div className="text-3xl font-black text-white">
-                ৳ {Number(summary.available_withdrawable || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-100/80">
+                <span>Min: ৳{Number(summary.min_withdrawal_limit || 5000).toLocaleString()}</span>
+                <span className="font-bold">{summary.can_withdraw ? '✅ Ready' : '⏳ Building'}</span>
               </div>
-              <p className="text-xs text-emerald-100 mt-2">
-                {isYearlyContract ? '100% Surplus (Unlocked after 50K)' : 'Available for payout'}
-              </p>
             </div>
           </div>
 
@@ -413,6 +499,73 @@ export default function PayrollWallet() {
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Disbursed via bKash / Bank</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Monthly Cycle & Rollover Ledger */}
+          {summary.monthly_cycle_ledger && summary.monthly_cycle_ledger.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                    <FiCalendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">Monthly Earnings & 15th Maturity Rollover</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Earnings mature on the 15th of the following month and automatically roll over until withdrawn.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 self-start sm:self-auto">
+                  {summary.monthly_cycle_ledger.length} Billing {summary.monthly_cycle_ledger.length === 1 ? 'Month' : 'Months'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {summary.monthly_cycle_ledger.map((cycle, idx) => (
+                  <div
+                    key={cycle.month_key || idx}
+                    className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${cycle.is_unlocked
+                      ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
+                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/70 dark:border-slate-700/60'
+                      }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">
+                          {cycle.month_label || cycle.month_key}
+                        </span>
+                        {cycle.is_unlocked ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                            <FiCheckCircle className="w-3 h-3" /> Matured
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold">
+                            <FiClock className="w-3 h-3" /> Unlocks {cycle.payout_unlock_date?.split('-')[2] || '15'}th
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-2xl font-black text-slate-900 dark:text-white my-1">
+                        ৳ {Number(cycle.total_earned || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/40">
+                        <span>{cycle.approved_hours || 0} hrs ({cycle.approved_minutes || 0}m)</span>
+                        <span>{cycle.sessions_count || 0} sessions</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedInvoice(cycle)}
+                      className="w-full mt-4 py-2 px-3 rounded-xl bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                    >
+                      <FiFileText className="w-3.5 h-3.5" /> View Payslip / Invoice
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -530,10 +683,13 @@ export default function PayrollWallet() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Request Payout</h3>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Request Payout</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Whole integer amount only</p>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               >
                 ✕
               </button>
@@ -545,31 +701,45 @@ export default function PayrollWallet() {
                   Available for Cashout
                 </label>
                 <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl flex items-center justify-between">
-                  <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Withdrawable Balance</span>
-                  <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                  <div>
+                    <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300 block">Integer Cashout Limit</span>
+                    {summary.fractional_rollover > 0 && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        (+৳{Number(summary.fractional_rollover).toFixed(2)} fraction stays in wallet)
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                     ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Amount to Withdraw (৳)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Amount to Withdraw (৳)
+                  </label>
+                  <span className="text-[10px] font-bold text-indigo-500">
+                    Min: ৳{Number(summary.min_withdrawal_limit || 5000).toLocaleString()}
+                  </span>
+                </div>
                 <div className="relative">
                   <input
                     type="number"
-                    step="any"
+                    step="1"
+                    min={summary.min_withdrawal_limit || 5000}
+                    max={summary.available_withdrawable || 0}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="e.g. 5000"
+                    placeholder={`e.g. ${summary.min_withdrawal_limit || 5000}`}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-bold text-base focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setWithdrawAmount(summary.available_withdrawable || '')}
-                    className="absolute right-2 top-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl hover:bg-indigo-200 transition"
+                    className="absolute right-2 top-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl hover:bg-indigo-200 transition cursor-pointer"
                   >
                     MAX
                   </button>
@@ -578,40 +748,64 @@ export default function PayrollWallet() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Payment Method
+                  Payout Method / গ্রহণের মাধ্যম
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-medium text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-bold text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
-                  <option value="bkash">bKash Personal</option>
-                  <option value="nagad">Nagad Personal</option>
-                  <option value="rocket">Rocket</option>
-                  <option value="bank">Bank Transfer</option>
-                  <option value="cash">Office Cash</option>
+                  <option value="cash">💵 Office Cash (হাতে হাতে নগদ গ্রহণ)</option>
+                  <option value="bkash">📱 bKash Personal</option>
+                  <option value="nagad">📱 Nagad Personal</option>
+                  <option value="rocket">📱 Rocket</option>
+                  <option value="bank">🏦 Bank Transfer</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Account Details / Phone Number
-                </label>
-                <textarea
-                  value={accountDetails}
-                  onChange={(e) => setAccountDetails(e.target.value)}
-                  placeholder="e.g. 017XXXXXXXX (bKash Personal) or Bank Account Name, A/C No, Branch"
-                  rows={2}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-medium text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
-              </div>
+              {/* Dynamic details preview based on selected method */}
+              {paymentMethod === 'cash' ? (
+                <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl flex items-center gap-3">
+                  <span className="text-2xl">💵</span>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Office Cash (হাতে হাতে নগদ)</p>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400">CCA Accounts Desk থেকে সরাসরি নগদ টাকা গ্রহণ করবেন। কোনো একাউন্ট নম্বর লাগবে না।</p>
+                  </div>
+                </div>
+              ) : savedPayoutSettings?.account_number ? (
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 font-medium">Profile Saved Account:</span>
+                    <a href="/profile" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline text-[11px]">
+                      Edit in Profile →
+                    </a>
+                  </div>
+                  <div className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                    {paymentMethod === 'bank' || savedPayoutSettings.payment_method === 'bank'
+                      ? `${savedPayoutSettings.bank_name || 'Bank'} A/C: ${savedPayoutSettings.account_number} (${savedPayoutSettings.branch_name || ''})`
+                      : `${savedPayoutSettings.account_number} (${paymentMethod.toUpperCase()})`}
+                  </div>
+                  {savedPayoutSettings.account_holder_name && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Holder: {savedPayoutSettings.account_holder_name}</div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                  <FiAlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">প্রোফাইলে পেমেন্ট তথ্য সেট করা নেই!</p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                      অনলাইনে টাকা পেতে আগে <a href="/profile" className="font-bold underline text-indigo-600 dark:text-indigo-400">প্রোফাইলে গিয়ে সেটআপ করুন</a> অথবা উপরে "Office Cash" নির্বাচন করুন।
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-2 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -625,6 +819,130 @@ export default function PayrollWallet() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Official Monthly Payslip / Invoice Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-indigo-600 text-white font-black text-xl shadow-lg shadow-indigo-600/30">
+                  CCA
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">Creative Computer Academy</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Official Monthly Payroll Payslip & Statement</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedInvoice(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Payslip Details Card */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+              <div>
+                <span className="text-slate-400 uppercase font-bold text-[10px] block">Payslip No.</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedInvoice.invoice_id || 'CCA-PAY-SLIP'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase font-bold text-[10px] block">Billing Cycle</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedInvoice.month_label}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase font-bold text-[10px] block">Maturity Date</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">{selectedInvoice.payout_unlock_date}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase font-bold text-[10px] block">Status</span>
+                <span className={`font-bold ${selectedInvoice.is_unlocked ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-600 dark:text-purple-400'}`}>
+                  {selectedInvoice.is_unlocked ? '✅ Matured & Rolled' : '⏳ Accruing'}
+                </span>
+              </div>
+            </div>
+
+            {/* Staff Info */}
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <StaffAvatar name={currentUser?.name} picture={currentUser?.profile_picture} size="md" />
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">{currentUser?.name}</h4>
+                  <p className="text-xs text-slate-400">{currentUser?.email} • {scheme.scheme_name || 'Staff Scheme'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Rate Applied</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">৳{Number(scheme.hourly_rate || 0).toFixed(2)} / hr</span>
+              </div>
+            </div>
+
+            {/* Financial Breakdown Table */}
+            <div className="border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200/60 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3">Description</th>
+                    <th className="p-3 text-center">Approved Time</th>
+                    <th className="p-3 text-right">Amount (৳)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tr>
+                    <td className="p-3 font-medium">
+                      Gross Accrued Work Earnings ({selectedInvoice.month_label})
+                      <div className="text-[11px] text-slate-400">{selectedInvoice.sessions_count || 0} approved work sessions ({selectedInvoice.days_count || 0} active days)</div>
+                    </td>
+                    <td className="p-3 text-center font-bold">{selectedInvoice.approved_hours} hrs ({selectedInvoice.approved_minutes}m)</td>
+                    <td className="p-3 text-right font-black text-slate-900 dark:text-white">৳ {Number(selectedInvoice.total_earned || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-emerald-50/40 dark:bg-emerald-950/20">
+                    <td className="p-3 font-bold text-emerald-700 dark:text-emerald-300" colSpan={2}>
+                      1. Whole Integer Payable (Cashout Limit)
+                    </td>
+                    <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                      ৳ {Number(selectedInvoice.invoice_integer_amount || Math.floor(selectedInvoice.total_earned || 0)).toLocaleString()}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50 dark:bg-slate-800/40">
+                    <td className="p-3 text-slate-500 dark:text-slate-400" colSpan={2}>
+                      2. Fractional Paisa Rollover (Automatically Carried Forward to Next Cycle)
+                    </td>
+                    <td className="p-3 text-right font-bold text-slate-600 dark:text-slate-300">
+                      + ৳ {Number(selectedInvoice.fractional_rollover || (selectedInvoice.total_earned - Math.floor(selectedInvoice.total_earned))).toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Notice */}
+            <p className="text-[11px] text-slate-400 leading-relaxed text-center">
+              This is an official system-generated computerized payslip. Under Creative Computer Academy payroll regulations, payouts mature on the 15th of the following month and roll over seamlessly into subsequent months without expiration.
+            </p>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedInvoice(null)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/20 transition cursor-pointer"
+              >
+                <FiPrinter className="w-4 h-4" /> Print / Save PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

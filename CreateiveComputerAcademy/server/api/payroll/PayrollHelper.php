@@ -325,7 +325,81 @@ class PayrollHelper {
             ];
         }
 
-        // 4. Scheme-specific calculations
+        // 4. Monthly Cycle & 15th Maturity Calculation
+        $todayDate = date('Y-m-d');
+        $currentMonth = date('Y-m'); // e.g. 2026-10
+        $currentDay = intval(date('j'));
+
+        // Next upcoming payout unlock date (15th of next month if current month ongoing)
+        $nextPayoutDate = date('Y-m-15', strtotime('+1 month'));
+        $daysUntilNextPayout = max(0, intval(round((strtotime($nextPayoutDate) - strtotime($todayDate)) / 86400)));
+
+        // Fetch earnings grouped by month for this scheme
+        $stmtMonthEarn = $pdo->prepare("
+            SELECT 
+                DATE_FORMAT(work_date, '%Y-%m') AS month_key,
+                DATE_FORMAT(work_date, '%M %Y') AS month_label,
+                COALESCE(SUM(earned_amount), 0) AS total_earned,
+                COALESCE(SUM(CASE WHEN is_surplus = 1 THEN earned_amount ELSE 0 END), 0) AS surplus_earned,
+                COALESCE(SUM(approved_minutes), 0) AS approved_minutes,
+                COUNT(id) AS sessions_count,
+                COUNT(DISTINCT work_date) AS days_count
+            FROM staff_work_earnings
+            WHERE scheme_id = :scheme_id
+            GROUP BY DATE_FORMAT(work_date, '%Y-%m'), DATE_FORMAT(work_date, '%M %Y')
+            ORDER BY month_key ASC
+        ");
+        $stmtMonthEarn->execute([':scheme_id' => $schemeId]);
+        $monthlyEarningsRows = $stmtMonthEarn->fetchAll(PDO::FETCH_ASSOC);
+
+        $maturedEarned = 0.0;
+        $maturedSurplus = 0.0;
+        $accruingEarned = 0.0;
+        $accruingSurplus = 0.0;
+        $monthlyCycleLedger = [];
+
+        foreach ($monthlyEarningsRows as $mRow) {
+            $mKey = $mRow['month_key'];
+            $mEarned = floatval($mRow['total_earned']);
+            $mSurplus = floatval($mRow['surplus_earned']);
+
+            // Payout unlock date for month 'YYYY-MM' is 15th of the NEXT month (e.g. 2026-09 unlocks on 2026-10-15; 2026-10 unlocks on 2026-11-15)
+            $payoutUnlockDate = date('Y-m-15', strtotime($mKey . '-01 +1 month'));
+
+            // A month is unlocked if:
+            // 1. It is a past completed month (e.g. September 2026 < October 2026) AND today >= 15th (or testing past month unlock)
+            // 2. Current ongoing month (e.g. October 2026) is NEVER unlocked until November 15th!
+            $isUnlocked = ($mKey < $currentMonth);
+
+            if ($isUnlocked) {
+                $maturedEarned += $mEarned;
+                $maturedSurplus += $mSurplus;
+                $status = 'unlocked';
+            } else {
+                $accruingEarned += $mEarned;
+                $accruingSurplus += $mSurplus;
+                $status = 'accruing';
+            }
+
+            $monthlyCycleLedger[] = [
+                'invoice_id' => 'CCA-PS-' . str_replace('-', '', $mKey) . '-' . $userId,
+                'month_key' => $mKey,
+                'month_label' => $mRow['month_label'],
+                'total_earned' => $mEarned,
+                'surplus_earned' => $mSurplus,
+                'invoice_integer_amount' => floor($mEarned),
+                'fractional_rollover' => round($mEarned - floor($mEarned), 2),
+                'approved_minutes' => intval($mRow['approved_minutes']),
+                'approved_hours' => round(intval($mRow['approved_minutes']) / 60, 2),
+                'days_count' => intval($mRow['days_count']),
+                'sessions_count' => intval($mRow['sessions_count']),
+                'payout_unlock_date' => $payoutUnlockDate,
+                'is_unlocked' => $isUnlocked,
+                'status' => $status
+            ];
+        }
+
+        // Scheme-specific calculations
         $summary = [
             'has_scheme' => true,
             'scheme' => $scheme,
@@ -336,6 +410,9 @@ class PayrollHelper {
             'total_withdrawn' => $totalWithdrawn,
             'pending_withdrawn' => $pendingWithdrawn,
             'active_session' => $activeSession,
+            'next_payout_date' => $nextPayoutDate,
+            'days_until_next_payout' => $daysUntilNextPayout,
+            'monthly_cycle_ledger' => array_reverse($monthlyCycleLedger),
         ];
 
         if ($schemeType === 'YEARLY_CONTRACT') {
@@ -344,21 +421,57 @@ class PayrollHelper {
             $targetCompleted = ($totalEarned >= $contractTarget);
             $progressPercent = $contractTarget > 0 ? min(100.0, round(($totalEarned / $contractTarget) * 100, 2)) : 100.0;
             $staffSurplusEarned = max(0.0, $totalEarned - $contractTarget);
-            $availableWithdrawable = max(0.0, $staffSurplusEarned - $totalWithdrawn - $pendingWithdrawn);
+
+            // Matured vs Accruing surplus calculation
+            $maturedSurplusCalc = max(0.0, $maturedEarned - $contractTarget);
+            $accruingSurplusCalc = max(0.0, $staffSurplusEarned - $maturedSurplusCalc);
+
+            // Available withdrawable is matured surplus minus what has been requested/paid
+            $availableWithdrawableTotal = max(0.0, $maturedSurplusCalc - $totalWithdrawn - $pendingWithdrawn);
+
+            // Minimum 5K requirement for Yearly Contract
+            $minWithdrawalLimit = 5000.0;
 
             $summary['contract_target'] = $contractTarget;
             $summary['company_reserved'] = $companyReserved;
             $summary['target_completed'] = $targetCompleted;
             $summary['progress_percent'] = $progressPercent;
             $summary['staff_surplus_earned'] = $staffSurplusEarned;
-            $summary['available_withdrawable'] = round($availableWithdrawable, 2);
+            $summary['matured_surplus_earned'] = $maturedSurplusCalc;
+            $summary['accruing_balance'] = round($accruingSurplusCalc, 2);
         } else {
             // MONTHLY
             $salaryAmount = floatval($scheme['salary_amount']);
-            $availableWithdrawable = max(0.0, $totalEarned - $totalWithdrawn - $pendingWithdrawn);
+            $availableWithdrawableTotal = max(0.0, $maturedEarned - $totalWithdrawn - $pendingWithdrawn);
+
+            // Minimum withdrawal threshold is base salary amount
+            $minWithdrawalLimit = ($salaryAmount > 0) ? $salaryAmount : 5000.0;
 
             $summary['monthly_salary'] = $salaryAmount;
-            $summary['available_withdrawable'] = round($availableWithdrawable, 2);
+            $summary['matured_earned'] = $maturedEarned;
+            $summary['accruing_balance'] = round($accruingEarned, 2);
+        }
+
+        // Integer cashout & Paisa/Fraction Rollover calculation
+        $availableWithdrawableInteger = floor($availableWithdrawableTotal);
+        $fractionalRollover = round($availableWithdrawableTotal - $availableWithdrawableInteger, 2);
+        $canWithdraw = ($minWithdrawalLimit > 0 && $availableWithdrawableInteger >= $minWithdrawalLimit);
+        $withdrawalBlockReason = !$canWithdraw 
+            ? (($availableWithdrawableInteger <= 0) 
+                ? 'No matured withdrawable balance available yet.' 
+                : 'Minimum withdrawal requirement for your scheme is ৳ ' . number_format($minWithdrawalLimit) . '.')
+            : null;
+
+        $summary['available_withdrawable_total'] = round($availableWithdrawableTotal, 2);
+        $summary['available_withdrawable'] = $availableWithdrawableInteger;
+        $summary['fractional_rollover'] = $fractionalRollover;
+        $summary['min_withdrawal_limit'] = $minWithdrawalLimit;
+        $summary['can_withdraw'] = $canWithdraw;
+        $summary['withdrawal_block_reason'] = $withdrawalBlockReason;
+
+        // Auto Notify Staff when maturity cycle unlocks with withdrawable amount ONLY IF user strictly meets/exceeds their required minimum salary threshold
+        if ($canWithdraw && $availableWithdrawableInteger >= $minWithdrawalLimit && $minWithdrawalLimit > 0) {
+            self::checkAndSendMaturityNotification($pdo, $userId, $availableWithdrawableInteger, $fractionalRollover);
         }
 
         return $summary;
@@ -461,12 +574,72 @@ class PayrollHelper {
     }
 
     /**
+     * Check and send maturity notification to staff on 15th once per cycle
+     */
+    public static function checkAndSendMaturityNotification($pdo, $userId, $availableAmount, $fractionalRollover) {
+        try {
+            $scheme = self::getActiveScheme($pdo, $userId);
+            if (!$scheme) {
+                return;
+            }
+
+            // Strictly determine minimum withdrawal limit (monthly salary or 5k)
+            $minLimit = ($scheme['scheme_type'] === 'YEARLY_CONTRACT') 
+                ? 5000.0 
+                : floatval($scheme['salary_amount'] ?: 5000.0);
+
+            // If available amount does not meet or exceed salary limit, staff is NOT eligible to withdraw -> DO NOT send notification!
+            if ($availableAmount < $minLimit || $minLimit <= 0) {
+                return;
+            }
+
+            require_once __DIR__ . '/../notifications/notification_helper.php';
+
+            $currentCycle = date('Y-m');
+            $metaTag = 'payout_unlocked_' . $currentCycle;
+
+            // Check if notification already sent for this cycle
+            $stmt = $pdo->prepare("
+                SELECT id FROM notifications 
+                WHERE user_id = :user_id 
+                  AND type = 'payroll_unlocked' 
+                  AND (metadata LIKE :meta_tag OR title LIKE '%পে-রোল%')
+                LIMIT 1
+            ");
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':meta_tag' => '%' . $metaTag . '%'
+            ]);
+
+            if (!$stmt->fetch()) {
+                $title = "🎉 পে-রোল সাইকেল আনলক: ৳" . number_format($availableAmount) . " তোলার জন্য প্রস্তুত!";
+                $msg = "আপনার পে-রোল সাইকেল সফলভাবে আনলক হয়েছে। ৳" . number_format($availableAmount) . " তোলার জন্য প্রস্তুত রয়েছে।" . ($fractionalRollover > 0 ? " (অবশিষ্ট ৳" . number_format($fractionalRollover, 2) . " পরের মাসের সাথে রোলওভার হবে)" : "");
+                
+                NotificationHelper::sendToUser(
+                    $pdo,
+                    $userId,
+                    null,
+                    $title,
+                    $msg,
+                    'payroll_unlocked',
+                    'all',
+                    '/payroll',
+                    'high',
+                    ['cycle' => $currentCycle, 'tag' => $metaTag, 'amount' => $availableAmount, 'fraction' => $fractionalRollover]
+                );
+            }
+        } catch (Exception $e) {
+            error_log("Maturity Notification Error: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Request a withdrawal
      */
     public static function requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails) {
-        $amount = floatval($amount);
+        $amount = floor(floatval($amount)); // Integer cashout
         if ($amount <= 0) {
-            throw new Exception("Withdrawal amount must be greater than 0.");
+            throw new Exception("Withdrawal amount must be a positive whole number (e.g. ৳ 5000).");
         }
 
         $summary = self::getStaffWalletSummary($pdo, $userId);
@@ -474,9 +647,14 @@ class PayrollHelper {
             throw new Exception($summary['message']);
         }
 
+        $minLimit = floatval($summary['min_withdrawal_limit'] ?? 5000);
+        if ($amount < $minLimit) {
+            throw new Exception("Minimum withdrawal amount for your pay scheme is ৳" . number_format($minLimit) . ".");
+        }
+
         $available = floatval($summary['available_withdrawable']);
         if ($amount > $available) {
-            throw new Exception("Requested amount (৳" . number_format($amount, 2) . ") exceeds your available withdrawable balance (৳" . number_format($available, 2) . ").");
+            throw new Exception("Requested amount (৳" . number_format($amount) . ") exceeds your available withdrawable balance (৳" . number_format($available) . "). Fractional paisa (৳" . number_format($summary['fractional_rollover'], 2) . ") remains in wallet for next month.");
         }
 
         $scheme = $summary['scheme'];
@@ -501,8 +679,41 @@ class PayrollHelper {
             ':account_details' => $accountDetails,
         ]);
 
+        $withdrawalId = $pdo->lastInsertId();
+
+        // Send notifications
+        try {
+            require_once __DIR__ . '/../notifications/notification_helper.php';
+            
+            // 1. Notify Admin
+            NotificationHelper::sendToRole(
+                $pdo,
+                'admin',
+                $userId,
+                "💰 New Payout Request: ৳" . number_format($amount),
+                "A staff member submitted a withdrawal request of ৳" . number_format($amount) . " via " . strtoupper($paymentMethod) . ".",
+                'withdrawal_request',
+                'admin',
+                '/payroll'
+            );
+
+            // 2. Notify Staff
+            NotificationHelper::sendToUser(
+                $pdo,
+                $userId,
+                null,
+                "⏳ Withdrawal Request Submitted: ৳" . number_format($amount),
+                "Your payout request of ৳" . number_format($amount) . " via {$paymentMethod} is currently under admin review.",
+                'withdrawal_pending',
+                'staff',
+                '/payroll'
+            );
+        } catch (Exception $e) {
+            // Non-blocking
+        }
+
         return [
-            'withdrawal_id' => $pdo->lastInsertId(),
+            'withdrawal_id' => $withdrawalId,
             'amount' => $amount,
             'status' => 'pending',
             'requested_at' => date('Y-m-d H:i:s')
