@@ -69,6 +69,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'Dashboard', transKey: 'dashboard', path: '/', icon: <FiHome size={19} /> },
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
+    { name: 'Mango Break Tree', transKey: 'mango_tree', path: '/mango-tree', icon: <span className="text-lg">🥭</span> },
     ...(currentUser?.id !== 2
       ? [{ name: 'Breaks Log', transKey: 'breaks_log', path: '/breaks', icon: <FiCoffee size={19} className="text-amber-500 group-hover:text-amber-400" /> }]
       : []),

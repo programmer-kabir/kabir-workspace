@@ -1,46 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { FiCoffee, FiPlay, FiSquare, FiAlertCircle } from 'react-icons/fi';
+import { FiCoffee, FiPlay, FiSquare, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 
 const BreakWidget = () => {
   const { currentUser } = useAuth();
-  const [activeBreak, setActiveBreak] = useState(null);
+  const storageKey = currentUser?.id ? `cca_active_break_${currentUser.id}` : null;
+
+  // Initialize from localStorage if present so timer does not disappear on reload
+  const [activeBreak, setActiveBreak] = useState(() => {
+    if (!storageKey) return null;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [allocatedMinutes, setAllocatedMinutes] = useState(60);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(() => {
+    if (!storageKey) return 0;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.start_time) {
+          const sTime = new Date(parsed.start_time.replace(' ', 'T')).getTime();
+          return Math.max(0, Math.floor((Date.now() - sTime) / 1000));
+        }
+      }
+    } catch {}
+    return 0;
+  });
+
   const [totalBreakMinutesToday, setTotalBreakMinutesToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [breakType, setBreakType] = useState('Tiffin');
+  const [ending, setEnding] = useState(false);
 
-  // Fetch active break on mount
-  useEffect(() => {
+  // Fetch active break from server on mount and keep in sync
+  const fetchActiveBreak = useCallback(async () => {
     if (!currentUser?.id) return;
-    const fetchActiveBreak = async () => {
-      try {
-        const res = await axios.post((import.meta.env.VITE_API_BASE_URL) + 'api/breaks/get_active_break.php', { user_id: currentUser.id });
-        if (res.data.status === 'success') {
-          setAllocatedMinutes(res.data.data.allocated_break_minutes);
-          if (res.data.data.total_break_minutes_today !== undefined) {
-            setTotalBreakMinutesToday(res.data.data.total_break_minutes_today);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      // Support both GET with query param and POST for maximum compatibility
+      const res = await axios.get(`${baseUrl}api/breaks/get_active_break.php?user_id=${currentUser.id}&t=${Date.now()}`);
+      
+      if (res.data.status === 'success' && res.data.data) {
+        const d = res.data.data;
+        if (d.allocated_break_minutes) {
+          setAllocatedMinutes(d.allocated_break_minutes);
+        }
+        if (d.total_break_minutes_today !== undefined) {
+          setTotalBreakMinutesToday(d.total_break_minutes_today);
+        }
+
+        if (d.active_break) {
+          setActiveBreak(d.active_break);
+          if (storageKey) {
+            localStorage.setItem(storageKey, JSON.stringify(d.active_break));
           }
-          if (res.data.data.active_break) {
-            setActiveBreak(res.data.data.active_break);
-            const serverTime = new Date(res.data.data.server_time).getTime();
-            const startTime = new Date(res.data.data.active_break.start_time).getTime();
-            const diff = Math.max(0, Math.floor((serverTime - startTime) / 1000));
-            setElapsedSeconds(diff);
+          const serverTime = d.server_time ? new Date(d.server_time.replace(' ', 'T')).getTime() : Date.now();
+          const startTime = new Date(d.active_break.start_time.replace(' ', 'T')).getTime();
+          const diff = Math.max(0, Math.floor((serverTime - startTime) / 1000));
+          setElapsedSeconds(diff);
+        } else {
+          setActiveBreak(null);
+          if (storageKey) {
+            localStorage.removeItem(storageKey);
           }
         }
-      } catch (error) {
-        console.error("Error fetching break data:", error);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchActiveBreak();
-  }, [currentUser]);
+    } catch (error) {
+      console.error("Error fetching break data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, storageKey]);
 
-  // Timer effect
+  useEffect(() => {
+    fetchActiveBreak();
+  }, [fetchActiveBreak]);
+
+  // Timer tick effect
   useEffect(() => {
     let interval;
     if (activeBreak) {
@@ -53,43 +96,74 @@ const BreakWidget = () => {
 
   const handleStartBreak = async () => {
     try {
-      const res = await axios.post((import.meta.env.VITE_API_BASE_URL) + 'api/breaks/start_break.php', {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await axios.post(`${baseUrl}api/breaks/start_break.php`, {
         user_id: currentUser.id,
         break_type: breakType
       });
-      if (res.data.status === 'success') {
-        setActiveBreak(res.data.data);
+
+      if (res.data.status === 'success' && res.data.data) {
+        const newBreak = res.data.data;
+        setActiveBreak(newBreak);
         setElapsedSeconds(0);
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(newBreak));
+        }
       } else {
-        alert(res.data.message);
+        // If an active break already exists on server, recover it into UI rather than getting stuck!
+        const msg = res.data.message || '';
+        if (msg.includes('already exists') || msg.includes('active break')) {
+          await fetchActiveBreak();
+        } else {
+          alert(msg);
+        }
       }
     } catch (error) {
-      console.error(error);
+      console.error("Failed to start break:", error);
+      // Auto-check server status in case break was registered
+      await fetchActiveBreak();
     }
   };
 
   const handleEndBreak = async () => {
+    setEnding(true);
     try {
-      const res = await axios.post((import.meta.env.VITE_API_BASE_URL) + 'api/breaks/end_break.php', {
-        user_id: currentUser.id
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await axios.post(`${baseUrl}api/breaks/end_break.php`, {
+        user_id: currentUser.id,
+        break_id: activeBreak?.id
       });
+
       if (res.data.status === 'success') {
         setActiveBreak(null);
         setElapsedSeconds(0);
-        // Refresh the total today
-        const refreshRes = await axios.post((import.meta.env.VITE_API_BASE_URL) + 'api/breaks/get_active_break.php', { user_id: currentUser.id });
-        if (refreshRes.data.status === 'success' && refreshRes.data.data.total_break_minutes_today !== undefined) {
-            setTotalBreakMinutesToday(refreshRes.data.data.total_break_minutes_today);
+        if (storageKey) {
+          localStorage.removeItem(storageKey);
         }
+        // Refresh today's completed total
+        await fetchActiveBreak();
       } else {
-        alert(res.data.message);
+        alert(res.data.message || 'Failed to end break');
       }
     } catch (error) {
-      console.error(error);
+      console.error("Failed to end break:", error);
+      // Fallback cleanup
+      if (storageKey) localStorage.removeItem(storageKey);
+      setActiveBreak(null);
+      setElapsedSeconds(0);
+      await fetchActiveBreak();
+    } finally {
+      setEnding(false);
     }
   };
 
-  if (loading) return null;
+  const handleForceReset = async () => {
+    if (window.confirm("Are you sure you want to force reset and close any active break?")) {
+      await handleEndBreak();
+    }
+  };
+
+  if (loading && !activeBreak) return null;
 
   const elapsedMinutes = Math.floor(elapsedSeconds / 60);
   const remainingSeconds = elapsedSeconds % 60;
@@ -116,8 +190,13 @@ const BreakWidget = () => {
 
         {activeBreak ? (
           <div className="w-full max-w-sm flex flex-col items-center">
+            {/* Break type indicator */}
+            <span className="px-3 py-1 mb-3 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider">
+              {activeBreak.break_type || 'Tiffin'} Break in progress
+            </span>
+
             {/* Live Timer Display */}
-            <div className="mb-8 relative">
+            <div className="mb-6 relative">
               {isOvertime && (
                 <div className="absolute -inset-4 bg-rose-500/20 rounded-full blur-xl animate-pulse"></div>
               )}
@@ -133,10 +212,18 @@ const BreakWidget = () => {
 
             <button 
               onClick={handleEndBreak}
-              className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-rose-600 to-rose-500 text-white font-black rounded-2xl shadow-[0_4px_14px_0_rgba(225,29,72,0.39)] hover:shadow-[0_6px_20px_rgba(225,29,72,0.23)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg uppercase tracking-wider group/btn"
+              disabled={ending}
+              className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-rose-600 to-rose-500 text-white font-black rounded-2xl shadow-[0_4px_14px_0_rgba(225,29,72,0.39)] hover:shadow-[0_6px_20px_rgba(225,29,72,0.23)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg uppercase tracking-wider group/btn cursor-pointer disabled:opacity-75"
             >
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/btn:animate-[shimmer_1.5s_infinite]"></div>
-              <FiSquare size={20} className="relative z-10" /> <span className="relative z-10">End Break</span>
+              <FiSquare size={20} className="relative z-10" /> <span className="relative z-10">{ending ? 'Ending Break...' : 'End Break'}</span>
+            </button>
+
+            <button
+              onClick={handleForceReset}
+              className="mt-3 text-[11px] text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 transition cursor-pointer underline flex items-center gap-1"
+            >
+              <FiRefreshCw size={11} /> Stuck or mismatch? Force Reset Break
             </button>
           </div>
         ) : (
@@ -147,7 +234,8 @@ const BreakWidget = () => {
                 onChange={e => setBreakType(e.target.value)}
                 className="w-full appearance-none bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer shadow-sm"
               >
-                <option value="Tiffin">🥪 Tiffin Break</option>
+                <option value="Tiffin">🥪 Tiffin Break (Standard Quota)</option>
+                <option value="Mango Break">🥭 Mango Break (Deducts from Overtime Bank)</option>
                 <option value="Prayer">🕌 Prayer Break</option>
                 <option value="Personal">☕ Personal Break</option>
                 <option value="Other">✨ Other</option>
@@ -159,7 +247,7 @@ const BreakWidget = () => {
             
             <button 
               onClick={handleStartBreak}
-              className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-black rounded-2xl shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg uppercase tracking-wider group/btn"
+              className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-black rounded-2xl shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg uppercase tracking-wider group/btn cursor-pointer"
             >
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/btn:animate-[shimmer_1.5s_infinite]"></div>
               <FiPlay size={20} className="relative z-10" /> <span className="relative z-10">Start Break</span>

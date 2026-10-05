@@ -74,6 +74,10 @@ export default function PayrollWallet() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
+  // Timeframe filter state: 'today' | 'this_week' | 'this_month' | 'all_time'
+  const [timeFilter, setTimeFilter] = useState('today');
+  const [liveSeconds, setLiveSeconds] = useState(0);
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -135,6 +139,28 @@ export default function PayrollWallet() {
     }, 60000);
     return () => clearInterval(interval);
   }, [currentUser]);
+
+  // Live ticking timer for ongoing shift
+  useEffect(() => {
+    const activeStart = data?.summary?.active_session?.session_start;
+    if (!activeStart) {
+      setLiveSeconds(0);
+      return;
+    }
+
+    const calcSeconds = () => {
+      const startTs = new Date(activeStart.replace(' ', 'T')).getTime();
+      const nowTs = Date.now();
+      return Math.max(0, Math.floor((nowTs - startTs) / 1000));
+    };
+
+    setLiveSeconds(calcSeconds());
+    const interval = setInterval(() => {
+      setLiveSeconds(calcSeconds());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [data?.summary?.active_session?.session_start]);
 
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
@@ -215,30 +241,108 @@ export default function PayrollWallet() {
   const progressPercent = summary.progress_percent || 0;
   const targetCompleted = summary.target_completed;
 
+
+  const activeHourlyRate = Number(scheme.hourly_rate || summary?.active_session?.hourly_rate || 0);
+  const liveEarned = (liveSeconds / 3600) * activeHourlyRate;
+  const liveHours = (liveSeconds / 3600).toFixed(2);
+  const liveMinutes = Math.floor(liveSeconds / 60);
+  const liveSecsRemainder = liveSeconds % 60;
+  const hasActiveShift = !!summary?.active_session;
+
+  // Period stats from backend
+  const periodStats = summary?.period_stats || {};
+
+  // Date filters for client calculations
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const dayOfWeek = now.getDay(); // 0 Sun, 6 Sat
+  const diffToSat = (dayOfWeek + 1) % 7;
+  const satDate = new Date(now);
+  satDate.setDate(now.getDate() - diffToSat);
+  const weekStartStr = `${satDate.getFullYear()}-${String(satDate.getMonth() + 1).padStart(2, '0')}-${String(satDate.getDate()).padStart(2, '0')}`;
+  const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+  // Period sums
+  let basePeriodEarned = 0;
+  let basePeriodMinutes = 0;
+  let basePeriodSessions = 0;
+
+  if (timeFilter === 'today') {
+    basePeriodEarned = Number(periodStats.today?.earned ?? 0);
+    basePeriodMinutes = Number(periodStats.today?.minutes ?? 0);
+    basePeriodSessions = Number(periodStats.today?.sessions ?? 0);
+  } else if (timeFilter === 'this_week') {
+    basePeriodEarned = Number(periodStats.this_week?.earned ?? 0);
+    basePeriodMinutes = Number(periodStats.this_week?.minutes ?? 0);
+    basePeriodSessions = Number(periodStats.this_week?.sessions ?? 0);
+  } else if (timeFilter === 'this_month') {
+    basePeriodEarned = Number(periodStats.this_month?.earned ?? 0);
+    basePeriodMinutes = Number(periodStats.this_month?.minutes ?? 0);
+    basePeriodSessions = Number(periodStats.this_month?.sessions ?? 0);
+  } else {
+    // all_time
+    basePeriodEarned = Number(summary.total_earned ?? periodStats.all_time?.earned ?? 0);
+    basePeriodMinutes = Number(summary.total_approved_minutes ?? periodStats.all_time?.minutes ?? 0);
+    basePeriodSessions = Number(summary.total_sessions ?? periodStats.all_time?.sessions ?? 0);
+  }
+
+  // Active shift contributes to whatever timeframe is selected
+  const currentPeriodEarned = basePeriodEarned + (hasActiveShift ? liveEarned : 0);
+  const currentPeriodMinutes = basePeriodMinutes + (hasActiveShift ? liveMinutes : 0);
+  const currentPeriodHours = (currentPeriodMinutes / 60).toFixed(1);
+  const currentPeriodSessions = basePeriodSessions + (hasActiveShift ? 1 : 0);
+
+  // Filter recent earnings table
+  const filteredEarnings = (data?.recent_earnings || []).filter((item) => {
+    if (timeFilter === 'all_time') return true;
+    const itemDate = item.work_date;
+    if (!itemDate) return true;
+    if (timeFilter === 'today') return itemDate === todayStr;
+    if (timeFilter === 'this_week') return itemDate >= weekStartStr;
+    if (timeFilter === 'this_month') return itemDate >= monthStartStr;
+    return true;
+  });
+
+  const filterTitles = {
+    today: "Today's Live Income (আজকের আয়)",
+    this_week: "This Week's Income (এই সপ্তাহের আয়)",
+    this_month: "This Month's Income (চলতি মাসের আয়)",
+    all_time: "All-Time Earnings (সবসময়ের মোট উপার্জন)",
+  };
+
+  const filterSubtitles = {
+    today: hasActiveShift
+      ? "🔴 লাইভ ডিউটি চালু রয়েছে (প্রতি সেকেন্ডে ইনকাম বাড়ছে)"
+      : "আজকের সম্পন্ন সকল শিফটের মোট উপার্জন",
+    this_week: `সপ্তাহের শুরু (${weekStartStr}) থেকে আজকের দিন পর্যন্ত মোট আয়`,
+    this_month: `চলতি মাসের ১ তারিখ (${monthStartStr}) থেকে আজকের দিন পর্যন্ত মোট আয়`,
+    all_time: "কাজের শুরুর দিন থেকে অদ্যাবধি সর্বমোট অর্জিত মোট উপার্জন",
+  };
+
   return (
     <div className="mx-auto space-y-8 animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border border-indigo-500/20 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-center gap-4 z-10">
           <StaffAvatar
             name={currentUser?.name}
             picture={currentUser?.profile_picture}
             size="xl"
-            className="border-2 border-indigo-400/40 shadow-lg shrink-0"
+            className="border-2 border-indigo-400/40 shadow-sm shrink-0"
           />
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-400/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wider">
               <FiShield className="w-3.5 h-3.5" />
               {isYearlyContract ? 'Yearly Company Contract' : 'Monthly Salary Scheme'}
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {currentUser?.name}'s Work Wallet
             </h1>
-            <p className="text-slate-300 text-xs md:text-sm max-w-xl">
+            <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm max-w-xl">
               {isYearlyContract
-                ? 'Your approved work time contributes to your ৳50,000 Company Target. Once complete, 100% of all additional earnings are yours to withdraw!'
+                ? 'Your approved work time contributes to your agreed contract target. Once complete, 100% of all additional earnings are yours to withdraw!'
                 : 'Your salary is computed dynamically from your approved work time (8 standard hours base divisor + overtime).'}
             </p>
           </div>
@@ -247,7 +351,7 @@ export default function PayrollWallet() {
         <div className="flex items-center gap-3 z-10">
           <button
             onClick={fetchPayroll}
-            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition border border-white/10 cursor-pointer"
+            className="p-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white rounded-2xl transition border border-slate-200 dark:border-white/10 cursor-pointer"
             title="Refresh"
           >
             <FiRefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
@@ -257,17 +361,17 @@ export default function PayrollWallet() {
               <button
                 onClick={openWithdrawModal}
                 disabled={!summary.can_withdraw}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg transition duration-200 ${summary.can_withdraw
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-md transition duration-200 ${summary.can_withdraw
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer'
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
                   }`}
               >
                 <FiArrowUpRight className="w-5 h-5" />
                 Request Withdrawal
               </button>
               {!summary.can_withdraw && summary.available_withdrawable > 0 && (
-                <span className="text-[10px] text-amber-400 font-medium">
-                  Min. ৳{Number(summary.min_withdrawal_limit || 5000).toLocaleString()} required
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                  Min. ৳{Number(summary.min_withdrawal_limit || 500).toLocaleString()} required
                 </span>
               )}
             </div>
@@ -287,7 +391,7 @@ export default function PayrollWallet() {
         <>
           {/* Active Ongoing Shift Live Earning Banner */}
           {summary.active_session && (
-            <div className="bg-gradient-to-r from-emerald-950/70 via-slate-900 to-teal-950/70 border border-emerald-500/40 p-5 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden animate-pulse-subtle">
+            <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 p-5 rounded-3xl shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden animate-pulse-subtle">
               <div className="flex items-center gap-4">
                 <div className="relative flex items-center justify-center">
                   <div className="w-4 h-4 bg-emerald-400 rounded-full animate-ping absolute" />
@@ -295,30 +399,30 @@ export default function PayrollWallet() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/30">
                       Live Shift In Progress
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       Checked in at {summary.active_session.check_in_time}
                     </span>
                   </div>
-                  <h4 className="text-base font-bold text-white mt-1">
-                    Currently Working: <span className="text-emerald-300">{summary.active_session.elapsed_hours} hrs</span> ({summary.active_session.elapsed_minutes} mins)
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    Currently Working: <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">{liveHours} hrs</span> ({liveMinutes} mins {liveSecsRemainder} secs)
                   </h4>
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 bg-slate-900/80 px-5 py-3 rounded-2xl border border-emerald-500/20">
+              <div className="flex items-center gap-6 bg-white dark:bg-slate-900/80 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 shadow-xs">
                 <div>
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Live Session Earnings</div>
-                  <div className="text-xl font-black text-emerald-400">
-                    + ৳ {Number(summary.active_session.live_earned || 0).toFixed(2)}
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Live Session Earnings</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    + ৳ {liveEarned.toFixed(2)}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Hourly Rate</div>
-                  <div className="text-sm font-bold text-slate-200">
-                    ৳ {Number(summary.active_session.hourly_rate || 0).toFixed(2)}/h
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Hourly Rate</div>
+                  <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    ৳ {activeHourlyRate.toFixed(2)}/h
                   </div>
                 </div>
               </div>
@@ -326,91 +430,188 @@ export default function PayrollWallet() {
           )}
 
           {/* Monthly Cycle & 15th Unlock Countdown Banner */}
-          <div className="bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/80 border border-indigo-500/30 p-5 md:p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
+          <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 p-5 md:p-6 rounded-3xl shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
             <div className="space-y-1 z-10">
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-wider border border-indigo-500/30">
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-wider border border-indigo-200 dark:border-indigo-500/30">
                   🗓️ Monthly 15th Payout Cycle
                 </span>
-                <span className="text-xs text-slate-400">
-                  Next Unlock: <strong className="text-white">{summary.next_payout_date || '15th'}</strong>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Next Unlock: <strong className="text-slate-900 dark:text-white">{summary.next_payout_date || '15th'}</strong>
                 </span>
               </div>
-              <h4 className="text-base md:text-lg font-bold text-white">
-                Monthly Earnings mature on the <span className="text-indigo-400 font-extrabold">15th of the following month</span>
+              <h4 className="text-base md:text-lg font-bold text-slate-900 dark:text-white">
+                Monthly Earnings mature on the <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">15th of the following month</span>
               </h4>
-              <p className="text-xs text-slate-300 max-w-2xl">
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
                 Earnings unlock on the 15th as integer cashouts. Fractional balance (+৳{Number(summary.fractional_rollover || 0).toFixed(2)}) rolls over seamlessly into next cycle!
               </p>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0 bg-slate-900/90 p-3.5 rounded-2xl border border-indigo-500/20 z-10">
+            <div className="flex items-center gap-4 shrink-0 bg-white dark:bg-slate-900/90 p-3.5 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 shadow-xs z-10">
               <div className="text-center">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Days Until Unlock</span>
-                <div className="text-2xl font-black text-indigo-400">
-                  {summary.days_until_next_payout ?? 0} <span className="text-xs text-slate-400 font-normal">days</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Days Until Unlock</span>
+                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  {summary.days_until_next_payout ?? 0} <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">days</span>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Timeframe Filter Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 md:p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-1">
+                সময়কাল ফিল্টার:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setTimeFilter('today')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${timeFilter === 'today'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                  {hasActiveShift && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
+                  <span>🔴 Today (আজকে)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTimeFilter('this_week')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${timeFilter === 'this_week'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                  <FiCalendar className="w-3.5 h-3.5" />
+                  <span>This Week (এই সপ্তাহ)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTimeFilter('this_month')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${timeFilter === 'this_month'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                  <FiLayers className="w-3.5 h-3.5" />
+                  <span>This Month (চলতি মাস)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTimeFilter('all_time')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${timeFilter === 'all_time'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                  <FiCheckCircle className="w-3.5 h-3.5" />
+                  <span>All Time (সবসময়)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400 pl-1 md:pl-0 md:pr-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block shrink-0" />
+              <span>{filterSubtitles[timeFilter]}</span>
+            </div>
+          </div>
+
           {/* Main 4 Status KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Card 1: Hourly Rate snapshot */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Hourly Rate</span>
-                <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl text-indigo-600 dark:text-indigo-400">
-                  <FiClock className="w-5 h-5" />
+            {/* Card 1: Selected Timeframe Earnings */}
+            <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 p-6 rounded-3xl border border-indigo-200/80 dark:border-indigo-500/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                      {timeFilter === 'today' ? 'Today Income' : timeFilter === 'this_week' ? 'Weekly Income' : timeFilter === 'this_month' ? 'Monthly Income' : 'All-Time Income'}
+                    </span>
+                    {hasActiveShift && timeFilter === 'today' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5 bg-indigo-100/70 dark:bg-indigo-950/70 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                    <FiTrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  ৳ {currentPeriodEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+
+                <div className="mt-2 text-xs text-indigo-700 dark:text-indigo-300 font-semibold flex items-center gap-1.5">
+                  <FiClock className="w-3.5 h-3.5" />
+                  <span>{currentPeriodHours} hrs ({currentPeriodMinutes}m) • {currentPeriodSessions} সেশন</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 dark:text-white">
-                ৳ {Number(scheme.hourly_rate || 0).toFixed(2)}
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">/ hr</span>
+
+              <div className="mt-4 pt-3 border-t border-indigo-100 dark:border-indigo-900/40 text-[11px] text-slate-500 dark:text-slate-400">
+                {timeFilter === 'today' && hasActiveShift ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    +৳{liveEarned.toFixed(2)} লাইভ ডিউটি থেকে যোগ হচ্ছে
+                  </span>
+                ) : (
+                  <span>রেট: ৳{activeHourlyRate.toFixed(2)}/ঘণ্টা</span>
+                )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Based on {scheme.working_days_per_month || 26} days × 8 standard base hours
-              </p>
             </div>
 
-            {/* Card 2: Actual Work Hours */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Total Approved Time</span>
-                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-blue-600 dark:text-blue-400">
-                  <FiTrendingUp className="w-5 h-5" />
+            {/* Card 2: Total Lifetime Earned (Gross, untouched by withdrawals) */}
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider">সর্বমোট উপার্জিত টাকা</span>
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-blue-600 dark:text-blue-400">
+                    <FiCheckCircle className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                  ৳ {(Number(summary.total_earned || 0) + (hasActiveShift ? liveEarned : 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  মোট {summary.total_approved_hours || 0} hrs ({summary.total_sessions || 0}টি সেশন)
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 dark:text-white">
-                {summary.total_approved_hours || 0}
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">hrs ({summary.total_approved_minutes || 0}m)</span>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                উত্তোলন করলেও এই মোট উপার্জনের রেকর্ড অপরিবর্তিত থাকে
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Across {summary.total_sessions || 0} approved work sessions
-              </p>
             </div>
 
-            {/* Card 3: Accruing Balance for Next Cycle */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider">Accruing (Next Cycle)</span>
-                <div className="p-2.5 bg-purple-50 dark:bg-purple-950/50 rounded-2xl text-purple-600 dark:text-purple-400">
-                  <FiCalendar className="w-5 h-5" />
+            {/* Card 3: Total Withdrawn */}
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider">উত্তোলিত টাকা</span>
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 rounded-2xl text-amber-600 dark:text-amber-400">
+                    <FiArrowUpRight className="w-5 h-5" />
+                  </div>
                 </div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                  ৳ {Number(summary.total_withdrawn || 0).toLocaleString()}
+                </div>
+                {Number(summary.pending_withdrawn || 0) > 0 && (
+                  <div className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    ⏳ +৳{Number(summary.pending_withdrawn).toLocaleString()} অনুমোদনের অপেক্ষায়
+                  </div>
+                )}
               </div>
-              <div className="text-3xl font-black text-purple-600 dark:text-purple-400">
-                ৳ {Number(summary.accruing_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                বিকাশ, নগদ বা অফিসের মাধ্যমে উত্তোলিত
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Unlocks on {summary.next_payout_date || '15th'}
-              </p>
             </div>
 
             {/* Card 4: Available for Immediate Withdrawal */}
             <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white p-6 rounded-3xl shadow-lg shadow-emerald-500/10 relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between text-emerald-100 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider">Available Cashout</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">উত্তোলনযোগ্য ব্যালেন্স</span>
                   <div className="p-2 bg-white/20 rounded-2xl text-white">
                     <FiDollarSign className="w-4 h-4" />
                   </div>
@@ -424,9 +625,9 @@ export default function PayrollWallet() {
                   </div>
                 )}
               </div>
-              <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-100/80">
-                <span>Min: ৳{Number(summary.min_withdrawal_limit || 5000).toLocaleString()}</span>
-                <span className="font-bold">{summary.can_withdraw ? '✅ Ready' : '⏳ Building'}</span>
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-100/90">
+                <span>Min: ৳{Number(summary.min_withdrawal_limit || 500).toLocaleString()}</span>
+                <span className="font-bold">{summary.can_withdraw ? '✅ Ready to Cashout' : '⏳ Building'}</span>
               </div>
             </div>
           </div>
@@ -489,7 +690,7 @@ export default function PayrollWallet() {
                   <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
                     ৳ {Number(summary.staff_surplus_earned || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">100% staff share after 50K milestone</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">100% staff share after target milestone</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
@@ -577,14 +778,18 @@ export default function PayrollWallet() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FiClock className="w-5 h-5 text-indigo-500" />
-                  <h3 className="font-bold text-slate-900 dark:text-white">Recent Work-Time Earnings</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    Work Sessions ({timeFilter === 'today' ? 'Today' : timeFilter === 'this_week' ? 'This Week' : timeFilter === 'this_month' ? 'This Month' : 'All Time'})
+                  </h3>
                 </div>
-                <span className="text-xs font-medium text-slate-400">Latest 50 entries</span>
+                <span className="text-xs font-medium text-slate-400">
+                  {filteredEarnings.length + (hasActiveShift ? 1 : 0)} সেশন প্রদর্শিত
+                </span>
               </div>
 
               <div className="overflow-x-auto max-h-[420px] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900">
+                  <thead className="text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
                     <tr>
                       <th className="pb-3 font-semibold">Date</th>
                       <th className="pb-3 font-semibold">Duration</th>
@@ -594,8 +799,33 @@ export default function PayrollWallet() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300 font-medium">
-                    {data.recent_earnings && data.recent_earnings.length > 0 ? (
-                      data.recent_earnings.map((item) => (
+                    {/* Live Ongoing Shift Row (if currently on shift) */}
+                    {hasActiveShift && (
+                      <tr className="bg-emerald-50/70 dark:bg-emerald-950/40 border-b-2 border-emerald-200 dark:border-emerald-800/60 font-medium">
+                        <td className="py-3 font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                          </span>
+                          {todayStr} (Live)
+                        </td>
+                        <td className="py-3 font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                          {liveHours}h ({liveMinutes}m {liveSecsRemainder}s)
+                        </td>
+                        <td className="py-3">৳ {activeHourlyRate.toFixed(2)}/h</td>
+                        <td className="py-3 font-black text-emerald-600 dark:text-emerald-400">
+                          + ৳ {liveEarned.toFixed(2)}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                            Active Shift
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+
+                    {filteredEarnings.length > 0 ? (
+                      filteredEarnings.map((item) => (
                         <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">{item.work_date}</td>
                           <td className="py-3">{item.approved_minutes} mins ({(item.approved_minutes / 60).toFixed(1)}h)</td>
@@ -610,13 +840,13 @@ export default function PayrollWallet() {
                           </td>
                         </tr>
                       ))
-                    ) : (
+                    ) : !hasActiveShift ? (
                       <tr>
                         <td colSpan="5" className="py-8 text-center text-slate-400 font-normal">
-                          No work sessions logged yet.
+                          নির্বাচিত সময়সীমার মধ্যে কোনো কাজের সেশন পাওয়া যায়নি।
                         </td>
                       </tr>
-                    )}
+                    ) : null}
                   </tbody>
                 </table>
               </div>

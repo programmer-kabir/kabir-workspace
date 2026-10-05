@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { FiClock, FiCheckCircle, FiLogOut, FiCalendar, FiAlertTriangle, FiPieChart, FiTrendingDown, FiAward, FiCoffee, FiAlertCircle } from 'react-icons/fi';
+import { FiClock, FiCheckCircle, FiLogOut, FiCalendar, FiAlertTriangle, FiPieChart, FiTrendingDown, FiAward, FiCoffee, FiAlertCircle, FiArrowRight } from 'react-icons/fi';
 import { soundFx } from '../utils/soundFx';
 import BreakWidget from '../components/BreakWidget';
 import AttendanceDisputeModal from '../components/AttendanceDisputeModal';
@@ -276,9 +277,19 @@ const Attendance = () => {
 
   return (
     <div className="pb-10 animate-in fade-in zoom-in-95 duration-300">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Attendance</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your daily check-ins and view attendance history.</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Attendance</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your daily check-ins and view attendance history.</p>
+        </div>
+        <Link
+          to="/mango-tree"
+          className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/20 hover:from-amber-500/20 hover:to-orange-500/30 text-amber-700 dark:text-amber-300 rounded-2xl border border-amber-300 dark:border-amber-700 font-bold text-xs transition duration-200 shadow-xs cursor-pointer group"
+        >
+          <span className="text-lg group-hover:scale-125 transition-transform">🥭</span>
+          <span>View Mango Break Tree</span>
+          <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
 
       {/* Tiffin Timer - visible to all staff */}
@@ -453,7 +464,7 @@ const Attendance = () => {
                   <div className="absolute top-0 right-0 p-2 opacity-10 text-emerald-600 dark:text-emerald-400">
                     <FiCheckCircle size={64} />
                   </div>
-                  <p className="text-emerald-800 dark:text-emerald-300 font-black uppercase tracking-wider text-sm mb-0.5">{currentUser?.id === 4 || 5 ? "Cash In" : "Checked In"}</p>
+                  <p className="text-emerald-800 dark:text-emerald-300 font-black uppercase tracking-wider text-sm mb-0.5">{[4, 5].includes(currentUser?.id) ? "Cash In" : "Check In"}</p>
                   <p className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">at {todayStatus.check_in}</p>
                 </div>
                 <button
@@ -468,7 +479,7 @@ const Attendance = () => {
                     </>
                   ) : (
                     <>
-                      <FiLogOut size={20} /> {currentUser?.id === 4 || 5 ? "Cash Out" : "Check Out"}
+                      <FiLogOut size={20} /> {[4, 5].includes(currentUser?.id) ? "Cash Out" : "Check Out"}
                     </>
                   )}
                 </button>

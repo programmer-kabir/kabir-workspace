@@ -36,6 +36,11 @@ const formatTime12 = (datetimeStr) => {
 
 const getBreakBadge = (type) => {
   switch (type?.toLowerCase()) {
+    case 'mango break':
+    case 'mango overtime':
+      return { label: 'Mango OT Break', icon: '🥭', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' };
+    case 'mango full day':
+      return { label: 'Mango Full Day', icon: '🥭', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' };
     case 'tiffin':
       return { label: 'Tiffin Break', icon: '🥪', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30' };
     case 'emergency':
@@ -270,6 +275,8 @@ const Breaks = () => {
               className="px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
             >
               <option value="all">All Break Types</option>
+              <option value="Mango Break">🥭 Mango OT Break</option>
+              <option value="Mango Full Day">🥭 Mango Full Day</option>
               <option value="Tiffin">🥪 Tiffin</option>
               <option value="Personal">🚶 Personal</option>
               <option value="Emergency">🚨 Emergency</option>

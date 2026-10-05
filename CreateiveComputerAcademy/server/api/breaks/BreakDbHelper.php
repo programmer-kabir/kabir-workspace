@@ -48,6 +48,23 @@ class BreakDbHelper {
             // Allow start_time to be NULL for initial pending state
             $db->exec("ALTER TABLE user_breaks MODIFY COLUMN start_time DATETIME NULL");
 
+            // 3. Ensure mango_break_claims table exists
+            $db->exec("CREATE TABLE IF NOT EXISTS mango_break_claims (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                mango_index INT NOT NULL DEFAULT 1,
+                hours_claimed DECIMAL(5,2) NOT NULL DEFAULT 8.00,
+                claim_date DATE NOT NULL,
+                leave_date DATE NOT NULL,
+                reason VARCHAR(255) NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'Approved',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX(user_id),
+                INDEX(claim_date),
+                INDEX(leave_date),
+                INDEX(status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
         } catch (Throwable $t) {
             error_log("BreakDbHelper error: " . $t->getMessage());
         }

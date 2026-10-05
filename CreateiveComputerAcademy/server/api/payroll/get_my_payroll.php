@@ -46,7 +46,7 @@ try {
         SELECT id, work_date, session_start, session_end, approved_minutes, applied_rate, earned_amount, is_surplus, source_type, reference_id, notes, created_at
         FROM staff_work_earnings
         WHERE scheme_id = :scheme_id
-        ORDER BY id DESC LIMIT 50
+        ORDER BY id DESC LIMIT 200
     ");
     $stmtEarn->execute([':scheme_id' => $schemeId]);
     $recentEarnings = $stmtEarn->fetchAll(PDO::FETCH_ASSOC);

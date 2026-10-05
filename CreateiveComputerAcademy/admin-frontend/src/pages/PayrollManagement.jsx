@@ -9,7 +9,8 @@ import {
   FiEdit3, FiRefreshCw, FiCalendar, FiArrowUpRight, FiCheck,
   FiX, FiList, FiFileText, FiShield, FiSend, FiUserPlus, FiUser,
   FiBriefcase, FiChevronDown, FiUserCheck, FiEye, FiActivity,
-  FiLayers, FiInfo, FiChevronRight, FiGrid, FiSliders, FiPrinter
+  FiLayers, FiInfo, FiChevronRight, FiGrid, FiSliders, FiPrinter,
+  FiSmartphone, FiCreditCard, FiAward, FiCopy
 } from 'react-icons/fi';
 import { FaCoins, FaGraduationCap } from 'react-icons/fa6';
 
@@ -86,6 +87,9 @@ export default function PayrollManagement() {
   const [filterType, setFilterType] = useState('ALL'); // 'ALL' | 'YEARLY_CONTRACT' | 'MONTHLY'
   const [roleFilter, setRoleFilter] = useState('ALL'); // 'ALL' | 'staff' | 'student' | 'reviewer'
   const [withdrawalFilter, setWithdrawalFilter] = useState('pending'); // 'all' | 'pending' | 'paid' | 'rejected'
+  const [withdrawalSearch, setWithdrawalSearch] = useState('');
+  const [methodFilter, setMethodFilter] = useState('ALL');
+  const [copiedId, setCopiedId] = useState(null);
 
   // Modal 1: Scheme Configuration
   const [isSchemeModalOpen, setIsSchemeModalOpen] = useState(false);
@@ -426,28 +430,106 @@ export default function PayrollManagement() {
     return matchesSearch && matchesType && matchesRole;
   });
 
+  // Filtered withdrawals
+  const filteredWithdrawals = withdrawals.filter(w => {
+    const matchesSearch = !withdrawalSearch || 
+      (w.staff_name && w.staff_name.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
+      (w.staff_email && w.staff_email.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
+      (w.account_details && w.account_details.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
+      (w.transaction_reference && w.transaction_reference.toLowerCase().includes(withdrawalSearch.toLowerCase()));
+    const matchesMethod = methodFilter === 'ALL' || (w.payment_method && w.payment_method.toLowerCase() === methodFilter.toLowerCase());
+    return matchesSearch && matchesMethod;
+  });
+
+  // Metrics & KPIs calculation across all schemes
+  const total50kContracts = staffSchemes.filter(s => s.scheme_type === 'YEARLY_CONTRACT').length;
+  const totalMonthlySchemes = staffSchemes.filter(s => s.scheme_type === 'MONTHLY').length;
+  const totalCommittedPool = staffSchemes.reduce((sum, s) => {
+    return sum + (s.scheme_type === 'YEARLY_CONTRACT' ? parseFloat(s.contract_amount || 50000) : (parseFloat(s.salary_amount || 0) * 12));
+  }, 0);
+  const totalApprovedHours = staffSchemes.reduce((sum, s) => {
+    return sum + parseFloat(s.wallet_summary?.total_approved_hours || 0);
+  }, 0);
+  const totalCumulativeEarned = staffSchemes.reduce((sum, s) => {
+    return sum + parseFloat(s.wallet_summary?.total_earned || 0);
+  }, 0);
+  const totalAvailablePayout = staffSchemes.reduce((sum, s) => {
+    return sum + parseFloat(s.wallet_summary?.available_withdrawable || 0);
+  }, 0);
+
   const pendingWithdrawalsCount = withdrawals.filter(w => w.status === 'pending').length;
+  const pendingWithdrawalsAmount = withdrawals
+    .filter(w => w.status === 'pending')
+    .reduce((sum, w) => sum + parseFloat(w.amount || 0), 0);
+  const paidWithdrawalsCount = withdrawals.filter(w => w.status === 'paid' || w.status === 'approved').length;
+  const paidWithdrawalsAmount = withdrawals
+    .filter(w => w.status === 'paid' || w.status === 'approved')
+    .reduce((sum, w) => sum + parseFloat(w.amount || 0), 0);
+  const rejectedWithdrawalsCount = withdrawals.filter(w => w.status === 'rejected').length;
+
+  const handleCopyText = (text, id) => {
+    if (!text || text === '—') return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast.success('Copied to clipboard!');
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
+
+  const getMethodBadge = (method) => {
+    const m = (method || '').toLowerCase();
+    if (m.includes('bkash')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/30 text-pink-700 dark:text-pink-400 font-bold text-[11px] whitespace-nowrap">
+          <FiSmartphone className="w-3.5 h-3.5 text-pink-600" /> bKash
+        </span>
+      );
+    }
+    if (m.includes('nagad')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 font-bold text-[11px] whitespace-nowrap">
+          <FiSmartphone className="w-3.5 h-3.5 text-amber-600" /> Nagad
+        </span>
+      );
+    }
+    if (m.includes('rocket')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-400 font-bold text-[11px] whitespace-nowrap">
+          <FiSmartphone className="w-3.5 h-3.5 text-purple-600" /> Rocket
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/30 text-sky-700 dark:text-sky-400 font-bold text-[11px] whitespace-nowrap">
+        <FiCreditCard className="w-3.5 h-3.5 text-sky-600" /> Bank Transfer
+      </span>
+    );
+  };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-700/50">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
+    <div className="space-y-8 animate-fadeIn pb-12">
+      {/* Header - Adapts cleanly to both White & Dark modes */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-black uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
             <FiShield className="w-3.5 h-3.5" />
-            Staff Payroll & 50K Contract Engine
+            Staff Payroll & Salary Engine
           </div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Staff Pay Schemes & 50K Wallet</h1>
-          <p className="text-slate-300 text-sm max-w-xl mt-1">
-            Assign 50K Yearly Contracts or Monthly Schemes to <b>Staff Members</b> with work-time earning calculation, target milestone tracking, and surplus payouts.
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            Staff Payroll & Pay Schemes
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs md:text-sm leading-relaxed">
+            Manage staff compensation schemes, calculate automated work-time earnings from verified attendance, track milestone targets, and disburse withdrawal payouts.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap lg:justify-end">
           <button
             onClick={() => handleSyncAttendance(null)}
             disabled={syncingAttendance}
-            className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer disabled:opacity-50"
             title="Sync all past & current attendance hours into ledger"
           >
             <FiRefreshCw className={`w-4 h-4 ${syncingAttendance ? 'animate-spin' : ''}`} />
@@ -455,53 +537,156 @@ export default function PayrollManagement() {
           </button>
           <button
             onClick={handleOpenNewUserScheme}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-md shadow-emerald-600/20 transition-all duration-200 cursor-pointer hover:scale-[1.02] active:scale-95"
           >
             <FiUserPlus className="w-4 h-4" />
             + Assign Scheme to Staff
           </button>
           <button
             onClick={() => setIsAdjustModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-md transition cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all duration-200 cursor-pointer hover:scale-[1.02] active:scale-95"
           >
             <FiPlus className="w-4 h-4" />
             Manual Adjustment
           </button>
           <button
             onClick={() => { fetchSchemes(); fetchWithdrawals(); }}
-            className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition border border-white/10"
-            title="Refresh"
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl transition border border-slate-200 dark:border-slate-700 cursor-pointer"
+            title="Refresh All"
           >
             <FiRefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      {/* 4 KPI Cards - Harmonious in Light & Dark Mode */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {/* Card 1: Total Payroll Budget */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-amber-200/80 dark:border-amber-500/30 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <FaCoins className="w-3.5 h-3.5 text-amber-500" /> Total Payroll Budget
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                ৳ {totalCommittedPool.toLocaleString()}
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center font-bold">
+              <FiAward className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span><b>{staffSchemes.length}</b> Active Schemes</span>
+            <span className="text-amber-600 dark:text-amber-400 font-bold">{totalMonthlySchemes} Monthly{total50kContracts > 0 ? ` · ${total50kContracts} Yearly` : ''}</span>
+          </div>
+        </div>
+
+        {/* Card 2: Approved Work Hours */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-sky-200/80 dark:border-sky-500/30 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-sky-700 dark:text-sky-400 flex items-center gap-1.5">
+                <FiClock className="w-3.5 h-3.5 text-sky-500" /> Logged Work-Time
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {totalApprovedHours.toFixed(1)} <span className="text-sm font-normal text-slate-500 dark:text-slate-400">hrs</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-sky-50 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-500/30 flex items-center justify-center font-bold">
+              <FiActivity className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Verified Hours</span>
+            <span className="text-sky-600 dark:text-sky-400 font-bold">Biometric & Tasks</span>
+          </div>
+        </div>
+
+        {/* Card 3: Cumulative Earned */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-emerald-200/80 dark:border-emerald-500/30 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <FiTrendingUp className="w-3.5 h-3.5 text-emerald-500" /> Total Staff Earned
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                ৳ {Math.round(totalCumulativeEarned).toLocaleString()}
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center font-bold">
+              <FiDollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Withdrawable Now:</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-black">৳ {Math.round(totalAvailablePayout).toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Card 4: Disbursement Queue */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-rose-200/80 dark:border-rose-500/30 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                <FiArrowUpRight className="w-3.5 h-3.5 text-rose-500" /> Payout Requests
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                {pendingWithdrawalsCount}
+                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 uppercase">
+                  Pending
+                </span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 flex items-center justify-center font-bold">
+              <FiCreditCard className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Pending Amount:</span>
+            <span className="text-rose-600 dark:text-rose-400 font-black">৳ {Math.round(pendingWithdrawalsAmount).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Segmented Navigation Tabs - Clean in Light & Dark Mode */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('schemes')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition ${activeTab === 'schemes'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
+            activeTab === 'schemes'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
+          }`}
         >
           <FiUsers className="w-4 h-4" />
-          Assigned Schemes & Live Progress ({staffSchemes.length})
+          <span>Assigned Schemes & Live Progress</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+            activeTab === 'schemes' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          }`}>
+            {staffSchemes.length}
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('withdrawals')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition relative ${activeTab === 'withdrawals'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 relative cursor-pointer ${
+            activeTab === 'withdrawals'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
+          }`}
         >
           <FiDollarSign className="w-4 h-4" />
-          Withdrawal Requests
-          {pendingWithdrawalsCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+          <span>Withdrawal Requests</span>
+          {pendingWithdrawalsCount > 0 ? (
+            <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-xs font-black animate-pulse shadow-md shadow-rose-500/50">
               {pendingWithdrawalsCount}
+            </span>
+          ) : (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+              activeTab === 'withdrawals' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}>
+              {withdrawals.length}
             </span>
           )}
         </button>
@@ -511,26 +696,26 @@ export default function PayrollManagement() {
       {activeTab === 'schemes' && (
         <div className="space-y-6">
           {/* Filters & Search */}
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-            <div className="relative w-full lg:w-80">
-              <FiSearch className="absolute left-3.5 top-3.5 text-slate-400 w-4 h-4" />
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 md:p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div className="relative w-full lg:w-96">
+              <FiSearch className="absolute left-4 top-3.5 text-slate-400 w-4 h-4" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, email, student, staff..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                placeholder="Search staff by name, email, department..."
+                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 transition"
               />
             </div>
 
-            <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap">
+            <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap justify-between lg:justify-end">
               {/* Role filter */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-bold uppercase">Role:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Role:</span>
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="ALL">All Roles</option>
                   <option value="staff">Staff Only</option>
@@ -540,15 +725,15 @@ export default function PayrollManagement() {
               </div>
 
               {/* Scheme Type Filter */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-bold uppercase">Scheme:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Scheme:</span>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="ALL">All Types</option>
-                  <option value="YEARLY_CONTRACT">Yearly Contract (50K Target)</option>
+                  <option value="ALL">All Schemes</option>
+                  <option value="YEARLY_CONTRACT">Yearly Milestone Contract</option>
                   <option value="MONTHLY">Monthly Regular Salary</option>
                 </select>
               </div>
@@ -568,9 +753,20 @@ export default function PayrollManagement() {
                 <div
                   key={user.user_id}
                   onClick={() => handleOpenDetailsModal(user.user_id)}
-                  className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5 hover:border-indigo-500 hover:shadow-xl hover:scale-[1.01] transition-all duration-200 group flex flex-col justify-between cursor-pointer relative overflow-hidden"
+                  className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300 group flex flex-col justify-between cursor-pointer relative overflow-hidden ${
+                    isYearly 
+                      ? 'border-amber-300/80 dark:border-amber-500/30 hover:border-amber-400' 
+                      : 'border-slate-200/80 dark:border-slate-800 hover:border-indigo-500'
+                  }`}
                 >
-                  <div className="space-y-4">
+                  {/* Subtle Top Accent Ribbon */}
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+                    isYearly 
+                      ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400' 
+                      : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-400'
+                  }`} />
+
+                  <div className="space-y-4 pt-1">
                     {/* Header: Profile & Roles */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
@@ -580,16 +776,16 @@ export default function PayrollManagement() {
                           size="lg"
                         />
                         <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition flex items-center gap-1.5">
+                          <h4 className="font-black text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition flex items-center gap-1.5 text-base">
                             {user.name}
                             {isStudent && (
-                              <span title="Student Profile" className="text-emerald-500"><FaGraduationCap size={14} /></span>
+                              <span title="Student Profile" className="text-emerald-500"><FaGraduationCap size={15} /></span>
                             )}
                           </h4>
                           <p className="text-xs text-slate-400 truncate">{user.email}</p>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
                             {user.roles?.split(',').map((r, i) => (
-                              <span key={i} className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[9px] font-bold uppercase">
+                              <span key={i} className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wide">
                                 {r.trim()}
                               </span>
                             ))}
@@ -598,53 +794,59 @@ export default function PayrollManagement() {
                       </div>
 
                       {/* Scheme Badge */}
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${isYearly
-                        ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300'
-                        : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
-                        }`}>
-                        {isYearly ? '50K Contract' : 'Monthly'}
+                      <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs ${
+                        isYearly
+                          ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40'
+                          : 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/40'
+                      }`}>
+                        {isYearly ? '🏆 Yearly Contract' : '💼 Monthly Salary'}
                       </span>
                     </div>
 
                     {/* Rate & Hours KPI */}
-                    <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl">
+                    <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Hourly Rate</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hourly Rate</span>
                         <div className="text-base font-black text-slate-900 dark:text-white">
                           ৳ {Number(user.hourly_rate || 0).toFixed(2)}
                           <span className="text-[10px] text-slate-400 font-normal">/h</span>
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total Hours</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Hours</span>
                         <div className="text-base font-black text-slate-900 dark:text-white">
                           {summary.total_approved_hours || 0}
-                          <span className="text-[10px] text-slate-400 font-normal">h</span>
+                          <span className="text-[10px] text-slate-400 font-normal"> hrs</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Contract Progress / Monthly Earned */}
                     {isYearly ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-amber-200/80 dark:border-amber-500/20">
                         <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="text-slate-600 dark:text-slate-300">
-                            Company Target (৳{Number(user.contract_amount || 50000).toLocaleString()})
+                          <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <FaCoins className="w-3.5 h-3.5 text-amber-500" />
+                            Target: ৳{Number(user.contract_amount || 50000).toLocaleString()}
                           </span>
-                          <span className={targetCompleted ? 'text-emerald-500 font-black' : 'text-indigo-600 dark:text-indigo-400'}>
+                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
+                            targetCompleted 
+                              ? 'bg-emerald-600 text-white' 
+                              : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20'
+                          }`}>
                             {progress.toFixed(1)}% {targetCompleted && '✅'}
                           </span>
                         </div>
-                        <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
                           <div
                             className={`h-full rounded-full transition-all duration-700 ${targetCompleted
                               ? 'bg-emerald-500'
-                              : 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                              : 'bg-gradient-to-r from-amber-500 via-orange-400 to-emerald-500'
                               }`}
                             style={{ width: `${Math.min(100, Math.max(3, progress))}%` }}
                           />
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold pt-0.5">
                           <span>Earned: ৳{Number(summary.total_earned || 0).toLocaleString()}</span>
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
                             Surplus: ৳{Number(summary.staff_surplus_earned || 0).toLocaleString()}
@@ -652,49 +854,49 @@ export default function PayrollManagement() {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-1 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/40 dark:border-emerald-800/30 rounded-2xl">
-                        <div className="flex justify-between text-xs">
+                      <div className="space-y-1.5 p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl">
+                        <div className="flex justify-between text-xs font-medium">
                           <span className="text-slate-500">Monthly Salary:</span>
                           <span className="font-bold text-slate-800 dark:text-slate-200">৳ {Number(user.salary_amount || 0).toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
+                        <div className="flex justify-between text-xs font-medium">
                           <span className="text-slate-500">Total Work Earned:</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">৳ {Number(summary.total_earned || 0).toLocaleString()}</span>
+                          <span className="font-black text-emerald-600 dark:text-emerald-400">৳ {Number(summary.total_earned || 0).toLocaleString()}</span>
                         </div>
                       </div>
                     )}
 
                     {/* Available for Cashout */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span className="text-xs font-bold text-slate-500 uppercase">Available Payout:</span>
-                      <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Available Cashout:</span>
+                      <span className="text-base font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
                         ৳ {Number(summary.available_withdrawable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="pt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800/80 mt-4">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSyncAttendance(user.user_id);
                       }}
                       disabled={syncingAttendance}
-                      className="p-2.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 hover:bg-teal-100 rounded-xl transition cursor-pointer border border-teal-200/50 dark:border-teal-800/50 shrink-0"
+                      className="p-2.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-xl transition cursor-pointer border border-teal-200/50 dark:border-teal-800/50 shrink-0"
                       title="Sync this staff's attendance hours"
                     >
-                      <FiRefreshCw className={`w-3.5 h-3.5 ${syncingAttendance ? 'animate-spin' : ''}`} />
+                      <FiRefreshCw className={`w-4 h-4 ${syncingAttendance ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenDetailsModal(user.user_id);
                       }}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition cursor-pointer border border-indigo-200/40 dark:border-indigo-800/40"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-black transition cursor-pointer border border-indigo-200/40 dark:border-indigo-800/40 shadow-xs"
                     >
-                      <FiEye className="w-3.5 h-3.5" />
-                      View Details
+                      <FiEye className="w-4 h-4" />
+                      View Full Ledger
                     </button>
                     <button
                       onClick={(e) => {
@@ -704,7 +906,7 @@ export default function PayrollManagement() {
                       className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
                       title="Configure Scheme"
                     >
-                      <FiEdit3 className="w-3.5 h-3.5" />
+                      <FiEdit3 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -717,99 +919,229 @@ export default function PayrollManagement() {
       {/* Tab 2: Withdrawal Requests */}
       {activeTab === 'withdrawals' && (
         <div className="space-y-6">
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            {['pending', 'paid', 'rejected', 'all'].map((st) => (
-              <button
-                key={st}
-                onClick={() => setWithdrawalFilter(st)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${withdrawalFilter === st
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+          {/* Control Bar: Status Filter + Search + Method */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 md:p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            {/* Status Pills */}
+            <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
+              {[
+                { key: 'pending', label: 'Pending', count: pendingWithdrawalsCount },
+                { key: 'paid', label: 'Paid / Disbursed', count: paidWithdrawalsCount },
+                { key: 'rejected', label: 'Rejected', count: rejectedWithdrawalsCount },
+                { key: 'all', label: 'All Requests', count: withdrawals.length }
+              ].map((st) => (
+                <button
+                  key={st.key}
+                  onClick={() => setWithdrawalFilter(st.key)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    withdrawalFilter === st.key
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-102'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/80'
                   }`}
+                >
+                  <span>{st.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    withdrawalFilter === st.key
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {st.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Search & Method Filter */}
+            <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap">
+              <div className="relative w-full sm:w-64">
+                <FiSearch className="absolute left-3.5 top-3 text-slate-400 w-3.5 h-3.5" />
+                <input
+                  type="text"
+                  value={withdrawalSearch}
+                  onChange={(e) => setWithdrawalSearch(e.target.value)}
+                  placeholder="Search staff, account, TRX..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <select
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-2 focus:ring-indigo-500"
               >
-                {st}
-              </button>
-            ))}
+                <option value="ALL">All Payment Methods</option>
+                <option value="bkash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+                <option value="bank">Bank Transfer</option>
+              </select>
+            </div>
           </div>
 
-          {/* Table */}
+          {/* Table or Premium Empty State */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Requested Amount</th>
-                    <th className="p-4">Type</th>
-                    <th className="p-4">Payment Method</th>
-                    <th className="p-4">Account / Phone</th>
-                    <th className="p-4">Trx ID / Ref</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                  {withdrawals.length > 0 ? (
-                    withdrawals.map((w) => (
-                      <tr key={w.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                        <td className="p-4">
-                          <div className="font-bold text-slate-900 dark:text-white">{w.staff_name}</div>
-                          <div className="text-[11px] text-slate-400">{w.staff_email}</div>
+            {filteredWithdrawals.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase font-black tracking-wider border-b border-slate-200 dark:border-slate-800 text-[11px]">
+                    <tr>
+                      <th className="p-4 md:p-5">Staff Member</th>
+                      <th className="p-4 md:p-5">Requested Amount</th>
+                      <th className="p-4 md:p-5">Scheme Type</th>
+                      <th className="p-4 md:p-5">Payment Method</th>
+                      <th className="p-4 md:p-5">Account / Phone</th>
+                      <th className="p-4 md:p-5">TRX / Reference</th>
+                      <th className="p-4 md:p-5">Status</th>
+                      <th className="p-4 md:p-5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-medium">
+                    {filteredWithdrawals.map((w) => (
+                      <tr key={w.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                        <td className="p-4 md:p-5">
+                          <div className="flex items-center gap-3">
+                            <StaffAvatar name={w.staff_name} size="sm" />
+                            <div>
+                              <div className="font-black text-slate-900 dark:text-white text-sm">{w.staff_name}</div>
+                              <div className="text-[11px] text-slate-400">{w.staff_email}</div>
+                            </div>
+                          </div>
                         </td>
-                        <td className="p-4 font-black text-sm text-emerald-600 dark:text-emerald-400">
-                          ৳ {Number(w.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">
-                            {w.withdrawal_type === 'CONTRACT_SURPLUS' ? '50K Surplus' : 'Monthly Salary'}
+                        <td className="p-4 md:p-5">
+                          <span className="inline-flex items-center gap-1 font-black text-base text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                            ৳ {Number(w.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </span>
                         </td>
-                        <td className="p-4 capitalize font-bold text-indigo-600 dark:text-indigo-400">
-                          {w.payment_method}
+                        <td className="p-4 md:p-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                            w.withdrawal_type === 'CONTRACT_SURPLUS'
+                              ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
+                              : 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30'
+                          }`}>
+                            {w.withdrawal_type === 'CONTRACT_SURPLUS' ? '🏆 Milestone Surplus' : '💼 Monthly Salary'}
+                          </span>
                         </td>
-                        <td className="p-4 font-mono text-xs">{w.account_details || '—'}</td>
-                        <td className="p-4 font-mono text-xs text-slate-500">{w.transaction_reference || '—'}</td>
-                        <td className="p-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${w.status === 'paid' || w.status === 'approved'
-                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                            : w.status === 'rejected'
-                              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
-                              : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                            }`}>
+                        <td className="p-4 md:p-5">
+                          {getMethodBadge(w.payment_method)}
+                        </td>
+                        <td className="p-4 md:p-5">
+                          <div className="inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-800 dark:text-slate-200">
+                            <span>{w.account_details || '—'}</span>
+                            {w.account_details && (
+                              <button
+                                onClick={() => handleCopyText(w.account_details, `acc-${w.id}`)}
+                                className="text-slate-400 hover:text-indigo-500 transition cursor-pointer"
+                                title="Copy account number"
+                              >
+                                {copiedId === `acc-${w.id}` ? <FiCheck className="w-3 h-3 text-emerald-500" /> : <FiCopy className="w-3 h-3" />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 md:p-5">
+                          {w.transaction_reference ? (
+                            <div className="inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-800 dark:text-slate-200">
+                              <span>{w.transaction_reference}</span>
+                              <button
+                                onClick={() => handleCopyText(w.transaction_reference, `trx-${w.id}`)}
+                                className="text-slate-400 hover:text-indigo-500 transition cursor-pointer"
+                                title="Copy transaction reference"
+                              >
+                                {copiedId === `trx-${w.id}` ? <FiCheck className="w-3 h-3 text-emerald-500" /> : <FiCopy className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">Unprocessed</span>
+                          )}
+                        </td>
+                        <td className="p-4 md:p-5">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            w.status === 'paid' || w.status === 'approved'
+                              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                              : w.status === 'rejected'
+                                ? 'bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400'
+                                : 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 animate-pulse'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              w.status === 'paid' || w.status === 'approved'
+                                ? 'bg-emerald-500'
+                                : w.status === 'rejected'
+                                  ? 'bg-rose-500'
+                                  : 'bg-amber-500'
+                            }`} />
                             {w.status}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
-                          {w.status === 'pending' && (
+                        <td className="p-4 md:p-5 text-right">
+                          {w.status === 'pending' ? (
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => handleOpenProcess(w, 'paid')}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1"
+                                className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
                               >
-                                <FiCheck className="w-3.5 h-3.5" /> Disburse & Pay
+                                <FiCheck className="w-4 h-4" /> Disburse & Pay
                               </button>
                               <button
                                 onClick={() => handleOpenProcess(w, 'rejected')}
-                                className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950 dark:text-rose-300 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                                className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition border border-rose-500/30 cursor-pointer flex items-center gap-1 hover:scale-105 active:scale-95"
                               >
                                 <FiX className="w-3.5 h-3.5" /> Reject
                               </button>
                             </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs font-medium">Completed</span>
                           )}
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="p-8 text-center text-slate-400 font-normal">
-                        No {withdrawalFilter} withdrawal requests found.
-                      </td>
-                    </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Ultra-Sleek Executive Empty State */
+              <div className="p-12 md:p-16 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500/20 via-teal-500/10 to-indigo-500/20 border border-emerald-400/30 text-emerald-400 flex items-center justify-center shadow-xl">
+                    <FiCheckCircle className="w-10 h-10" />
+                  </div>
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 max-w-md">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {withdrawalFilter === 'pending'
+                      ? 'All Caught Up! Zero Pending Withdrawals'
+                      : `No ${withdrawalFilter.toUpperCase()} Requests Found`}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {withdrawalFilter === 'pending'
+                      ? 'Every staff disbursement request in this queue has been processed and settled. When staff reach their minimum payout threshold and submit a cashout, it will appear here in real-time.'
+                      : `No payout records matching the '${withdrawalFilter}' status or your current search filters.`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2 flex-wrap justify-center">
+                  {withdrawalFilter === 'pending' && paidWithdrawalsCount > 0 && (
+                    <button
+                      onClick={() => setWithdrawalFilter('paid')}
+                      className="px-4 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition border border-indigo-200 dark:border-indigo-800 cursor-pointer"
+                    >
+                      View Paid Disbursements ({paidWithdrawalsCount})
+                    </button>
                   )}
-                </tbody>
-              </table>
-            </div>
+                  <button
+                    onClick={() => handleSyncAttendance(null)}
+                    disabled={syncingAttendance}
+                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <FiRefreshCw className={`w-3.5 h-3.5 ${syncingAttendance ? 'animate-spin' : ''}`} />
+                    Sync Attendance Hours
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

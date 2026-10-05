@@ -22,6 +22,7 @@ const BlogFeed = React.lazy(() => import('./pages/BlogFeed'));
 const BlogDetails = React.lazy(() => import('./pages/BlogDetails'));
 const ContentStudio = React.lazy(() => import('./pages/ContentStudio'));
 const PayrollWallet = React.lazy(() => import('./pages/PayrollWallet'));
+const MangoBreakTree = React.lazy(() => import('./pages/MangoBreakTree'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -78,6 +79,22 @@ function App() {
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <Breaks />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/mango-tree" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <MangoBreakTree />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/break-tree" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <MangoBreakTree />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

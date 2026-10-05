@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 const BREAK_OPTIONS = [
+  { type: 'Mango Break', label: '🥭 Mango Break (Overtime)', icon: '🥭', desc: 'Deducted directly from your Mango Overtime Bank' },
   { type: 'Personal', label: '🚶 Personal Work', icon: '🚶', desc: 'Urgent personal errand or task' },
   { type: 'Emergency', label: '🚨 Emergency Break', icon: '🚨', desc: 'Unplanned critical emergency' },
   { type: 'Prayer', label: '🕌 Prayer Break', icon: '🕌', desc: 'Prayer / Namaz time' },

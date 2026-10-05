@@ -444,8 +444,8 @@ class PayrollHelper {
             $salaryAmount = floatval($scheme['salary_amount']);
             $availableWithdrawableTotal = max(0.0, $maturedEarned - $totalWithdrawn - $pendingWithdrawn);
 
-            // Minimum withdrawal threshold is base salary amount
-            $minWithdrawalLimit = ($salaryAmount > 0) ? $salaryAmount : 5000.0;
+            // Minimum withdrawal threshold is flexible ৳500 (or full available if less than salary)
+            $minWithdrawalLimit = ($salaryAmount > 0) ? min(500.0, $salaryAmount) : 500.0;
 
             $summary['monthly_salary'] = $salaryAmount;
             $summary['matured_earned'] = $maturedEarned;
@@ -473,6 +473,66 @@ class PayrollHelper {
         if ($canWithdraw && $availableWithdrawableInteger >= $minWithdrawalLimit && $minWithdrawalLimit > 0) {
             self::checkAndSendMaturityNotification($pdo, $userId, $availableWithdrawableInteger, $fractionalRollover);
         }
+
+        // Period statistics (Today, This Week, This Month, All Time)
+        $dayOfWeek = intval(date('w')); // 0 (Sun) to 6 (Sat)
+        $diffDays = ($dayOfWeek + 1) % 7; // In BD Saturday starts week: Sat=0, Sun=1, ..., Fri=6
+        $weekStart = date('Y-m-d', strtotime("-{$diffDays} days"));
+        $monthStart = date('Y-m-01');
+
+        $stmtPeriod = $pdo->prepare("
+            SELECT 
+                COALESCE(SUM(CASE WHEN work_date = :today THEN earned_amount ELSE 0 END), 0) AS today_earned,
+                COALESCE(SUM(CASE WHEN work_date = :today THEN approved_minutes ELSE 0 END), 0) AS today_minutes,
+                COALESCE(COUNT(CASE WHEN work_date = :today THEN id ELSE NULL END), 0) AS today_sessions,
+
+                COALESCE(SUM(CASE WHEN work_date >= :week_start THEN earned_amount ELSE 0 END), 0) AS week_earned,
+                COALESCE(SUM(CASE WHEN work_date >= :week_start THEN approved_minutes ELSE 0 END), 0) AS week_minutes,
+                COALESCE(COUNT(CASE WHEN work_date >= :week_start THEN id ELSE NULL END), 0) AS week_sessions,
+
+                COALESCE(SUM(CASE WHEN work_date >= :month_start THEN earned_amount ELSE 0 END), 0) AS month_earned,
+                COALESCE(SUM(CASE WHEN work_date >= :month_start THEN approved_minutes ELSE 0 END), 0) AS month_minutes,
+                COALESCE(COUNT(CASE WHEN work_date >= :month_start THEN id ELSE NULL END), 0) AS month_sessions
+            FROM staff_work_earnings
+            WHERE scheme_id = :scheme_id
+        ");
+        $stmtPeriod->execute([
+            ':scheme_id' => $schemeId,
+            ':today' => $today,
+            ':week_start' => $weekStart,
+            ':month_start' => $monthStart
+        ]);
+        $periodData = $stmtPeriod->fetch(PDO::FETCH_ASSOC);
+
+        $summary['period_stats'] = [
+            'today' => [
+                'earned' => round(floatval($periodData['today_earned']), 2),
+                'minutes' => intval($periodData['today_minutes']),
+                'hours' => round(intval($periodData['today_minutes']) / 60, 2),
+                'sessions' => intval($periodData['today_sessions']),
+                'date' => $today,
+            ],
+            'this_week' => [
+                'earned' => round(floatval($periodData['week_earned']), 2),
+                'minutes' => intval($periodData['week_minutes']),
+                'hours' => round(intval($periodData['week_minutes']) / 60, 2),
+                'sessions' => intval($periodData['week_sessions']),
+                'start_date' => $weekStart,
+            ],
+            'this_month' => [
+                'earned' => round(floatval($periodData['month_earned']), 2),
+                'minutes' => intval($periodData['month_minutes']),
+                'hours' => round(intval($periodData['month_minutes']) / 60, 2),
+                'sessions' => intval($periodData['month_sessions']),
+                'start_date' => $monthStart,
+            ],
+            'all_time' => [
+                'earned' => round($totalEarned, 2),
+                'minutes' => $totalMinutes,
+                'hours' => $totalHours,
+                'sessions' => intval($earnData['total_sessions']),
+            ]
+        ];
 
         return $summary;
     }

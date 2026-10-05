@@ -6,11 +6,12 @@ date_default_timezone_set('Asia/Dhaka');
 $database = new Database();
 $db = $database->getConnection();
 
-$data = json_decode(file_get_contents("php://input"));
+$raw_input = file_get_contents("php://input");
+$data = !empty($raw_input) ? json_decode($raw_input) : null;
 
-$start_date = isset($data->start_date) ? $data->start_date : date('Y-m-01');
-$end_date = isset($data->end_date) ? $data->end_date : date('Y-m-d');
-$department_id = isset($data->department_id) && $data->department_id !== 'all' ? intval($data->department_id) : null;
+$start_date = isset($data->start_date) ? $data->start_date : (isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01'));
+$end_date = isset($data->end_date) ? $data->end_date : (isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d'));
+$department_id = isset($data->department_id) && $data->department_id !== 'all' ? intval($data->department_id) : (isset($_GET['department_id']) && $_GET['department_id'] !== 'all' ? intval($_GET['department_id']) : null);
 
 try {
     // 1. Fetch all employees
@@ -26,10 +27,14 @@ try {
             u.email,
             u.phone,
             u.profile_picture,
-            d.name AS department_name
+            d.name AS department_name,
+            COALESCE(uc.balance, 0) AS credit_balance,
+            COALESCE(uc.total_earned, 0) AS credits_earned,
+            COALESCE(uc.total_penalties, 0) AS credits_penalties
         FROM employees e
         JOIN users u ON e.user_id = u.id
         LEFT JOIN departments d ON e.department_id = d.id
+        LEFT JOIN user_credits uc ON e.user_id = uc.user_id
         WHERE u.status = 'active' OR u.status IS NULL
     ";
 
@@ -161,6 +166,31 @@ try {
         $working_days_count = 1;
     }
 
+    // 4c. Fetch credit transactions in period (Earned credits minus Penalties/deductions)
+    $c_start_dt = $start_date . ' 00:00:00';
+    $c_end_dt = $end_date . ' 23:59:59';
+    $period_credits = [];
+    try {
+        $cred_stmt = $db->prepare("
+            SELECT 
+                user_id,
+                SUM(amount) as period_net,
+                SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as period_earned,
+                SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as period_penalties
+            FROM credit_transactions
+            WHERE created_at >= :c_start_dt AND created_at <= :c_end_dt
+            GROUP BY user_id
+        ");
+        $cred_stmt->execute([':c_start_dt' => $c_start_dt, ':c_end_dt' => $c_end_dt]);
+        while ($cr = $cred_stmt->fetch(PDO::FETCH_ASSOC)) {
+            $period_credits[$cr['user_id']] = [
+                'net' => intval($cr['period_net']),
+                'earned' => intval($cr['period_earned']),
+                'penalties' => intval($cr['period_penalties'])
+            ];
+        }
+    } catch (Throwable $e) {}
+
     // 5. Build Aggregated Staff Data
     $staff_data = [];
     $dept_aggregates = [];
@@ -197,6 +227,11 @@ try {
         $absent_days = 0;
         $leave_days = 0;
         $worked_secs = 0;
+        $is_currently_working = false;
+        $today_check_in_time = null;
+
+        $today_str = date('Y-m-d');
+        $now_ts = time();
 
         foreach ($user_att as $a) {
             $st = strtolower($a['status'] ?? '');
@@ -214,15 +249,30 @@ try {
             }
 
             // Calculate worked hours/secs from check_in and check_out
-            if (!empty($a['check_in']) && !empty($a['check_out'])) {
-                $in_t = strtotime($a['check_in']);
-                $out_t = strtotime($a['check_out']);
-                if ($out_t > $in_t) {
-                    $worked_secs += ($out_t - $in_t);
+            if (!empty($a['check_in'])) {
+                $in_full = (strlen($a['check_in']) <= 8) ? ($a['date'] . ' ' . $a['check_in']) : $a['check_in'];
+                $in_t = strtotime($in_full);
+
+                if (!empty($a['check_out'])) {
+                    $out_full = (strlen($a['check_out']) <= 8) ? ($a['date'] . ' ' . $a['check_out']) : $a['check_out'];
+                    $out_t = strtotime($out_full);
+                    if ($out_t > $in_t) {
+                        $worked_secs += ($out_t - $in_t);
+                    }
+                } else {
+                    // Not checked out yet
+                    if ($a['date'] === $today_str) {
+                        // CURRENTLY WORKING TODAY: actual elapsed seconds from check-in until NOW!
+                        if ($now_ts > $in_t) {
+                            $worked_secs += ($now_ts - $in_t);
+                        }
+                        $is_currently_working = true;
+                        $today_check_in_time = $a['check_in'];
+                    } else {
+                        // Past days where user forgot to check out: use standard shift hours
+                        $worked_secs += ($emp['shift_hours'] ? intval($emp['shift_hours']) : 8) * 3600;
+                    }
                 }
-            } elseif (!empty($a['check_in']) && empty($a['check_out'])) {
-                // Default shift hours if still checked in or not logged out
-                $worked_secs += ($emp['shift_hours'] ? intval($emp['shift_hours']) : 8) * 3600;
             }
         }
 
@@ -329,7 +379,8 @@ try {
         // Formatted strings
         $h = Math_floor_div($worked_secs, 3600);
         $m = Math_floor_div($worked_secs % 3600, 60);
-        $total_office_worked_str = "{$h}h {$m}m";
+        $s = $worked_secs % 60;
+        $total_office_worked_str = $is_currently_working ? "{$h}h {$m}m {$s}s" : "{$h}h {$m}m";
 
         $th = Math_floor_div($task_worked_secs, 3600);
         $tm = Math_floor_div($task_worked_secs % 3600, 60);
@@ -395,6 +446,8 @@ try {
             'leave_days'            => $leave_days,
             'total_worked_seconds'  => $worked_secs,
             'total_worked_formatted'=> $total_office_worked_str,
+            'is_currently_working'  => $is_currently_working,
+            'today_check_in'        => $today_check_in_time,
             'avg_daily_hours'       => $avg_daily_hours,
             'attendance_rate'       => $attendance_rate,
             // Tasks
@@ -413,6 +466,13 @@ try {
             // Efficiency & Tier
             'efficiency_score'      => $score,
             'performance_tier'      => $tier,
+            // Credits & Balance
+            'credit_balance'        => intval($emp['credit_balance'] ?? 0),
+            'credits_earned'        => intval($emp['credits_earned'] ?? 0),
+            'credits_penalties'     => intval($emp['credits_penalties'] ?? 0),
+            'period_credits'        => intval($period_credits[$emp['user_id']]['net'] ?? 0),
+            'period_earned'         => intval($period_credits[$emp['user_id']]['earned'] ?? 0),
+            'period_penalties'      => intval($period_credits[$emp['user_id']]['penalties'] ?? 0),
             // Detailed Logs for Drilldown
             'recent_tasks'          => $recent_tasks,
             'recent_attendance'     => $recent_attendance
