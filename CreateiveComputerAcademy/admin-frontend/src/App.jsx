@@ -33,6 +33,7 @@ import ContentStudioAdmin from './pages/ContentStudioAdmin';
 import PayrollManagement from './pages/PayrollManagement';
 import CommunityWall from './pages/CommunityWall';
 import LiveScreenMonitor from './pages/LiveScreenMonitor';
+import ServerCodeEditor from './pages/ServerCodeEditor';
 import NotFound from './pages/NotFound';
 
 // Mock empty pages to avoid errors
@@ -193,6 +194,12 @@ function App() {
           <Route path="/app-releases" element={
             <ProtectedRoute>
               <AdminLayout><AppReleases /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/server-editor" element={
+            <ProtectedRoute>
+              <AdminLayout><ServerCodeEditor /></AdminLayout>
             </ProtectedRoute>
           } />
 

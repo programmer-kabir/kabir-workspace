@@ -36,7 +36,9 @@ export function useDeveloperConsole() {
                     ? 'crons'
                     : location.pathname.includes('/database')
                         ? 'database'
-                        : 'overview';
+                        : location.pathname.includes('/editor')
+                            ? 'editor'
+                            : 'overview';
 
     const [telemetry, setTelemetry] = useState(null);
     const [loading, setLoading] = useState(true);

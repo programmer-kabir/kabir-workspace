@@ -52,6 +52,7 @@ import SystemLogsTab from '../components/DeveloperConsole/SystemLogsTab';
 import ApiTesterTab from '../components/DeveloperConsole/ApiTesterTab';
 import CronsTab from '../components/DeveloperConsole/CronsTab';
 import DatabaseTab from '../components/DeveloperConsole/DatabaseTab';
+import ServerCodeEditorTab from '../components/DeveloperConsole/ServerCodeEditorTab';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -62,6 +63,7 @@ const TABS = [
   { id: 'api-tester', label: 'API & Socket Tester', path: '/developer/api-tester', icon: FiRadio },
   { id: 'crons', label: 'Crons & Automation', path: '/developer/crons', icon: FiClock },
   { id: 'database', label: 'Database & Cache', path: '/developer/database', icon: FiDatabase },
+  { id: 'editor', label: 'Server Code Editor', path: '/developer/editor', icon: FiCode },
 ];
 
 
@@ -276,6 +278,11 @@ export default function DeveloperConsole() {
           handleRunJanitorClean={handleRunJanitorClean}
           telemetry={telemetry}
         />
+      )}
+
+      {/* === TAB 6: SERVER FILE MANAGER & CODE EDITOR === */}
+      {activeTab === 'editor' && (
+        <ServerCodeEditorTab />
       )}
 
       {/* ── Beautiful Clear Log Confirmation Modal ── */}

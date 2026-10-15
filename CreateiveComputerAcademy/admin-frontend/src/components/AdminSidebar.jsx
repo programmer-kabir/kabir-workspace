@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud, FiCode } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -110,6 +110,7 @@ const AdminSidebar = ({ isOpen = true }) => {
     { name: 'Database Manager', path: '/database', icon: <FiDatabase size={18} /> },
     { name: 'Cloud Vault & Storage', path: '/storage-settings', icon: <FiHardDrive size={18} className="text-cyan-500" /> },
     { name: 'App Version Control', path: '/app-releases', icon: <FiDownloadCloud size={18} className="text-indigo-400" /> },
+    { name: 'Server Code Editor', path: '/server-editor', icon: <FiCode size={18} className="text-emerald-400" /> },
     { name: 'Settings', path: '/settings', icon: <FiSettings size={18} /> },
   ];
 

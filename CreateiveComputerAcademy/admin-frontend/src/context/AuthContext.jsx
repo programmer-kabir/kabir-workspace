@@ -21,9 +21,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await axios.post(`${API_BASE}api/auth/verify.php`, { token });
         if (res.data.status === 'success') {
-          // Extra guard: must have admin role
-          const isAdmin = res.data.user.roles && res.data.user.roles.includes('admin');
-          if (isAdmin) {
+          // Extra guard: must have admin or developer role
+          const isAuthorized = res.data.user.roles && res.data.user.roles.some(r => ['admin', 'developer'].includes(r));
+          if (isAuthorized) {
             setCurrentUser(res.data.user);
           } else {
             localStorage.removeItem(TOKEN_KEY);
@@ -48,9 +48,9 @@ export const AuthProvider = ({ children }) => {
     const res = await axios.post(`${API_BASE}api/auth/login.php`, { email, password });
     if (res.data.status === 'success') {
       const user = res.data.user;
-      const isAdmin = user.roles && user.roles.includes('admin');
-      if (!isAdmin) {
-        throw new Error('Access denied. You do not have admin privileges.');
+      const isAuthorized = user.roles && user.roles.some(r => ['admin', 'developer'].includes(r));
+      if (!isAuthorized) {
+        throw new Error('Access denied. Administrator or Developer privileges required.');
       }
       localStorage.setItem(TOKEN_KEY, res.data.token);
       localStorage.setItem(USER_KEY, JSON.stringify(user));

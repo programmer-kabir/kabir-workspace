@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
   FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo,
-  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase
+  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -94,6 +94,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'API & Sockets', transKey: 'dev_api_tester', path: '/developer/api-tester', icon: <FiRadio size={14} /> },
     { name: 'Crons & Auto', transKey: 'dev_crons', path: '/developer/crons', icon: <FiClock size={14} /> },
     { name: 'Database & Cache', transKey: 'dev_database', path: '/developer/database', icon: <FiDatabase size={14} /> },
+    { name: 'Server Code Editor', transKey: 'dev_editor', path: '/developer/editor', icon: <FiCode size={14} /> },
   ];
 
   const menuItems = [

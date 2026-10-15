@@ -30,6 +30,7 @@ const dictionary = {
     dev_api_tester: "API & Sockets",
     dev_crons: "Crons & Auto",
     dev_database: "Database",
+    dev_editor: "Server Code Editor",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -56,6 +57,7 @@ const dictionary = {
     dev_api_tester: "API ও সকেট",
     dev_crons: "ক্রন ও অটোমেশন",
     dev_database: "ডাটাবেজ",
+    dev_editor: "সার্ভার কোড এডিটর",
   }
 };
 
