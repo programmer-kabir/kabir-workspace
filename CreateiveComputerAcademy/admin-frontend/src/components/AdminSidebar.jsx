@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -80,11 +80,13 @@ const AdminSidebar = ({ isOpen = true }) => {
       ]
     },
     { name: 'Task Oversight', path: '/tasks', icon: <FiCheckSquare size={18} /> },
+    { name: 'Live Screen Monitor', path: '/screen-monitor', icon: <FiMonitor size={18} className="text-cyan-400" /> },
     {
       name: 'Work & Attendance',
       icon: <FiClock size={18} />,
       badge: pendingDisputes,
       subItems: [
+        { name: 'Live Screen Monitor 🛰️', path: '/screen-monitor' },
         { name: 'Daily Roster', path: '/attendance' },
         { name: 'Leave Approvals', path: '/leave' },
         { name: 'Attendance Disputes', path: '/attendance-disputes', badge: pendingDisputes }
@@ -101,10 +103,13 @@ const AdminSidebar = ({ isOpen = true }) => {
         { name: 'Reviewer Reports', path: '/reviewer-report' }
       ]
     },
+    { name: 'Community Wall', path: '/community', icon: <FiShare2 size={18} className="text-violet-500" /> },
     { name: 'Academy Feed / Blog', path: '/blogs', icon: <FiBookOpen size={18} className="text-indigo-500" /> },
     { name: 'Message', path: '/messages', icon: <FiMessageSquare size={18} /> },
     { name: 'Brand Kit & Assets', path: '/brand-resources', icon: <HiSparkles size={18} className="text-amber-400" /> },
     { name: 'Database Manager', path: '/database', icon: <FiDatabase size={18} /> },
+    { name: 'Cloud Vault & Storage', path: '/storage-settings', icon: <FiHardDrive size={18} className="text-cyan-500" /> },
+    { name: 'App Version Control', path: '/app-releases', icon: <FiDownloadCloud size={18} className="text-indigo-400" /> },
     { name: 'Settings', path: '/settings', icon: <FiSettings size={18} /> },
   ];
 

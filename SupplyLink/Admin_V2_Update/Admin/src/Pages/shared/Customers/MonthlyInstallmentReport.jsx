@@ -43,12 +43,16 @@ const MonthlyInstallmentReport = () => {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
 
-  /* 🧠 users map (user_id → name) */
+  /* 🧠 users map strictly by user_id (prevent collision with table auto-increment id) */
   const usersMap = useMemo(() => {
     return (
       users?.reduce((acc, u) => {
-        if (u.user_id !== undefined && u.user_id !== null) {
-          acc[Number(u.user_id)] = u.name;
+        const uid =
+          u.user_id !== undefined && u.user_id !== null
+            ? Number(u.user_id)
+            : Number(u.id);
+        if (uid) {
+          acc[uid] = u.name;
         }
         return acc;
       }, {}) || {}
@@ -83,7 +87,7 @@ const filteredData = useMemo(() => {
       const card = cardsById[Number(p.card_id || 0)];
 
       // Daily card বাদ
-      if ((card?.remarks || "").trim().toLowerCase() === "daily") {
+      if ((card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily") {
         return false;
       }
 
@@ -98,7 +102,10 @@ const filteredData = useMemo(() => {
       );
 
       const collected_by = p.collected_by || p.signature || card?.reference_user_id;
-      const collectedByName = usersMap[collected_by] || "Unknown Staff";
+      const collectedByName =
+        usersMap[Number(collected_by)] ||
+        usersMap[Number(card?.reference_user_id)] ||
+        "Unknown Staff";
 
       const dueDate = p.due_date || "";
       const monthName = getMonthNameFromYYMMDD(dueDate);

@@ -1010,6 +1010,13 @@ export default function PayrollManagement() {
                           <span className="inline-flex items-center gap-1 font-black text-base text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
                             ৳ {Number(w.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </span>
+                          {Number(w.overtime_hours_cashed || 0) > 0 && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold" title={`${w.overtime_hours_cashed}h Overtime Cashed Out`}>
+                                🥭 +{w.overtime_hours_cashed}h OT Cashed
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="p-4 md:p-5">
                           <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${

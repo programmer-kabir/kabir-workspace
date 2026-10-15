@@ -42,6 +42,34 @@ function apiError($message, $debug = null, $code = 400) {
   exit;
 }
 
+$isLocal = (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') && (
+    ($_SERVER['HTTP_HOST'] ?? '') === 'localhost' || 
+    strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+    strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false
+);
+
+if ($isLocal) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+} else {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '.supplylinkbd.com',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'None',
+    ]);
+}
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 try {
   $input = json_decode(file_get_contents("php://input"), true);
   if (!is_array($input)) apiError("Invalid JSON input");
@@ -51,7 +79,11 @@ try {
   $payment_method = $input['payment_method'] ?? null;
   $receipt_number = $input['receipt_number'] ?? null;
   $status         = $input['status'] ?? null;
-  $collected_by   = (int)($input['signature'] ?? $input['collected_by'] ?? 0);
+  $sessionUser    = (int)($_SESSION['user']['user_id'] ?? $_SESSION['user']['id'] ?? 0);
+  $collected_by   = (int)($input['collected_by'] ?? $input['signature'] ?? 0);
+  if ($collected_by <= 0 && $sessionUser > 0) {
+    $collected_by = $sessionUser;
+  }
 
   if ($id <= 0) apiError("Invalid installment ID");
 
@@ -79,8 +111,8 @@ try {
   // 2. Fetch updater staff name if available
   $editorName = "Staff/Admin";
   if ($collected_by > 0) {
-    $userStmt = $mysqli->prepare("SELECT name FROM users WHERE id = ? OR user_id = ? LIMIT 1");
-    $userStmt->bind_param("ii", $collected_by, $collected_by);
+    $userStmt = $mysqli->prepare("SELECT name FROM users WHERE user_id = ? OR id = ? ORDER BY (user_id = ?) DESC LIMIT 1");
+    $userStmt->bind_param("iii", $collected_by, $collected_by, $collected_by);
     $userStmt->execute();
     $uRes = $userStmt->get_result()->fetch_assoc();
     if ($uRes && !empty($uRes['name'])) {
@@ -143,7 +175,8 @@ try {
       payment_method = ?,
       receipt_number = ?,
       status = ?,
-      collected_by = ?
+      collected_by = ?,
+      signature = ?
     WHERE id = ?
   ";
 
@@ -151,11 +184,12 @@ try {
   if (!$stmt) apiError("Prepare failed: " . $mysqli->error);
 
   $stmt->bind_param(
-    "ssssii",
+    "ssssiii",
     $paid_date,
     $payment_method,
     $receipt_number,
     $status,
+    $collected_by,
     $collected_by,
     $id
   );

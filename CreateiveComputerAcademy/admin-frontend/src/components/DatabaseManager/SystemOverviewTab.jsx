@@ -534,10 +534,13 @@ export default function SystemOverviewTab({
     const apiBase = import.meta.env.VITE_API_BASE_URL || '';
 
     try {
+      const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token') || '';
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
       if (deleteModal.type === 'file') {
         const fileKey = deleteModal.target.key;
         try {
-          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { key: fileKey });
+          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { key: fileKey }, { headers: authHeaders });
         } catch (err) {
           console.warn('Backend delete error (offline/fallback mode active):', err);
         }
@@ -548,7 +551,7 @@ export default function SystemOverviewTab({
       } else if (deleteModal.type === 'folder') {
         const folderPrefix = deleteModal.target.prefix;
         try {
-          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { prefix: folderPrefix });
+          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { prefix: folderPrefix }, { headers: authHeaders });
         } catch (err) {
           console.warn('Backend delete error (offline/fallback mode active):', err);
         }
@@ -558,7 +561,7 @@ export default function SystemOverviewTab({
       } else if (deleteModal.type === 'bulk') {
         const keysToDelete = [...selectedItems];
         try {
-          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { keys: keysToDelete });
+          await axios.post(`${apiBase}api/admin/database/delete_r2_object.php`, { keys: keysToDelete }, { headers: authHeaders });
         } catch (err) {
           console.warn('Backend bulk delete error (offline/fallback mode active):', err);
         }

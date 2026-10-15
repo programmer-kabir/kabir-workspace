@@ -64,7 +64,7 @@ class AttendanceSecurityHelper {
                 'office_latitude' => ['23.81033100', 'Office GPS Latitude coordinate'],
                 'office_longitude' => ['90.41252100', 'Office GPS Longitude coordinate'],
                 'office_geofence_radius_meters' => ['50', 'Allowed radius in meters for office attendance'],
-                'attendance_security_mode' => ['audit_flag', 'Security mode: audit_flag (allow & flag) or strict_block (block if outside)'],
+                'attendance_security_mode' => ['strict_ip', 'Security mode: strict_ip (require office IP), strict_ip_and_gps (require IP + GPS), strict_block, or audit_flag'],
                 'office_allowed_ips' => ['127.0.0.1,::1,182.48.76.182', 'Comma-separated list of allowed office public IPs or subnets']
             ];
 
@@ -234,7 +234,7 @@ class AttendanceSecurityHelper {
             'office_latitude' => 23.810331,
             'office_longitude' => 90.412521,
             'office_geofence_radius_meters' => 50,
-            'attendance_security_mode' => 'audit_flag',
+            'attendance_security_mode' => 'strict_ip',
             'office_allowed_ips' => ['127.0.0.1', '::1', '182.48.76.182']
         ];
 
@@ -341,13 +341,33 @@ class AttendanceSecurityHelper {
         // Check if strict blocking is enabled
         $isBlocked = false;
         $blockMessage = '';
-        if ($settings['attendance_security_mode'] === 'strict_block') {
-            if (!$isWithinGeofence && $distanceMeters !== null) {
+        $punchWord = ($punchType === 'check_out') ? 'চেক-আউট (Check-out)' : 'হাজিরা (Check-in)';
+
+        // 1. Strict IP Only Mode: IP must strictly match office whitelist
+        if ($settings['attendance_security_mode'] === 'strict_ip') {
+            if (!$isIpMatched) {
                 $isBlocked = true;
-                $blockMessage = "Check-in blocked. You are " . round($distanceMeters) . "m away from the office building (Allowed: {$allowedRadius}m).";
-            } elseif (!$isIpMatched && ($lat === null || $lng === null)) {
+                $blockMessage = "{$punchWord} সম্পন্ন করা সম্ভব হয়নি! আপনাকে অবশ্যই ক্রিয়েটিভ কম্পিউটার একাডেমির অফিস ওয়াইফাই/আইপি নেটওয়ার্কে সংযুক্ত থাকতে হবে। আপনার বর্তমান আইপি ({$clientIp}) অনুমোদনপ্রাপ্ত নয়।";
+            }
+        }
+        // 2. Strict IP + GPS Geofence Mode: IP must match AND GPS must be within office
+        elseif ($settings['attendance_security_mode'] === 'strict_ip_and_gps') {
+            if (!$isIpMatched) {
                 $isBlocked = true;
-                $blockMessage = "Check-in blocked. You must be connected to Office Wi-Fi or enable GPS location.";
+                $blockMessage = "{$punchWord} সম্পন্ন করা সম্ভব হয়নি! আপনাকে অবশ্যই অফিসের অনুমোদিত ওয়াইফাই নেটওয়ার্কে যুক্ত থাকতে হবে। (IP: {$clientIp})";
+            } elseif (!$isWithinGeofence && $distanceMeters !== null) {
+                $isBlocked = true;
+                $blockMessage = "{$punchWord} ব্লক করা হয়েছে! আপনি অফিস ভবনের নির্দিষ্ট সীমানার (" . round($distanceMeters) . " মি দূরে) বাইরে রয়েছেন।";
+            }
+        }
+        // 3. Strict Geofence or IP Mode
+        elseif ($settings['attendance_security_mode'] === 'strict_block') {
+            if (!$isIpMatched) {
+                $isBlocked = true;
+                $blockMessage = "{$punchWord} সম্পন্ন করা সম্ভব হয়নি! আপনাকে অবশ্যই অফিসের অনুমোদিত ওয়াইফাই নেটওয়ার্কে যুক্ত থাকতে হবে। (আপনার বর্তমান IP: {$clientIp})";
+            } elseif (!$isWithinGeofence && $distanceMeters !== null) {
+                $isBlocked = true;
+                $blockMessage = "{$punchWord} ব্লক করা হয়েছে! আপনি অফিস সীমানার (" . round($distanceMeters) . " মি দূরে) বাইরে অবস্থান করছেন।";
             }
         }
 

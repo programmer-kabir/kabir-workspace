@@ -312,9 +312,10 @@ const Reports = () => {
                               record.status === 'Late' ? 'bg-amber-100 text-amber-700' : 
                               record.status === 'Weekend' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' :
                               record.status === 'Holiday' ? 'bg-purple-100 text-purple-700' :
+                              record.status === 'Leave' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-400' :
                               'bg-rose-100 text-rose-700'
                             }`}>
-                              {record.status}
+                              {record.leave_title ? `Leave (${record.leave_title})` : record.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center font-medium text-slate-400">{record.expected_hours || '-'}</td>

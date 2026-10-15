@@ -24,11 +24,15 @@ import { Toaster } from 'sonner';
 
 import LeaveManagement from './pages/LeaveManagement';
 import DatabaseManager from './pages/DatabaseManager';
+import StorageSettings from './pages/StorageSettings';
+import AppReleases from './pages/AppReleases';
 import BrandResources from './pages/BrandResources';
 import AcademyBlog from './pages/AcademyBlog';
 import BlogDetails from './pages/BlogDetails';
 import ContentStudioAdmin from './pages/ContentStudioAdmin';
 import PayrollManagement from './pages/PayrollManagement';
+import CommunityWall from './pages/CommunityWall';
+import LiveScreenMonitor from './pages/LiveScreenMonitor';
 import NotFound from './pages/NotFound';
 
 // Mock empty pages to avoid errors
@@ -51,6 +55,12 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <AdminLayout><Dashboard /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/screen-monitor" element={
+            <ProtectedRoute>
+              <AdminLayout><LiveScreenMonitor /></AdminLayout>
             </ProtectedRoute>
           } />
 
@@ -174,6 +184,18 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/storage-settings" element={
+            <ProtectedRoute>
+              <AdminLayout><StorageSettings /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/app-releases" element={
+            <ProtectedRoute>
+              <AdminLayout><AppReleases /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/brand-resources" element={
             <ProtectedRoute>
               <AdminLayout><BrandResources /></AdminLayout>
@@ -189,6 +211,12 @@ function App() {
           <Route path="/blogs/:id" element={
             <ProtectedRoute>
               <AdminLayout><BlogDetails /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/community" element={
+            <ProtectedRoute>
+              <AdminLayout><CommunityWall /></AdminLayout>
             </ProtectedRoute>
           } />
 

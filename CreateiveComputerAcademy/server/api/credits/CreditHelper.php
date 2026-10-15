@@ -574,6 +574,7 @@ class CreditHelper {
                 'total_penalties' => 0,
                 'rank' => 1,
                 'updated_at' => date('Y-m-d H:i:s'),
+                'policy_settings' => [],
                 'transactions' => []
             ];
         }
@@ -605,6 +606,9 @@ class CreditHelper {
         ");
         $stfStmt->execute([':uid' => $userId]);
         $staffBalance = intval($stfStmt->fetchColumn() ?: 0);
+
+        // 3. Calculate Total Combined Balance (Unified truth from ledger)
+        $totalCombined = intval($reviewerBalance + $staffBalance);
 
         // Stats calculation based on portal
         if ($portal === 'reviewer') {
@@ -690,14 +694,29 @@ class CreditHelper {
             $portalFilter = "";
         }
 
-        // Fetch user ranking amongst all staff/members
+        // Auto-heal & synchronize user_credits cached record with ledger balance
+        try {
+            $syncStmt = $db->prepare("
+                UPDATE user_credits 
+                SET balance = :balance, 
+                    updated_at = NOW() 
+                WHERE user_id = :uid
+            ");
+            $syncStmt->execute([
+                ':balance' => $totalCombined,
+                ':uid' => $userId
+            ]);
+        } catch (Throwable $e) {}
+
+        // Fetch user ranking amongst all active academy members based on total combined credit
         $rankStmt = $db->prepare("
             SELECT COUNT(*) + 1 as rank 
-            FROM user_credits 
-            WHERE balance > :balance
+            FROM user_credits uc
+            JOIN users u ON uc.user_id = u.id
+            WHERE (u.status = 'active' OR u.status IS NULL) AND uc.balance > :balance
         ");
         $rankStmt->execute([':balance' => $totalCombined]);
-        $rank = $rankStmt->fetchColumn() ?: 1;
+        $rank = intval($rankStmt->fetchColumn() ?: 1);
 
         // Fetch recent transactions with participant user names and task details
         $txStmt = $db->prepare("

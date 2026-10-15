@@ -1,6 +1,7 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
+require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/storage.php';
 $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
@@ -112,6 +113,7 @@ try {
             (SELECT name FROM users WHERE id = t.reviewed_by) AS reviewed_by_name,
             tfd.final_file_url,
             tfd.final_image_url,
+            tfd.storage_provider AS final_delivery_storage_provider,
             tfd.fix_notes,
             tfd.is_stock_ready,
             tfd.source_type AS delivery_source_type,
@@ -207,13 +209,19 @@ try {
             $sub_stmt = $db->query("SELECT * FROM task_submissions WHERE task_id IN ($in_ids) ORDER BY id ASC");
             if ($sub_stmt) {
                 while ($sub = $sub_stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $submissions_by_task[$sub['task_id']][] = $sub;
+                    $submissions_by_task[$sub['task_id']][] = formatSubmissionItem($sub);
                 }
             }
         } catch (Exception $ex) {}
 
         foreach ($completed_tasks as &$pt) {
             $pt['submissions'] = $submissions_by_task[$pt['task_id']] ?? [];
+            if (!empty($pt['final_file_url'])) {
+                $pt['final_file_url'] = resolveStorageUrl($pt['final_file_url'], $pt['final_delivery_storage_provider'] ?? 'r2');
+            }
+            if (!empty($pt['final_image_url'])) {
+                $pt['final_image_url'] = resolveStorageUrl($pt['final_image_url'], $pt['final_delivery_storage_provider'] ?? 'r2');
+            }
         }
     }
 

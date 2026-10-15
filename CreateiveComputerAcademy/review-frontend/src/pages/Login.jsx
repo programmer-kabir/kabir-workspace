@@ -274,7 +274,7 @@ const Login = () => {
               {/* Reviewer Email */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Reviewer Email Address
+                  Email, Username or Phone
                 </label>
                 <div className="relative group/input">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within/input:text-indigo-600 dark:group-focus-within/input:text-indigo-400 transition-colors">
@@ -282,15 +282,15 @@ const Login = () => {
                   </div>
                   <input
                     id="reviewer-email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     required
                     value={email}
                     onChange={e => {
                       setEmail(e.target.value);
                       if (error) setError('');
                     }}
-                    placeholder="reviewer@creativeacademy.com"
+                    placeholder="e.g. reviewer@cca.com or username"
                     className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-[#ffffff] placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-medium outline-none focus:bg-[#ffffff] dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 dark:focus:border-indigo-500 transition-all shadow-2xs"
                   />
                 </div>

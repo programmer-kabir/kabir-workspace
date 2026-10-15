@@ -154,6 +154,12 @@ export const sidebarMenu = [
         roles: ["admin", "developer", "manager", "staff"],
       },
       {
+        label: "Settled Cards Report",
+        path: "/customers/settled_cards_report",
+        icon: GiReceiveMoney,
+        roles: ["admin", "developer", "manager", "staff"],
+      },
+      {
         label: "Monthly Installment Print",
         path: "/customers/monthly_installment_overview",
         icon: TbChartBar,

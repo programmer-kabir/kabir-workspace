@@ -1,6 +1,8 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
+require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/storage.php';
+
 
 $database = new Database();
 $db = $database->getConnection();
@@ -155,7 +157,8 @@ if(isset($data->user_id)) {
             $sub_query = "SELECT * FROM task_submissions WHERE task_id = :task_id ORDER BY id ASC";
             $sub_stmt = $db->prepare($sub_query);
             $sub_stmt->execute([':task_id' => $row['id']]);
-            $row['submissions'] = $sub_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rawSubs = $sub_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $row['submissions'] = array_map('formatSubmissionItem', $rawSubs);
 
             // Fetch Reviewer Final Stock Delivery
             try {
@@ -165,7 +168,8 @@ if(isset($data->user_id)) {
                               WHERE tfd.task_id = :task_id LIMIT 1";
                 $del_stmt = $db->prepare($del_query);
                 $del_stmt->execute([':task_id' => $row['id']]);
-                $row['final_delivery'] = $del_stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                $finalDel = $del_stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                $row['final_delivery'] = formatFinalDelivery($finalDel);
             } catch (Exception $ex) {
                 $row['final_delivery'] = null;
             }

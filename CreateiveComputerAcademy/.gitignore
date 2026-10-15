@@ -9,6 +9,11 @@ coverage/
 # Production builds
 dist/
 build/
+release/
+**/release/
+**/*.exe
+**/*.dll
+**/*.bin
 
 # Environment Variables & Secrets
 .env
@@ -20,6 +25,7 @@ build/
 !**/.env.example
 server/.env
 server/.env.local
+server/config/google_drive_credentials.json
 
 # Logs
 npm-debug.log*
@@ -37,3 +43,7 @@ Thumbs.db
 server/uploads/*
 !server/uploads/.gitkeep
 server/*.sql
+server/backups/*
+!server/backups/.htaccess
+!server/backups/.gitkeep
+

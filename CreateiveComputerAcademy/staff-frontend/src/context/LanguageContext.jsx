@@ -23,6 +23,13 @@ const dictionary = {
     brand_kit: "Brand Kit",
     breaks_log: "Breaks Log",
     academy_feed: "Academy Feed",
+    dev_suite: "Dev Console",
+    dev_overview: "Overview",
+    dev_impersonate: "User Impersonator",
+    dev_logs: "System Logs",
+    dev_api_tester: "API & Sockets",
+    dev_crons: "Crons & Auto",
+    dev_database: "Database",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -42,6 +49,13 @@ const dictionary = {
     brand_kit: "ব্র্যান্ড কিট",
     breaks_log: "ব্রেক লগ",
     academy_feed: "অ্যাকাডেমি ফিড",
+    dev_suite: "ডেভ কনসোল",
+    dev_overview: "ওভারভিউ",
+    dev_impersonate: "ইউজার ইমপার্সনেটর",
+    dev_logs: "সিস্টেম লগ",
+    dev_api_tester: "API ও সকেট",
+    dev_crons: "ক্রন ও অটোমেশন",
+    dev_database: "ডাটাবেজ",
   }
 };
 

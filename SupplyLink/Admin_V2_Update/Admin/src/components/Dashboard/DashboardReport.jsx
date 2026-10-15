@@ -20,11 +20,10 @@ const DashboardReport = () => {
     users,
     roleStats,
     openingCash,
+    today
   } = useDashboardData();
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-  }).format(new Date());
-  // const today = '2026-10-03';
+
+
   const allCash = approvedCashReports || cashReports || [];
 
   const monthlyInstallments = customerInstallmentPayments?.filter((item) => {
@@ -32,10 +31,12 @@ const DashboardReport = () => {
       (c) => Number(c.card_id) === Number(item.card_id)
     );
 
+    const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
+
     return (
       item.status === "Paid" &&
       item.paid_date?.split(" ")[0] === today &&
-      card?.remarks !== "Daily"
+      !isDaily
     );
   });
   const cardUserMap = {};
@@ -200,10 +201,12 @@ const DashboardReport = () => {
         (c) => Number(c.card_id) === Number(item.card_id)
       );
 
+      const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
+
       return (
         item.status === "Paid" &&
         item.paid_date?.split(" ")[0] === today &&
-        card?.remarks === "Daily"
+        isDaily
       );
     },
   );

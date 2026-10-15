@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/storage.php';
 
 $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
+
 
 $taskId = isset($_GET['task_id']) ? intval($_GET['task_id']) : (isset($_GET['id']) ? intval($_GET['id']) : null);
 
@@ -55,6 +57,7 @@ try {
             (SELECT name FROM users WHERE id = t.reviewed_by) AS reviewed_by_name,
             tfd.final_file_url,
             tfd.final_image_url,
+            tfd.storage_provider AS final_delivery_storage_provider,
             tfd.fix_notes,
             tfd.is_stock_ready,
             tfd.source_type AS delivery_source_type,
@@ -68,9 +71,9 @@ try {
             tr.feedback_notes AS review_feedback,
             tr.tags,
             tr.tags AS review_tags,
-            tr.rating_quality,
-            tr.rating_speed,
-            tr.rating_creativity
+            NULL AS rating_quality,
+            NULL AS rating_speed,
+            NULL AS rating_creativity
         FROM tasks t
         LEFT JOIN employees e ON t.assigned_to = e.id
         LEFT JOIN users u ON e.user_id = u.id
@@ -145,15 +148,25 @@ try {
     // Fetch submissions / file attachments
     try {
         $sub_stmt = $db->prepare("
-            SELECT id, file_name, file_url, file_size, file_type, mime_type, is_image, is_video, created_at 
+            SELECT id, file_name, file_url, file_key, storage_provider, file_size, file_type, file_ext, mime_type, 
+                   (file_type = 'preview') AS is_image, (file_type = 'video') AS is_video, created_at 
             FROM task_submissions 
             WHERE task_id = :task_id 
             ORDER BY id ASC
         ");
         $sub_stmt->execute([':task_id' => $taskId]);
-        $task['submissions'] = $sub_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rawSubs = $sub_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $task['submissions'] = array_map('formatSubmissionItem', $rawSubs);
     } catch (Exception $e) {
         $task['submissions'] = [];
+    }
+
+    // Resolve final delivery URLs dynamically
+    if (!empty($task['final_file_url'])) {
+        $task['final_file_url'] = resolveStorageUrl($task['final_file_url'], $task['final_delivery_storage_provider'] ?? 'r2');
+    }
+    if (!empty($task['final_image_url'])) {
+        $task['final_image_url'] = resolveStorageUrl($task['final_image_url'], $task['final_delivery_storage_provider'] ?? 'r2');
     }
 
     // Fetch task logs / history

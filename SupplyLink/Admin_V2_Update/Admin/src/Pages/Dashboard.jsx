@@ -7,10 +7,10 @@ import DashboardFilter from "../components/Dashboards/DashboardFilter";
 import DashboardChart from "../components/Dashboards/DashboardChart";
 import { Link } from "react-router-dom";
 import StateCardCopy from "../components/Dashboards/StateCardCopy";
-import { 
-  FiFileText, 
-  FiClock, 
-  FiLayers, 
+import {
+  FiFileText,
+  FiClock,
+  FiLayers,
   FiZap,
   FiTrendingUp,
   FiRefreshCw
@@ -44,7 +44,7 @@ const Dashboard = () => {
     { length: currentYear - 2024 + 1 },
     (_, i) => currentYear - i,
   );
-  
+
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
   }).format(new Date());
@@ -78,11 +78,28 @@ const Dashboard = () => {
   const safeDailyInstallments = Array.isArray(dailyInstallments) ? dailyInstallments : [];
   const safeSales = Array.isArray(customerInstallmentCards) ? customerInstallmentCards : [];
   const safeExpenses = Array.isArray(companyExpenses) ? companyExpenses : [];
+  const cardsMap = React.useMemo(() => {
+    const map = {};
+    safeSales.forEach((c) => {
+      if (c.card_id) map[String(c.card_id)] = c;
+    });
+    return map;
+  }, [safeSales]);
 
-  const filteredPayments = safePayments.filter((p) => {
+  const filteredMonthlyPayments = safePayments.filter((p) => {
     const isPaid = p.status === "Paid";
     const isMatchedDate = matchDate(p.paid_date);
-    return isPaid && isMatchedDate;
+    const card = cardsMap[String(p.card_id)];
+    const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
+    return isPaid && isMatchedDate && !isDaily;
+  });
+
+  const filteredDailyCardPayments = safePayments.filter((p) => {
+    const isPaid = p.status === "Paid";
+    const isMatchedDate = matchDate(p.paid_date);
+    const card = cardsMap[String(p.card_id)];
+    const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
+    return isPaid && isMatchedDate && isDaily;
   });
 
   const filteredInvestments = safeInvestments.filter((i) =>
@@ -103,13 +120,12 @@ const Dashboard = () => {
   );
 
   const totalSalesAmount = sumBy(filteredSales, "sale_price");
-  const totalInstallmentAmount = sumBy(filteredPayments, "due_amount");
+  const totalInstallmentAmount = sumBy(filteredMonthlyPayments, "due_amount");
   const totalInvestmentAmount = sumBy(filteredInvestments, "amount");
   const totalExpenseAmount = sumBy(filteredExpenses, "amount");
-  const totalDailyInstallmentAmount = sumBy(
-    filteredDailyInstallments,
-    "amount",
-  );
+  const totalDailyInstallmentAmount =
+    sumBy(filteredDailyInstallments, "amount") +
+    sumBy(filteredDailyCardPayments, "due_amount");
 
   const chartConfig = (data, field, dateField) =>
     getChartData({
@@ -127,7 +143,7 @@ const Dashboard = () => {
     "sale_price",
     "delivery_date",
   );
-  
+
   const installmentChart = chartConfig(
     safePayments,
     "due_amount",
@@ -163,7 +179,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* ===== Top Hero Welcome Banner ===== */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 p-6 sm:p-8 border border-slate-800/90 shadow-2xl backdrop-blur-2xl">
         {/* Glow Spots */}
@@ -187,7 +203,7 @@ const Dashboard = () => {
           {/* Quick Action Button */}
           <div className="flex items-center gap-3">
             <Link to="/today-report">
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-900/40 border border-indigo-400/30 transition-all duration-200"
@@ -223,7 +239,7 @@ const Dashboard = () => {
 
       {/* ===== Main Company Overview Section ===== */}
       <div className="relative rounded-3xl bg-slate-900/50 border border-slate-800/80 p-5 sm:p-7 shadow-2xl backdrop-blur-2xl">
-        
+
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800/80">
           <div>

@@ -1,6 +1,7 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
+require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/storage.php';
 $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
@@ -184,7 +185,7 @@ try {
             $sub_stmt = $db->query("SELECT * FROM task_submissions WHERE task_id IN ($in_ids) ORDER BY id ASC");
             if ($sub_stmt) {
                 while ($sub = $sub_stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $submissions_by_task[$sub['task_id']][] = $sub;
+                    $submissions_by_task[$sub['task_id']][] = formatSubmissionItem($sub);
                 }
             }
         } catch (Exception $ex) {}

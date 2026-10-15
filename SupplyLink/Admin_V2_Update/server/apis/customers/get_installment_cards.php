@@ -98,6 +98,7 @@ $dataSql = "
         ic.additional_cost,
         ic.cost_price,
         ic.sale_type,
+        ic.installment_type,
         ic.sale_price,
         ic.down_payment,
         ic.total_due_amount,

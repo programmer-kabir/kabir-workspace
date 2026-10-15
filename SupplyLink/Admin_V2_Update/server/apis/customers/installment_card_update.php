@@ -30,7 +30,7 @@ try {
     $stmt = $mysqli->prepare("
         UPDATE installment_cards
         SET status = ?
-        WHERE id = ?
+        WHERE card_id = ?
         LIMIT 1
     ");
 

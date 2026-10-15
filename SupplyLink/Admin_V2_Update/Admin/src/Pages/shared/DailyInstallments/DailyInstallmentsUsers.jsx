@@ -75,7 +75,7 @@ const DailyInstallmentsUsers = () => {
   // Filter only Daily cards
   const DailyInstallmentsCards = useMemo(() => {
     return (customerInstallmentCards || []).filter(
-      (card) => (card.remarks || "").trim().toLowerCase() === "daily"
+      (card) => (card.installment_type || card.remarks || "").trim().toLowerCase() === "daily"
     );
   }, [customerInstallmentCards]);
 

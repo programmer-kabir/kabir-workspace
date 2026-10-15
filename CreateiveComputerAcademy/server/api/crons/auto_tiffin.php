@@ -83,8 +83,8 @@ try {
             if (!$existing) {
                 // Insert as ACTIVE break
                 $insert = $db->prepare("INSERT INTO user_breaks 
-                    (user_id, date, break_type, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
-                    VALUES (:user_id, :date, :break_type, :start_time, NULL, NULL, 'Active', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
+                    (user_id, date, break_type, purpose, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
+                    VALUES (:user_id, :date, :break_type, 'Tiffin', :start_time, NULL, NULL, 'Active', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
                 $insert->execute([
                     ':user_id' => $user_id,
                     ':date' => $date,
@@ -165,16 +165,21 @@ try {
                 }
             }
 
+            // Calculate tiffin efficiency delta
+            $tiffin_delta = BreakDbHelper::calculateTiffinDelta($duration_mins);
+
             // Update to Completed
             $upd = $db->prepare("UPDATE user_breaks 
                                  SET end_time = :end_time, 
                                      duration_minutes = :duration, 
+                                     tiffin_delta_minutes = :tiffin_delta, 
                                      status = 'Completed', 
                                      updated_at = :now 
                                  WHERE id = :id");
             $upd->execute([
                 ':end_time' => $end_datetime,
                 ':duration' => $duration_mins,
+                ':tiffin_delta' => $tiffin_delta,
                 ':now' => $now,
                 ':id' => $break_id
             ]);
@@ -228,8 +233,8 @@ try {
                 $duration = !empty($u['tiffin_duration_minutes']) ? (int)$u['tiffin_duration_minutes'] : 40;
 
                 $ins = $db->prepare("INSERT INTO user_breaks 
-                    (user_id, date, break_type, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
-                    VALUES (:user_id, :date, 'Tiffin', :start_time, :end_time, :duration, 'Completed', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
+                    (user_id, date, break_type, purpose, start_time, end_time, duration_minutes, status, reason, approved_at, created_at, updated_at) 
+                    VALUES (:user_id, :date, 'Tiffin', 'Tiffin', :start_time, :end_time, :duration, 'Completed', 'Scheduled Daily Tiffin Break', :now, :now, :now)");
                 $ins->execute([
                     ':user_id' => $user_id,
                     ':date' => $date,

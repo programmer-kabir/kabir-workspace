@@ -95,6 +95,37 @@ export const InstallmentRow = ({
   const [historyLogs, setHistoryLogs] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
+  // Early Settlement States
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isSettlementDetailsOpen, setIsSettlementDetailsOpen] = useState(false);
+  const [settlementDiscount, setSettlementDiscount] = useState(0);
+  const [settledCashAmount, setSettledCashAmount] = useState(0);
+  const [settlementPaymentMethod, setSettlementPaymentMethod] = useState("Cash");
+  const [settlementDate, setSettlementDate] = useState(today);
+  const [settlementNote, setSettlementNote] = useState("");
+  const [isSettling, setIsSettling] = useState(false);
+  const [cardSettlementInfo, setCardSettlementInfo] = useState(null);
+
+  const fetchCardSettlement = async () => {
+    try {
+      const targetId = Number(card?.card_id);
+      if (!targetId) return;
+      const res = await fetch(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/customers/settle_installment_card.php?card_id=${targetId}`
+      );
+      const data = await res.json();
+      if (data.success && data.settled) {
+        setCardSettlementInfo(data.data);
+      } else {
+        setCardSettlementInfo(null);
+      }
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    fetchCardSettlement();
+  }, [card?.card_id]);
+
   useEffect(() => {
     setInstallments(
       Array.from({ length: installmentCount }).map((_, index) => {
@@ -163,6 +194,13 @@ export const InstallmentRow = ({
 
   const handleUpdateInstallment = async (index) => {
     const updatedItem = payments[index];
+    const activeStaffId = Number(user?.user_id ?? user?.id ?? 0);
+
+    if (updatedItem.status === "Paid" && !activeStaffId) {
+      toast.error("লগইন ইউজারের তথ্য পাওয়া যায়নি! দয়া করে পেজটি রিফ্রেশ করে আবার চেষ্টা করুন।");
+      return;
+    }
+
     const payload = {
       id: updatedItem.id,
       paid_date:
@@ -170,7 +208,8 @@ export const InstallmentRow = ({
       payment_method: updatedItem.payment_method,
       receipt_number: updatedItem.receipt_number,
       status: updatedItem.status,
-      signature: user?.id,
+      signature: activeStaffId || null,
+      collected_by: activeStaffId || null,
     };
     try {
       const res = await fetch(
@@ -180,6 +219,7 @@ export const InstallmentRow = ({
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify(payload),
         }
       );
@@ -201,7 +241,8 @@ export const InstallmentRow = ({
     setIsHistoryLoading(true);
     setIsHistoryModalOpen(true);
     try {
-      const targetCardId = card?.card_id || card?.id;
+      const targetCardId = Number(card?.card_id);
+      if (!targetCardId) return;
       const res = await fetch(
         `${import.meta.env.VITE_LOCALHOST_KEY}/customers/installment_payment_history.php?card_id=${targetCardId}`
       );
@@ -286,7 +327,97 @@ export const InstallmentRow = ({
   };
 
   const isAllPaid =
-    payments.length > 0 && payments.every((p) => p.status === "Paid");
+    Boolean(cardSettlementInfo) ||
+    (payments.length > 0 &&
+      payments.every((p) => p.status === "Paid" || p.status === "Waived"));
+
+  const totalOriginalAmount = payments.reduce(
+    (sum, p) => sum + Number(p.due_amount || 0),
+    0
+  );
+  const totalPaidSoFar = payments
+    .filter((p) => p.status === "Paid")
+    .reduce((sum, p) => sum + Number(p.due_amount || 0), 0);
+  const remainingDue = Math.max(0, totalOriginalAmount - totalPaidSoFar);
+
+  const handleOpenSettlement = () => {
+    setSettlementDiscount(0);
+    setSettledCashAmount(remainingDue);
+    setSettlementDate(today);
+    setSettlementPaymentMethod("Cash");
+    setSettlementNote("");
+    setIsSettlementModalOpen(true);
+  };
+
+  const handleDiscountChange = (val) => {
+    const d = Math.max(0, Number(val) || 0);
+    setSettlementDiscount(val);
+    setSettledCashAmount(Math.max(0, Number((remainingDue - d).toFixed(2))));
+  };
+
+  const handleCashChange = (val) => {
+    const c = Math.max(0, Number(val) || 0);
+    setSettledCashAmount(val);
+    setSettlementDiscount(Math.max(0, Number((remainingDue - c).toFixed(2))));
+  };
+
+  const handleConfirmSettlement = async () => {
+    const activeStaffId = Number(user?.user_id ?? user?.id ?? 0);
+    if (!activeStaffId) {
+      toast.error("লগইন ইউজারের তথ্য পাওয়া যায়নি! দয়া করে আবার লগইন করুন।");
+      return;
+    }
+
+    const disc = Number(settlementDiscount) || 0;
+    const cash = Number(settledCashAmount) || 0;
+
+    if (disc < 0 || cash < 0) {
+      toast.warning("টাকার পরিমাণ সঠিক নয়!");
+      return;
+    }
+
+    if (Math.abs(disc + cash - remainingDue) > 0.05) {
+      toast.warning(
+        `ছাড় এবং গৃহীত ক্যাশের যোগফল অবশ্যই মোট বকেয়ার (৳${remainingDue.toFixed(2)}) সমান হতে হবে!`
+      );
+      return;
+    }
+
+    setIsSettling(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/customers/settle_installment_card.php`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            card_id: Number(card?.card_id),
+            discount_amount: disc,
+            final_settled_amount: cash,
+            payment_method: settlementPaymentMethod || "Cash",
+            settlement_date: settlementDate || today,
+            note: settlementNote,
+            settled_by: activeStaffId,
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "কার্ড নিষ্পত্তি সফল হয়েছে 🎉");
+        setIsSettlementModalOpen(false);
+        fetchCardSettlement();
+        refetch?.();
+      } else {
+        toast.error(data.message || "নিষ্পত্তি ব্যর্থ হয়েছে");
+      }
+    } catch (err) {
+      toast.error("সার্ভার এরর: নিষ্পত্তি সম্পন্ন করা যায়নি");
+    } finally {
+      setIsSettling(false);
+    }
+  };
 
   const handleMarkFullPaid = async () => {
     try {
@@ -296,7 +427,7 @@ export const InstallmentRow = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            card_id: card.card_id,
+            card_id: Number(card?.card_id),
             status: "Fully Paid",
           }),
         }
@@ -304,7 +435,7 @@ export const InstallmentRow = ({
 
       const data = await res.json();
       if (data.success) {
-        toast.success(`কার্ড #${card.card_id || card.id} সম্পূর্ণ পরিশোধিত (Fully Paid) হিসেবে চিহ্নিত হয়েছে ✅`);
+        toast.success(`কার্ড #${card.card_id} সম্পূর্ণ পরিশোধিত (Fully Paid) হিসেবে চিহ্নিত হয়েছে ✅`);
         setTimeout(() => {
           navigate("/customers/installment_cards");
         }, 300);
@@ -314,106 +445,7 @@ export const InstallmentRow = ({
     }
   };
 
-  const handleEarlyClose = () => {
-    const updated = [...payments];
-    const firstUnpaidIndex = updated.findIndex((p) => p.status !== "Paid");
-    if (firstUnpaidIndex === -1) return;
 
-    const currentItem = updated[firstUnpaidIndex];
-
-    const totalPaidPrincipalAmount = updated
-      .filter((p) => p.status === "Paid")
-      .reduce((sum, p) => sum + Number(p.principal_amount || 0), 0);
-
-    const totalPaidProfitAmount = updated
-      .filter((p) => p.status === "Paid")
-      .reduce((sum, p) => sum + Number(p.profit_amount || 0), 0);
-
-    const totalPrincipal = Number(card?.cost_price || 0);
-    const totalProfit = Number(card?.sale_price || 0) - totalPrincipal;
-
-    const lastPrincipal = totalPrincipal - totalPaidPrincipalAmount;
-    const lastProfit = totalProfit - totalPaidProfitAmount;
-    const lastAmount = lastPrincipal + lastProfit;
-
-    Swal.fire({
-      title: "Full Settlement Confirmation",
-      background: "#0B1324",
-      color: "#f8fafc",
-      html: `
-      <p style="color:#94a3b8;">You are about to <b>close and fully settle all remaining installments</b>.</p>
-      <div style="background:#070D1E; border:1px solid #1e293b; border-radius:16px; padding:16px; margin:16px 0;">
-        <span style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Final Payable Amount:</span>
-        <div style="font-size:24px; font-weight:900; color:#38bdf8; font-family:monospace; margin-top:4px;">৳ ${lastAmount.toFixed(2)}</div>
-        <div style="font-size:12px; color:#64748b; margin-top:4px;">(Principal: ৳ ${lastPrincipal.toFixed(2)} + Profit: ৳ ${lastProfit.toFixed(2)})</div>
-      </div>
-      <p style="color:#f87171; font-size:13px; font-weight:600;">⚠️ This action will mark this card as Fully Paid.</p>
-    `,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#0284c7",
-      cancelButtonColor: "#334155",
-      confirmButtonText: "Yes, Close All & Settle",
-      cancelButtonText: "Cancel",
-    }).then(async (result) => {
-      if (!result.isConfirmed) return;
-
-      Swal.fire({
-        title: "Processing Settlement...",
-        background: "#0B1324",
-        color: "#f8fafc",
-        allowOutsideClick: false,
-        showConfirmButton: false,
-      });
-
-      try {
-        await fetch(
-          `${import.meta.env.VITE_LOCALHOST_KEY}/customers/installment_full_close.php`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              card_id: currentItem.card_id,
-              installment_no: currentItem.installment_no,
-              due_amount: lastAmount,
-              principal_amount: lastPrincipal,
-              profit_amount: lastProfit,
-            }),
-          }
-        );
-
-        updated[firstUnpaidIndex] = {
-          ...updated[firstUnpaidIndex],
-          due_amount: lastAmount,
-          principal_amount: lastPrincipal,
-          profit_amount: lastProfit,
-          status: "Paid",
-          paid_date: today,
-        };
-
-        const finalList = updated.slice(0, firstUnpaidIndex + 1);
-        setPayments(finalList);
-
-        Swal.fire({
-          title: "Settlement Complete! 🎉",
-          text: "All remaining installments have been closed and card marked as Paid.",
-          icon: "success",
-          background: "#0B1324",
-          color: "#f8fafc",
-          confirmButtonColor: "#0284c7",
-        });
-        refetch();
-      } catch (err) {
-        Swal.fire({
-          title: "Failed!",
-          text: "Something went wrong during settlement.",
-          icon: "error",
-          background: "#0B1324",
-          color: "#f8fafc",
-        });
-      }
-    });
-  };
 
   // Helper to fix any corrupted tag in Bengali
   const getCleanTag = (item, index) => {
@@ -427,6 +459,46 @@ export const InstallmentRow = ({
 
   return (
     <div className="space-y-6">
+      {/* ===== Existing Settlement Banner ===== */}
+      {cardSettlementInfo && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-950/40 via-slate-900/90 to-emerald-950/40 border border-amber-500/30 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-xl shadow-inner">
+              <FaReceipt />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-white">অগ্রিম নিষ্পত্তিকৃত কার্ড</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/40">Settled Early</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                তারিখ: {cardSettlementInfo.settlement_date} &bull; অনুমোদনকারী: {cardSettlementInfo.staff_name || cardSettlementInfo.settled_by_name || "Admin"}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800">
+              <span className="text-slate-400">বকেয়া ছিল: </span>
+              <span className="text-white font-bold">৳{Number(cardSettlementInfo.remaining_due).toFixed(2)}</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/30">
+              <span className="text-rose-300">ছাড়: </span>
+              <span className="text-rose-400 font-extrabold">-৳{Number(cardSettlementInfo.discount_amount).toFixed(2)}</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30">
+              <span className="text-emerald-300">গৃহীত ক্যাশ: </span>
+              <span className="text-emerald-400 font-extrabold">৳{Number(cardSettlementInfo.final_settled_amount).toFixed(2)}</span>
+            </div>
+            <button
+              onClick={() => setIsSettlementDetailsOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30 font-sans font-bold transition cursor-pointer"
+            >
+              বিস্তারিত দেখুন
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ===== Table Container ===== */}
       <div className="overflow-x-auto rounded-3xl bg-gradient-to-b from-slate-900/95 via-[#0C1427]/90 to-slate-950/95 border border-slate-800 shadow-2xl sl-scroll">
         <table className="w-full text-left text-xs text-slate-300 min-w-[950px]">
@@ -468,14 +540,23 @@ export const InstallmentRow = ({
 
             {/* SAVED PAYMENTS */}
             {InstallmentPayments.map((item, index) => {
-              const isPaid = payments[index]?.status === "Paid";
+              const currentStatus =
+                payments[index]?.status ||
+                (cardSettlementInfo ? "Waived" : "Unpaid");
+              const isPaid = currentStatus === "Paid";
+              const isWaived =
+                currentStatus === "Waived" || (Boolean(cardSettlementInfo) && !isPaid);
               const tagText = getCleanTag(item, index);
 
               return (
                 <tr
                   key={item.id || index}
                   className={`hover:bg-slate-800/40 transition-colors ${
-                    isPaid ? "bg-emerald-500/[0.03]" : ""
+                    isPaid
+                      ? "bg-emerald-500/[0.03]"
+                      : isWaived
+                      ? "bg-amber-500/[0.03]"
+                      : ""
                   }`}
                 >
                   {/* Tag Column */}
@@ -483,10 +564,19 @@ export const InstallmentRow = ({
                     <div className="flex items-center gap-2">
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${
-                          isPaid ? "bg-emerald-400" : "bg-slate-500"
+                          isPaid
+                            ? "bg-emerald-400"
+                            : isWaived
+                            ? "bg-amber-400 animate-pulse"
+                            : "bg-slate-500"
                         }`}
                       />
                       <span>{tagText}</span>
+                      {isWaived && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold ml-1">
+                          মওকুফ
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -536,6 +626,10 @@ export const InstallmentRow = ({
                         onChange={(e) => handlePaidDateChange(index, e.target.value)}
                         className="bg-[#070D1E] border border-emerald-500/50 rounded-xl px-2.5 py-1.5 font-mono text-emerald-300 text-xs focus:outline-none date-fix"
                       />
+                    ) : isWaived ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-950/40 px-2.5 py-1.5 rounded-xl border border-amber-500/40">
+                        <FaCheckCircle className="text-[10px]" /> Waived / ছাড়
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700/50">
                         <FaClock className="text-[10px]" /> Not Paid
@@ -547,8 +641,11 @@ export const InstallmentRow = ({
                   <td className="py-3 px-3.5">
                     <select
                       value={payments[index]?.payment_method || "Cash"}
+                      disabled={Boolean(cardSettlementInfo)}
                       onChange={(e) => handlePaymentMethodChange(index, e.target.value)}
-                      className="bg-[#070D1E] border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400"
+                      className={`bg-[#070D1E] border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 ${
+                        cardSettlementInfo ? "opacity-60 cursor-not-allowed" : ""
+                      }`}
                     >
                       <option value="Cash">Cash</option>
                       <option value="Bank">Bank</option>
@@ -561,20 +658,28 @@ export const InstallmentRow = ({
                   <td className="py-3 px-3.5">
                     <input
                       value={payments[index]?.receipt_number || ""}
+                      disabled={Boolean(cardSettlementInfo)}
                       onChange={(e) => handleReceiptChange(index, e.target.value)}
                       placeholder="Receipt #"
-                      className="w-24 bg-[#070D1E] border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400"
+                      className={`w-24 bg-[#070D1E] border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 ${
+                        cardSettlementInfo ? "opacity-60 cursor-not-allowed" : ""
+                      }`}
                     />
                   </td>
 
                   {/* Status Dropdown */}
                   <td className="py-3 px-3.5">
                     <select
-                      value={payments[index]?.status || "Unpaid"}
+                      value={isWaived ? "Waived" : (payments[index]?.status || "Unpaid")}
+                      disabled={Boolean(cardSettlementInfo)}
                       onChange={(e) => handleStatusChange(index, e.target.value)}
                       className={`rounded-xl px-2.5 py-1.5 text-xs font-bold border focus:outline-none ${
+                        cardSettlementInfo ? "opacity-70 cursor-not-allowed" : ""
+                      } ${
                         isPaid
                           ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                          : isWaived
+                          ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
                           : "bg-slate-800 border-slate-700 text-slate-300"
                       }`}
                     >
@@ -584,6 +689,9 @@ export const InstallmentRow = ({
                       <option value="Unpaid" className="bg-slate-900 text-slate-300">
                         Unpaid
                       </option>
+                      <option value="Waived" className="bg-slate-900 text-amber-300 font-bold">
+                        Waived (মওকুফ/ছাড়)
+                      </option>
                     </select>
                   </td>
 
@@ -591,8 +699,13 @@ export const InstallmentRow = ({
                   <td className="py-3 px-3.5">
                     <button
                       onClick={() => handleUpdateInstallment(index)}
-                      title="Save Changes"
-                      className="w-8 h-8 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30 flex items-center justify-center transition shadow-sm"
+                      disabled={Boolean(cardSettlementInfo)}
+                      title={cardSettlementInfo ? "কার্ডটি ইতোমধ্যে নিষ্পত্তি করা হয়েছে" : "Save Changes"}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition shadow-sm ${
+                        cardSettlementInfo
+                          ? "bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed"
+                          : "bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30"
+                      }`}
                     >
                       <FiSave className="text-xs" />
                     </button>
@@ -632,32 +745,41 @@ export const InstallmentRow = ({
             </button>
           )}
 
-          {/* Mark Full Paid */}
-          {InstallmentPayments.length > 0 && (
+          {/* Mark Full Paid (Only for running cards that are not yet settled) */}
+          {InstallmentPayments.length > 0 && !cardSettlementInfo && card?.status !== "Fully Paid" && (
             <button
               disabled={!isAllPaid}
               onClick={handleMarkFullPaid}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-lg ${
-                isAllPaid
-                  ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-emerald-500/25"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-lg ${isAllPaid
+                  ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-emerald-500/25 cursor-pointer"
                   : "bg-slate-800/80 border border-slate-700 text-slate-500 cursor-not-allowed opacity-60"
-              }`}
+                }`}
             >
               <FaCheckCircle />
               <span>Mark as Full Paid</span>
             </button>
           )}
 
-          {/* Full Settlement (Early Close) */}
-          {InstallmentPayments.length > 0 && !isAllPaid && (
+          {/* Settled indicator badge when already settled */}
+          {(Boolean(cardSettlementInfo) || card?.status === "Fully Paid") && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+              <FaCheckCircle className="text-emerald-400" />
+              <span>কার্ডটি সম্পূর্ণ পরিশোধিত ও নিষ্পত্তি সম্পন্ন</span>
+            </div>
+          )}
+
+          {/* Early Settlement Button */}
+          {InstallmentPayments.length > 0 && !isAllPaid && remainingDue > 0 && !cardSettlementInfo && (
             <button
-              onClick={handleEarlyClose}
-              className="flex items-center gap-2 rounded-2xl px-5 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition"
+              onClick={handleOpenSettlement}
+              className="flex items-center gap-2 rounded-2xl px-5 py-2.5 bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition cursor-pointer"
             >
               <FaFire className="text-xs" />
-              <span>Full Settlement (Early Close)</span>
+              <span>অগ্রিম নিষ্পত্তি ও ছাড় (Early Settlement)</span>
             </button>
           )}
+
+
         </div>
       </div>
 
@@ -703,8 +825,8 @@ export const InstallmentRow = ({
                     instNo === 0
                       ? "ডাউন পেমেন্ট"
                       : !log?.tag || log.tag.includes("?")
-                      ? `${bnNumbers[instNo - 1] || `${instNo}তম`} কিস্তি`
-                      : log.tag;
+                        ? `${bnNumbers[instNo - 1] || `${instNo}তম`} কিস্তি`
+                        : log.tag;
 
                   const isMarkedPaid = log.new_status === "Paid";
                   const isMarkedUnpaid = log.old_status === "Paid" && log.new_status === "Unpaid";
@@ -721,13 +843,12 @@ export const InstallmentRow = ({
                             {cleanTagText}
                           </span>
                           <span
-                            className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${
-                              isMarkedPaid
+                            className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${isMarkedPaid
                                 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                 : isMarkedUnpaid
-                                ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
-                                : "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-                            }`}
+                                  ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+                                  : "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
+                              }`}
                           >
                             {log.action || (isMarkedPaid ? "কিস্তি পেইড করা হয়েছে" : "পেমেন্ট আপডেট")}
                           </span>
@@ -779,23 +900,22 @@ export const InstallmentRow = ({
                                 {ch.field === "Status"
                                   ? "স্ট্যাটাস (Status)"
                                   : ch.field === "Paid Date"
-                                  ? "পরিশোধের তারিখ (Paid Date)"
-                                  : ch.field === "Payment Method"
-                                  ? "পেমেন্ট মেথড"
-                                  : ch.field === "Receipt Number"
-                                  ? "রশিদ নম্বর"
-                                  : ch.field}
+                                    ? "পরিশোধের তারিখ (Paid Date)"
+                                    : ch.field === "Payment Method"
+                                      ? "পেমেন্ট মেথড"
+                                      : ch.field === "Receipt Number"
+                                        ? "রশিদ নম্বর"
+                                        : ch.field}
                                 :
                               </span>
 
                               <div className="flex items-center gap-2 font-mono flex-wrap justify-end">
                                 <span className="text-[10px] text-slate-500 uppercase font-semibold">আগে:</span>
                                 <span
-                                  className={`px-2 py-0.5 rounded-md text-[11px] ${
-                                    ch.old === "Paid"
+                                  className={`px-2 py-0.5 rounded-md text-[11px] ${ch.old === "Paid"
                                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold"
                                       : "bg-slate-800 text-slate-400 border border-slate-700"
-                                  }`}
+                                    }`}
                                 >
                                   {ch.old || "None"}
                                 </span>
@@ -804,13 +924,12 @@ export const InstallmentRow = ({
 
                                 <span className="text-[10px] text-slate-400 uppercase font-semibold">পরে:</span>
                                 <span
-                                  className={`px-2 py-0.5 rounded-md font-bold text-[11px] ${
-                                    ch.new === "Paid"
+                                  className={`px-2 py-0.5 rounded-md font-bold text-[11px] ${ch.new === "Paid"
                                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                                       : ch.new === "Unpaid"
-                                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                                      : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                                  }`}
+                                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                        : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                                    }`}
                                 >
                                   {ch.new || "None"}
                                 </span>
@@ -843,6 +962,277 @@ export const InstallmentRow = ({
               <button
                 onClick={() => setIsHistoryModalOpen(false)}
                 className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Early Settlement Modal ===== */}
+      {isSettlementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-xl rounded-3xl bg-[#0B1324] border border-amber-500/30 p-6 sm:p-7 space-y-6 shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-lg shadow-inner">
+                  <FaFire />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    কার্ড অগ্রিম নিষ্পত্তি ও ছাড় (Early Settlement)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    কার্ড #{card?.card_id || card?.id} &bull; গ্রাহক: {card?.user_name || "Customer"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettlementModalOpen(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto space-y-5 pr-1 sl-scroll">
+              {/* Summary 3-Box Grid */}
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center">
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-medium">মোট চুক্তি মূল্য</p>
+                  <p className="text-xs sm:text-sm font-bold text-slate-200 mt-1 font-mono">
+                    ৳{totalOriginalAmount.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-950/25 border border-emerald-500/25 text-center">
+                  <p className="text-[10px] sm:text-xs text-emerald-400 font-medium">পরিশোধিত</p>
+                  <p className="text-xs sm:text-sm font-bold text-emerald-300 mt-1 font-mono">
+                    ৳{totalPaidSoFar.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/35 text-center">
+                  <p className="text-[10px] sm:text-xs text-cyan-300 font-bold">বর্তমান বকেয়া</p>
+                  <p className="text-xs sm:text-sm font-extrabold text-cyan-200 mt-1 font-mono">
+                    ৳{remainingDue.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Settlement Form Inputs */}
+              <div className="space-y-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4">
+                {/* Discount Input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-rose-300">
+                      বিশেষ ছাড় / ডিসকাউন্ট (৳)
+                    </label>
+                    <span className="text-[10px] text-slate-400">মওকুফকৃত পরিমাণ</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={remainingDue}
+                    value={settlementDiscount}
+                    onChange={(e) => handleDiscountChange(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-[#070D1E] border border-rose-500/40 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-rose-300 focus:outline-none focus:border-rose-400"
+                  />
+                  {/* Preset Discount Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] text-slate-500">কুইক সিলেক্ট:</span>
+                    {[500, 1000, 2000, 3000].filter(a => a < remainingDue).map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleDiscountChange(preset)}
+                        className="px-2 py-0.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-mono transition cursor-pointer"
+                      >
+                        ৳{preset}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleDiscountChange(remainingDue)}
+                      className="px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono transition cursor-pointer"
+                    >
+                      সম্পূর্ণ ছাড় (১০০%)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Final Cash Payable Input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-emerald-300">
+                      কাস্টমার আজ নগদ জমা দেবে (৳)
+                    </label>
+                    <span className="text-[10px] text-emerald-400">প্রকৃত ক্যাশ ইন</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={remainingDue}
+                    value={settledCashAmount}
+                    onChange={(e) => handleCashChange(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-[#070D1E] border border-emerald-500/40 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                {/* Payment Method & Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      পেমেন্ট মেথড
+                    </label>
+                    <select
+                      value={settlementPaymentMethod}
+                      onChange={(e) => setSettlementPaymentMethod(e.target.value)}
+                      className="w-full bg-[#070D1E] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    >
+                      <option value="Cash">Cash (নগদ)</option>
+                      <option value="Bkash">bKash</option>
+                      <option value="Nagad">Nagad</option>
+                      <option value="Bank">Bank Transfer</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      নিষ্পত্তির তারিখ
+                    </label>
+                    <input
+                      type="date"
+                      value={settlementDate}
+                      onChange={(e) => setSettlementDate(e.target.value)}
+                      className="w-full bg-[#070D1E] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Note */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    মন্তব্য / ছাড়ের কারণ (Note)
+                  </label>
+                  <input
+                    type="text"
+                    value={settlementNote}
+                    onChange={(e) => setSettlementNote(e.target.value)}
+                    placeholder="যেমন: এককালীন সম্পূর্ণ পরিশোধ করায় ২,০০০ টাকা বিশেষ ছাড়"
+                    className="w-full bg-[#070D1E] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Informational Notice */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed flex items-start gap-2.5">
+                <FaFire className="text-amber-400 shrink-0 mt-0.5" />
+                <p>
+                  নিষ্পত্তি করার পর ক্যাশ রিপোর্টে শুধুমাত্র <b>৳{Number(settledCashAmount || 0).toFixed(2)}</b> টাকা ক্যাশ ইন হিসেবে যোগ হবে। কিস্তির মূল রেকর্ড ডিলিট হবে না, অবশিষ্ট কিস্তিগুলো <b>'Waived' (ছাড়)</b> হিসেবে সংরক্ষিত থাকবে।
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                disabled={isSettling}
+                onClick={() => setIsSettlementModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition cursor-pointer"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={isSettling}
+                onClick={handleConfirmSettlement}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-xs font-bold text-white shadow-lg shadow-amber-500/25 transition cursor-pointer disabled:opacity-60"
+              >
+                {isSettling ? (
+                  <span>প্রসেসিং হচ্ছে...</span>
+                ) : (
+                  <>
+                    <FaCheckCircle className="text-xs" />
+                    <span>ছাড় অনুমোদন ও নিষ্পত্তি সম্পন্ন করুন</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Existing Settlement Details Modal ===== */}
+      {isSettlementDetailsOpen && cardSettlementInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-[#0B1324] border border-amber-500/30 p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-sm">
+                  <FaReceipt />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">অগ্রিম নিষ্পত্তি মেমো ও বিবরণী</h3>
+                  <p className="text-xs text-slate-400">কার্ড #{cardSettlementInfo.card_id} &bull; আইডি #{cardSettlementInfo.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettlementDetailsOpen(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs divide-y divide-slate-800/80 font-mono">
+              <div className="flex justify-between py-1.5 text-slate-300">
+                <span>মূল চুক্তি মূল্য:</span>
+                <span className="font-bold text-white">৳{Number(cardSettlementInfo.total_original_amount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-300">
+                <span>নিষ্পত্তির পূর্বে পরিশোধিত:</span>
+                <span className="font-bold text-emerald-400">৳{Number(cardSettlementInfo.total_paid_before).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-300">
+                <span>নিষ্পত্তিকালীন বকেয়া:</span>
+                <span className="font-bold text-cyan-300">৳{Number(cardSettlementInfo.remaining_due).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-300">
+                <span className="text-rose-400 font-bold">অনুমোদিত বিশেষ ছাড়:</span>
+                <span className="font-extrabold text-rose-400">-৳{Number(cardSettlementInfo.discount_amount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-2 text-sm bg-emerald-950/20 px-3 rounded-xl border border-emerald-500/20">
+                <span className="text-emerald-300 font-bold">নগদ গৃহীত টাকা:</span>
+                <span className="font-extrabold text-emerald-400">৳{Number(cardSettlementInfo.final_settled_amount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-400 font-sans">
+                <span>পেমেন্ট মেথড:</span>
+                <span className="text-slate-200">{cardSettlementInfo.payment_method}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-400 font-sans">
+                <span>নিষ্পত্তির তারিখ:</span>
+                <span className="text-slate-200">{cardSettlementInfo.settlement_date}</span>
+              </div>
+              <div className="flex justify-between py-1.5 text-slate-400 font-sans">
+                <span>অনুমোদনকারী স্টাফ:</span>
+                <span className="text-slate-200 font-bold">{cardSettlementInfo.staff_name || cardSettlementInfo.settled_by_name || "Admin"}</span>
+              </div>
+              {cardSettlementInfo.note && (
+                <div className="py-2 text-slate-400 font-sans">
+                  <span className="block font-semibold text-slate-300 mb-0.5">নোট:</span>
+                  <p className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-slate-300">{cardSettlementInfo.note}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setIsSettlementDetailsOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition cursor-pointer"
               >
                 বন্ধ করুন
               </button>

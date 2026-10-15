@@ -73,6 +73,7 @@ export default function TaskFileUploader({ files = [], setFiles, taskId = 0, use
           name: fileName,
           url: public_url,
           key: r2_key,
+          storage_provider: 'r2',
           size: fileItem.size,
           ext: ext || (fileName.split('.').pop() || '').toLowerCase(),
           mime: fileItem.type || 'application/octet-stream',
@@ -106,6 +107,7 @@ export default function TaskFileUploader({ files = [], setFiles, taskId = 0, use
       setFileProgressMap(prev => ({ ...prev, [fileName]: 100 }));
       return {
         ...singleRes.data.file,
+        storage_provider: singleRes.data.file.storage_provider || singleRes.data.provider || 'r2',
         file: fileItem
       };
     } else {

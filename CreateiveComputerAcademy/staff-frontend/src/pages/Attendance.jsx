@@ -27,6 +27,7 @@ const Attendance = () => {
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [selectedDisputeDate, setSelectedDisputeDate] = useState(null);
   const [disputeSuccessMsg, setDisputeSuccessMsg] = useState('');
+  const [isManualBreak, setIsManualBreak] = useState(false);
 
 
   const fetchAttendance = async () => {
@@ -39,6 +40,9 @@ const Attendance = () => {
         setHistory(response.data.history || []);
         if (response.data.shift_hours) setShiftHours(response.data.shift_hours);
         if (response.data.total_break_minutes !== undefined) setTotalBreakMinutes(response.data.total_break_minutes);
+        if (response.data.is_manual_break !== undefined) {
+          setIsManualBreak(Boolean(response.data.is_manual_break));
+        }
       }
     } catch (err) {
       console.error('Failed to fetch attendance', err);
@@ -553,8 +557,8 @@ const Attendance = () => {
         )}
       </div>
 
-      {/* Break Widget Section - Only visible to User ID 2 */}
-      {currentUser?.id === 2 && (
+      {/* Break Widget Section - Visible to staff with manual break (has_tiffin_break = 0 or allocated_break_minutes > 0) */}
+      {(isManualBreak || currentUser?.is_manual_break || currentUser?.has_tiffin_break === 0 || (Number(currentUser?.allocated_break_minutes) > 0 && currentUser?.has_tiffin_break === 0)) && (
         <div className="mb-8">
           <BreakWidget />
         </div>

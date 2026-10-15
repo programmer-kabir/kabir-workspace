@@ -32,7 +32,7 @@ const Sidebar = ({ onLinkClick, closeDrawer }) => {
     targetRoles?.find(role => user?.role?.includes(role)) || 'no valid role';
 
   const runningUser = Array.isArray(users)
-    ? users.find((u) => Number(u?.id) === Number(user?.id))
+    ? users.find((u) => Number(u?.user_id ?? u?.id) === Number(user?.user_id ?? user?.id))
     : null;
 
   const hasAccess = (item) =>
@@ -70,16 +70,16 @@ const Sidebar = ({ onLinkClick, closeDrawer }) => {
         <div className="w-10 h-10 rounded-full ring-2 ring-indigo-500/30 overflow-hidden bg-slate-800 flex items-center justify-center shrink-0">
           <img
             className="w-full h-full object-cover"
-            src={`https://management.supplylinkbd.com/${runningUser?.photo}`}
+            src={`https://management.supplylinkbd.com/${runningUser?.photo || user?.photo}`}
             alt=""
             onError={(e) => {
-              e.target.src = "https://ui-avatars.com/api/?name=" + (runningUser?.name || "User") + "&background=6366f1&color=fff";
+              e.target.src = "https://ui-avatars.com/api/?name=" + (runningUser?.name || user?.name || "User") + "&background=6366f1&color=fff";
             }}
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-slate-100 truncate">{runningUser?.name || "Admin User"}</p>
-          <p className="text-xs text-slate-400 font-mono">ID: #{runningUser?.id || "-"}</p>
+          <p className="text-sm font-bold text-slate-100 truncate">{runningUser?.name || user?.name || "Admin User"}</p>
+          <p className="text-xs text-slate-400 font-mono">ID: #{runningUser?.user_id ?? user?.user_id ?? user?.id ?? "-"}</p>
         </div>
       </div>
 

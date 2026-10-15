@@ -13,6 +13,14 @@ if (!$db) {
     exit();
 }
 
+if (file_exists('../attendance/AttendanceSecurityHelper.php')) {
+    require_once '../attendance/AttendanceSecurityHelper.php';
+    AttendanceSecurityHelper::ensureTables($db);
+    $clientIp = AttendanceSecurityHelper::getRealClientIP();
+} else {
+    $clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+}
+
 try {
     // Ensure table & seed defaults if not exists
     CreditHelper::getSystemSetting($db, 'reviewer_approval_credit', 1);
@@ -30,6 +38,7 @@ try {
     echo json_encode([
         "status" => "success",
         "settings" => $settings,
+        "client_ip" => $clientIp,
         "details" => $rows
     ]);
 } catch (Exception $e) {

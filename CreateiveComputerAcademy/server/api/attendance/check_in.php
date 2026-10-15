@@ -40,6 +40,24 @@ if (!empty($eval['is_blocked'])) {
     exit;
 }
 
+// Enforce Desktop App Version Control & Log Version
+require_once '../../config/AppVersionHelper.php';
+if (isset($data['app_version'])) {
+    $verCheck = AppVersionHelper::checkUpdate($data['app_version'], $db);
+    $devName = isset($device_info['device_name']) ? $device_info['device_name'] : ($device_info['browser'] ?? 'Desktop');
+    AppVersionHelper::logStaffVersion($user_id, $data['app_version'], $devName, 'Windows', true);
+
+    if (!empty($verCheck['is_mandatory'])) {
+        echo json_encode([
+            "status" => "error",
+            "is_mandatory_update" => true,
+            "message" => "Security Lockout: আপনার ডেস্কটপ অ্যাপটি পুরনো (v{$data['app_version']})। হাজিরা দিতে অনুগ্রহ করে v{$verCheck['latest_version']} আপডেট করুন।",
+            "update_info" => $verCheck
+        ]);
+        exit;
+    }
+}
+
 $today = date('Y-m-d');
 $current_time = date('H:i:s');
 

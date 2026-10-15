@@ -6,13 +6,13 @@ import { useAuth } from "../../../Provider/AuthProvider";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { 
-  FiEye, 
-  FiEyeOff, 
-  FiUser, 
-  FiLock, 
-  FiShield, 
-  FiArrowRight, 
+import {
+  FiEye,
+  FiEyeOff,
+  FiUser,
+  FiLock,
+  FiShield,
+  FiArrowRight,
   FiCheckCircle,
   FiZap,
   FiActivity,
@@ -35,12 +35,12 @@ const AdminLogin = () => {
   const navigate = useNavigate();
 
   const onSubmit = async (data) => {
-    const id = data?.id?.trim();
-    const password = data?.password;
-    
+    const userId = (data?.user_id || data?.id)?.trim();
+    const password = data?.password || data?.pass;
+
     setIsSubmitting(true);
     try {
-      const res = await login(id, password);
+      const res = await login(userId, password);
 
       if (res?.success) {
         toast.success("লগইন সফল হয়েছে! ড্যাশবোর্ডে প্রবেশ করা হচ্ছে...", {
@@ -66,15 +66,15 @@ const AdminLogin = () => {
   };
 
   const setQuickId = (val) => {
-    setValue("id", val, { shouldValidate: true });
+    setValue("user_id", val, { shouldValidate: true });
   };
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#050811] overflow-x-hidden p-4 sm:p-6 lg:p-10 select-none">
-      
+
       {/* ===== Ambient Floating Glowing Nebulas ===== */}
-      <motion.div 
-        animate={{ 
+      <motion.div
+        animate={{
           scale: [1, 1.2, 1],
           opacity: [0.2, 0.35, 0.2],
           x: [0, 30, 0],
@@ -83,9 +83,9 @@ const AdminLogin = () => {
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         className="absolute -top-32 -left-32 w-96 sm:w-[580px] h-96 sm:h-[580px] rounded-full bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-transparent blur-[140px] pointer-events-none"
       />
-      
-      <motion.div 
-        animate={{ 
+
+      <motion.div
+        animate={{
           scale: [1, 1.25, 1],
           opacity: [0.15, 0.3, 0.15],
           x: [0, -35, 0],
@@ -95,14 +95,14 @@ const AdminLogin = () => {
         className="absolute -bottom-32 -right-32 w-96 sm:w-[620px] h-96 sm:h-[620px] rounded-full bg-gradient-to-tl from-cyan-600/25 via-blue-600/20 to-transparent blur-[150px] pointer-events-none"
       />
 
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.08, 0.18, 0.08] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-indigo-500/10 blur-[180px] pointer-events-none"
       />
 
       {/* ===== Cyber Grid & Hex Pattern ===== */}
-      <div 
+      <div
         className="absolute inset-0 opacity-[0.04] pointer-events-none"
         style={{
           backgroundImage: `
@@ -121,7 +121,7 @@ const AdminLogin = () => {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-5xl z-10 grid grid-cols-1 lg:grid-cols-12 rounded-[2.5rem] backdrop-blur-3xl bg-slate-900/70 border border-slate-700/60 shadow-[0_0_80px_-15px_rgba(79,70,229,0.3)] overflow-hidden"
       >
-        
+
         {/* Glowing Top Rainbow Border */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 via-indigo-500 to-transparent opacity-90 z-20" />
 
@@ -129,7 +129,7 @@ const AdminLogin = () => {
         {/* LEFT COLUMN: Visual Brand Showcase & Feature Cards (Desktop) */}
         {/* ================================================================= */}
         <div className="hidden lg:flex lg:col-span-6 flex-col justify-between p-10 xl:p-12 relative bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-slate-950/80 border-r border-slate-800/80 overflow-hidden">
-          
+
           {/* Subtle Light Rays */}
           <div className="absolute top-0 left-1/4 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -170,11 +170,11 @@ const AdminLogin = () => {
               <div className="absolute inset-0 rounded-full border border-indigo-500/20 animate-[spin_12s_linear_infinite]" />
               <div className="absolute inset-3 rounded-full border border-cyan-500/20 border-dashed animate-[spin_20s_linear_infinite_reverse]" />
               <div className="absolute inset-6 rounded-full bg-indigo-500/10 blur-xl" />
-              
-              <Lottie 
-                animationData={loginAnimation} 
-                loop 
-                className="w-36 h-36 relative z-10 drop-shadow-[0_0_25px_rgba(99,102,241,0.6)]" 
+
+              <Lottie
+                animationData={loginAnimation}
+                loop
+                className="w-36 h-36 relative z-10 drop-shadow-[0_0_25px_rgba(99,102,241,0.6)]"
               />
             </div>
 
@@ -187,7 +187,7 @@ const AdminLogin = () => {
 
             {/* Feature Mini Cards */}
             <div className="grid grid-cols-2 gap-3 mt-6 w-full max-w-sm">
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -2 }}
                 className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 backdrop-blur-md flex items-center gap-2.5 text-left"
               >
@@ -200,7 +200,7 @@ const AdminLogin = () => {
                 </div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -2 }}
                 className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 backdrop-blur-md flex items-center gap-2.5 text-left"
               >
@@ -229,7 +229,7 @@ const AdminLogin = () => {
         {/* RIGHT COLUMN: The Interactive Login Form */}
         {/* ================================================================= */}
         <div className="lg:col-span-6 flex flex-col justify-center p-8 sm:p-10 xl:p-12 relative bg-slate-900/50 backdrop-blur-2xl">
-          
+
           {/* Mobile Only: Top Brand */}
           <div className="flex lg:hidden items-center justify-between mb-8 pb-4 border-b border-slate-800/80">
             <div className="flex items-center gap-2.5">
@@ -264,7 +264,7 @@ const AdminLogin = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            
+
             {/* User ID Field */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 ml-1">
@@ -278,20 +278,20 @@ const AdminLogin = () => {
                   type="text"
                   autoComplete="username"
                   placeholder="যেমন: 1 অথবা 01941145876"
-                  {...register("id", { required: "ইউজার আইডি বা মোবাইল নম্বর দেওয়া আবশ্যক" })}
+                  {...register("user_id", { required: "ইউজার আইডি বা মোবাইল নম্বর দেওয়া আবশ্যক" })}
                   className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-800/70 border border-slate-700/80 text-white placeholder-slate-500 text-sm font-medium
                   focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/20 transition-all duration-200 shadow-inner"
                 />
               </div>
               <AnimatePresence>
-                {errors.id && (
-                  <motion.p 
+                {errors.user_id && (
+                  <motion.p
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     className="text-rose-400 text-xs pl-1 font-medium mt-1"
                   >
-                    {errors.id.message}
+                    {errors.user_id.message}
                   </motion.p>
                 )}
               </AnimatePresence>
@@ -339,7 +339,7 @@ const AdminLogin = () => {
               </div>
               <AnimatePresence>
                 {errors.password && (
-                  <motion.p 
+                  <motion.p
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
@@ -361,7 +361,7 @@ const AdminLogin = () => {
             >
               {/* Moving Neon Shimmer */}
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 rounded-2xl transition duration-300 group-hover:opacity-100 opacity-80 blur-sm" />
-              
+
               <div className="relative flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 text-white font-bold text-sm tracking-wide transition-all duration-200 shadow-lg">
                 {isSubmitting ? (
                   <>

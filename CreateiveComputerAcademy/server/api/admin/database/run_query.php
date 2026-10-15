@@ -1,24 +1,39 @@
 <?php
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/admin_db_guard.php';
 
 $database = new Database();
 $db = $database->getConnection();
 
 if (!$db) {
+    http_response_code(500);
     echo json_encode(["status" => "error", "message" => "Database connection failed"]);
     exit();
 }
+
+$adminUser = verifyAdminDbAccess($db);
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
     $input = $_POST;
 }
 
+// ── 2. Query Extraction & Safety Guard ────────────────────────────────────
 $rawQuery = isset($input['query']) ? trim($input['query']) : '';
 
 if (empty($rawQuery)) {
     echo json_encode(["status" => "error", "message" => "SQL query is required"]);
+    exit();
+}
+
+// Disallow catastrophic whole-database drop commands
+if (preg_match('/\bDROP\s+DATABASE\b/i', $rawQuery)) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Security Restriction: 'DROP DATABASE' commands are permanently blocked for safety."
+    ]);
     exit();
 }
 

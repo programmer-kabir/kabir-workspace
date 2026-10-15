@@ -74,6 +74,8 @@ if (!empty($taskId)) {
     } catch (Throwable $e) {}
 }
 
+require_once __DIR__ . '/../../config/storage.php';
+
 // 2. Classify file extension & type
 $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 function classifyFileTypeFast($ext) {
@@ -87,6 +89,18 @@ function classifyFileTypeFast($ext) {
     return 'other';
 }
 $classifiedType = classifyFileTypeFast($fileExt);
+
+// Check admin storage routing settings
+$targetProvider = determineUploadProvider($fileExt, $classifiedType);
+if ($targetProvider === 'gdrive') {
+    // Presigned S3 URL does not apply to Google Drive; route to parallel worker endpoint
+    echo json_encode([
+        "status"   => "use_worker",
+        "provider" => "gdrive",
+        "message"  => "Google Drive uses server worker stream."
+    ]);
+    exit();
+}
 
 // 3. Resolve Target Path
 if (!empty($taskId)) {

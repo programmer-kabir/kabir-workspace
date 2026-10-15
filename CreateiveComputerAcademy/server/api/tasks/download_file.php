@@ -1,5 +1,7 @@
 <?php
 require_once '../../config/cors.php';
+require_once '../../config/storage.php';
+
 
 if (!isset($_GET['url']) && !isset($_GET['file'])) {
     http_response_code(400);
@@ -15,6 +17,13 @@ if (empty($raw_file)) {
     echo json_encode(["error" => "Empty file parameter."]);
     exit;
 }
+
+// If raw_file is a relative storage key for task submissions, resolve to full storage URL
+if (!preg_match('/^https?:\/\//i', $raw_file) && strpos($raw_file, 'task_submissions/') !== false) {
+    $provider = $_GET['provider'] ?? 'r2';
+    $raw_file = resolveStorageUrl($raw_file, $provider);
+}
+
 
 // 1. Check if the URL points to a local upload path on this server
 $relative_path = null;

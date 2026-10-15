@@ -58,8 +58,8 @@ const Dashboard = () => {
       return saved.companySummary || null;
     } catch { return null; }
   });
-  const [timeFilter, setTimeFilter] = useState('this_month'); // Default to 'this_month' like Admin Master Report!
-  const [sortBy, setSortBy] = useState('overall'); // 'overall', 'tasks', 'attendance', 'quality', 'credits'
+  const [timeFilter, setTimeFilter] = useState('today'); // Default to 'this_month' like Admin Master Report!
+  const [sortBy, setSortBy] = useState('attendance'); // 'overall', 'tasks', 'attendance', 'quality', 'credits'
   const [selectedDept, setSelectedDept] = useState('all');
 
   // 1. Fetch Today's Attendance, Assigned Tasks, and Mango Bank
@@ -88,7 +88,7 @@ const Dashboard = () => {
             tasks: tasksRes.data?.tasks || [],
             mangoSummary: mangoRes?.data?.data?.summary || null
           }));
-        } catch {}
+        } catch { }
       } catch (err) {
         console.error("Personal dashboard fetch error:", err);
       } finally {
@@ -142,7 +142,7 @@ const Dashboard = () => {
               staffData: list,
               companySummary: res.data.company_summary || null
             }));
-          } catch {}
+          } catch { }
         }
       } catch (err) {
         console.error("Master report fetch error:", err);
@@ -258,27 +258,25 @@ const Dashboard = () => {
     return (
       <div
         key={staff.user_id}
-        className={`${
-          isGold
-            ? 'order-first md:order-2 bg-gradient-to-b from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/20 dark:via-slate-800 dark:to-slate-800/80 rounded-3xl p-5 border-2 border-amber-400/80 dark:border-amber-500/60 shadow-lg shadow-amber-500/10 flex flex-col justify-between relative overflow-hidden'
-            : isSilver
+        className={`${isGold
+          ? 'order-first md:order-2 bg-gradient-to-b from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/20 dark:via-slate-800 dark:to-slate-800/80 rounded-3xl p-5 border-2 border-amber-400/80 dark:border-amber-500/60 shadow-lg shadow-amber-500/10 flex flex-col justify-between relative overflow-hidden'
+          : isSilver
             ? 'order-2 md:order-1 bg-slate-50/80 dark:bg-slate-800/40 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between hover:shadow-md transition-all'
             : 'order-3 md:order-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between hover:shadow-md transition-all'
-        }`}
+          }`}
       >
         <div className="relative z-10">
           {/* Top Rank Badge */}
           <div className="flex items-center justify-between mb-3">
             <span
-              className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center ${
-                isGold
-                  ? 'bg-amber-400 text-slate-950 shadow-xs'
-                  : isSilver
+              className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center ${isGold
+                ? 'bg-amber-400 text-slate-950 shadow-xs'
+                : isSilver
                   ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                   : isBronze
-                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-              }`}
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
             >
               #{rank}
             </span>
@@ -294,13 +292,12 @@ const Dashboard = () => {
           {/* Profile Header with Unique Bordered Rank Icon next to Name */}
           <div className="flex items-center gap-3 mb-4">
             <div
-              className={`rounded-2xl overflow-hidden shrink-0 border shadow-sm relative ${
-                isGold
-                  ? 'w-14 h-14 border-2 border-amber-400 shadow-md ring-2 ring-amber-400/20'
-                  : isSilver
+              className={`rounded-2xl overflow-hidden shrink-0 border shadow-sm relative ${isGold
+                ? 'w-14 h-14 border-2 border-amber-400 shadow-md ring-2 ring-amber-400/20'
+                : isSilver
                   ? 'w-12 h-12 border-2 border-slate-300 dark:border-slate-600'
                   : 'w-12 h-12 border-2 border-amber-300/60 dark:border-amber-800'
-              }`}
+                }`}
             >
               {staff.profile_picture ? (
                 <img src={`${API_BASE}${staff.profile_picture}`} alt={staff.name} className="w-full h-full object-cover" />
@@ -352,11 +349,10 @@ const Dashboard = () => {
 
           {/* Dynamic Headline Metric Box based on Active Tab */}
           <div
-            className={`p-3.5 rounded-2xl mb-3 flex items-center justify-between border ${
-              isGold
-                ? 'bg-white dark:bg-slate-800 border-amber-300/80 dark:border-amber-500/40 shadow-xs'
-                : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
-            }`}
+            className={`p-3.5 rounded-2xl mb-3 flex items-center justify-between border ${isGold
+              ? 'bg-white dark:bg-slate-800 border-amber-300/80 dark:border-amber-500/40 shadow-xs'
+              : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
+              }`}
           >
             {sortBy === 'attendance' ? (
               <>
@@ -412,9 +408,9 @@ const Dashboard = () => {
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                     {timeFilter === 'today' ? "Today's Net Credits" :
-                     timeFilter === 'this_week' ? "This Week's Credits" :
-                     timeFilter === 'this_month' ? "This Month's Credits" :
-                     "Net Credit Balance"}
+                      timeFilter === 'this_week' ? "This Week's Credits" :
+                        timeFilter === 'this_month' ? "This Month's Credits" :
+                          "Net Credit Balance"}
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">
                     {timeFilter === 'all_time'
@@ -423,13 +419,12 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className={`text-2xl font-black tracking-tight font-mono ${
-                    getStaffCredit(staff) < 0
-                      ? 'text-rose-600 dark:text-rose-400'
-                      : isGold
+                  <span className={`text-2xl font-black tracking-tight font-mono ${getStaffCredit(staff) < 0
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : isGold
                       ? 'text-3xl text-amber-600 dark:text-amber-400'
                       : 'text-slate-900 dark:text-white'
-                  }`}>
+                    }`}>
                     {getStaffCredit(staff) > 0 ? `+${getStaffCredit(staff)}` : getStaffCredit(staff)}
                   </span>
                   <span className="block text-[10px] font-black tracking-wider uppercase text-amber-500 font-extrabold">
@@ -747,11 +742,10 @@ const Dashboard = () => {
               <button
                 key={f.id}
                 onClick={() => setTimeFilter(f.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                  timeFilter === f.id
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${timeFilter === f.id
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                  }`}
               >
                 {f.label}
               </button>
@@ -772,11 +766,10 @@ const Dashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => setSortBy(tab.id)}
-                className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${
-                  sortBy === tab.id
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${sortBy === tab.id
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                  }`}
               >
                 <span>{tab.label}</span>
               </button>
@@ -823,12 +816,12 @@ const Dashboard = () => {
                           {sortBy === 'credits'
                             ? `(${getStaffCredit(myStanding)} Credits ${timeFilter === 'all_time' ? 'Wallet Balance' : 'in ' + (timeFilter === 'today' ? 'Today' : timeFilter === 'this_week' ? 'This Week' : 'This Month')})`
                             : sortBy === 'attendance'
-                            ? `(${myStanding.total_worked_formatted} Worked • ${myStanding.present_days}d)`
-                            : sortBy === 'tasks'
-                            ? `(${myStanding.tasks_completed} Tasks Completed)`
-                            : sortBy === 'quality'
-                            ? `(⭐ ${myStanding.avg_rating || '5.0'} Rating)`
-                            : `(${myStanding.efficiency_score}% Efficiency Score)`}
+                              ? `(${myStanding.total_worked_formatted} Worked • ${myStanding.present_days}d)`
+                              : sortBy === 'tasks'
+                                ? `(${myStanding.tasks_completed} Tasks Completed)`
+                                : sortBy === 'quality'
+                                  ? `(⭐ ${myStanding.avg_rating || '5.0'} Rating)`
+                                  : `(${myStanding.efficiency_score}% Efficiency Score)`}
                         </span>
                         {getTierBadge(myStanding.performance_tier)}
                       </div>
@@ -897,18 +890,16 @@ const Dashboard = () => {
                         return (
                           <tr
                             key={staff.user_id}
-                            className={`transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${
-                              isMe ? 'bg-indigo-50/40 dark:bg-indigo-950/20 font-bold' : ''
-                            }`}
+                            className={`transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${isMe ? 'bg-indigo-50/40 dark:bg-indigo-950/20 font-bold' : ''
+                              }`}
                           >
                             {/* Rank */}
                             <td className="py-3.5 px-4 font-black text-slate-800 dark:text-slate-200">
-                              <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${
-                                rankNum === 1 ? 'bg-amber-400 text-slate-950 font-black' :
+                              <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${rankNum === 1 ? 'bg-amber-400 text-slate-950 font-black' :
                                 rankNum === 2 ? 'bg-slate-200 dark:bg-slate-700 text-slate-800' :
-                                rankNum === 3 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800' :
-                                'text-slate-400'
-                              }`}>
+                                  rankNum === 3 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800' :
+                                    'text-slate-400'
+                                }`}>
                                 {rankNum}
                               </span>
                             </td>
@@ -1006,11 +997,10 @@ const Dashboard = () => {
                             <td className={`py-3.5 px-4 ${sortBy === 'credits' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}`}>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-amber-500 text-xs">🪙</span>
-                                <span className={`font-black font-mono text-xs ${
-                                  getStaffCredit(staff) < 0
-                                    ? 'text-rose-600 dark:text-rose-400'
-                                    : 'text-amber-600 dark:text-amber-400'
-                                }`}>
+                                <span className={`font-black font-mono text-xs ${getStaffCredit(staff) < 0
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : 'text-amber-600 dark:text-amber-400'
+                                  }`}>
                                   {getStaffCredit(staff) > 0 ? `+${getStaffCredit(staff)}` : getStaffCredit(staff)}
                                 </span>
                               </div>
@@ -1078,13 +1068,12 @@ const Dashboard = () => {
                 <div
                   key={task.id}
                   onClick={() => navigate('/tasks', { state: { activeTab: task.status } })}
-                  className={`p-5 rounded-3xl border transition-all flex flex-col justify-between gap-4 cursor-pointer group shadow-sm hover:shadow-xl hover:-translate-y-1 ${
-                    isRejected
-                      ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300/80 dark:border-rose-800/60 hover:border-rose-500'
-                      : isInProgress
+                  className={`p-5 rounded-3xl border transition-all flex flex-col justify-between gap-4 cursor-pointer group shadow-sm hover:shadow-xl hover:-translate-y-1 ${isRejected
+                    ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300/80 dark:border-rose-800/60 hover:border-rose-500'
+                    : isInProgress
                       ? 'bg-blue-50/30 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-800/60 hover:border-blue-500'
                       : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -1093,13 +1082,12 @@ const Dashboard = () => {
                       </span>
 
                       <span
-                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${
-                          isRejected
-                            ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
-                            : isInProgress
+                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${isRejected
+                          ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+                          : isInProgress
                             ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                        }`}
+                          }`}
                       >
                         {task.status}
                       </span>

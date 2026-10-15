@@ -6,7 +6,9 @@ import useUsers from "../../utils/Hooks/useUsers";
 const TopHeader = ({ onMenuClick }) => {
   const { user } = useAuth() || {};
   const { users = [] } = useUsers();
-  const currentUser = users.find((u) => u?.id === user?.id);
+  const currentUser = users.find(
+    (u) => Number(u?.user_id ?? u?.id) === Number(user?.user_id ?? user?.id)
+  );
 
   const todayFormatted = new Intl.DateTimeFormat("bn-BD", {
     dateStyle: "medium",
@@ -48,16 +50,16 @@ const TopHeader = ({ onMenuClick }) => {
             <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-indigo-500/40 bg-slate-800 shrink-0">
               <img
                 className="w-full h-full object-cover"
-                src={`https://management.supplylinkbd.com/${currentUser?.photo}`}
+                src={`https://management.supplylinkbd.com/${currentUser?.photo || user?.photo}`}
                 alt=""
                 onError={(e) => {
-                  e.target.src = "https://ui-avatars.com/api/?name=" + (currentUser?.name || "Admin") + "&background=6366f1&color=fff";
+                  e.target.src = "https://ui-avatars.com/api/?name=" + (currentUser?.name || user?.name || "Admin") + "&background=6366f1&color=fff";
                 }}
               />
             </div>
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-slate-200 leading-tight truncate max-w-[120px]">
-                {currentUser?.name || "Admin"}
+                {currentUser?.name || user?.name || "Admin"}
               </p>
               <p className="text-[10px] text-emerald-400 font-medium leading-none flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

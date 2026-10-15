@@ -25,9 +25,16 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
   const [ending, setEnding] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const isManualUser = Boolean(
+    currentUser?.is_manual_break ||
+    currentUser?.has_tiffin_break === 0 ||
+    currentUser?.has_tiffin_break === false ||
+    (Number(currentUser?.allocated_break_minutes) > 0 && currentUser?.has_tiffin_break === 0)
+  );
+
   // 1. Fetch current status
   const fetchStatus = async () => {
-    if (!currentUser?.id || currentUser.id === 2) {
+    if (!currentUser?.id || isManualUser) {
       setLoading(false);
       return;
     }
@@ -63,7 +70,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
 
   // 2. Pusher Real-time listener
   useEffect(() => {
-    if (!currentUser?.id || currentUser.id === 2) return;
+    if (!currentUser?.id || isManualUser) return;
 
     let pusherInstance = null;
     try {
@@ -81,6 +88,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
           setActiveBreak({
             id: data.break_id,
             break_type: data.break_type,
+            purpose: data.purpose,
             start_time: data.start_time,
             reason: data.reason
           });
@@ -139,6 +147,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
   }, [activeBreak]);
 
   // 4. Handle End Break
+  // 4. Handle End Break
   const handleEndBreak = async () => {
     if (!activeBreak) return;
     setEnding(true);
@@ -150,7 +159,14 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
       });
 
       if (res.data.status === 'success') {
-        toast.success(`✅ Break ended! Total time away: ${res.data.duration || 0} minutes.`);
+        const delta = res.data.tiffin_delta;
+        if (typeof delta === 'number' && delta > 0) {
+          toast.success(`🎉 দারুণ! আপনি ${delta} মিনিট সাশ্রয় করেছেন। আম গাছে +${delta} মিনিট জমা হয়েছে 🥭`, { duration: 6000 });
+        } else if (typeof delta === 'number' && delta < 0) {
+          toast.error(`⚠️ টিফিন লিমিট অতিক্রম! আম গাছ থেকে ${Math.abs(delta)} মিনিট কর্তন করা হয়েছে ⚡`, { duration: 6000 });
+        } else {
+          toast.success(res.data.message || `✅ Break ended! Total time away: ${res.data.duration || 0} minutes.`);
+        }
         setActiveBreak(null);
         setPendingRequest(null);
         if (onBreakChange) onBreakChange({ activeBreak: null, pendingRequest: null });
@@ -164,43 +180,85 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
     }
   };
 
-  // Guard: User ID 2 excluded or no active/pending state
-  if (currentUser?.id === 2) return null;
+  // Guard: Manual break users excluded (they use direct BreakWidget) or no active/pending state
+  if (isManualUser) return null;
   if (loading) return null;
   if (!activeBreak && !pendingRequest) return null; // Clean hidden state!
+
+  const isTiffin = activeBreak?.break_type === 'Tiffin' || activeBreak?.purpose === 'Tiffin';
+  const isOverTiffin = isTiffin && elapsedSeconds > 40 * 60;
+  const overSeconds = isOverTiffin ? elapsedSeconds - 40 * 60 : 0;
+  const remainingTiffinSec = isTiffin && !isOverTiffin ? Math.max(0, 40 * 60 - elapsedSeconds) : 0;
 
   return (
     <div className="w-full animate-in fade-in slide-in-from-top-4 duration-300">
       
       {/* ── CASE 1: ACTIVE BREAK RUNNING ── */}
       {activeBreak && (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 p-5 md:p-6 text-white shadow-xl shadow-orange-600/20 border border-white/20">
+        <div className={`relative overflow-hidden rounded-3xl p-5 md:p-6 text-white shadow-xl border transition-all duration-500 ${
+          isOverTiffin
+            ? 'bg-gradient-to-r from-red-700 via-rose-700 to-amber-800 border-red-300/40 ring-4 ring-rose-500/30 shadow-red-900/30'
+            : isTiffin
+            ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-emerald-700 border-white/20 shadow-orange-600/20'
+            : 'bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 border-white/20 shadow-orange-600/20'
+        }`}>
           
           {/* Animated pulsing background effect */}
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl animate-pulse pointer-events-none" />
+          <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full blur-2xl pointer-events-none ${isOverTiffin ? 'bg-red-400/20 animate-ping' : 'bg-white/10 animate-pulse'}`} />
           <div className="absolute -bottom-12 left-1/3 w-40 h-40 bg-black/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5">
             
             {/* Left info */}
             <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shrink-0 shadow-lg">
-                <FiCoffee size={28} className="animate-bounce" />
+              <div className={`w-14 h-14 rounded-2xl backdrop-blur-md border flex items-center justify-center text-white shrink-0 shadow-lg ${
+                isOverTiffin ? 'bg-red-500/30 border-red-300/40 animate-pulse text-3xl' : 'bg-white/20 border-white/30 text-2xl'
+              }`}>
+                {isTiffin ? (isOverTiffin ? '🚨' : '🥪') : <FiCoffee size={28} className="animate-bounce" />}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    Break Active
+                <div className="flex items-center flex-wrap gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border backdrop-blur-sm ${
+                    isOverTiffin
+                      ? 'bg-red-500/40 text-white border-red-300/50 animate-pulse'
+                      : 'bg-white/20 text-white border-white/30'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${isOverTiffin ? 'bg-red-300 animate-ping' : 'bg-emerald-400 animate-ping'}`} />
+                    {isOverTiffin ? '⚠️ Over-Break Limit' : 'Break Active'}
                   </span>
-                  <span className="text-xs font-bold text-white/80">
+                  <span className="text-xs font-bold text-white/90">
                     {activeBreak.break_type}
                   </span>
+                  {isTiffin && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/25 text-amber-200 border border-amber-300/30 backdrop-blur-sm">
+                      Standard: 40 mins
+                    </span>
+                  )}
                 </div>
-                <h4 className="text-lg sm:text-xl font-black tracking-tight mt-0.5 text-white">
-                  {activeBreak.break_type} Break In Progress
+
+                <h4 className="text-lg sm:text-xl font-black tracking-tight mt-0.5 text-white flex items-center gap-2">
+                  {isOverTiffin ? (
+                    <span className="text-red-100">⚠️ ৪০ মিনিট পার হয়েছে! (অতিরিক্ত সময় আম কাটা হচ্ছে)</span>
+                  ) : isTiffin ? (
+                    <span>🥪 টিফিন ব্রেক চলছে (দ্রুত ফিরলে বোনাস আম 🥭)</span>
+                  ) : (
+                    <span>{activeBreak.purpose ? `${activeBreak.purpose} Break` : `${activeBreak.break_type} Break`} In Progress</span>
+                  )}
                 </h4>
-                {activeBreak.reason && (
+
+                {isTiffin && !isOverTiffin && (
+                  <p className="text-xs text-emerald-100 font-bold mt-0.5 flex items-center gap-1">
+                    <span>💡 বরাদ্দ আর {Math.floor(remainingTiffinSec / 60)} মিনিট বাকি — এখনই শেষ করলে +{Math.min(25, Math.floor(remainingTiffinSec / 60))} মিনিট আম গাছে জমা হবে!</span>
+                  </p>
+                )}
+
+                {isOverTiffin && (
+                  <p className="text-xs text-amber-200 font-bold mt-0.5 animate-pulse">
+                    ⚡ অতিরিক্ত সময়: +{Math.floor(overSeconds / 60)} মিনিট (আম গাছ থেকে কেটে নেওয়া হচ্ছে)
+                  </p>
+                )}
+
+                {!isTiffin && activeBreak.reason && (
                   <p className="text-xs text-white/80 font-medium italic truncate max-w-md mt-0.5">
                     "{activeBreak.reason}"
                   </p>
@@ -209,12 +267,14 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
             </div>
 
             {/* Right Timer & End Button */}
-            <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto bg-black/15 backdrop-blur-md border border-white/10 p-2.5 sm:p-3 rounded-2xl">
+            <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto bg-black/20 backdrop-blur-md border border-white/10 p-2.5 sm:p-3 rounded-2xl">
               <div className="px-3 text-left sm:text-right">
                 <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70">
-                  Elapsed Time
+                  {isOverTiffin ? 'Total Over-Time' : 'Elapsed Time'}
                 </p>
-                <p className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white drop-shadow-sm">
+                <p className={`text-2xl sm:text-3xl font-black font-mono tracking-tight drop-shadow-sm ${
+                  isOverTiffin ? 'text-amber-300 animate-pulse' : 'text-white'
+                }`}>
                   {formatTimer(elapsedSeconds)}
                 </p>
               </div>
@@ -223,17 +283,21 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                 type="button"
                 onClick={handleEndBreak}
                 disabled={ending}
-                className="px-5 py-3 rounded-xl bg-white hover:bg-slate-100 text-rose-600 font-extrabold text-xs sm:text-sm shadow-lg shadow-black/20 hover:shadow-xl active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
+                className={`px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 shrink-0 ${
+                  isOverTiffin
+                    ? 'bg-amber-300 hover:bg-amber-200 text-red-900 ring-2 ring-white/50'
+                    : 'bg-white hover:bg-slate-100 text-rose-600'
+                }`}
               >
                 {ending ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-rose-600/30 border-t-rose-600 rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     <span>Ending...</span>
                   </>
                 ) : (
                   <>
-                    <FiSquare size={16} className="fill-rose-600" />
-                    <span>End Break & Resume</span>
+                    <FiSquare size={16} className="fill-current" />
+                    <span>{isTiffin ? 'End Tiffin & Claim' : 'End Break & Resume'}</span>
                   </>
                 )}
               </button>
@@ -256,7 +320,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                   ⏳ Break Request Pending
                 </span>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                  • {pendingRequest.break_type} ({pendingRequest.estimated_minutes || 30} mins)
+                  • {pendingRequest.break_type} {pendingRequest.purpose ? `[${pendingRequest.purpose}]` : ''} ({pendingRequest.estimated_minutes || 30} mins)
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">

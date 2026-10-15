@@ -124,11 +124,14 @@ class PayrollHelper {
                     continue; // Skip invalid or zero durations
                 }
 
-                $approvedMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
+                $rawMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
+                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
+                $standardDailyMinutes = max(60, intval(round($standardDailyHours * 60)));
+                $approvedMinutes = min($rawMinutes, $standardDailyMinutes);
                 $earnedAmount = round(($approvedMinutes / 60.0) * $hourlyRate, 2);
                 $sessionStart = date('Y-m-d H:i:s', $inTs);
                 $sessionEnd = date('Y-m-d H:i:s', $outTs);
-                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw}";
+                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw}" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$standardDailyHours}h; overtime reserved for Mango Bank]" : "");
 
                 // Check if already in staff_work_earnings
                 $stmtCheck = $pdo->prepare("
@@ -194,6 +197,74 @@ class PayrollHelper {
 
                 $totalSyncedSessions++;
                 $totalSyncedAmount += $earnedAmount;
+            }
+
+            // Also sync approved mango full day breaks from user_breaks into staff_work_earnings so leave day is fully paid
+            try {
+                $sqlMango = "
+                    SELECT id, user_id, date, duration_minutes, reason 
+                    FROM user_breaks 
+                    WHERE user_id = :user_id 
+                      AND break_type = 'Mango Full Day'
+                      AND status = 'Approved'
+                      AND date >= :start_date
+                      " . ($endDate ? "AND date <= :end_date" : "") . "
+                ";
+                $stmtMangoClaims = $pdo->prepare($sqlMango);
+                $stmtMangoClaims->execute($params);
+                $mangoClaims = $stmtMangoClaims->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($mangoClaims as $mc) {
+                    $mcId = $mc['id'];
+                    $mcDate = $mc['date'];
+                    $mcMinutes = intval($mc['duration_minutes'] ?: 480);
+                    $mcHours = round($mcMinutes / 60.0, 2);
+                    $mcEarned = round($mcHours * $hourlyRate, 2);
+                    $mcNotes = "Paid Mango Day Off (Redeemed {$mcHours}h Break from Overtime Bank)";
+
+                    $stmtCheckMc = $pdo->prepare("
+                        SELECT id FROM staff_work_earnings 
+                        WHERE scheme_id = :scheme_id 
+                          AND source_type = 'mango_leave' 
+                          AND reference_id = :reference_id
+                        LIMIT 1
+                    ");
+                    $stmtCheckMc->execute([
+                        ':scheme_id' => $sId,
+                        ':reference_id' => $mcId
+                    ]);
+                    $existingMcEarning = $stmtCheckMc->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$existingMcEarning) {
+                        $stmtInsMc = $pdo->prepare("
+                            INSERT INTO staff_work_earnings (
+                                user_id, scheme_id, work_date, session_start, session_end,
+                                approved_minutes, applied_rate, earned_amount, is_surplus,
+                                source_type, reference_id, notes, created_at
+                            ) VALUES (
+                                :user_id, :scheme_id, :work_date, :session_start, :session_end,
+                                :approved_minutes, :applied_rate, :earned_amount, 0,
+                                'mango_leave', :reference_id, :notes, NOW()
+                            )
+                        ");
+                        $stmtInsMc->execute([
+                            ':user_id' => $uId,
+                            ':scheme_id' => $sId,
+                            ':work_date' => $mcDate,
+                            ':session_start' => $mcDate . ' 09:00:00',
+                            ':session_end' => $mcDate . ' 17:00:00',
+                            ':approved_minutes' => $mcMinutes,
+                            ':applied_rate' => $hourlyRate,
+                            ':earned_amount' => $mcEarned,
+                            ':reference_id' => $mcId,
+                            ':notes' => $mcNotes
+                        ]);
+                        $totalSyncedSessions++;
+                        $totalSyncedAmount += $mcEarned;
+                    }
+                }
+            } catch (Throwable $tMango) {
+                error_log("Error syncing mango claims to earnings: " . $tMango->getMessage());
             }
 
             // Recalculate surplus flags chronologically for yearly contract schemes
@@ -444,8 +515,8 @@ class PayrollHelper {
             $salaryAmount = floatval($scheme['salary_amount']);
             $availableWithdrawableTotal = max(0.0, $maturedEarned - $totalWithdrawn - $pendingWithdrawn);
 
-            // Minimum withdrawal threshold is flexible ৳500 (or full available if less than salary)
-            $minWithdrawalLimit = ($salaryAmount > 0) ? min(500.0, $salaryAmount) : 500.0;
+            // Minimum withdrawal threshold is the monthly salary requirement (e.g. ৳ 15,000)
+            $minWithdrawalLimit = ($salaryAmount > 0) ? $salaryAmount : 5000.0;
 
             $summary['monthly_salary'] = $salaryAmount;
             $summary['matured_earned'] = $maturedEarned;
@@ -533,6 +604,183 @@ class PayrollHelper {
                 'sessions' => intval($earnData['total_sessions']),
             ]
         ];
+
+        // 5. Overtime Bank (Money vs Mango Choice Calculation)
+        try {
+            $shiftHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
+            if ($shiftHours <= 0) $shiftHours = 8.0;
+
+            // Determine cutoff date for unlocked withdrawal cycle (e.g. up to 2026-09-30 when withdrawing September)
+            $maxUnlockedMonth = null;
+            if (!empty($monthlyCycleLedger)) {
+                foreach ($monthlyCycleLedger as $cycle) {
+                    if (!empty($cycle['is_unlocked'])) {
+                        if ($maxUnlockedMonth === null || $cycle['month_key'] > $maxUnlockedMonth) {
+                            $maxUnlockedMonth = $cycle['month_key'];
+                        }
+                    }
+                }
+            }
+            $cycleEndDate = $maxUnlockedMonth ? date('Y-m-t', strtotime($maxUnlockedMonth . '-01')) : date('Y-m-d');
+            $cycleLabel = $maxUnlockedMonth ? date('F Y', strtotime($maxUnlockedMonth . '-01')) : date('F Y');
+
+            // Fetch attendance for unlocked cycle overtime calculation
+            $stmtAttAll = $pdo->prepare("
+                SELECT date, check_in, check_out 
+                FROM attendance 
+                WHERE user_id = :user_id 
+                  AND check_in IS NOT NULL AND check_out IS NOT NULL
+                  AND date <= :cycle_end_date
+                ORDER BY date ASC
+            ");
+            $stmtAttAll->execute([
+                ':user_id' => $userId,
+                ':cycle_end_date' => $cycleEndDate
+            ]);
+            $attRowsAll = $stmtAttAll->fetchAll(PDO::FETCH_ASSOC);
+
+            // Holidays
+            $holidays = [];
+            $holStmt = $pdo->query("SELECT date, expected_hours FROM holidays");
+            if ($holStmt) {
+                while ($h = $holStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $holidays[$h['date']] = (float)$h['expected_hours'];
+                }
+            }
+
+            // Aggregate by date
+            $dailyWorkedSec = [];
+            foreach ($attRowsAll as $ar) {
+                $inTs = strtotime(strpos($ar['check_in'], ' ') !== false ? $ar['check_in'] : ($ar['date'] . ' ' . $ar['check_in']));
+                $outTs = strtotime(strpos($ar['check_out'], ' ') !== false ? $ar['check_out'] : ($ar['date'] . ' ' . $ar['check_out']));
+                if ($outTs <= $inTs) continue;
+                $d = $ar['date'];
+                if (!isset($dailyWorkedSec[$d])) $dailyWorkedSec[$d] = 0;
+                $dailyWorkedSec[$d] += ($outTs - $inTs);
+            }
+
+            $totalOtSeconds = 0;
+            $totalShortSeconds = 0;
+            foreach ($dailyWorkedSec as $dStr => $wSec) {
+                $isFri = (date('N', strtotime($dStr)) == 5);
+                $expSec = $isFri ? 0 : ($shiftHours * 3600);
+                if (isset($holidays[$dStr])) {
+                    $expSec = $holidays[$dStr] * 3600;
+                }
+                $diffSec = $wSec - $expSec;
+                if ($diffSec > 0) {
+                    $totalOtSeconds += $diffSec;
+                } elseif ($diffSec < -900 && !$isFri) {
+                    $totalShortSeconds += abs($diffSec);
+                }
+            }
+            $totalOtHours = round($totalOtSeconds / 3600, 2);
+            $totalShortHours = round($totalShortSeconds / 3600, 2);
+
+            // Claims directly from central user_breaks table (within cycle cutoff)
+            $stmtMb = $pdo->prepare("
+                SELECT date, break_type, duration_minutes 
+                FROM user_breaks 
+                WHERE user_id = :user_id 
+                  AND status != 'Rejected' 
+                  AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime')
+                  AND date <= :cycle_end_date
+            ");
+            $stmtMb->execute([
+                ':user_id' => $userId,
+                ':cycle_end_date' => $cycleEndDate
+            ]);
+            $mbRows = $stmtMb->fetchAll(PDO::FETCH_ASSOC);
+
+            $claimedOtHours = 0.0;
+            $inShiftOtHours = 0.0;
+            $claimedDatesMap = [];
+
+            foreach ($mbRows as $mb) {
+                $hrs = round(intval($mb['duration_minutes']) / 60, 2);
+                if ($mb['break_type'] === 'Mango Full Day') {
+                    $claimedOtHours += $hrs;
+                    if (!empty($mb['date'])) {
+                        $claimedDatesMap[$mb['date']] = true;
+                    }
+                } else {
+                    $inShiftOtHours += $hrs;
+                }
+            }
+
+            // Leaves & Absences outside of claimed mango breaks
+            $leaveDatesMap = [];
+            try {
+                $lrStmt = $pdo->prepare("SELECT start_date, end_date FROM leave_requests WHERE user_id = :user_id AND status = 'Approved'");
+                $lrStmt->execute([':user_id' => $userId]);
+                while ($al = $lrStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cur = strtotime($al['start_date']);
+                    $end = strtotime($al['end_date']);
+                    while ($cur <= $end) {
+                        $dt = date('Y-m-d', $cur);
+                        if (date('N', $cur) != 5 && !isset($claimedDatesMap[$dt])) {
+                            $leaveDatesMap[$dt] = true;
+                        }
+                        $cur = strtotime('+1 day', $cur);
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            try {
+                $attLeaveStmt = $pdo->prepare("SELECT date FROM attendance WHERE user_id = :user_id AND status IN ('Leave', 'Absent')");
+                $attLeaveStmt->execute([':user_id' => $userId]);
+                while ($attL = $attLeaveStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $dt = $attL['date'];
+                    if (date('N', strtotime($dt)) != 5 && !isset($claimedDatesMap[$dt])) {
+                        $leaveDatesMap[$dt] = true;
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            $totalLeaveHours = round(count($leaveDatesMap) * $shiftHours, 2);
+            $totalGapHours = round($totalShortHours + $totalLeaveHours, 2);
+
+            // Cashed out overtime from staff_withdrawals
+            $stmtCashed = $pdo->prepare("SELECT COALESCE(SUM(overtime_hours_cashed), 0) FROM staff_withdrawals WHERE user_id = :user_id AND status != 'rejected'");
+            $stmtCashed->execute([':user_id' => $userId]);
+            $cashedOtHours = floatval($stmtCashed->fetchColumn());
+
+            // Net Available Overtime (Do not double-deduct short hours since base salary already deducted them)
+            $netDeductions = round($claimedOtHours + $inShiftOtHours + $cashedOtHours, 2);
+            $availableOtHours = max(0.0, round($totalOtHours - $netDeductions, 2));
+            $availableRipeMangoes = floor($availableOtHours / $shiftHours);
+            $availableOtCashValue = round($availableOtHours * $hourlyRate, 2);
+
+            $summary['overtime_bank'] = [
+                'cycle_label' => $cycleLabel,
+                'cycle_end_date' => $cycleEndDate,
+                'shift_hours' => $shiftHours,
+                'hourly_rate' => $hourlyRate,
+                'total_overtime_hours' => $totalOtHours,
+                'cashed_out_hours' => $cashedOtHours,
+                'claimed_break_hours' => $claimedOtHours,
+                'available_hours' => $availableOtHours,
+                'ripe_mangoes' => intval($availableRipeMangoes),
+                'cash_value' => $availableOtCashValue,
+                'can_cashout' => ($availableOtHours >= 1.0)
+            ];
+        } catch (Throwable $otEx) {
+            error_log("Error calculating overtime bank in summary: " . $otEx->getMessage());
+            $summary['overtime_bank'] = null;
+        }
+
+        // Finalize eligibility: Staff can initiate withdrawal if their base balance + available overtime reaches the salary requirement
+        $potentialOtCash = floatval($summary['overtime_bank']['cash_value'] ?? 0.0);
+        $totalPotentialWithdrawable = $availableWithdrawableInteger + floor($potentialOtCash);
+        $canWithdraw = ($minWithdrawalLimit > 0 && $totalPotentialWithdrawable >= $minWithdrawalLimit);
+        $summary['can_withdraw'] = $canWithdraw;
+        if (!$canWithdraw) {
+            $summary['withdrawal_block_reason'] = ($totalPotentialWithdrawable <= 0)
+                ? 'No matured withdrawable balance available yet.'
+                : 'Minimum withdrawal requirement for your scheme is ৳ ' . number_format($minWithdrawalLimit) . '.';
+        } else {
+            $summary['withdrawal_block_reason'] = null;
+        }
 
         return $summary;
     }
@@ -694,10 +942,12 @@ class PayrollHelper {
     }
 
     /**
-     * Request a withdrawal
+     * Request a withdrawal (supports base salary + optional overtime cashout)
      */
-    public static function requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails) {
+    public static function requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails, $overtimeHoursToCash = 0.0) {
         $amount = floor(floatval($amount)); // Integer cashout
+        $overtimeHoursToCash = max(0.0, floatval($overtimeHoursToCash));
+
         if ($amount <= 0) {
             throw new Exception("Withdrawal amount must be a positive whole number (e.g. ৳ 5000).");
         }
@@ -712,9 +962,24 @@ class PayrollHelper {
             throw new Exception("Minimum withdrawal amount for your pay scheme is ৳" . number_format($minLimit) . ".");
         }
 
-        $available = floatval($summary['available_withdrawable']);
-        if ($amount > $available) {
-            throw new Exception("Requested amount (৳" . number_format($amount) . ") exceeds your available withdrawable balance (৳" . number_format($available) . "). Fractional paisa (৳" . number_format($summary['fractional_rollover'], 2) . ") remains in wallet for next month.");
+        // Base withdrawable
+        $baseAvailable = floatval($summary['available_withdrawable']);
+        $otCashAmount = 0.0;
+
+        if ($overtimeHoursToCash > 0) {
+            $otBank = $summary['overtime_bank'] ?? null;
+            $availOtHours = floatval($otBank['available_hours'] ?? 0.0);
+            if ($overtimeHoursToCash > $availOtHours) {
+                throw new Exception("Requested overtime cashout (" . $overtimeHoursToCash . "h) exceeds your available Overtime Bank (" . $availOtHours . "h).");
+            }
+            $otHourlyRate = floatval($otBank['hourly_rate'] ?? 0.0);
+            $otCashAmount = round($overtimeHoursToCash * $otHourlyRate, 2);
+        }
+
+        $totalMaxAvailable = floor($baseAvailable + $otCashAmount);
+
+        if ($amount > $totalMaxAvailable) {
+            throw new Exception("Requested amount (৳" . number_format($amount) . ") exceeds your total available withdrawable balance (৳" . number_format($totalMaxAvailable) . ").");
         }
 
         $scheme = $summary['scheme'];
@@ -722,10 +987,10 @@ class PayrollHelper {
 
         $stmt = $pdo->prepare("
             INSERT INTO staff_withdrawals (
-                user_id, scheme_id, amount, withdrawal_type, status,
+                user_id, scheme_id, amount, overtime_hours_cashed, withdrawal_type, status,
                 payment_method, account_details, requested_at
             ) VALUES (
-                :user_id, :scheme_id, :amount, :withdrawal_type, 'pending',
+                :user_id, :scheme_id, :amount, :overtime_hours_cashed, :withdrawal_type, 'pending',
                 :payment_method, :account_details, NOW()
             )
         ");
@@ -734,6 +999,7 @@ class PayrollHelper {
             ':user_id' => $userId,
             ':scheme_id' => $scheme['id'],
             ':amount' => $amount,
+            ':overtime_hours_cashed' => $overtimeHoursToCash,
             ':withdrawal_type' => $withdrawalType,
             ':payment_method' => $paymentMethod,
             ':account_details' => $accountDetails,

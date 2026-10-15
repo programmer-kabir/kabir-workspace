@@ -27,7 +27,7 @@ $today = date('Y-m-d');
 
 try {
     // 1. Get active break
-    $activeQuery = "SELECT id, break_type, start_time, reason, estimated_minutes 
+    $activeQuery = "SELECT id, break_type, purpose, start_time, reason, estimated_minutes 
                     FROM user_breaks 
                     WHERE user_id = :user_id AND status = 'Active' 
                     ORDER BY id DESC LIMIT 1";
@@ -48,7 +48,7 @@ try {
     // 2. Get pending break request (if no active break)
     $pending_request = null;
     if (!$active_break) {
-        $pendQuery = "SELECT id, break_type, reason, estimated_minutes, created_at 
+        $pendQuery = "SELECT id, break_type, purpose, reason, estimated_minutes, created_at 
                       FROM user_breaks 
                       WHERE user_id = :user_id AND date = :today AND status = 'Pending' 
                       ORDER BY id DESC LIMIT 1";
@@ -57,20 +57,26 @@ try {
         $pending_request = $pendStmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    // 3. Get allocated_break_minutes for this user (from employees or students)
-    $limit_query = "SELECT allocated_break_minutes FROM employees WHERE user_id = :user_id 
+    // 3. Get allocated_break_minutes & has_tiffin_break for this user (from employees or students)
+    $limit_query = "SELECT has_tiffin_break, allocated_break_minutes FROM employees WHERE user_id = :user_id 
                     UNION 
-                    SELECT allocated_break_minutes FROM students WHERE user_id = :user_id LIMIT 1";
+                    SELECT has_tiffin_break, allocated_break_minutes FROM students WHERE user_id = :user_id LIMIT 1";
     $limit_stmt = $db->prepare($limit_query);
     $limit_stmt->execute([':user_id' => $user_id]);
-    $allocated_minutes = 60; // Default 60 mins
+    $allocated_minutes = 40; // Default 40 mins
+    $has_tiffin_break = 1;
     
     if ($limit_stmt->rowCount() > 0) {
         $emp = $limit_stmt->fetch(PDO::FETCH_ASSOC);
+        if (isset($emp['has_tiffin_break'])) {
+            $has_tiffin_break = (int)$emp['has_tiffin_break'];
+        }
         if (isset($emp['allocated_break_minutes']) && (int)$emp['allocated_break_minutes'] > 0) {
             $allocated_minutes = (int)$emp['allocated_break_minutes'];
         }
     }
+
+    $is_manual_break = ($has_tiffin_break === 0 || ($allocated_minutes > 0 && $has_tiffin_break === 0));
 
     // 4. Get total Tiffin break minutes today (counted against company quota)
     $tiffin_stmt = $db->prepare("SELECT SUM(duration_minutes) as total_mins 
@@ -94,6 +100,8 @@ try {
             "active_break" => $active_break,
             "pending_request" => $pending_request,
             "allocated_break_minutes" => $allocated_minutes,
+            "has_tiffin_break" => (bool)$has_tiffin_break,
+            "is_manual_break" => (bool)$is_manual_break,
             "total_break_minutes_today" => $total_tiffin_minutes_today,
             "total_tiffin_minutes_today" => $total_tiffin_minutes_today,
             "total_mango_minutes_today" => $total_mango_minutes_today,

@@ -278,10 +278,10 @@ const Login = () => {
               {/* ── Form Inputs ── */}
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 
-                {/* Email Field */}
+                {/* Identifier Field */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Student Email Address
+                    Email, Username or Phone
                   </label>
                   <div className="relative group/input">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within/input:text-indigo-600 dark:group-focus-within/input:text-indigo-400 transition-colors">
@@ -289,15 +289,15 @@ const Login = () => {
                     </div>
                     <input
                       id="student-email"
-                      type="email"
-                      autoComplete="email"
+                      type="text"
+                      autoComplete="username"
                       required
                       value={email}
                       onChange={e => {
                         setEmail(e.target.value);
                         if (error) setError('');
                       }}
-                      placeholder="student@creativeacademy.com"
+                      placeholder="e.g. username, email or 017xxxxxxxx"
                       className="w-full bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-medium outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 dark:focus:border-indigo-500 transition-all duration-200 shadow-xs"
                     />
                   </div>

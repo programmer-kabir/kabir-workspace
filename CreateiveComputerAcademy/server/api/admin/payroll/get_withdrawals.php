@@ -29,6 +29,7 @@ try {
             ps.contract_amount,
             ps.salary_amount,
             w.amount,
+            COALESCE(w.overtime_hours_cashed, 0) AS overtime_hours_cashed,
             w.withdrawal_type,
             w.status,
             w.payment_method,

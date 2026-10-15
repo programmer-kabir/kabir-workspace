@@ -1,36 +1,77 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
-
+require_once '../../config/cors.php';
 require_once '../../config/database.php';
 $database = new Database();
 $db = $database->getConnection();
 
 $data = json_decode(file_get_contents("php://input"));
 
-if (!isset($data->email) || !isset($data->password)) {
-    echo json_encode(["status" => "error", "message" => "Email and password are required."]);
+function ensureUsernameColumn($db) {
+    static $done = false;
+    if ($done || !$db) return;
+    try {
+        $colCheck = $db->query("SHOW COLUMNS FROM users LIKE 'username'")->fetch();
+        if (!$colCheck) {
+            $db->exec("ALTER TABLE users ADD COLUMN `username` VARCHAR(100) NULL UNIQUE AFTER `name`");
+        }
+        // Auto-seed usernames from email prefix if empty
+        $emptyUsers = $db->query("SELECT id, email FROM users WHERE username IS NULL OR username = ''")->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($emptyUsers)) {
+            foreach ($emptyUsers as $u) {
+                $base = !empty($u['email']) ? strtolower(explode('@', $u['email'])[0]) : 'user_' . $u['id'];
+                $base = preg_replace('/[^a-z0-9_.]/', '', $base);
+                if (empty($base)) $base = 'user_' . $u['id'];
+
+                $chk = $db->prepare("SELECT id FROM users WHERE username = :uname AND id != :uid");
+                $chk->execute([':uname' => $base, ':uid' => $u['id']]);
+                if ($chk->rowCount() > 0) {
+                    $uname = $base . '_' . $u['id'];
+                } else {
+                    $uname = $base;
+                }
+                $upd = $db->prepare("UPDATE users SET username = :uname WHERE id = :uid");
+                $upd->execute([':uname' => $uname, ':uid' => $u['id']]);
+            }
+        }
+        $done = true;
+    } catch (Exception $ex) {
+        // Table or column already set
+    }
+}
+
+$rawIdentifier = trim($data->email ?? $data->identifier ?? '');
+$password      = $data->password ?? '';
+
+if (empty($rawIdentifier) || empty($password)) {
+    echo json_encode(["status" => "error", "message" => "Email, username, or phone and password are required."]);
     exit;
 }
 
-$email    = trim($data->email);
-$password = $data->password;
-
 try {
-    // ── 1. Find user ────────────────────────────────────────────────────────
+    ensureUsernameColumn($db);
+
+    // Clean phone number (strip spaces, symbols, international code)
+    $cleanDigits = preg_replace('/[^0-9]/', '', $rawIdentifier);
+    $localPhone  = preg_replace('/^88/', '', $cleanDigits);
+
+    // ── 1. Find user by Email, Username, or Phone ────────────────────────────
     $stmt = $db->prepare(
-        "SELECT id, name, email, password, phone, status, profile_picture, cover_picture
-         FROM users WHERE email = :email LIMIT 1"
+        "SELECT id, name, username, email, password, phone, status, profile_picture, cover_picture
+         FROM users 
+         WHERE email = :raw
+            OR username = :raw
+            OR SUBSTRING_INDEX(email, '@', 1) = :raw
+            OR phone = :raw
+            OR (phone IS NOT NULL AND :localPhone != '' AND REPLACE(REPLACE(phone, '+88', ''), ' ', '') = :localPhone)
+         LIMIT 1"
     );
-    $stmt->bindParam(':email', $email);
-    $stmt->execute();
+    $stmt->execute([
+        ':raw' => $rawIdentifier,
+        ':localPhone' => $localPhone
+    ]);
 
     if ($stmt->rowCount() === 0) {
-        echo json_encode(["status" => "error", "message" => "Invalid email or password."]);
+        echo json_encode(["status" => "error", "message" => "Invalid credentials (email, username, or phone not found)."]);
         exit;
     }
 
@@ -38,7 +79,7 @@ try {
 
     // ── 2. Verify password ───────────────────────────────────────────────────
     if (!password_verify($password, $user['password'])) {
-        echo json_encode(["status" => "error", "message" => "Invalid email or password."]);
+        echo json_encode(["status" => "error", "message" => "Incorrect password. Please try again."]);
         exit;
     }
 
@@ -114,7 +155,7 @@ try {
         $emp = ['employee_code' => null, 'designation' => 'Student', 'department_name' => $student_info['course_name'] ?? 'General'];
     } else {
         $emp_stmt = $db->prepare(
-            "SELECT e.employee_code, e.designation, d.name AS department_name, e.shift_start, e.shift_end, e.joining_date
+            "SELECT e.employee_code, e.designation, d.name AS department_name, e.shift_start, e.shift_end, e.joining_date, e.has_tiffin_break, e.allocated_break_minutes
              FROM employees e
              LEFT JOIN departments d ON e.department_id = d.id
              WHERE e.user_id = :user_id LIMIT 1"
@@ -143,6 +184,12 @@ try {
     $user['shift_end']       = $emp['shift_end'] ?? null;
     $user['joining_date']    = $emp['joining_date'] ?? null;
     $user['student_info']    = $student_info;
+    
+    $hasTiffin = isset($emp['has_tiffin_break']) ? (int)$emp['has_tiffin_break'] : 1;
+    $allocBreak = isset($emp['allocated_break_minutes']) && $emp['allocated_break_minutes'] !== null ? (int)$emp['allocated_break_minutes'] : 0;
+    $user['has_tiffin_break']        = $hasTiffin;
+    $user['allocated_break_minutes'] = $allocBreak;
+    $user['is_manual_break']         = ($hasTiffin === 0 || ($allocBreak > 0 && $hasTiffin === 0));
 
     echo json_encode(["status" => "success", "token" => $token, "user" => $user]);
 

@@ -176,7 +176,7 @@ const MonthlyCollectionAnalytics = () => {
         const card = cardsMap[String(p.card_id)] || null;
 
         // Skip daily cards if marked
-        if ((card?.remarks || "").trim().toLowerCase() === "daily") {
+        if ((card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily") {
           return null;
         }
 

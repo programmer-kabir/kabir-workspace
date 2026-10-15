@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
+require_once '../../config/storage.php';
 if (file_exists('../credits/CreditHelper.php')) {
     require_once '../credits/CreditHelper.php';
 }
@@ -163,7 +164,7 @@ if (isset($_FILES['final_file']) && $_FILES['final_file']['error'] === UPLOAD_ER
         try {
             $uploadRes = $r2->uploadFile($fileTmpPath, $r2Key, $mimeType);
             if ($uploadRes && !empty($uploadRes['success'])) {
-                $final_file_url = $uploadRes['url'] ?? $uploadRes['public_url'] ?? $r2->getPublicUrl($r2Key);
+                $final_file_url = $r2Key;
                 $uploadedToCloud = true;
             }
         } catch (Throwable $e) {
@@ -199,7 +200,7 @@ if (isset($_FILES['final_image']) && $_FILES['final_image']['error'] === UPLOAD_
         try {
             $uploadImgRes = $r2->uploadFile($imgTmpPath, $r2ImgKey, $mimeType);
             if ($uploadImgRes && !empty($uploadImgRes['success'])) {
-                $final_image_url = $uploadImgRes['url'] ?? $uploadImgRes['public_url'] ?? $r2->getPublicUrl($r2ImgKey);
+                $final_image_url = $r2ImgKey;
                 $uploadedImgToCloud = true;
             }
         } catch (Throwable $e) {
@@ -228,14 +229,17 @@ if (empty($final_file_url) && empty($final_image_url)) {
 try {
     $db->beginTransaction();
 
+    $storage_provider = ($uploadedToCloud || $uploadedImgToCloud) ? 'r2' : 'local';
+
     // 1. Insert or Update task_final_deliveries
     $deliveryQuery = "INSERT INTO task_final_deliveries 
-        (task_id, reviewer_id, final_file_url, final_image_url, fix_notes, is_stock_ready, source_type)
-        VALUES (:task_id, :reviewer_id, :final_file_url, :final_image_url, :fix_notes, 1, :source_type)
+        (task_id, reviewer_id, final_file_url, final_image_url, storage_provider, fix_notes, is_stock_ready, source_type)
+        VALUES (:task_id, :reviewer_id, :final_file_url, :final_image_url, :storage_provider, :fix_notes, 1, :source_type)
         ON DUPLICATE KEY UPDATE 
             reviewer_id = VALUES(reviewer_id),
             final_file_url = VALUES(final_file_url),
             final_image_url = VALUES(final_image_url),
+            storage_provider = VALUES(storage_provider),
             fix_notes = VALUES(fix_notes),
             is_stock_ready = 1,
             source_type = VALUES(source_type),
@@ -243,12 +247,13 @@ try {
 
     $delStmt = $db->prepare($deliveryQuery);
     $delStmt->execute([
-        ':task_id' => $task_id,
-        ':reviewer_id' => $reviewer_id,
-        ':final_file_url' => $final_file_url ?? '',
-        ':final_image_url' => $final_image_url,
-        ':fix_notes' => $fix_notes,
-        ':source_type' => $source_type
+        ':task_id'          => $task_id,
+        ':reviewer_id'      => $reviewer_id,
+        ':final_file_url'   => $final_file_url ?? '',
+        ':final_image_url'  => $final_image_url,
+        ':storage_provider' => $storage_provider,
+        ':fix_notes'        => $fix_notes,
+        ':source_type'      => $source_type
     ]);
 
     // 2. Mark task as Completed
@@ -340,8 +345,8 @@ try {
         "message" => "Final stock delivery saved and task approved successfully!",
         "delivery" => [
             "task_id" => $task_id,
-            "final_file_url" => $final_file_url,
-            "final_image_url" => $final_image_url,
+            "final_file_url" => resolveStorageUrl($final_file_url, $storage_provider),
+            "final_image_url" => resolveStorageUrl($final_image_url, $storage_provider),
             "fix_notes" => $fix_notes,
             "rating" => $rating,
             "source_type" => $source_type

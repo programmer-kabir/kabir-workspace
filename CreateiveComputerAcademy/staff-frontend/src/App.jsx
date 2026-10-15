@@ -3,6 +3,7 @@ import React, { Suspense } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { SearchProvider } from './context/SearchContext';
 import ProtectedRoute from './routes/ProtectedRoute';
+import DeveloperRoute from './routes/DeveloperRoute';
 import AuthenticatedLayout from './layouts/AuthenticatedLayout';
 
 // Lazy load pages for performance
@@ -23,6 +24,8 @@ const BlogDetails = React.lazy(() => import('./pages/BlogDetails'));
 const ContentStudio = React.lazy(() => import('./pages/ContentStudio'));
 const PayrollWallet = React.lazy(() => import('./pages/PayrollWallet'));
 const MangoBreakTree = React.lazy(() => import('./pages/MangoBreakTree'));
+const CommunityFeed = React.lazy(() => import('./pages/CommunityFeed'));
+const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -99,6 +102,14 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/community" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <CommunityFeed />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             <Route path="/feed" element={
               <ProtectedRoute>
                 <AuthenticatedLayout>
@@ -169,6 +180,22 @@ function App() {
                   <PayrollWallet />
                 </AuthenticatedLayout>
               </ProtectedRoute>
+            } />
+
+            {/* Developer Suite Route - Only for Developer / Admin */}
+            <Route path="/developer" element={
+              <DeveloperRoute>
+                <AuthenticatedLayout>
+                  <DeveloperConsole />
+                </AuthenticatedLayout>
+              </DeveloperRoute>
+            } />
+            <Route path="/developer/:tab" element={
+              <DeveloperRoute>
+                <AuthenticatedLayout>
+                  <DeveloperConsole />
+                </AuthenticatedLayout>
+              </DeveloperRoute>
             } />
 
             {/* 404 Catch-All Route */}

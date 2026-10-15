@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FiTable,
   FiCode,
@@ -24,6 +25,7 @@ const DbHeader = ({
   selectedTable = '',
   systemHealth = null
 }) => {
+  const navigate = useNavigate();
   const r2Size = systemHealth?.r2_storage?.total_size_gb ? `${systemHealth.r2_storage.total_size_gb} GB` : '3.05 GB';
   const r2Files = systemHealth?.r2_storage?.total_objects || 190;
 
@@ -96,6 +98,16 @@ const DbHeader = ({
           >
             <FiCode size={16} />
             <span>SQL Runner</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/storage-settings')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition-all cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+            title="Configure Cloud Storage & File Routing Rules"
+          >
+            <FiHardDrive size={15} />
+            <span>Vault Rules</span>
           </button>
         </div>
       </div>

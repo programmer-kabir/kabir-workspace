@@ -44,6 +44,9 @@ $fileSize     = $fileData['size'];
 $fileTmpPath  = $fileData['tmp_name'];
 $fileExt      = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
+require_once __DIR__ . '/../../config/storage.php';
+require_once __DIR__ . '/../../config/GoogleDriveClient.php';
+
 function classifyFileTypeSingle($ext) {
     $previewExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
     $videoExts = ['mp4', 'mov', 'webm', 'avi', 'mkv'];
@@ -56,6 +59,8 @@ function classifyFileTypeSingle($ext) {
 }
 $fileType = classifyFileTypeSingle($fileExt);
 
+$targetProvider = determineUploadProvider($fileExt, $fileType);
+
 if (!empty($taskId)) {
     $suffix = ($index > 1) ? "_{$index}" : "";
     $targetFileName = "{$taskId}{$suffix}.{$fileExt}";
@@ -67,13 +72,30 @@ if (!empty($taskId)) {
     $r2Key = "task_submissions/{$targetFileName}";
 }
 
-// Upload direct to R2 via SigV4
-$accountId     = 'fa948485e5e2101ff9947aa131ca2a10';
-$accessKey     = '8388e6bdc9147b7a38c1c472bc7404eb';
-$secretKey     = 'a02487098fb85ff1ac74ca43773484a9dec89c5afb60a2736ca4cb4df3b6477e';
-$bucketName    = 'cca-task-attachments';
-$publicBaseUrl = 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev';
-$region        = 'auto';
+$mimeMap = [
+    'psd' => 'image/vnd.adobe.photoshop',
+    'ai' => 'application/postscript',
+    'eps' => 'application/postscript',
+    'pdf' => 'application/pdf',
+    'jpg' => 'image/jpeg',
+    'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'svg' => 'image/svg+xml',
+    'zip' => 'application/zip',
+    'rar' => 'application/x-rar-compressed',
+    '7z' => 'application/x-7z-compressed',
+    'mp4' => 'video/mp4'
+];
+// ── Cloudflare R2 Credentials & Config ──
+require_once __DIR__ . '/../../config/r2.php';
+
+$accountId     = defined('R2_ACCOUNT_ID') ? R2_ACCOUNT_ID : 'fa948485e5e2101ff9947aa131ca2a10';
+$accessKey     = defined('R2_ACCESS_KEY_ID') ? R2_ACCESS_KEY_ID : '8388e6bdc9147b7a38c1c472bc7404eb';
+$secretKey     = defined('R2_SECRET_ACCESS_KEY') ? R2_SECRET_ACCESS_KEY : 'a02487098fb85ff1ac74ca43773484a9dec89c5afb60a2736ca4cb4df3b6477e';
+$bucketName    = defined('R2_BUCKET_NAME') ? R2_BUCKET_NAME : 'cca-task-attachments';
+$publicBaseUrl = defined('R2_PUBLIC_URL') ? R2_PUBLIC_URL : 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev';
+$region        = defined('R2_REGION') ? R2_REGION : 'auto';
 
 if (!file_exists($fileTmpPath)) {
     echo json_encode(["status" => "error", "message" => "Temporary source file not found."]);
@@ -85,6 +107,64 @@ if ($content === false) {
     echo json_encode(["status" => "error", "message" => "Failed to read uploaded file contents."]);
     exit();
 }
+
+$gdriveFailError = null;
+// ── OPTION A: Google Drive Provider ──
+if ($targetProvider === 'gdrive') {
+    try {
+        $driveClient = new GoogleDriveClient();
+        if ($driveClient->isConfigured()) {
+            $cfg = getStorageRoutingConfig();
+            $folderName = $cfg['gdrive_task_folder_name'] ?? 'Task_Submissions';
+            $rootId = !empty($cfg['gdrive_root_folder_id']) ? $cfg['gdrive_root_folder_id'] : null;
+
+            // 1. Get or create main Task_Submissions folder
+            $mainFolderId = $driveClient->findOrCreateFolder($folderName, $rootId);
+            if (empty($mainFolderId)) {
+                $mainFolderId = $rootId;
+            }
+
+            // 2. Organize by Task: Create task_{taskId} subfolder inside Task_Submissions
+            $targetFolderId = $mainFolderId;
+            if (!empty($taskId)) {
+                $taskSubfolderName = "task_{$taskId}";
+                $taskSubfolderId = $driveClient->findOrCreateFolder($taskSubfolderName, $mainFolderId);
+                if (!empty($taskSubfolderId)) {
+                    $targetFolderId = $taskSubfolderId;
+                }
+            }
+
+            // 3. Upload file inside task_{taskId} folder
+            $driveRes = $driveClient->uploadFile($fileTmpPath, $targetFileName, $contentType, $targetFolderId);
+
+            $displayKey = !empty($taskId) ? "task_submissions/task_{$taskId}/{$targetFileName}" : "task_submissions/{$targetFileName}";
+
+            echo json_encode([
+                "status"    => "success",
+                "message"   => "Uploaded to Google Drive successfully",
+                "provider"  => "gdrive",
+                "file"      => [
+                    'name'             => $originalName,
+                    'url'              => $driveRes['view_url'],
+                    'key'              => $displayKey,
+                    'file_id'          => $driveRes['file_id'],
+                    'storage_provider' => 'gdrive',
+                    'size'             => $fileSize,
+                    'ext'              => $fileExt,
+                    'mime'             => $contentType,
+                    'file_type'        => $fileType
+                ]
+            ]);
+            exit();
+        }
+    } catch (Exception $e) {
+        $gdriveFailError = $e->getMessage();
+        error_log("Google Drive upload failed, auto-failover to R2: " . $gdriveFailError);
+        // Failover continues to Cloudflare R2 safely below
+    }
+}
+
+// ── OPTION B: Cloudflare R2 Provider (Default / Failover) ──
 
 $host = "{$accountId}.r2.cloudflarestorage.com";
 $uri  = "/{$bucketName}/" . ltrim($r2Key, '/');
@@ -165,17 +245,21 @@ curl_close($ch);
 
 if ($httpCode >= 200 && $httpCode < 300) {
     $finalUrl = rtrim($publicBaseUrl, '/') . '/' . ltrim($r2Key, '/');
+    $msg = !empty($gdriveFailError) ? "Fallback to R2: {$gdriveFailError}" : "Uploaded successfully";
     echo json_encode([
         "status"    => "success",
-        "message"   => "Uploaded successfully",
+        "message"   => $msg,
+        "failover"  => !empty($gdriveFailError),
+        "failover_error" => $gdriveFailError,
         "file"      => [
-            'name'      => $originalName,
-            'url'       => $finalUrl,
-            'key'       => $r2Key,
-            'size'      => $fileSize,
-            'ext'       => $fileExt,
-            'mime'      => $contentType,
-            'file_type' => $fileType
+            'name'             => $originalName,
+            'url'              => $finalUrl,
+            'key'              => $r2Key,
+            'storage_provider' => 'r2',
+            'size'             => $fileSize,
+            'ext'              => $fileExt,
+            'mime'             => $contentType,
+            'file_type'        => $fileType
         ]
     ]);
 } else {

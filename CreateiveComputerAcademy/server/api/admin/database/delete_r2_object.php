@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/R2Client.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/admin_db_guard.php';
 
 header('Content-Type: application/json');
 
@@ -10,6 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Method not allowed. Use POST.']);
     exit;
 }
+
+$database = new Database();
+$db = $database->getConnection();
+$adminUser = verifyAdminDbAccess($db);
 
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true);

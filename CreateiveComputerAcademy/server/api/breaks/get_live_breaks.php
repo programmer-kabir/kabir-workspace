@@ -13,7 +13,7 @@ $today = date('Y-m-d');
 
 try {
     // 1. Fetch active breaks
-    $actQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.start_time, b.reason, b.estimated_minutes,
+    $actQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.purpose, b.start_time, b.reason, b.estimated_minutes,
                         u.name, u.profile_picture, COALESCE(e.employee_code, st.student_code) as employee_code,
                         COALESCE(e.allocated_break_minutes, st.allocated_break_minutes, 40) as allocated_break_minutes 
                  FROM user_breaks b 
@@ -27,7 +27,7 @@ try {
     $active_breaks = $actStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 2. Fetch pending requests
-    $pendQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.reason, b.estimated_minutes, b.created_at,
+    $pendQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.purpose, b.reason, b.estimated_minutes, b.created_at,
                          u.name, u.profile_picture, COALESCE(e.employee_code, st.student_code) as employee_code
                   FROM user_breaks b 
                   JOIN users u ON b.user_id = u.id 

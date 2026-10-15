@@ -20,6 +20,7 @@ import {
   FaLayerGroup,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { GiReceiveMoney } from "react-icons/gi";
 import Loader from "../../../components/Loader/Loader";
 import NoDataFound from "../../../components/NoData/NoDataFound";
 import Pagination from "../../../components/Pagination";
@@ -166,7 +167,9 @@ const InstallmentCards = () => {
     return pages;
   }, [totalPages]);
 
-  const currentUser = users?.find((u) => u.id === user?.id);
+  const currentUser = users?.find(
+    (u) => Number(u?.user_id ?? u?.id) === Number(user?.user_id ?? user?.id)
+  );
 
   return (
     <div className="w-full space-y-6 pb-12 pt-2">
@@ -188,14 +191,24 @@ const InstallmentCards = () => {
           </div>
         </div>
 
-        {/* Quick Action Button */}
-        <Link
-          to="/customers/create_installment_cards"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-200 self-start md:self-auto"
-        >
-          <FaPlus className="text-xs" />
-          <span>Create New Card</span>
-        </Link>
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
+          <Link
+            to="/customers/settled_cards_report"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 border border-amber-500/30 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/10 transition-all duration-200"
+          >
+            <GiReceiveMoney className="text-base" />
+            <span>অগ্রিম নিষ্পত্তি রিপোর্ট</span>
+          </Link>
+
+          <Link
+            to="/customers/create_installment_cards"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-200"
+          >
+            <FaPlus className="text-xs" />
+            <span>Create New Card</span>
+          </Link>
+        </div>
       </div>
 
       {/* ===== KPI Metrics Bar ===== */}

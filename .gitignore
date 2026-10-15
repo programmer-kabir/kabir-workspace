@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 **/node_modules/
 **/vendor/
 
@@ -7,11 +7,23 @@
 **/build/
 **/.next/
 **/out/
+**/release/
+**/*.exe
+**/*.dll
+**/*.bin
 
 # Environment variables & secrets
 **/.env
 **/.env.local
-**/.env.*.local
+**/.env.*
+!**/.env.example
+**/google_drive_credentials.json
+
+# Database & Large Dumps
+**/*.sql
+**/server/backups/*
+!**/server/backups/.htaccess
+!**/server/backups/.gitkeep
 
 # Logs
 **/*.log

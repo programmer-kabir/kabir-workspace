@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // 🔹 login
-  const login = async (id, password) => {
+  const login = async (userId, password) => {
     setLoading(true);
     try {
       const res = await fetch(
@@ -37,7 +37,12 @@ export const AuthProvider = ({ children }) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ id, password }),
+          body: JSON.stringify({
+            user_id: userId,
+            id: userId,
+            password: password,
+            pass: password,
+          }),
         },
       );
 

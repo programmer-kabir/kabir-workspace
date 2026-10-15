@@ -21,10 +21,19 @@ const Profile = () => {
   // New Profile Edit States
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [username, setUsername] = useState(currentUser?.username || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('profile'); // 'profile' | 'payout' | 'security'
+
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name || '');
+      setPhone(currentUser.phone || '');
+      setUsername(currentUser.username || '');
+    }
+  }, [currentUser]);
 
   // Payout Settings State
   const [payoutForm, setPayoutForm] = useState({
@@ -116,12 +125,13 @@ const Profile = () => {
       const res = await axios.post(`${API_URL}api/profile/update_profile.php`, {
         user_id: currentUser.id,
         name: name,
-        phone: phone
+        phone: phone,
+        username: username
       });
       
       if(res.data.status === 'success') {
         setProfileMessage({ text: 'Profile updated successfully!', type: 'success' });
-        updateUser({ name, phone });
+        updateUser({ name, phone, username });
         setTimeout(() => {
           setIsModalOpen(false);
           setProfileMessage(null);
@@ -130,7 +140,7 @@ const Profile = () => {
         setProfileMessage({ text: res.data.message || 'Failed to update profile.', type: 'error' });
       }
     } catch (error) {
-      setProfileMessage({ text: 'Server error occurred.', type: 'error' });
+      setProfileMessage({ text: error.response?.data?.message || 'Server error occurred.', type: 'error' });
     } finally {
       setProfileLoading(false);
     }
@@ -281,6 +291,7 @@ const Profile = () => {
                       onClick={() => {
                           setName(currentUser.name || '');
                           setPhone(currentUser.phone || '');
+                          setUsername(currentUser.username || '');
                           setIsModalOpen(true);
                       }}
                       className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white rounded-xl font-bold backdrop-blur-md border border-slate-200 dark:border-white/20 transition-all shadow-sm"
@@ -308,6 +319,17 @@ const Profile = () => {
                     Contact Details
                   </h3>
                   <div className="space-y-4">
+                    <div className="flex items-center gap-4 group">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shrink-0">
+                        <FiHash size={16} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Username</div>
+                        <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                          @{currentUser?.username || 'Not set'}
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-4 group">
                       <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0">
                         <FiMail size={16} />
@@ -736,6 +758,23 @@ const Profile = () => {
                   </div>
 
                   <form onSubmit={handleProfileUpdate} className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">
+                        Username <span className="text-[11px] font-semibold text-indigo-500 lowercase">(for instant login)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">@</span>
+                        <input 
+                          type="text" 
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-4 pl-9 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono"
+                          placeholder="e.g. sonia_akter"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">Lowercase letters, numbers, dot (.) and underscore (_) only.</p>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Full Name</label>
                       <input 

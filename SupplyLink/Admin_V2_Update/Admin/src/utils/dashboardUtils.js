@@ -15,6 +15,7 @@ export const matchDate = ({
 
   const cleanDate = itemDate.split(" ")[0];
   const today = new Date().toISOString().split("T")[0];
+  // const today = "2026-10-10";
 
   if (filterType === "daily") {
     return cleanDate === (selectedDate || today);
@@ -63,11 +64,11 @@ export const groupByDate = (data, field, dateField, startDate, endDate) => {
     const rawDate = item[dateField];
     if (!rawDate) return;
 
-const date = rawDate.split(" ")[0];
+    const date = rawDate.split(" ")[0];
 
-if (!inRange(date, startDate, endDate)) return;
+    if (!inRange(date, startDate, endDate)) return;
 
-map[date] = (map[date] || 0) + Number(item[field] || 0);
+    map[date] = (map[date] || 0) + Number(item[field] || 0);
   });
 
   const allDates = generateDates(startDate, endDate);
@@ -87,11 +88,11 @@ export const groupByMonth = (data, field, dateField, MONTHS) => {
     if (!raw) return;
 
 
-const date = new Date(raw);
-if (isNaN(date)) return;
+    const date = new Date(raw);
+    if (isNaN(date)) return;
 
-const month = date.getMonth() + 1;
-map[month] = (map[month] || 0) + Number(item[field] || 0);
+    const month = date.getMonth() + 1;
+    map[month] = (map[month] || 0) + Number(item[field] || 0);
 
   });
 
@@ -102,25 +103,25 @@ map[month] = (map[month] || 0) + Number(item[field] || 0);
 };
 
 export const getChartData = ({
-data,
-field,
-dateField,
-startDate,
-endDate,
-activePreset,
-MONTHS,
+  data,
+  field,
+  dateField,
+  startDate,
+  endDate,
+  activePreset,
+  MONTHS,
 }) => {
-// 🔥 FIRST: check year
-if (activePreset === "year") {
-return groupByMonth(data, field, dateField, MONTHS);
-}
+  // 🔥 FIRST: check year
+  if (activePreset === "year") {
+    return groupByMonth(data, field, dateField, MONTHS);
+  }
 
-// 🔹 THEN: range
-if (startDate && endDate) {
-return groupByDate(data, field, dateField, startDate, endDate);
-}
+  // 🔹 THEN: range
+  if (startDate && endDate) {
+    return groupByDate(data, field, dateField, startDate, endDate);
+  }
 
-return [];
+  return [];
 };
 
 
@@ -145,8 +146,8 @@ export const applyPreset = (type) => {
     firstDay.setDate(1);
 
 
-start = firstDay;
-end = today;
+    start = firstDay;
+    end = today;
 
   }
 
@@ -154,9 +155,9 @@ end = today;
     const firstDay = new Date();
     firstDay.setDate(1);
 
-   
-start = firstDay;
-end = today;
+
+    start = firstDay;
+    end = today;
 
   }
 

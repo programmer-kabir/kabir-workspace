@@ -23,8 +23,15 @@ const BreakLockOverlay = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [ending, setEnding] = useState(false);
 
+  const isManualUser = Boolean(
+    currentUser?.is_manual_break ||
+    currentUser?.has_tiffin_break === 0 ||
+    currentUser?.has_tiffin_break === false ||
+    (Number(currentUser?.allocated_break_minutes) > 0 && currentUser?.has_tiffin_break === 0)
+  );
+
   const fetchStatus = async () => {
-    if (!currentUser?.id || currentUser.id === 2) return;
+    if (!currentUser?.id || isManualUser) return;
     try {
       const res = await axios.get(`${API_BASE}api/breaks/get_active_break.php?user_id=${currentUser.id}`);
       if (res.data.status === 'success') {
@@ -57,6 +64,7 @@ const BreakLockOverlay = () => {
           setActiveBreak({
             id: data.break_id,
             break_type: data.break_type,
+            purpose: data.purpose,
             start_time: data.start_time,
             reason: data.reason
           });
@@ -113,8 +121,8 @@ const BreakLockOverlay = () => {
     }
   };
 
-  // Rule 1: User ID 2 is completely excluded
-  if (currentUser?.id === 2) return null;
+  // Rule 1: Manual break users are completely excluded from screen lock
+  if (isManualUser) return null;
 
   // Rule 2: No active break -> no lock
   if (!activeBreak) return null;
@@ -138,7 +146,10 @@ const BreakLockOverlay = () => {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 mb-2">
           <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
-          <span>{activeBreak.break_type} Break Active</span>
+          <span>{activeBreak.purpose ? `${activeBreak.purpose} Break` : `${activeBreak.break_type} Break`} Active</span>
+          {activeBreak.purpose && activeBreak.break_type && (
+            <span className="text-[10px] text-slate-400 font-bold">({activeBreak.break_type})</span>
+          )}
         </div>
 
         {/* Title & Reason */}

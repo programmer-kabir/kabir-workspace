@@ -18,6 +18,9 @@ try {
     $additional_cost = (float) ($_POST['additional_cost'] ?? 0);
 
     $sale_type    = $_POST['sale_type'] ?? 'Installment';
+    $installment_type = in_array(strtolower(trim($_POST['installment_type'] ?? '')), ['daily', 'monthly']) 
+        ? strtolower(trim($_POST['installment_type'])) 
+        : 'monthly';
     $sale_price   = (float) ($_POST['sale_price'] ?? 0);
     $down_payment = (float) ($_POST['down_payment'] ?? 0);
 
@@ -78,15 +81,14 @@ try {
     if ($per_installment_amount <= 0) {
         throw new Exception("Invalid per installment amount");
     }
-if ($reference_user_id === null || $reference_user_id <= 0) {
-    throw new Exception("Reference staff is required");
-}
+    if ($reference_user_id === null || $reference_user_id <= 0) {
+        throw new Exception("Reference staff is required");
+    }
     // cost price
     $cost_price = $purchase_price + $additional_cost;
 
-    // profit (as per your rule)
-    // profit = (purchase + additional) - sale
-    $profit = $cost_price - $sale_price;
+    // profit = sale - (purchase + additional)
+    $profit = $sale_price - $cost_price;
 
     $res = $mysqli->query("SELECT MAX(card_id) AS max_id FROM installment_cards FOR UPDATE");
     $row = $res->fetch_assoc();
@@ -104,6 +106,7 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
             additional_cost,
             cost_price,
             sale_type,
+            installment_type,
             sale_price,
             down_payment,
             total_due_amount,
@@ -113,16 +116,16 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
             delivery_date,
             first_installment_date,
             supplier_id,
-               reference_user_id,
+            reference_user_id,
             status,
             created_at
         ) VALUES (
-            ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Running', NOW()
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Running', NOW()
         )
     ");
 
     $stmt->bind_param(
-        "iisddddsdddiddssii",
+        "iisddddssdddiddssii",
         $next_card_id,           // i
         $user_id,                // i
         $product_name,           // s
@@ -131,6 +134,7 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
         $additional_cost,        // d
         $cost_price,             // d
         $sale_type,              // s
+        $installment_type,       // s
         $sale_price,             // d
         $down_payment,           // d
         $total_due_amount,       // d
@@ -139,9 +143,8 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
         $profit,                 // d
         $delivery_date,          // s
         $first_installment_date, // s
-        $supplier_id,             // i
-            $reference_user_id       // i ✅ NEW
-
+        $supplier_id,            // i
+        $reference_user_id       // i
     );
 
     $stmt->execute();

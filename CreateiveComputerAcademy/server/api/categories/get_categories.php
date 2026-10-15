@@ -67,13 +67,37 @@ try {
         if ($item['level'] === 'child' && !empty($item['parent_id'])) {
             $parentId = $item['parent_id'];
             // Find parent subcategory in tree
+            $found = false;
             foreach ($tree as &$mainCat) {
                 if (isset($mainCat['subcategories'][$parentId])) {
                     $mainCat['subcategories'][$parentId]['children'][] = $item;
+                    $found = true;
                     break;
                 }
             }
             unset($mainCat);
+
+            // If not found in subcategories, check if parent is directly a main category
+            if (!$found && isset($tree[$parentId])) {
+                $virtualSubId = 'direct_' . $parentId;
+                if (!isset($tree[$parentId]['subcategories'][$virtualSubId])) {
+                    $tree[$parentId]['subcategories'][$virtualSubId] = [
+                        'id' => $parentId,
+                        'name' => 'General / Niches',
+                        'slug' => 'general-niches-' . $parentId,
+                        'parent_id' => $parentId,
+                        'level' => 'subcategory',
+                        'icon' => '📁',
+                        'color' => $tree[$parentId]['color'] ?? 'from-blue-500 to-indigo-600',
+                        'credit' => $tree[$parentId]['credit'] ?? 5,
+                        'default_checklists' => [],
+                        'default_specs' => null,
+                        'estimated_minutes' => 90,
+                        'children' => []
+                    ];
+                }
+                $tree[$parentId]['subcategories'][$virtualSubId]['children'][] = $item;
+            }
         }
     }
 

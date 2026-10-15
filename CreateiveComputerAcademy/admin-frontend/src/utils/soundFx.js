@@ -138,6 +138,36 @@ class SoundFX {
       console.debug(e);
     }
   }
+
+  playAlert() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, now); // A4
+      osc.frequency.setValueAtTime(330, now + 0.15); // E4
+      osc.frequency.setValueAtTime(440, now + 0.3); // A4
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch (e) {
+      console.debug(e);
+    }
+  }
 }
 
 export const soundFx = new SoundFX();
+

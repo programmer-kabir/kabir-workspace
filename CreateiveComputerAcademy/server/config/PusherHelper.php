@@ -1,14 +1,15 @@
 <?php
-class PusherHelper {
-    // ⚠️ TODO: Replace these with your actual Pusher Keys ⚠️
-    private static $app_id = '2188221';
-    private static $key = '82a63711fed4b73bd74d';
-    private static $secret = '2c2b6d614bb47f7928a4';
-    private static $cluster = 'ap2'; // e.g., 'mt1', 'ap2'
+require_once __DIR__ . '/env.php';
 
+class PusherHelper {
     public static function trigger($channel, $event, $data) {
-        $host = "api-" . self::$cluster . ".pusher.com";
-        $path = "/apps/" . self::$app_id . "/events";
+        $app_id = env('PUSHER_APP_ID', '2188221');
+        $key = env('PUSHER_KEY', '82a63711fed4b73bd74d');
+        $secret = env('PUSHER_SECRET', '2c2b6d614bb47f7928a4');
+        $cluster = env('PUSHER_CLUSTER', 'ap2');
+
+        $host = "api-" . $cluster . ".pusher.com";
+        $path = "/apps/" . $app_id . "/events";
         
         $payload = json_encode([
             "name" => $event,
@@ -20,7 +21,7 @@ class PusherHelper {
         $timestamp = time();
 
         $query_params = [
-            "auth_key" => self::$key,
+            "auth_key" => $key,
             "auth_timestamp" => $timestamp,
             "auth_version" => "1.0",
             "body_md5" => $body_md5
@@ -31,7 +32,7 @@ class PusherHelper {
         $query_string = http_build_query($query_params);
 
         $string_to_sign = "POST\n$path\n$query_string";
-        $auth_signature = hash_hmac('sha256', $string_to_sign, self::$secret);
+        $auth_signature = hash_hmac('sha256', $string_to_sign, $secret);
 
         $url = "https://$host$path?$query_string&auth_signature=$auth_signature";
 

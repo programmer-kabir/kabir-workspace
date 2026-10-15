@@ -19,7 +19,7 @@ import { FiSearch, FiX, FiSidebar, FiMenu, FiCoffee } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 const AuthenticatedLayout = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, isImpersonating, revertImpersonation, originalDevUser } = useAuth();
   const { searchTerm, setSearchTerm } = useSearch();
   const location = useLocation();
   const navigate = useNavigate();
@@ -120,6 +120,33 @@ const AuthenticatedLayout = ({ children }) => {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
+        {/* Sticky Impersonation Alert Banner */}
+        {isImpersonating && (
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-3 sm:px-6 py-2 text-xs font-bold flex items-center justify-between gap-3 shadow-md z-40 border-b border-amber-500/40 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
+              </span>
+              <span className="truncate">
+                <strong className="tracking-wide uppercase text-[10px] bg-black/25 px-1.5 py-0.5 rounded mr-1">Impersonating</strong>
+                <span>{currentUser?.name || 'User'}</span>
+                <span className="opacity-80 ml-1">({currentUser?.employee_code || 'Staff'})</span>
+                <span className="hidden md:inline opacity-75 ml-1.5">&bull; Logged in by Developer {originalDevUser?.name || ''}</span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                revertImpersonation();
+                navigate('/developer/impersonate');
+              }}
+              className="px-2.5 sm:px-3 py-1 bg-white text-amber-950 hover:bg-amber-100 rounded-lg text-xs font-black shadow-xs cursor-pointer transition flex items-center gap-1.5 shrink-0"
+            >
+              <span>Exit Impersonation</span>
+            </button>
+          </div>
+        )}
         <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 shadow-xs relative z-30 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
             {/* Mobile Drawer Trigger */}
@@ -205,8 +232,8 @@ const AuthenticatedLayout = ({ children }) => {
               <HeaderClock />
             </div>
 
-            {/* Custom Break Request Button - visible to all staff except User ID 2 */}
-            {currentUser?.id !== 2 && (
+            {/* Custom Break Request Button - visible to staff with scheduled tiffin */}
+            {(!currentUser?.is_manual_break && currentUser?.has_tiffin_break !== 0 && currentUser?.has_tiffin_break !== false && !(Number(currentUser?.allocated_break_minutes) > 0 && currentUser?.has_tiffin_break === 0)) && (
               <button
                 type="button"
                 onClick={() => setIsBreakModalOpen(true)}

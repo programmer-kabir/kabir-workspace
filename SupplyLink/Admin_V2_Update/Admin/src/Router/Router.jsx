@@ -27,6 +27,7 @@ import Investors from "../Pages/shared/Investors/Investors";
 import MonthlyInstallmentOverviews from "../Pages/shared/Customers/MonthlyInstallmentOverviews";
 import MonthlyInstallmentReport from "../Pages/shared/Customers/MonthlyInstallmentReport";
 import MonthlyCollectionAnalytics from "../Pages/shared/Customers/MonthlyCollectionAnalytics";
+import SettledCardsReport from "../Pages/shared/Customers/SettledCardsReport";
 import DailyInstallmentsUsers from "../Pages/shared/DailyInstallments/DailyInstallmentsUsers";
 import DailyInstallmentsReports from "../Pages/shared/DailyInstallments/DailyInstallmentsReports";
 import DailyInstallmentsUsersDetails from "../Pages/shared/DailyInstallments/DailyInstallmentsUsersDetails";
@@ -125,6 +126,10 @@ const routes = createBrowserRouter([
           {
             path: "/customers/monthly_installment_reports",
             element: <MonthlyInstallmentReport />,
+          },
+          {
+            path: "/customers/settled_cards_report",
+            element: <SettledCardsReport />,
           },
           {
             path: "/customers/Installment_payments/:cardId",

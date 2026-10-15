@@ -31,22 +31,22 @@ require_once "../db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$id = $data['id'] ?? null;
-$password = $data['password'] ?? null;
+$id = $data['user_id'] ?? $data['user_d'] ?? $data['id'] ?? null;
+$password = $data['password'] ?? $data['pass'] ?? null;
 
 if (!$id || !$password) {
     http_response_code(400);
-    echo json_encode(["message" => "ID and password required"]);
+    echo json_encode(["message" => "User ID and password required"]);
     exit;
 }
 
-/* 🔥 STEP 1: USER + ALL ROLES FETCH (Supports DB id, user_id, id_number, or mobile) */
+/* 🔥 STEP 1: USER + ALL ROLES FETCH (Checks by official user_id or mobile) */
 $cleanId = trim($id);
 $stmt = $mysqli->prepare("
     SELECT u.id, u.user_id, u.name, u.mobile, u.id_number, u.password, r.role
     FROM users u
     LEFT JOIN user_roles r ON r.user_id = u.user_id
-    WHERE u.id = ? OR u.user_id = ? OR u.id_number = ? OR u.mobile = ?
+    WHERE u.user_id = ? OR u.mobile = ?
 ");
 
 if (!$stmt) {
@@ -55,7 +55,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param("ssss", $cleanId, $cleanId, $cleanId, $cleanId);
+$stmt->bind_param("ss", $cleanId, $cleanId);
 $stmt->execute();
 $res = $stmt->get_result();
 
@@ -97,7 +97,7 @@ if (!$isPasswordValid) {
 
 /* 🔥 STEP 4: SESSION SAVE (ARRAY ROLE) */
 $_SESSION['user'] = [
-    "id" => (int)($userData['id'] ?? $userData['user_id']),
+    "id" => (int)($userData['user_id'] ?? $userData['id']),
     "user_id" => (int)($userData['user_id'] ?? $userData['id']),
     "name" => $userData['name'] ?? '',
     "mobile" => $userData['mobile'] ?? '',

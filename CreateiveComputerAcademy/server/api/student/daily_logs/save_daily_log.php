@@ -117,8 +117,8 @@ try {
             $admStmt = $db->query("
                 SELECT DISTINCT u.id 
                 FROM users u
-                LEFT JOIN user_roles ur ON ur.user_id = u.id
-                WHERE ur.role IN ('admin', 'reviewer') OR u.role IN ('admin', 'reviewer')
+                INNER JOIN user_roles ur ON ur.user_id = u.id
+                WHERE ur.role IN ('admin', 'reviewer')
             ");
             $adminIds = $admStmt ? $admStmt->fetchAll(PDO::FETCH_COLUMN) : [];
 

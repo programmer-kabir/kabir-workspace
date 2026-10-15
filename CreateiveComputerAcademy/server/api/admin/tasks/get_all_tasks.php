@@ -4,8 +4,10 @@ if (!ob_start("ob_gzhandler")) {
     ob_start();
 }
 
-require_once '../../../config/cors.php';
-require_once '../../../config/database.php';
+require_once __DIR__ . '/../../../config/cors.php';
+require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../config/storage.php';
+
 
 $database = new Database();
 $db = $database->getConnection();
@@ -48,7 +50,7 @@ try {
             $sub_stmt = $db->prepare("SELECT * FROM task_submissions WHERE task_id IN ($in_placeholders) ORDER BY id ASC");
             $sub_stmt->execute($task_ids);
             while ($sub = $sub_stmt->fetch(PDO::FETCH_ASSOC)) {
-                $subs_by_task[$sub['task_id']][] = $sub;
+                $subs_by_task[$sub['task_id']][] = formatSubmissionItem($sub);
             }
         } catch (Exception $ex) {}
 
@@ -63,7 +65,7 @@ try {
             ");
             $del_stmt->execute($task_ids);
             while ($del = $del_stmt->fetch(PDO::FETCH_ASSOC)) {
-                $del_by_task[$del['task_id']] = $del;
+                $del_by_task[$del['task_id']] = formatFinalDelivery($del);
             }
         } catch (Exception $ex) {}
 

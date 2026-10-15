@@ -9,7 +9,7 @@ const Login = () => {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // Theme state for Light / Dark mode
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
@@ -47,7 +47,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden transition-colors duration-500">
-      
+
       {/* ── Ambient Background Glows ── */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-500/20 dark:bg-blue-600/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/20 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '10s' }} />
@@ -56,13 +56,13 @@ const Login = () => {
       {/* ── Main Login Card Center ── */}
       <main className="w-full max-w-md mx-auto z-20">
         <div className="relative group">
-          
+
           {/* Subtle Outer Neon Halo */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 rounded-[28px] blur-sm opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200" />
 
           {/* Card Container */}
           <div className="relative bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/90 rounded-[26px] p-8 sm:p-10 shadow-2xl shadow-slate-300/40 dark:shadow-black/60 transition-colors duration-500">
-            
+
             {/* Top Accent Line */}
             <div className="absolute top-0 left-8 right-8 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500 rounded-full" />
 
@@ -82,7 +82,7 @@ const Login = () => {
               <div className="relative overflow-hidden flex items-start gap-3 p-4 rounded-2xl bg-rose-50/95 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200 shadow-xl shadow-rose-500/10 dark:shadow-rose-950/40 backdrop-blur-md mb-6 animate-in slide-in-from-top-2 duration-300">
                 {/* Left accent bar */}
                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-rose-500 to-red-600" />
-                
+
                 {/* Pulsing Icon Bubble */}
                 <div className="w-8 h-8 rounded-xl bg-rose-500/15 dark:bg-rose-500/25 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-sm">
                   <FiAlertCircle size={18} className="animate-pulse" />
@@ -112,11 +112,11 @@ const Login = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              
-              {/* Email Field */}
+
+              {/* Email / Username / Phone Field */}
               <div className="space-y-2">
                 <label className="block text-[11px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Admin Email
+                  Email, Username or Phone
                 </label>
                 <div className="relative group/input">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within/input:text-blue-600 dark:group-focus-within/input:text-blue-400 transition-colors">
@@ -124,15 +124,15 @@ const Login = () => {
                   </div>
                   <input
                     id="admin-email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     required
                     value={email}
                     onChange={e => {
                       setEmail(e.target.value);
                       if (error) setError('');
                     }}
-                    placeholder="admin@cca.com"
+                    placeholder="Enter email, username or phone number"
                     className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-medium outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 dark:focus:border-blue-500 transition-all duration-200 shadow-sm"
                   />
                 </div>

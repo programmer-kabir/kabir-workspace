@@ -4,6 +4,11 @@ import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token') || '';
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 /**
  * useDatabaseManager Hook
  * Pure JavaScript custom hook managing schema metadata, table records,
@@ -82,7 +87,9 @@ export function useDatabaseManager() {
   const fetchTables = async (selectDefault = false) => {
     setLoadingTables(true);
     try {
-      const res = await axios.get(`${API_BASE}api/admin/database/get_tables.php`);
+      const res = await axios.get(`${API_BASE}api/admin/database/get_tables.php`, {
+        headers: getAuthHeaders()
+      });
       if (res.data.status === 'success') {
         const fetchedTables = res.data.tables || [];
         setTables(fetchedTables);
@@ -105,7 +112,9 @@ export function useDatabaseManager() {
   const fetchSystemHealth = async (showToast = false) => {
     setLoadingHealth(true);
     try {
-      const res = await axios.get(`${API_BASE}api/admin/database/get_system_health.php`);
+      const res = await axios.get(`${API_BASE}api/admin/database/get_system_health.php`, {
+        headers: getAuthHeaders()
+      });
       if (res.data && res.data.status === 'success') {
         setSystemHealth(res.data);
         if (showToast) {
@@ -138,7 +147,10 @@ export function useDatabaseManager() {
         sort_col: sortCol,
         sort_dir: sortDir
       };
-      const res = await axios.get(`${API_BASE}api/admin/database/get_table_data.php`, { params });
+      const res = await axios.get(`${API_BASE}api/admin/database/get_table_data.php`, {
+        params,
+        headers: getAuthHeaders()
+      });
       if (res.data.status === 'success') {
         setTableData(res.data);
         if (res.data.columns) {
@@ -253,10 +265,16 @@ export function useDatabaseManager() {
     setSubmitting(true);
     const target = insertModal.table || selectedTable;
     try {
-      const res = await axios.post(`${API_BASE}api/admin/database/insert_row.php`, {
-        table: target,
-        data: insertModal.data
-      });
+      const res = await axios.post(
+        `${API_BASE}api/admin/database/insert_row.php`,
+        {
+          table: target,
+          data: insertModal.data
+        },
+        {
+          headers: getAuthHeaders()
+        }
+      );
       if (res.data.status === 'success') {
         toast.success(res.data.message || 'Row inserted successfully');
         setInsertModal({ isOpen: false, data: {}, table: '' });
@@ -294,11 +312,17 @@ export function useDatabaseManager() {
     }
 
     try {
-      const res = await axios.post(`${API_BASE}api/admin/database/update_row.php`, {
-        table: target,
-        primary_keys: primaryKeys,
-        data: editModal.row
-      });
+      const res = await axios.post(
+        `${API_BASE}api/admin/database/update_row.php`,
+        {
+          table: target,
+          primary_keys: primaryKeys,
+          data: editModal.row
+        },
+        {
+          headers: getAuthHeaders()
+        }
+      );
       if (res.data.status === 'success') {
         toast.success(res.data.message || 'Row updated successfully');
         setEditModal({ isOpen: false, row: null, table: '' });
@@ -349,10 +373,16 @@ export function useDatabaseManager() {
     }
 
     try {
-      const res = await axios.post(`${API_BASE}api/admin/database/delete_row.php`, {
-        table: target,
-        primary_keys: primaryKeys
-      });
+      const res = await axios.post(
+        `${API_BASE}api/admin/database/delete_row.php`,
+        {
+          table: target,
+          primary_keys: primaryKeys
+        },
+        {
+          headers: getAuthHeaders()
+        }
+      );
       if (res.data.status === 'success') {
         toast.success(res.data.message || 'Row deleted successfully');
         setDeleteModal({ isOpen: false, row: null, table: '', fromSql: false });
@@ -439,10 +469,20 @@ export function useDatabaseManager() {
       return;
     }
     setExecutingSql(true);
+    const token = localStorage.getItem('cca_admin_token') || '';
     try {
-      const res = await axios.post(`${API_BASE}api/admin/database/run_query.php`, {
-        query: queryToRun
-      });
+      const res = await axios.post(
+        `${API_BASE}api/admin/database/run_query.php`,
+        {
+          query: queryToRun,
+          token: token
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
       setSqlResult(res.data);
       if (res.data.status === 'success') {
         toast.success(res.data.message || `Query executed in ${res.data.execution_time_ms}ms`);
@@ -455,7 +495,8 @@ export function useDatabaseManager() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to execute SQL query');
+      const msg = err.response?.data?.message || 'Failed to execute SQL query';
+      toast.error(msg);
     } finally {
       setExecutingSql(false);
     }

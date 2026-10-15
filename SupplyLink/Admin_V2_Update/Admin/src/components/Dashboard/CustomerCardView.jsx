@@ -24,30 +24,57 @@ const CustomerCardView = ({ card }) => {
     ? [downPayment, ...regularInstallments]
     : regularInstallments;
 
-  const paidCount = allInstallments.filter((p) => p.status === "Paid").length;
+  const isCardFullyPaid = card.status === "Fully Paid";
+
+  // If a card is Fully Paid, any installment that is not "Paid" is considered "Waived" (or discount)
+  const getInstallmentStatus = (p) => {
+    if (p.status === "Paid") return "Paid";
+    if (p.status === "Waived") return "Waived";
+    if (isCardFullyPaid) return "Waived";
+    return "Unpaid";
+  };
+
+  const paidCount = allInstallments.filter(
+    (p) => getInstallmentStatus(p) === "Paid"
+  ).length;
+
+  const waivedCount = allInstallments.filter(
+    (p) => getInstallmentStatus(p) === "Waived"
+  ).length;
 
   const totalInstallments =
     Number(card.installment_count) + (hasDownPayment ? 1 : 0);
 
-  const progress = Math.min(
-    100,
-    totalInstallments ? Math.round((paidCount / totalInstallments) * 100) : 0
-  );
+  const isCompleted = isCardFullyPaid || (paidCount + waivedCount >= totalInstallments);
+
+  const progress = isCompleted
+    ? 100
+    : Math.min(
+        100,
+        totalInstallments
+          ? Math.round(((paidCount + waivedCount) / totalInstallments) * 100)
+          : 0
+      );
 
   const downPaymentAmount = downPayment ? Number(downPayment.due_amount) : 0;
 
   const paidInstallmentAmount = regularInstallments
-    .filter((p) => p.status === "Paid")
+    .filter((p) => getInstallmentStatus(p) === "Paid")
+    .reduce((sum, p) => sum + Number(p.due_amount), 0);
+
+  const waivedAmount = regularInstallments
+    .filter((p) => getInstallmentStatus(p) === "Waived")
     .reduce((sum, p) => sum + Number(p.due_amount), 0);
 
   const baseInstallmentAmount = Number(card.sale_price) - downPaymentAmount;
 
-  const totalRemaining = Math.max(
-    0,
-    baseInstallmentAmount - paidInstallmentAmount
-  );
+  const totalRemaining = isCompleted
+    ? 0
+    : Math.max(
+        0,
+        baseInstallmentAmount - paidInstallmentAmount - waivedAmount
+      );
 
-  const isCompleted = progress === 100 || card.status === "Fully Paid";
   const displayCardId = card.card_id || card.id;
 
   return (
@@ -105,6 +132,13 @@ const CustomerCardView = ({ card }) => {
             )}
           </span>
 
+          {/* Settled Early / Discount Badge */}
+          {waivedCount > 0 && isCompleted && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+              ছাড় / Settled Early
+            </span>
+          )}
+
           {/* Quick Link to Card Details / Manage */}
           <Link
             to={`/customers/installment_cards/card_Details?cardId=${displayCardId}`}
@@ -143,6 +177,11 @@ const CustomerCardView = ({ card }) => {
           <p className="text-base sm:text-lg font-black text-rose-300 font-mono">
             ৳ {Number(totalRemaining || 0).toLocaleString()}
           </p>
+          {waivedAmount > 0 && isCompleted && (
+            <span className="text-[10px] text-amber-400 font-medium block">
+              (মওকুফ/ছাড়: ৳{waivedAmount.toLocaleString()})
+            </span>
+          )}
         </div>
 
         <div className="p-3.5 rounded-2xl bg-[#070D1E]/80 border border-slate-800 space-y-1">
@@ -150,7 +189,7 @@ const CustomerCardView = ({ card }) => {
             <FaCalendarAlt className="text-cyan-400 text-xs" /> Installments
           </span>
           <p className="text-base sm:text-lg font-black text-cyan-300 font-mono">
-            {paidCount} / {totalInstallments}
+            {isCompleted ? totalInstallments : (paidCount + waivedCount)} / {totalInstallments}
           </p>
         </div>
       </div>
@@ -185,7 +224,9 @@ const CustomerCardView = ({ card }) => {
           </thead>
           <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
             {allInstallments.map((p, idx) => {
-              const isPaid = p.status === "Paid";
+              const status = getInstallmentStatus(p);
+              const isPaid = status === "Paid";
+              const isWaived = status === "Waived";
               const isDown = Number(p.installment_no) === 0;
 
               return (
@@ -196,10 +237,19 @@ const CustomerCardView = ({ card }) => {
                   <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        isPaid ? "bg-emerald-400" : "bg-slate-500"
+                        isPaid
+                          ? "bg-emerald-400"
+                          : isWaived
+                          ? "bg-amber-400"
+                          : "bg-slate-500"
                       }`}
                     ></span>
                     <span>{isDown ? "Down Payment" : p.tag || `Installment #${p.installment_no}`}</span>
+                    {isWaived && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold ml-1">
+                        মওকুফ
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 font-mono text-slate-300">
                     {p.due_date || "-"}
@@ -208,17 +258,19 @@ const CustomerCardView = ({ card }) => {
                     ৳ {Number(p.due_amount || 0).toLocaleString()}
                   </td>
                   <td className="py-3 px-4 font-mono text-slate-300">
-                    {p.paid_date || "-"}
+                    {isPaid ? (p.paid_date || "-") : isWaived ? "মওকুফ / ছাড়" : "-"}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
                         isPaid
                           ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                          : isWaived
+                          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
                           : "bg-slate-800 text-slate-400 border-slate-700"
                       }`}
                     >
-                      {isPaid ? "Paid" : "Unpaid"}
+                      {isPaid ? "Paid" : isWaived ? "Waived / মওকুফ" : "Unpaid"}
                     </span>
                   </td>
                 </tr>

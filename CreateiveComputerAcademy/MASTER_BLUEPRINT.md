@@ -1,404 +1,604 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Blueprint
 
-**Generated:** September 21, 2026
-**Role:** Lead Software Architect / Senior Full-Stack Developer analysis
-**Scope:** Full repository — 4 React frontends, 1 PHP backend, 1 MySQL schema
+**Generated / Updated:** October 15, 2026  
+**Role:** Lead Software Architect / Senior Full-Stack Developer analysis  
+**Scope:** Full repository — 4 React web frontends, 1 Electron Desktop Attendance App, 1 PHP REST backend (350+ endpoints across 29 domains), 74 baseline MySQL tables + dynamic runtime tables, Cloudflare R2, Google Drive Cloud Vault, Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, SMS Dispatcher Shield, and Google Gemini AI integration.
 
-No files were modified, deleted, or refactored to produce this document. All statements are traced from the actual code in this repository as of the current working tree (including uncommitted changes shown in git status). Anything not directly verifiable is marked `UNKNOWN`.
+No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
 ---
 
 # 1. PROJECT UNDERSTANDING STATUS
 
-Full codebase analyzed: all 4 frontend portals (`admin-frontend`, `staff-frontend`, `review-frontend`, `student-frontend`), the entire `server/api` tree (~170 PHP endpoints across 24 domains), `server/config`, and the full MySQL dump (`server/u647959341_cca_manage_db (3).sql`, 56 tables). Route trees, auth flow, credit engine, and every table's columns/keys/foreign keys were traced directly from source. A prior self-audit (`PROJECT_AUDIT_REPORT.md`, Sept 8 2026) exists in the repo; findings below were independently re-verified against current code, not copied — several of its findings are now fixed, one is not, and new findings are added.
+**Status: FULL CODEBASE ANALYZED AND VERIFIED.**
+
+The complete repository has been exhaustively analyzed:
+- **4 Frontend Web Portals**: `admin-frontend` (Port 5173), `staff-frontend` (Port 5174), `review-frontend` (Port 5175), `student-frontend` (Port 5176).
+- **1 Desktop Application**: `Attendence_Apps/Attendance-Desktop` (Electron + React 19 + Tailwind v4 + Vite + WebRTC Screen Streamer & Native Windows Input Injector + Fleet Auto-Update Service).
+- **Backend API**: The entire `server/api` tree (350+ PHP endpoints across 29 domains), `server/config`, and `server/data`.
+- **Database**: The MySQL schema (`server/u647959341_cca_manage_db.sql`, 74 baseline tables) + dynamic runtime table definitions (`community_posts`, `community_likes`, `community_comments`, `staff_overtime_trades`, `staff_pay_schemes`, `staff_work_earnings`, `staff_withdrawals`, `staff_payout_settings`, `app_releases`, `staff_app_versions`, `system_storage_settings`).
+- **Integrations**: Pusher WebSockets (`ap2` cluster), WebRTC (STUN `stun.l.google.com:19302`), Cloudflare R2 object storage, Google Drive API Cloud Vault, PHPMailer SMTP, SMS Dispatcher Shield with dry-run protection, and Google Gemini API for break note polishing.
 
 ---
 
 # 2. TECHNOLOGY STACK
 
-**Frontend (×4, independent Vite apps):**
-- React 19.2.8, React Router DOM 7.18.2, Vite 8.2.0
-- Styling: Tailwind CSS (v3.4 in `admin-frontend`/`review-frontend` via PostCSS; v4.3 in `staff-frontend`/`student-frontend` via `@tailwindcss/vite`) — **inconsistent Tailwind major version across portals**
-- `axios` (HTTP), `pusher-js` (realtime), `framer-motion` (animation), `react-toastify` + `sonner` (toasts), `react-icons`
-- `admin-frontend` only: `recharts` (charts), `@hello-pangea/dnd` (drag-drop), `jodit-react` (rich text editor)
-- `review-frontend` only: TypeScript (`tsc && vite build`), `canvas-confetti`, `recharts`
-- `student-frontend`: `canvas-confetti`, custom Bezier/PenTool game assets (`public/bezier/`)
-- Linting: `oxlint` in admin/staff; none configured in review/student `package.json`
+### Frontend Web Portals (4 Independent Vite SPAs)
+- **Framework & Core**: React 19.2.8, React Router DOM 7.18.2, Vite 8.2.0/8.2.1
+- **Styling Architecture**:
+  - `admin-frontend` & `review-frontend`: Tailwind CSS v3.4 via PostCSS
+  - `staff-frontend` & `student-frontend`: Tailwind CSS v4.3 via `@tailwindcss/vite`
+- **State & Networking**: `axios` (HTTP), `pusher-js` (realtime WebSockets), `framer-motion` (UI animations), `sonner` + `react-toastify` (notification toasts), `react-icons` (icons)
+- **Specialized Portal Libraries**:
+  - `admin-frontend`: `recharts` (analytics), `@hello-pangea/dnd` (drag & drop), `jodit-react` (rich text editor), WebRTC RTCPeerConnection (`LiveScreenMonitor.jsx`)
+  - `review-frontend`: TypeScript (`tsc`), `canvas-confetti`, `recharts`
+  - `student-frontend`: `canvas-confetti`, Bezier/PenTool interactive game engine (`public/bezier/`)
+  - `staff-frontend`: Developer Suite (`DeveloperConsole.jsx`, `ApiTesterTab.jsx`, `LogStreamTab.jsx`)
+- **Code Quality**: `oxlint` configured in `admin-frontend` and `staff-frontend`.
 
-**Backend:**
-- Plain PHP (no framework), PDO + MySQL, procedural per-endpoint scripts (one `.php` file = one REST action)
-- `PHPMailer` (vendored under `server/api/libs/PHPMailer`) for email
-- Custom `PusherHelper` for realtime events, custom `R2Client` for Cloudflare R2 (S3-compatible) file storage
-- `.env` loader (`server/config/env.php`) — supports `DB_HOST/DB_NAME/DB_USER/DB_PASS`; secrets outside DB config are hardcoded (see §10)
+### Desktop Application (`Attendence_Apps/Attendance-Desktop`)
+- **Runtime**: Electron v35.0.0 with Node.js & Chromium
+- **Frontend Layer**: React 19.0.0, Tailwind CSS v4.0.0, Vite 6.2.0, `pusher-js`, `axios`, `react-icons`
+- **Native Hardware & System Features**:
+  - Windows System Tray integration (`Tray`, context menu "Quick Punch", background persistence)
+  - `desktopCapturer` auto-authorized desktop capture
+  - WebRTC live peer-to-peer screen streaming (`ScreenStreamService.js`)
+  - Native Windows input injection child process (`electron/input_injector.exe`) for remote control
+  - Native Windows notifications (`Notification`) and audio punch feedback
+- **Packaging & Distribution**: `electron-builder` producing `CCA-Attendance-Standalone.exe` (portable) and `CCA-Attendance-Setup.exe` (NSIS installer).
 
-**Database:** MySQL/MariaDB, InnoDB, `utf8mb4`, 56 tables, timezone forced to `+06:00` (Asia/Dhaka) at connection level.
+### Backend Architecture
+- **Language & Runtime**: Plain PHP (procedural per-endpoint scripts, zero external framework, no ORM).
+- **Database Access**: PDO (PHP Data Objects) with prepared statements, connection timezone pinned to `+06:00` (Asia/Dhaka).
+- **Third-Party Libraries & Helpers**:
+  - `PHPMailer` (vendored in `server/api/libs/PHPMailer`)
+  - `R2Client` (custom S3-compatible client for Cloudflare R2)
+  - `PusherHelper` (cURL-based Pusher REST API publisher)
+  - `SmsHelper` (`server/config/SmsHelper.php` with dry-run mode via `maintenance_status.json`)
+  - `CommunityDbHelper` (`server/api/community/CommunityDbHelper.php`)
+  - `BreakDbHelper` (`server/api/breaks/BreakDbHelper.php`)
+  - `PayrollHelper` (`server/api/payroll/PayrollHelper.php`)
+  - `AttendanceSecurityHelper` (`server/api/attendance/AttendanceSecurityHelper.php`)
+- **AI Integration**: Google Gemini REST API (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.8-flash`) with deterministic rule-based fallback in `server/api/breaks/polish_break_note.php`.
 
-**Infra/Integrations:** Cloudflare R2 (object storage), Pusher (realtime channel: `ap2` cluster), cron scripts under `server/api/crons/`.
+### Database
+- **Engine**: MySQL / MariaDB (InnoDB, `utf8mb4_unicode_ci`, 74 base tables + dynamically provisioned community, HR, and payroll tables).
+- **Timezone**: Connection-level forced to `+06:00` (Asia/Dhaka).
 
 ---
 
 # 3. ARCHITECTURE SUMMARY
 
-Four independent React SPAs, each its own Vite project, each calling the **same shared PHP REST API** in `server/api/`. There is no API gateway, no shared backend framework, and no ORM — every endpoint is a standalone script that: sets CORS headers → connects to MySQL via PDO → reads `php://input` JSON or `$_GET`/`$_POST` → runs raw/prepared SQL → `echo json_encode(...)`.
+The system consists of 4 web SPAs and 1 native Electron desktop app communicating with a shared PHP REST API and cloud infrastructure:
 
 ```
-Admin Portal (5173) ─┐
-Staff Portal (5174) ─┼──axios──▶ server/api/**/*.php ──PDO──▶ MySQL (u647959341_cca_manage_db)
-Review Portal (5175)─┤                  │
-Student Portal(5176)─┘                  ├──▶ Cloudflare R2 (file uploads: tasks, blogs, courses, brand)
-                                         ├──▶ Pusher (chat, notifications, live breaks — realtime push)
-                                         └──▶ PHPMailer/SMTP (emails)
+┌─────────────────────────┐
+│   Admin Portal (5173)   │─┐
+└─────────────────────────┘ │
+┌─────────────────────────┐ │
+│   Staff Portal (5174)   │─┼─ axios ──▶ server/api/**/*.php (343 Endpoints)
+└─────────────────────────┘ │                 │
+┌─────────────────────────┐ │                 ├──▶ MySQL (u647959341_cca_manage_db)
+│   Review Portal (5175)  │─┤                 ├──▶ Cloudflare R2 (Files, Deliveries, Blogs)
+└─────────────────────────┘ │                 ├──▶ Pusher ap2 (Live Breaks, Trades, Community, Chat, WebRTC Signals)
+┌─────────────────────────┐ │                 ├──▶ PHPMailer / SMTP (System Emails)
+│  Student Portal (5176)  │─┤                 ├──▶ Google Gemini API (AI Break Note Polish)
+└─────────────────────────┘ │                 └──▶ SMS Gateway / Simulation Logger
+┌─────────────────────────┐ │
+│ Electron Desktop App    │─┘
+│ (Attendance + WebRTC)   │════ WebRTC Stream ════▶ Admin LiveScreenMonitor.jsx
+└─────────────────────────┘      (STUN / DataChannel Remote Input Control)
 ```
 
-Auth is a **shared opaque-token session model**: `login.php` issues a random 64-char hex token stored in `user_tokens`, the frontend stores it (localStorage, per-portal `AuthContext` — see §6) and sends it as `Authorization: Bearer <token>` or similar on `verify.php`/`sync.php` calls to rehydrate the session on load. **Most business endpoints do not independently validate this token** — see §6 and §10.
-
-Two CORS strategies coexist: `config/cors.php` (origin allow-list, used by most business endpoints) and inline `header("Access-Control-Allow-Origin: *")` in `auth/*.php` and some others — flagged as inconsistent in the prior audit and still true.
+### Communication Flow:
+1. **Client Request**: Frontend triggers an Axios call with JSON payload, form data, or URL query parameters. Electron desktop overrides origin headers to match authorized academy domains.
+2. **CORS & Headers**: Endpoint loads `config/cors.php` (allowed origin list: `localhost:5173-5180` and production domains).
+3. **Database Connection**: Endpoint instantiates `Database` (`config/database.php`), retrieving a singleton PDO instance configured with `PDO::ERRMODE_EXCEPTION`.
+4. **Business Logic & Helpers**: Endpoint coordinates domain helpers (`BreakDbHelper`, `PayrollHelper`, `CreditHelper`, `AttendanceSecurityHelper`, `CommunityDbHelper`, `NotificationHelper`, `PusherHelper`, `SmsHelper`).
+5. **Execution & Response**: Executes atomic SQL transactions where applicable (`beginTransaction`, `commit`, `rollBack`) and outputs JSON via `echo json_encode(...)`.
+6. **WebRTC Signaling**: Admin and Desktop App exchange SDP offers/answers and ICE candidates via `server/api/screen_monitor/signal.php` over Pusher channels (`screen-admin-channel` & `screen-staff-{id}`). Direct peer stream and RTCDataChannel handle mouse/keyboard inputs.
 
 ---
 
 # 4. COMPLETE MODULE LIST
 
-- **Identity & Auth** — login, token verify/sync, logout, multi-role support
-- **Staff Directory & HR** — employees, departments, staff CRUD, profiles
-- **Attendance** — check-in/out, disputes, device logs, daily roster, IP/geofencing (`AttendanceSecurityHelper`)
-- **Breaks / Tiffin** — request/start/end break, live break monitor, auto-tiffin cron
-- **Leave Management** — apply, approve/reject, list
-- **Task Pipeline** — creation (manual + AI "agentic blueprint"), claim, self-create, timer (start/pause), checklist, file upload (R2 presigned + direct), status lifecycle, history/logs, comments
-- **Reviewer/QA Pipeline** — pending/completed/rejected queues, task review & status update, final delivery, marketplace submissions (Dayal Stock + external), team management, analytics
-- **Credit / Gamification Engine** — wallet, P2P transfer, task rewards, rejection penalties, reviewer rewards, marketplace credit rules, leaderboard (`CreditHelper.php`, §9)
-- **Course & Curriculum (LMS)** — courses, modules, lessons, milestones, quizzes, resources, assignments, admin media upload
-- **Student Portal** — dashboard, enrollment, course player, assignment submission, quizzes, discussions, notes, lesson progress
-- **Foundations Lab** — typing curriculum, typing sessions, mouse drills, **PenTool game/lab** (new/uncommitted feature), skill badges, leaderboard
-- **Blogs (Academy Blog)** — CRUD, comments, reactions, read tracking, image upload
-- **Chat / Messaging** — 1:1 and group chats, reactions, receipts, typing indicators, file transfer, block/mute, realtime via Pusher
-- **Notifications** — per-user notification feed, mark read/delete, sent from many modules
-- **Brand Kit / Resources** — shared brand assets per role
-- **Database Manager (Admin)** — raw SQL runner, table browser, R2 object browser (⚠️ see §10)
-- **Reports/Analytics** — staff report, attendance report, task report, reviewer micro-analytics, schema viewer
-- **Settings** — system-wide settings + per-user settings
-- **Crons** — auto-checkout, auto-tiffin, category migration
+1. **Identity & Authentication**: Login, session rehydration, token sync, password hashing, multi-role profile resolution.
+2. **Staff HR & Directory**: Employees, departments, designations, shifts, staff CRUD, profiles.
+3. **Attendance & Geofencing**:
+   - Biometric/browser check-in/out, disputes, dynamic IP allow-list, device fingerprinting (`AttendanceSecurityHelper`).
+   - **Auto-Absent Manager (`cron_absent_manager.php`, `backfill_past_absents.php`)**: Nightly reconciliation with Friday and holiday awareness.
+   - **Mango Tree Auto-Protection**: Staff with $\ge$ 8 hours in Mango Bank consume 1 ripe mango to cover absences automatically.
+4. **Desktop Attendance & Live Screen Monitoring (🆕)**:
+   - Dedicated lightweight Electron Desktop App with background System Tray persistence and one-click quick punch.
+   - Real-time WebRTC peer-to-peer screen capture (`desktopCapturer`).
+   - Admin live monitoring grid (`LiveScreenMonitor.jsx`) with multi-screen inspection.
+   - Low-latency remote input injection via native Windows binary (`input_injector.exe`).
+5. **Breaks & Tiffin System**:
+   - Standard break requesting, approval, timer, auto-tiffin cron (`auto_tiffin.php`).
+   - **Tiffin Efficiency & Over-Break Policy**: 40-minute cap with credit (+25m) and penalty (-20m) deltas.
+   - **Mango Break Bank & Tree**: Visual overtime accumulation, in-shift claims, full-day leave conversion.
+   - **P2P Overtime Market**: Peer-to-peer overtime trading synchronized with payroll earnings.
+   - **AI Break Note Polisher**: Gemini-powered formalization of informal break notes.
+6. **Staff Payroll & Withdrawals**:
+   - Monthly and Yearly pay schemes with hourly rates (`PayrollHelper.php`, `staff_pay_schemes`).
+   - Automated sync of attendance work sessions into monetary earnings (`staff_work_earnings`).
+   - Withdrawal requests, processing, bKash/Nagad/Bank payouts (`staff_withdrawals`, `staff_payout_settings`).
+7. **Community Feed / Social Wall**:
+   - Internal social wall for Admin & Staff (`CommunityWall.jsx`, `CommunityFeed.jsx`).
+   - Post creation with rich text, categories (Announcement, Achievement, Discussion), image uploads via R2.
+   - Interactive likes, nested comment threads, pinned announcements, and live updates via Pusher `community-channel`.
+8. **Developer Suite & Janitor**:
+   - In-app developer console (`DeveloperConsole.jsx`) protected by `DeveloperRoute.jsx` and `developer_guard.php`.
+   - Live API runner, WebSocket tester, error log viewer, database snapshot export, cache cleaner (`run_janitor_clean.php`), and system maintenance toggler.
+9. **Smart SMS & Maintenance Shield**:
+   - `SmsHelper.php` with dry-run mode configured via `maintenance_status.json` preventing external balance deductions.
+10. **Task Pipeline**:
+    - Task creation (manual + AI Architect Blueprint), claiming, self-creation, timer tracking, R2 uploads.
+11. **Reviewer / QA Pipeline**:
+    - Review queues, task QA review, final delivery submission, marketplace upload & approval tracking.
+12. **Credit & Gamification Engine**:
+    - User wallet, P2P transfer, task completion rewards, rejection penalties, marketplace credits (`CreditHelper.php`).
+13. **Course Curriculum & LMS**:
+    - Courses, modules, lessons, milestones, quizzes, assignments, admin media uploads.
+14. **Student Portal & Foundations Lab**:
+    - Course dashboard, lesson video player, quiz attempts, typing lab, PenTool Bezier training game, Lumi Odyssey.
+15. **Academy Blogs**:
+    - Blog creation, rich-text editing, comments, emoji reactions, read count analytics.
+16. **Realtime Chat & Messaging**:
+    - 1:1 direct chat, group channels, reactions, receipts, Pusher WebSockets.
+17. **Database Manager (Admin)**:
+    - Table browser, SQL runner, R2 bucket browser guarded by `admin_db_guard.php`.
+18. **Desktop App Release Governance & Fleet Version Control (🆕)**:
+    - Centralized desktop client versioning (`AppVersionHelper.php`, `app_releases`, `staff_app_versions`).
+    - Mandatory / optional force-update gates, release publishing, installer downloads (`check_update.php`, `log_version.php`).
+    - Admin release management console ([`AppReleases.jsx`](file:///c:/Users/CCA/Desktop/kabir-workspace/CreateiveComputerAcademy/admin-frontend/src/pages/AppReleases.jsx)) with fleet version adoption telemetry.
+    - Native desktop update lifecycle via Electron IPC (`UpdateService.js`, `main.cjs`).
+19. **Multi-Tier Cloud Storage Routing & Failover (🆕)**:
+    - Smart content router (`storage.php`) supporting Cloudflare R2, Google Drive API (`GoogleDriveClient.php`), and local disk.
+    - Admin dynamic routing console ([`StorageSettings.jsx`](file:///c:/Users/CCA/Desktop/kabir-workspace/CreateiveComputerAcademy/admin-frontend/src/pages/StorageSettings.jsx)) backed by `system_storage_settings`.
+    - Automated emergency failover from Google Drive to Cloudflare R2 if credentials expire or drive fills up.
 
 ---
 
 # 5. DATABASE SUMMARY
 
-56 tables, all InnoDB/utf8mb4, `id` PK on nearly all (exceptions: `chat_message_receipts` PK `(message_id,user_id)`, `chat_participants` PK `(chat_id,user_id)`, `system_settings` PK `setting_key`).
+The system operates on **74 baseline tables** defined in `server/u647959341_cca_manage_db.sql` plus dynamically provisioned runtime tables.
 
-**Core identity cluster**
-- `users` (id, name, email, password [bcrypt], status enum active/inactive/suspended, profile/cover picture)
-- `user_roles` (user_id, role enum: admin/manager/staff/instructor/student/reviewer) — **many-to-many**, a user can hold multiple roles
-- `user_tokens` (user_id, token, expires_at) — session store
-- `user_settings`, `departments`, `employees` (1:1 with users, shift/tiffin config), `reviewers` (1:1 with users), `students` (1:1 with users, FK → courses)
+### Table Clusters
 
-**Task pipeline cluster**
-- `tasks` (central table — see §9 for full column list and lifecycle), `task_categories` (self-referential hierarchy: category → subcategory → child), `task_comments`, `task_history`, `task_logs`, `task_submissions`, `task_final_deliveries`, `task_blueprint_variants` (AI-generated variants), `task_marketplace_submissions` + `task_marketplace_submission_logs`, `task_reviews`
+#### 1. Identity & Permissions
+- `users`: Primary accounts (id, name, email, password, status, profile_picture, cover_picture).
+- `user_roles`: Multi-role mapping (`admin`, `manager`, `staff`, `instructor`, `student`, `reviewer`, `developer`).
+- `user_tokens`: Session tokens (token, expires_at).
+- `employees`: Staff HR profile (department_id, shift_hours, tiffin_time, designation, joining_date).
+- `students`: Student profile (course_id, enrollment_date, status).
+- `departments`: Academy organizational units.
 
-**Credit engine cluster**
-- `user_credits` (1:1 wallet per user: balance, total_earned, total_penalties, total_sent, total_received)
-- `credit_transactions` (full ledger: user_id, sender_id, receiver_id, amount, type, reference_id, **event_key [idempotency guard]**, meta_data JSON)
+#### 2. Attendance & Breaks Cluster
+- `attendance`, `attendance_device_logs`, `attendance_disputes`, `holidays`, `leave_requests`.
+- `user_breaks`, `employee_breaks`, `mango_break_claims`.
+- `staff_overtime_trades`: P2P overtime market trades.
 
-**Attendance/HR cluster**
-- `attendance`, `attendance_device_logs`, `attendance_disputes`, `user_breaks`, `leave_requests`, `holidays`
+#### 3. Payroll & Earnings Cluster
+- `staff_pay_schemes`: Compensation contracts (hourly rate calculation).
+- `staff_work_earnings`: Granular work earnings ledger.
+- `staff_withdrawals`: Cash payout requests.
+- `staff_payout_settings`: Mobile banking & bank account details.
 
-**LMS cluster**
-- `courses`, `course_modules`, `course_lessons`, `course_milestones`, `course_quizzes` + `course_quiz_questions`, `course_resources`, `course_assignments`
-- Student-side mirrors: `student_assignments`, `student_submissions`, `student_lesson_progress`, `student_lesson_notes`, `student_lesson_discussions` + replies, `student_quiz_attempts`, `student_skill_badges`, `student_foundations_drills`, `student_typing_sessions`, `student_typing_curriculum_progress`
+#### 4. Community Feed Cluster
+- `community_posts`: Feed posts (id, user_id, content, category, image_url, is_pinned, likes_count, comments_count, status).
+- `community_likes`: Unique post reactions (post_id, user_id, reaction_type).
+- `community_comments`: Nested discussions (post_id, user_id, parent_id, comment).
 
-**Comms cluster**
-- `chats`, `chat_participants`, `chat_messages`, `chat_message_reactions`, `chat_message_receipts`
-- `academy_blogs`, `blog_comments`, `blog_reactions`, `blog_reads`
-- `notifications`
+#### 5. Task & Review Pipeline
+- `tasks`, `task_categories`, `task_history`, `task_logs`, `task_comments`, `task_submissions`, `task_final_deliveries`, `task_marketplace_submissions`, `task_reviews`, `task_blueprint_variants`.
 
-**Misc:** `cca_brand_resources`, `email_templates`, `system_settings`, `holidays`
+#### 6. Credit Ledger
+- `user_credits`, `credit_transactions` (idempotent double-entry ledger).
 
-**Foreign keys** (from `ADD CONSTRAINT` block) are consistently `ON DELETE CASCADE` for user-owned child rows (attendance, chat messages, credit ledger, task comments/history/logs, submissions) and `ON DELETE SET NULL` for optional references (department on employee, course on student, reference_id on credit_transactions). No FK exists on `tasks.assigned_to → employees.id` violations being caught at the DB layer beyond the declared constraint — enforcement is real (declared `fk_task_assignee`).
+#### 7. LMS & Student Foundations Lab
+- `courses`, `course_modules`, `course_lessons`, `course_milestones`, `course_quizzes`, `course_quiz_questions`, `course_assignments`, `course_resources`.
+- `student_assignments`, `student_submissions`, `student_enrollments`, `student_daily_logs`.
+- `student_lesson_progress`, `student_lesson_notes`, `student_lesson_discussions`.
+- `student_typing_sessions`, `student_typing_curriculum_progress`, `student_pentool_sessions`, `student_pentool_stage_progress`, `student_foundations_drills`, `student_lumi_odyssey_progress`.
 
-**Notable schema smell:** `task_categories` supports 3 levels via self-reference but `tasks` also stores `category` as a plain string column *in addition to* `category_id/subcategory_id/child_category_id` FKs — `CreditHelper::getTaskCategoryCredit()` falls back to string-matching `category` by name when the FK chain is empty, meaning two parallel category systems are live simultaneously (see §12.22).
+#### 8. Comms, Brand & Developer
+- `chats`, `chat_participants`, `chat_messages`, `chat_message_reactions`, `chat_message_receipts`.
+- `academy_blogs`, `blog_comments`, `blog_reactions`, `blog_reads`.
+- `notifications`, `cca_brand_resources`, `system_settings`, `email_templates`.
+
+#### 9. Desktop Versioning & Storage Governance (🆕)
+- `app_releases`: Version release directory, release notes, categories, download URLs, hash, and mandatory flags.
+- `staff_app_versions`: Workstation fleet telemetry tracking user IDs, device hostnames, OS platforms, and live app versions.
+- `system_storage_settings`: Multi-tier storage routing configurations, folder paths, and Google Drive / R2 failover credentials.
 
 ---
 
 # 6. AUTHENTICATION & AUTHORIZATION
 
-**Login (`api/auth/login.php`):** email+password → `password_verify()` against `users.password` (bcrypt) → checks `status='active'` → loads all rows from `user_roles` → if the frontend passed a `role` field, rejects if the user doesn't hold that role for that portal → generates `bin2hex(random_bytes(32))` token, inserts into `user_tokens` → returns token + merged user/employee/student profile in one JSON payload.
+### Authentication Flow
+1. **Credentials Submission**: Frontend/Desktop sends `email`, `password`, and optional intended `role` to `api/auth/login.php`.
+2. **Verification**: Uses `password_verify()` against `users.password` (bcrypt).
+3. **Status Check**: Validates `status = 'active'`.
+4. **Role Validation**: Queries `user_roles`; verifies that the user possesses the role required by the connecting portal.
+5. **Token Generation**: Generates a 64-character hex token stored in `user_tokens` with an expiration timestamp.
+6. **Session Hydration**: On app load, `AuthContext` retrieves the token from `localStorage` and calls `api/auth/verify.php` to restore user identity.
 
-**Session rehydration (`api/auth/verify.php`):** frontend sends the stored token → joins `user_tokens ⋈ users` filtering `expires_at > NOW()` → re-checks role membership → returns the same merged profile shape. `api/auth/sync.php` exists as a variant (not read in full — `UNKNOWN` exact difference from `verify.php`).
-
-**Logout (`api/auth/logout.php`):** presumed to delete the token row — not read in full; **UNKNOWN** exact behavior (file exists, not inspected).
-
-**Frontend session storage:** each portal has its own `AuthContext` (`src/context/`) and its own `localStorage` key — sessions are **not shared** across portals even though they hit the same backend; a user with multiple roles must log in separately per portal.
-
-**Authorization model — the critical gap:** `user_roles` is the only role source; there is **no JWT, no signed session, no server-side middleware**. The token is a bare opaque string. Critically, **most non-auth endpoints never re-check the token at all** — only `admin/staff/delete_staff.php` was found referencing `user_tokens` outside the `auth/` folder. This means:
-- Role/portal separation is enforced almost entirely **client-side** (route guards in each portal's `routes/` folder) — a valid API caller who skips the frontend can call any admin, staff, or reviewer endpoint directly with no token, since PHP has no way to know who's asking.
-- `api/admin/database/run_query.php` (raw SQL executor) confirmed to have **zero authentication** — see §10, this is the single most severe finding in the system.
-
-**Frontend route protection:** each portal's `routes/` directory wraps pages in a guard component (pattern consistent with `ProtectedRoute`); this is a UX/routing convenience only, not a security boundary, given the backend gap above.
+### Authorization Enforcement
+- **Client-Side**: Protected routes (`ProtectedRoute`, `DeveloperRoute`) guard access to portal views based on role.
+- **Backend Guarded**:
+  - `server/api/developer/`: Token & role verification via `developer_guard.php`.
+  - `server/api/admin/database/`: Token & role verification via `admin_db_guard.php`.
+- **Backend Open Areas**: Several legacy endpoints accept `user_id` without validating session tokens.
 
 ---
 
 # 7. API SUMMARY & MAP
 
-~170 PHP endpoints under `server/api/`, organized by domain folder. All accept/return JSON; CORS via `config/cors.php` (origin allow-list) except `auth/*` and a few others (wildcard `*`). Auth: **not enforced per-endpoint** except where explicitly noted (see §6/§10) — treat every endpoint below as effectively public unless stated otherwise.
+343 PHP endpoints organized under 27 functional domains:
 
-| Domain | Path prefix | Representative endpoints | Notes |
-|---|---|---|---|
-| Auth | `api/auth/` | login, verify, sync, logout, make_hash | `make_hash.php` is a live password-hash generator with **no auth** — §10 |
-| Attendance | `api/attendance/` | check_in, check_out, dispute, get_attendance | Geofenced via `AttendanceSecurityHelper` (dynamic IP allow-list + device fingerprint) |
-| Admin/Attendance | `api/admin/attendance/` | get_daily_roster, get_disputes, resolve_dispute, update_attendance, get_attendance_device_logs | Admin-only by convention, not enforced server-side |
-| Breaks | `api/breaks/` | start_break, end_break, request_break, get_live_breaks, get_my_tiffin_config | |
-| Leave | `api/leave/`, `api/admin/leave/` | apply_leave, get_my_leaves / get_all_leaves, update_leave_status | |
-| Tasks (staff-facing) | `api/tasks/` | claim_task, create_self_task, start_timer, pause_timer, update_checklist, update_task_status, task_comments, upload_task_files, get_upload_presigned_url, marketplace_submissions, architect_blueprint, blueprint_variants | `architect_blueprint.php` = AI task-generation endpoint |
-| Tasks (admin) | `api/admin/tasks/` | create_task, edit_task, delete_task, get_all_tasks, update_task_assignee, get_workload, task_image_upload | |
-| Reviewer | `api/reviewer/` | get_pending_reviews, get_completed_reviews, get_rejected_reviews, update_task_status, submit_final_delivery, get_team_stats, get_activity_heatmap, get_daily_report | Drives credit-engine reward/penalty calls |
-| Credits | `api/credits/` | get_wallet, send_credits, admin_adjust, get_users | Thin wrappers around `CreditHelper.php` |
-| Courses (admin) | `api/admin/courses/` | save_course, save_module, get_modules, lessons/*, quizzes/*, milestones/*, assignments/*, upload_course_media, seed_modules | |
-| Student | `api/student/` | dashboard, enroll_course, get_my_courses, get_all_courses, assignments, get_resources, get_leaderboard, courses/{curriculum, quiz, notes, discussions, update_lesson_progress, assignment_submission} | |
-| Foundations | `api/student/foundations/` | get_progress, get_typing_curriculum, save_typing_session, save_mouse_drill, get_pentool_progress, save_pentool_progress, leaderboard | PenTool endpoints are new/uncommitted |
-| Blogs | `api/blogs/` | create_blog, update_blog, delete_blog, get_blogs, get_blog_details, add_comment, react_blog, upload_blog_image, get_blog_readers | |
-| Chat | `api/chat/` | create_chat, send_message, get_messages, edit_message, delete_message, forward_message, toggle_reaction, mark_read, add_group_members, manage_group_member, block_user, download_file, check_typing/update_typing | Largest single domain (~20 files) |
-| Notifications | `api/notifications/` | get_notifications, mark_as_read, delete_notification | |
-| Brand | `api/brand/` | get_brand_resources, manage_brand_resource | |
-| Categories | `api/categories/` | create/update/delete/get_categories | |
-| Settings | `api/settings/` | get/update system_settings, get/update user_settings | |
-| Reports | `api/reports/` | get_all_staff_report, get_attendance_report, get_task_report, get_reviewer_micro_analytics, get_schema | `get_schema.php` likely powers `DatabaseManager.jsx` — check its own auth independently |
-| Admin/Database | `api/admin/database/` | get_tables, get_table_data, run_query, insert_row, update_row, delete_row, delete_r2_object, get_system_health | **No auth anywhere in this folder** — §10 |
-| Dashboard | `api/dashboard/`, `api/admin/dashboard/` | get_leaderboard, get_stats, get_today_attendance_list, get_reviewer_summary_widget | |
-| AI | `api/ai/` | precheck_submission.php | Pre-submission AI quality check (used by `AIQualityScanner.jsx` per old audit) |
-| Profile | `api/profile/` | change_password, update_profile, upload_pictures, get_my_stats | |
-| Crons | `api/crons/` | auto_checkout, auto_tiffin, migrate_categories | Meant for scheduled execution, not user-triggered |
-| Misc | `api/` root | server_time.php, server_native_time.php, check_server_timezone.php | Clock-sync utilities |
-
-Full parameter/response-shape documentation for all 170 files was not transcribed here (would dominate this document); the table above is a complete **file-level** map. Deep-dive on any individual endpoint's request/response contract should be done on demand.
+| Domain | Base Path | Key Endpoints | Auth / Security Notes |
+| :--- | :--- | :--- | :--- |
+| **Auth** | `api/auth/` | `login.php`, `verify.php`, `sync.php`, `logout.php`, `make_hash.php` | ⚠️ `make_hash.php` is an unauthenticated public hash generator |
+| **Attendance** | `api/attendance/` | `check_in.php`, `check_out.php`, `dispute.php`, `get_attendance.php` | Dynamic IP check & device fingerprinting |
+| **Screen Monitor** (🆕) | `api/screen_monitor/` | `get_active_staff.php`, `signal.php` | Pusher signaling for WebRTC video streams & remote input control |
+| **Admin Attendance** | `api/admin/attendance/` | `get_daily_roster.php`, `get_disputes.php`, `resolve_dispute.php`, `update_attendance.php` | Conventionally admin |
+| **Breaks & Tiffin** | `api/breaks/` | `start_break.php`, `end_break.php`, `request_break.php`, `get_live_breaks.php`, `manage_break_request.php`, `claim_mango_break.php`, `get_mango_break_bank.php`, `polish_break_note.php`, `backfill_tiffin_delta.php` | Realtime Pusher events; Gemini AI note polisher |
+| **Break Trades (P2P)** | `api/breaks/trades/` | `create_trade_request.php`, `seller_respond_trade.php`, `admin_manage_trade.php`, `get_market_peers.php`, `get_my_trades.php`, `get_pending_admin_trades.php` | Multi-party trade settlement; synchronizes with payroll earnings |
+| **Staff Payroll** | `api/payroll/` | `get_my_payroll.php`, `request_withdrawal.php`, `record_timer_session.php`, `get_payout_settings.php`, `save_payout_settings.php` | Dynamic rate calculation; balance validation |
+| **Admin Payroll** | `api/admin/payroll/` | `get_all_schemes.php`, `save_scheme.php`, `get_staff_payroll_details.php`, `get_withdrawals.php`, `process_withdrawal.php`, `sync_attendance_earnings.php` | Admin financial control; contractual compensation |
+| **Community Feed** | `api/community/` | `get_feed.php`, `create_post.php`, `toggle_like.php`, `add_comment.php`, `pin_post.php`, `delete_post.php`, `upload_post_image.php`, `get_mention_users.php` | Pusher channel `community-channel`; schema self-provisioning |
+| **Developer Suite** | `api/developer/` | `get_dev_status.php`, `dispatch_websocket_event.php`, `export_db_snapshot.php`, `export_full_system_snapshot.php`, `get_api_directory.php`, `get_error_log.php`, `run_janitor_clean.php`, `toggle_maintenance.php` | Token-gated via `developer_guard.php` (admin/developer role required) |
+| **Tasks (Staff)** | `api/tasks/` | `claim_task.php`, `create_self_task.php`, `start_timer.php`, `pause_timer.php`, `update_checklist.php`, `update_task_status.php`, `task_comments.php`, `upload_task_files.php`, `marketplace_submissions.php`, `architect_blueprint.php` | Core staff workflow |
+| **Tasks (Admin)** | `api/admin/tasks/` | `create_task.php`, `edit_task.php`, `delete_task.php`, `get_all_tasks.php`, `update_task_assignee.php`, `get_workload.php` | Operational task management |
+| **Reviewer QA** | `api/reviewer/` | `get_pending_reviews.php`, `update_task_status.php`, `submit_final_delivery.php`, `get_team_stats.php`, `get_daily_report.php` | Triggers credit engine reward / penalty workflows |
+| **Credit Engine** | `api/credits/` | `get_wallet.php`, `send_credits.php`, `admin_adjust.php`, `get_users.php` | Managed via `CreditHelper.php` |
+| **Courses & LMS** | `api/admin/courses/`<br>`api/student/` | `save_course.php`, `lessons/*`, `quizzes/*`, `enroll_course.php`, `update_lesson_progress.php`, `assignment_submission.php` | Admin curriculum & student LMS |
+| **Foundations Lab** | `api/student/foundations/` | `get_typing_curriculum.php`, `save_typing_session.php`, `save_mouse_drill.php`, `get_pentool_progress.php`, `save_pentool_progress.php` | Typing, mouse, and PenTool interactive engines |
+| **Academy Blogs** | `api/blogs/` | `create_blog.php`, `get_blogs.php`, `add_comment.php`, `react_blog.php`, `upload_blog_image.php` | Content marketing & student articles |
+| **Realtime Chat** | `api/chat/` | `create_chat.php`, `send_message.php`, `get_messages.php`, `edit_message.php`, `toggle_reaction.php`, `mark_read.php`, `add_group_members.php` | Pusher channels `chat_{id}` |
+| **Admin Database** | `api/admin/database/` | `run_query.php`, `get_tables.php`, `get_table_data.php`, `insert_row.php`, `update_row.php`, `delete_row.php`, `delete_r2_object.php` | Guarded by `admin_db_guard.php` (Bearer token + Admin role) |
+| **App Version Governance** (🆕) | `api/app_version/`<br>`api/admin/app_version/` | `check_update.php`, `log_version.php`, `get_releases.php`, `publish_release.php`, `toggle_force_update.php` | Managed via `AppVersionHelper.php`; desktop client telemetry & force updates |
+| **Storage Governance** (🆕) | `api/admin/storage/` | `get_storage_settings.php`, `save_storage_settings.php`, `test_storage_connection.php` | Dynamic cloud storage routing (R2, GDrive, Local) & failover config |
+| **Crons** | `api/crons/` | `auto_checkout.php`, `auto_tiffin.php`, `cron_absent_manager.php`, `backfill_past_absents.php`, `migrate_categories.php` | Nightly attendance and break reconcilers |
 
 ---
 
 # 8. IMPORTANT DATA FLOWS
 
-**Task completion → credit reward:**
-`Staff clicks "Submit"` (staff-frontend `Tasks.jsx`) → `api/tasks/update_task_status.php` → row update on `tasks.status` → on reviewer approval, `api/reviewer/update_task_status.php` (transactional, `beginTransaction`/`commit`/`rollBack` — verified present) → calls `CreditHelper::rewardTaskCompletion()` → idempotent insert into `credit_transactions` keyed by `event_key = "task_reward_task_{id}"` → `user_credits.balance` incremented → `NotificationHelper::sendToUser()` → Pusher push → staff-frontend `Credits.jsx`/toast updates live.
+### 1. WebRTC Live Screen Streaming & Remote Input Control
+```
+[Staff Desktop App] Checks in via AttendanceView.jsx
+      │
+      ▼ ScreenStreamService.init(user)
+      │  Subscribes to Pusher channel `screen-staff-${user.id}`
+      │  Dispatches 'staff-online' signal to `screen-admin-channel`
+      ▼
+[Admin] Opens LiveScreenMonitor.jsx
+      │  Fetches active roster from /api/screen_monitor/get_active_staff.php
+      │  Sends 'request-stream' via /api/screen_monitor/signal.php
+      ▼
+[Staff Desktop App] Receives 'request-stream'
+      │  Invokes desktopCapturer.getSources({ types: ['screen'] })
+      │  Creates RTCPeerConnection with Google STUN servers
+      │  Creates RTCDataChannel ('remote-control')
+      │  Generates WebRTC Offer & sends via signal.php
+      ▼
+[Admin LiveScreenMonitor.jsx]
+      │  Receives Offer, creates Answer, sets Remote Description
+      │  Renders live <video> element
+      │  When Admin controls mouse/keys, sends JSON over RTCDataChannel
+      ▼
+[Staff Desktop App]
+      │  Receives data channel message: { type: 'mouse-move', x, y }
+      │  IPC to Electron main process -> writes to `input_injector.exe` via stdin
+      │  Cursor / Keyboard action physically executes on Windows host!
+```
 
-**Task rejection → penalty:** same path, `CreditHelper::penalizeTaskRejection()` — always allows negative balances, uses a unique `event_key` per rejection **cycle** (not globally idempotent like completion — each rejection round produces a new penalty, by design).
+### 2. Community Feed Post & Realtime Broadcast
+```
+[User] Publishes Post in CommunityWall.jsx / CommunityFeed.jsx
+      │
+      ▼ POST /api/community/create_post.php
+      │  Inserts into `community_posts`
+      │  Notifies @mentions via NotificationHelper
+      │  Emits Pusher event 'new-post' on 'community-channel'
+      │
+      ▼ Active clients receive WebSocket event
+      │  UI automatically updates without manual refresh
+```
 
-**Marketplace submission → credit:** reviewer adds a submission (`api/tasks/marketplace_submissions.php`) → `CreditHelper::handleMarketplaceUploadCredit()` (+1, idempotent by submission id) → on later admin/reviewer status change → `handleMarketplaceStatusChangeCredit()` (+2 on approve, -1 on reject, 0 net for "Dayal Stock" marketplace specifically).
+### 3. P2P Overtime Trade Settlement
+```
+[Buyer Staff] Requests Overtime (P2POvertimeMarket.jsx)
+      │  POST /api/breaks/trades/create_trade_request.php (Status: pending_seller)
+      ▼
+[Seller Staff] Accepts Trade (P2POvertimeMarket.jsx)
+      │  POST /api/breaks/trades/seller_respond_trade.php (Status: pending_admin)
+      ▼
+[Admin] Approves Trade (BreakMonitor.jsx)
+      │  POST /api/breaks/trades/admin_manage_trade.php (Atomic Transaction)
+      │  1. Updates trade status to 'approved'
+      │  2. Credits Seller in staff_work_earnings ('overtime_trade_sale')
+      │  3. Debits Buyer in staff_work_earnings ('overtime_trade_purchase')
+      │  4. Overtime minutes automatically transfer in BreakDbHelper
+      │  5. Emits Pusher events to update interfaces live
+```
 
-**Attendance check-in:** student/staff frontend → `api/attendance/check_in.php` → `AttendanceSecurityHelper` resolves real client IP (`HTTP_CF_CONNECTING_IP` → `HTTP_X_FORWARDED_FOR` → `REMOTE_ADDR`), checks against dynamic `office_allowed_ips` (from `system_settings`, not hardcoded — fixed since prior audit), builds a device fingerprint hash → insert `attendance` row.
-
-**Course lesson progress:** student-frontend `CoursePlayer.jsx` → `api/student/courses/update_lesson_progress.php` → `student_lesson_progress` upsert (unique `user_id`+`lesson_id`) → feeds `SkillReport.jsx`/badges (`student_skill_badges`).
-
-**Chat message:** any portal → `api/chat/send_message.php` → insert `chat_messages` → Pusher trigger on `chat_{chat_id}` channel → all connected clients update via `pusher-js` subscription in each portal's chat component.
+### 4. Mango Break Bank & Full-Day Off Claim
+```
+[Staff] Views Mango Tree (MangoBreakTree.jsx)
+      │  Formula: Net Mins = (Worked OT + Bought OT) - (Claimed Breaks + Cashed OT + Sold OT)
+      │  8 hours (480 mins) = 1 Ripe Mango = 1 Full-Day Paid Leave
+      ▼ Clicks "Claim Full-Day Off"
+      │  POST /api/breaks/claim_mango_break.php
+      │  Inserts user_breaks row (break_type = 'Mango Full Day', duration = 480 mins)
+```
 
 ---
 
 # 9. FEATURE INVENTORY
 
-| Feature | Frontend | Backend | API | Database | Status | Important Files |
-|---|---|---|---|---|---|---|
-| Login/Auth | all 4 | procedural | `auth/*` | users, user_roles, user_tokens | ✅ Working, ⚠️ weak session model | `api/auth/login.php`, per-portal `context/AuthContext` |
-| Task Lifecycle | staff, admin | procedural | `tasks/*`, `admin/tasks/*` | tasks, task_history, task_logs | ✅ Working | `staff-frontend/src/pages/Tasks.jsx` |
-| Reviewer QA | review | procedural | `reviewer/*` | task_reviews, task_final_deliveries | ✅ Working | `review-frontend/src/pages/PendingReviews.jsx` |
-| Credit Engine | staff, review, admin | `CreditHelper.php` | `credits/*` | user_credits, credit_transactions | ⚠️ Working, 1 confirmed bug (§12.22) | `server/api/credits/CreditHelper.php` |
-| Attendance | staff, admin | `AttendanceSecurityHelper.php` | `attendance/*` | attendance, attendance_disputes | ⚠️ Working, cron bug (§12.22) | `server/api/crons/auto_checkout.php` |
-| LMS / Courses | admin, student | procedural | `admin/courses/*`, `student/courses/*` | courses, course_lessons, course_quizzes… | ✅ Working | `admin-frontend/src/pages/CoursesAndCurriculum.jsx` |
-| PenTool Lab | student, admin | new/uncommitted | `student/foundations/{get,save}_pentool_progress.php` | student_foundations_drills (assumed) | 🟡 In progress (untracked files) | `student-frontend/src/pages/PenToolLab.jsx`, `admin-frontend/src/pages/PenToolReports.jsx` |
-| Typing Lab | student | procedural | `student/foundations/*typing*` | student_typing_sessions, student_typing_curriculum_progress | ✅ Working | `student-frontend/src/pages/TypingLab.jsx` |
-| Blogs | admin, staff | `BlogDbHelper.php` | `blogs/*` | academy_blogs, blog_comments | ✅ Working | `admin-frontend/src/pages/AcademyBlog.jsx` |
-| Chat | all 4 | procedural | `chat/*` | chats, chat_messages… | ✅ Working, largest module | `*/src/pages/Messages.jsx` |
-| Database Manager | admin | procedural | `admin/database/*` | any table (raw SQL) | 🔴 Working but **unauthenticated** | `admin-frontend/src/pages/DatabaseManager.jsx`, `server/api/admin/database/run_query.php` |
-| Marketplace Submissions | review, admin | `CreditHelper.php` | `tasks/marketplace_submissions.php` | task_marketplace_submissions | ✅ Working | — |
-| Notifications | all 4 | `notification_helper.php` | `notifications/*` | notifications | ✅ Working | — |
-| Brand Kit | staff, review | procedural | `brand/*` | cca_brand_resources | ✅ Working | — |
-| Settings | admin, all | procedural | `settings/*` | system_settings, user_settings | ✅ Working | — |
-| Reports/Analytics | admin, staff, review | procedural | `reports/*` | derived queries | ✅ Working | `admin-frontend/src/pages/MasterReport.jsx` |
+| Feature | Frontend Portal / Client | Backend Controller | API Route | Database Tables | Status | Critical Files |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Authentication** | All Portals + Desktop | Procedural PHP | `api/auth/*` | `users`, `user_roles`, `user_tokens` | ✅ Active | `api/auth/login.php`, `AuthContext.jsx` |
+| **Desktop Attendance** | Electron Desktop | Procedural PHP | `api/attendance/*` | `attendance`, `attendance_device_logs` | ✅ Active | `electron/main.cjs`, `AttendanceView.jsx` |
+| **Live Screen Monitor** | Admin + Electron Desktop | `signal.php` | `api/screen_monitor/*` | `attendance`, `users` | ✅ Active | `LiveScreenMonitor.jsx`, `ScreenStreamService.js` |
+| **Remote Input Injection** | Electron Desktop | Native Win32 CLI | IPC / Local stdin | None | ✅ Active | `input_injector.exe`, `electron/main.cjs` |
+| **Community Feed** | Admin, Staff | `CommunityDbHelper` | `api/community/*` | `community_posts`, `community_likes`, `community_comments` | ✅ Active | `CommunityWall.jsx`, `CommunityFeed.jsx` |
+| **Developer Console** | Staff (Dev role) | `developer_guard` | `api/developer/*` | `system_settings`, error logs | ✅ Active | `DeveloperConsole.jsx`, `DeveloperRoute.jsx` |
+| **Break Monitoring** | Admin, Staff | `BreakDbHelper.php` | `api/breaks/*` | `user_breaks` | ✅ Active | `BreakMonitor.jsx`, `Breaks.jsx` |
+| **P2P Break Trades** | Admin, Staff | Procedural + Helpers | `api/breaks/trades/*` | `staff_overtime_trades`, `staff_work_earnings` | ✅ Active | `P2POvertimeMarket.jsx`, `admin_manage_trade.php` |
+| **Mango Break Tree** | Staff | `BreakDbHelper.php` | `api/breaks/get_mango_break_bank.php` | `user_breaks`, `attendance` | ✅ Active | `MangoBreakTree.jsx`, `claim_mango_break.php` |
+| **Staff Payroll** | Admin, Staff | `PayrollHelper.php` | `api/payroll/*`, `api/admin/payroll/*` | `staff_pay_schemes`, `staff_work_earnings`, `staff_withdrawals` | ✅ Active | `PayrollManagement.jsx`, `PayrollWallet.jsx` |
+| **Attendance** | Staff, Admin | `AttendanceSecurityHelper` | `api/attendance/*` | `attendance`, `attendance_disputes` | ✅ Active | `api/attendance/check_in.php` |
+| **Task Lifecycle** | Staff, Admin | Procedural PHP | `api/tasks/*`, `api/admin/tasks/*` | `tasks`, `task_history`, `task_logs` | ✅ Active | `staff-frontend/src/pages/Tasks.jsx` |
+| **Reviewer QA** | Review Portal | Procedural PHP | `api/reviewer/*` | `task_reviews`, `task_final_deliveries` | ✅ Active | `PendingReviews.jsx` |
+| **Credit Engine** | Admin, Staff, Review | `CreditHelper.php` | `api/credits/*` | `user_credits`, `credit_transactions` | ⚠️ Active (1 Rank Bug) | `server/api/credits/CreditHelper.php` |
+| **LMS / Courses** | Admin, Student | Procedural PHP | `api/admin/courses/*`, `api/student/*` | `courses`, `course_lessons`, `course_quizzes` | ✅ Active | `CoursesAndCurriculum.jsx`, `CoursePlayer.jsx` |
+| **PenTool Lab** | Student, Admin | Foundations API | `api/student/foundations/*pentool*` | `student_pentool_sessions` | ✅ Active | `PenToolLab.jsx`, `PenToolReports.jsx` |
+| **Typing Lab** | Student | Procedural PHP | `api/student/foundations/*typing*` | `student_typing_sessions` | ✅ Active | `TypingLab.jsx`, `TypingReports.jsx` |
+| **Academy Blogs** | Admin, Staff | `BlogDbHelper.php` | `api/blogs/*` | `academy_blogs`, `blog_comments` | ✅ Active | `AcademyBlog.jsx` |
+| **Realtime Chat** | All 4 portals | Pusher Helper | `api/chat/*` | `chats`, `chat_messages` | ✅ Active | `Messages.jsx` across all portals |
+| **Database Manager**| Admin | Procedural PHP | `api/admin/database/*` | Any table (Raw SQL) | ✅ Guarded (Bearer + Admin) | `DatabaseManager.jsx`, `run_query.php` |
+| **App Releases & Fleet Telemetry** | Admin + Electron Desktop | `AppVersionHelper.php` | `api/app_version/*`, `api/admin/app_version/*` | `app_releases`, `staff_app_versions` | ✅ Active | `AppReleases.jsx`, `UpdateService.js`, `main.cjs` |
+| **Multi-Tier Storage Settings** | Admin Portal | `storage.php` | `api/admin/storage/*` | `system_storage_settings` | ✅ Active | `StorageSettings.jsx`, `storage.php`, `GoogleDriveClient.php` |
 
 ---
 
 # 10. EXISTING ISSUES
 
-### 🔴 Critical
+### 🔴 Security & Integrity Items
+1. **Unauthenticated Database Manager Endpoints (`api/admin/database/*`)**:
+   - **RESOLVED (Oct 13, 2026)**: All 8 database management endpoints are now strictly guarded by `admin_db_guard.php`. Requests require an active Bearer token and verified `admin` role in `user_roles`.
+2. **Public Hash Generator (`api/auth/make_hash.php`)**:
+   - Accepts `?pass=` and outputs valid Bcrypt hashes without authentication. Needs deletion or restriction.
+3. **Hardcoded Fallback Credentials in Source**:
+   - `server/config/r2.php` and `server/config/PusherHelper.php` contain hardcoded fallbacks if `.env` values are absent.
+4. **Remote Input Injection Permissions**:
+   - `input_injector.exe` executes arbitrary mouse movements, clicks, and keystrokes sent over WebRTC data channels without physical user confirmation prompts on the staff computer.
 
-1. **`api/admin/database/run_query.php` has zero authentication.** Confirmed by direct read: the file connects to the DB and executes arbitrary SQL from the request body with no token/session/role check anywhere in the file. Any unauthenticated HTTP client can `SELECT`, and depending on the rest of the file's write-guard logic, potentially mutate or drop production data. This is the single highest-severity issue in the codebase. (Same finding as prior audit — **still unfixed**.)
-2. **Live third-party secrets committed to git in plaintext**, not `.env`-gated: `server/config/r2.php` (Cloudflare R2 account ID, access key ID, **secret access key**) and `server/config/PusherHelper.php` (Pusher app ID, key, **secret**). Both files are tracked in git history (confirmed via `git log`) and are not covered by `.gitignore` (`.gitignore` only excludes `.env*`, not `config/r2.php`/`config/PusherHelper.php`). Anyone with repo access — or anyone who finds a leaked clone/fork — has live write access to the R2 bucket and can forge Pusher events. **New finding, not in prior audit.**
-3. **`api/auth/make_hash.php` is a live, unauthenticated password-hash generator**, reachable at a public URL per its own comment (`Visit: https://api.creativecomputeracademy.com/api/auth/make_hash.php?pass=...`). Anyone can generate a valid bcrypt hash for an arbitrary password; combined with finding #1 (raw SQL access), this is a direct path to full account takeover. (Same as prior audit — **still unfixed**, file still present.)
-4. **`CreditHelper::getWallet()` uses `$totalCombined` without ever assigning it** (`server/api/credits/CreditHelper.php`, confirmed at lines 661, 699, 759 — no assignment anywhere in the method). For `portal='all'` (the default), `$activeBalance`/`total_combined` in the API response is `null`/undefined-warning, and the leaderboard rank query (`WHERE balance > :balance` bound to `null`) silently returns wrong ranks. **New finding, not in prior audit.**
-5. **Auto-checkout cron still uses `a.date <= :date`** (`server/api/crons/auto_checkout.php` line 24) instead of `<` or a shift-end time check. If the cron runs during the current business day, it will force-checkout everyone still clocked in. Exact same bug the prior audit flagged on Sept 8 — **confirmed still present, not fixed**.
-
-### 🟡 Fixed since prior audit (verified, no longer issues)
-- Hardcoded office IP / Cloudflare proxy handling: `AttendanceSecurityHelper::getIp()` now reads `HTTP_CF_CONNECTING_IP` → `HTTP_X_FORWARDED_FOR` → `REMOTE_ADDR` in order, and `office_allowed_ips` is a `system_settings`-backed value, not a hardcoded constant.
-- Unrolled-back transaction in `api/reviewer/update_task_status.php`: `rollBack()` is now called before the early `exit` (line 32).
-
-### 🟡 Medium (carried from prior audit, not independently re-verified line-by-line this pass)
-- Inconsistent CORS strategy: `config/cors.php` origin allow-list vs. wildcard headers hardcoded in `auth/*.php`.
-- Frontend hook dependency warnings in `admin-frontend` (`useTaskOversight.js`, likely others) — not re-scanned exhaustively this pass.
-- Dual category systems on `tasks` (string `category` column + FK hierarchy) create ambiguous credit-resolution fallback logic in `CreditHelper::getTaskCategoryCredit()` (§5, §12.22).
-
-### 🟢 In-progress work (visible in git status, not bugs)
-- PenTool Lab feature is mid-development: new frontend page (`PenToolLab.jsx`), new admin report page (`PenToolReports.jsx`), 4 new backend endpoints, and new `public/bezier/` assets are untracked/uncommitted. `CoursePlayer.jsx`, both `App.jsx` files, and both sidebar components are modified but not committed — consistent with wiring the new feature into routing/navigation.
-- New `upload_course_media.php` (admin courses) is untracked — likely a new media-upload path for the LMS, not yet integrated into a committed frontend flow (`UNKNOWN` — not traced to a calling component this pass).
+### 🟡 Architectural Debt
+1. **Absence of Token Middleware Across Legacy Endpoints**:
+   - Most legacy endpoints accept raw user IDs from the client body without validating session tokens.
+2. **Tailwind Version Divergence**:
+   - Tailwind v3 (Admin, Review) vs Tailwind v4 (Staff, Student, Desktop App).
+3. **Dual Category Representations on Tasks**:
+   - Both hierarchical foreign keys (`category_id`, `subcategory_id`) and legacy string columns exist.
 
 ---
 
 # 11. CRITICAL FILES
 
-- `server/config/database.php` — the only DB connection point; a change here affects all 170 endpoints.
-- `server/config/env.php` — `.env` loader; all DB credentials flow through this.
-- `server/config/cors.php` — CORS allow-list; the source of truth for which frontend origins can reach the API.
-- `server/api/credits/CreditHelper.php` — the entire gamification/economy engine; every reward/penalty path in the system funnels through this one class.
-- `server/api/attendance/AttendanceSecurityHelper.php` — all attendance fraud-prevention logic (IP, device fingerprint, allow-list) lives here.
-- `server/api/admin/database/run_query.php` — critical *because it is dangerous*, not because it's load-bearing; see §10.
-- `server/u647959341_cca_manage_db (3).sql` — canonical schema reference; the DB itself is the real source of truth but this dump is the only static reference in-repo.
-- Each portal's `src/context/AuthContext.jsx` (or equivalent) and `src/routes/` — the entire client-side access-control boundary for that portal.
-- `server/config/r2.php`, `server/config/PusherHelper.php` — critical for the reasons in §10 (live committed secrets).
+- `server/config/database.php`: Central PDO database connection provider.
+- `server/config/cors.php`: Primary access origin filter for web & electron communication.
+- `server/config/SmsHelper.php`: SMS dispatcher with simulation shield.
+- `server/api/breaks/BreakDbHelper.php`: Central overtime, break limit, and mango tree calculation engine.
+- `server/api/payroll/PayrollHelper.php`: Staff compensation, hourly rate calculation, and earnings synchronizer.
+- `server/api/screen_monitor/signal.php`: Pusher signaling gateway for WebRTC screen streaming.
+- `Attendence_Apps/Attendance-Desktop/electron/main.cjs`: Native desktop lifecycle, system tray, and input injector manager.
+- `Attendence_Apps/Attendance-Desktop/src/services/ScreenStreamService.js`: WebRTC peer connection & media streamer.
+- `server/api/community/CommunityDbHelper.php`: Self-provisioning community post and reaction engine.
+- `server/api/developer/developer_guard.php`: Standardized token-based developer and admin access guard.
+- `server/api/admin/database/admin_db_guard.php`: Strict token-based database manager security guard.
+- `server/u647959341_cca_manage_db.sql`: Baseline MySQL schema dump.
 
 ---
 
 # 12. MASTER BLUEPRINT
 
 ### 12.1 Project Overview
-Multi-portal internal operations platform for a computer-design academy: staff task/attendance/credit management, a QA review pipeline, a student LMS, and shared chat/blog/notification infrastructure, all against one shared MySQL database and one shared PHP API.
+Creative Computer Academy (CCA) is an enterprise academy operations, workforce governance, and learning management platform. It encompasses staff attendance, native desktop tracking, live screen streaming, remote input injection, real-time break monitoring, peer-to-peer overtime trading, staff compensation and withdrawals, task assignment and verification, QA delivery workflows, gamified credit economies, student LMS training labs, a community social wall, and developer tooling.
 
 ### 12.2 Technology Stack
-See §2 in full.
+See Section 2.
 
 ### 12.3 Complete Folder Structure
 ```
 CreateiveComputerAcademy/
-├── admin-frontend/    (React 19 + Vite, Tailwind 3, port 5173)
-├── staff-frontend/    (React 19 + Vite, Tailwind 4, port 5174)
-├── review-frontend/   (React 19 + Vite + TS, Tailwind 3, port 5175)
-├── student-frontend/  (React 19 + Vite, Tailwind 4, port 5176)
+├── Attendence_Apps/            # Desktop Attendance & Screen Monitoring
+│   ├── Attendance-Desktop/     # Electron + React 19 + Tailwind v4
+│   │   ├── electron/           # main.cjs, preload.cjs, input_injector.exe
+│   │   ├── src/                # AttendanceView.jsx, ScreenStreamService.js
+│   │   └── package.json
+│   ├── CCA-Attendance-Live.exe
+│   ├── CCA-Attendance-Standalone.exe
+│   └── run-attendance-app.bat
+├── admin-frontend/            # React 19 + Tailwind v3 (Vite, Port 5173)
+│   ├── src/
+│   │   ├── components/        # BreakMonitor.jsx, AdminSidebar.jsx, etc.
+│   │   ├── pages/             # LiveScreenMonitor.jsx, CommunityWall.jsx, PayrollManagement.jsx
+│   │   └── routes/            # ProtectedRoute.jsx
+├── staff-frontend/            # React 19 + Tailwind v4 (Vite, Port 5174)
+│   ├── src/
+│   │   ├── components/        # P2POvertimeMarket.jsx, ActiveBreakWidget.jsx, DeveloperConsole/
+│   │   └── pages/             # CommunityFeed.jsx, DeveloperConsole.jsx, MangoBreakTree.jsx
+├── review-frontend/           # React 19 + TypeScript + Tailwind v3 (Vite, Port 5175)
+├── student-frontend/          # React 19 + Tailwind v4 (Vite, Port 5176)
+│   ├── public/bezier/         # PenTool interactive game assets
+│   └── src/pages/             # PenToolLab.jsx, TypingLab.jsx, CoursePlayer.jsx
 ├── server/
-│   ├── api/           (~170 endpoints, 24 domain folders — see §7)
-│   ├── config/        (database.php, env.php, cors.php, r2.php, PusherHelper.php, r2.php)
-│   ├── data/           (typing_curriculum.json — static curriculum data)
-│   ├── migrations/     (schema migration scripts — not individually inventoried this pass)
-│   ├── uploads/        (local upload staging, gitignored)
-│   └── u647959341_cca_manage_db (3).sql  (full schema dump, 56 tables)
-├── .agents/skills/     (this repo's own agent-skill definitions, incl. master-blueprint)
-└── PROJECT_AUDIT_REPORT.md  (prior self-audit, Sept 8 2026, Bengali)
+│   ├── api/                   # 343 PHP REST endpoint files
+│   │   ├── admin/             # tasks/, courses/, database/, payroll/, attendance/, staff/
+│   │   ├── attendance/        # check_in.php, check_out.php, AttendanceSecurityHelper.php
+│   │   ├── screen_monitor/    # get_active_staff.php, signal.php
+│   │   ├── auth/              # login.php, verify.php, sync.php, make_hash.php
+│   │   ├── breaks/            # BreakDbHelper.php, trades/, polish_break_note.php
+│   │   ├── community/         # CommunityDbHelper.php, get_feed.php, create_post.php
+│   │   ├── developer/         # developer_guard.php, get_dev_status.php, run_janitor_clean.php
+│   │   ├── credits/           # CreditHelper.php, get_wallet.php, send_credits.php
+│   │   ├── payroll/           # PayrollHelper.php, get_my_payroll.php, request_withdrawal.php
+│   │   ├── tasks/             # claim_task.php, architect_blueprint.php
+│   │   ├── student/           # courses/, foundations/ (typing, pentool)
+│   │   ├── chat/              # 1:1 and group chat endpoints
+│   │   └── crons/             # auto_checkout.php, auto_tiffin.php, cron_absent_manager.php
+│   ├── config/                # database.php, cors.php, env.php, r2.php, PusherHelper.php, SmsHelper.php
+│   └── u647959341_cca_manage_db.sql
+├── COMMUNITY_POSTS_BLUEPRINT.md
+└── MASTER_BLUEPRINT.md        # Canonical architectural blueprint
 ```
-Each frontend mirrors the same internal shape: `src/{pages,components,context,routes,hooks,layouts,utils}`. `staff-frontend` additionally has `src/services` and `src/config`; `student-frontend` has `src/data` instead.
 
 ### 12.4 Frontend Architecture
-4 independently deployed SPAs sharing no code (no monorepo tooling, no shared package) — each has its own `package.json`, its own `AuthContext`, its own copy of near-identical UI primitives (sidebars, layouts). This is **intentional duplication for portal isolation**, not a shared design system.
+Four autonomous web SPAs and one native Electron desktop application. Each frontend isolates its view logic and state while consuming shared REST and WebSocket services.
 
 ### 12.5 Backend Architecture
-Flat, non-framework PHP: no router, no controller base class, no dependency injection. Each endpoint file is independently responsible for its own CORS headers, DB connection, input parsing, and error handling. Shared logic lives in a small number of `*Helper.php` classes (`CreditHelper`, `AttendanceSecurityHelper`, `BlogDbHelper`, `BreakDbHelper`, `notification_helper.php`, `EmailHelper.php`, `category_helper.php`, `task_history_helper.php`) co-located inside their respective domain folders rather than a central `lib/`.
+Flat, non-framework PHP REST API. Endpoints reside in domain-specific folders under `server/api/`. Shared functionality is encapsulated within static helper classes (`BreakDbHelper`, `PayrollHelper`, `CreditHelper`, `CommunityDbHelper`, `AttendanceSecurityHelper`, `NotificationHelper`, `PusherHelper`, `SmsHelper`).
 
 ### 12.6 PHP Architecture
-Procedural, `require_once` for config/helpers, `try/catch (PDOException|Throwable)` per-file, direct `echo json_encode(...)` responses (no consistent envelope beyond `{status, message, ...}` by convention). Helper classes use `public static` methods exclusively — no instantiation, no interfaces.
+Procedural scripts relying on `require_once` for configuration and helpers. Endpoints read input via `json_decode(file_get_contents("php://input"), true)` or `$_GET`/`$_POST`, interact with MySQL through PDO, and return structured JSON responses.
 
 ### 12.7 React Architecture
-Standard CRA-style pattern via Vite: `pages/` = route-level screens, `components/` = reusable UI, `context/` = global state (auth, likely theme/notifications), `hooks/` = data-fetching/business hooks (e.g. `useTaskOversight`, `useMasterReport`, `useDatabaseManager` in admin), `layouts/` = shell/sidebar wrappers, `routes/` = route table + guards.
+Component-driven architecture utilizing Vite for fast HMR. Global authentication state is managed via React Context (`AuthContext`). Realtime updates are consumed via Pusher WebSocket channels inside components with cleanup hooks.
 
 ### 12.8 Database Architecture
-See §5. Single MySQL database, `InnoDB`, `utf8mb4`, connection-level timezone force to `+06:00`. No stored procedures/triggers observed in the dump excerpt reviewed; declarative FK constraints handle cascade/null-on-delete behavior (full list in §5's constraint block).
+Normalized relational database running on InnoDB with foreign keys configured to `ON DELETE CASCADE` for user-owned records (attendance, breaks, trades, submissions) and `ON DELETE SET NULL` for optional references (departments, courses). Dynamic tables are automatically created if absent (`BreakDbHelper::ensureSchema`, `CommunityDbHelper::ensureSchema`).
 
 ### 12.9 Database Relationship Map
 ```
-users ──1:1──> employees ──N:1──> departments
-users ──1:1──> reviewers
-users ──1:1──> students ──N:1──> courses
-users ──1:N──> user_roles (multi-role)
-users ──1:1──> user_credits ──1:N──> credit_transactions (sender_id/receiver_id/user_id all → users)
-users ──1:N──> user_tokens
-employees ──1:N──> tasks (assigned_to)
-users ──1:N──> tasks (created_by)
-departments ──1:N──> tasks
-tasks ──1:N──> {task_comments, task_history, task_logs, task_submissions, task_final_deliveries, task_blueprint_variants, task_marketplace_submissions}
-task_marketplace_submissions ──1:N──> task_marketplace_submission_logs
-courses ──1:N──> course_modules ──1:N──> course_lessons ──1:N──> {student_lesson_progress, student_lesson_notes, student_lesson_discussions}
-courses ──1:N──> {course_quizzes, course_assignments, course_resources, course_milestones}
-users ──1:N──> attendance, attendance_disputes, user_breaks, leave_requests, notifications
-chats ──1:N──> chat_messages ──1:N──> {chat_message_reactions, chat_message_receipts}
-chats ──N:N──> users (via chat_participants)
-academy_blogs ──1:N──> {blog_comments, blog_reactions, blog_reads}
+users ──1:1──▶ employees ──N:1──▶ departments
+users ──1:1──▶ user_credits ──1:N──▶ credit_transactions
+users ──1:N──▶ user_roles
+users ──1:N──▶ user_tokens
+users ──1:N──▶ attendance ──1:1──▶ attendance_disputes
+users ──1:N──▶ user_breaks
+users ──1:N──▶ community_posts ──1:N──▶ community_comments
+community_posts ──1:N──▶ community_likes
+users ──1:N──▶ staff_overtime_trades (as seller_id & buyer_id)
+users ──1:N──▶ staff_pay_schemes ──1:N──▶ staff_work_earnings
+users ──1:N──▶ staff_withdrawals
+users ──1:N──▶ tasks (as creator or assignee) ──1:N──▶ task_submissions / comments / logs
+courses ──1:N──▶ course_modules ──1:N──▶ course_lessons ──1:N──▶ student_lesson_progress
+chats ──1:N──▶ chat_participants ──N:1──▶ users
+chats ──1:N──▶ chat_messages ──1:N──▶ chat_message_reactions / receipts
 ```
 
 ### 12.10 Authentication Flow
-See §6 in full — opaque bearer token, `user_tokens` table, per-portal role check at login/verify time, no per-request middleware.
+Described in Section 6.
 
 ### 12.11 Authorization / Role System
-`user_roles` enum: `admin`, `manager`, `staff`, `instructor`, `student`, `reviewer`. A user may hold several simultaneously (e.g., a promoted student → staff keeps history — see `students.status = 'promoted_to_staff'`). Authorization is enforced at **login time** (role-gated) and then **trusted for the rest of the session** by the frontend; the backend does not re-verify role per API call in the large majority of endpoints (§6, §10).
+Roles: `admin`, `manager`, `staff`, `instructor`, `student`, `reviewer`, `developer`. Stored in `user_roles`. Multi-role accounts are supported.
 
 ### 12.12 API Architecture
-REST-ish over plain PHP scripts, JSON in/out, no versioning, no OpenAPI/Swagger spec found. Endpoint URL = filesystem path (e.g. `POST /api/tasks/claim_task.php`).
+RESTful semantics using standard HTTP verbs, returning JSON payloads. URL paths correspond directly to physical filesystem paths under `server/api/`.
 
 ### 12.13 API Endpoint Map
-Full domain-grouped table in §7.
+Described in Section 7.
 
 ### 12.14 Feature Inventory
-Full table in §9.
+Described in Section 9.
 
 ### 12.15 Component Map
-`UNKNOWN` in exhaustive detail — 4 portals × dozens of components each were enumerated by page (§4 module list, folder scan) but not individually opened. Notable cross-portal shared concept: each portal has its own `AgenticBlueprintViewer.jsx` (admin, staff, review) — a UI for the AI task-blueprint feature (`architect_blueprint.php`/`blueprint_variants.php`), duplicated 3× rather than shared.
+Key cross-portal components:
+- `LiveScreenMonitor.jsx`: Admin WebRTC live monitoring grid with remote input injection.
+- `ScreenStreamService.js`: Electron client WebRTC peer connection and desktop capturer.
+- `CommunityWall.jsx` / `CommunityFeed.jsx`: Interactive internal social wall.
+- `DeveloperConsole.jsx`: Developer diagnostics and maintenance suite.
+- `BreakMonitor.jsx`: Realtime administrative break monitor with live trades approval tab.
+- `P2POvertimeMarket.jsx`: Staff portal overtime market modal (Buy, Incoming, History).
+- `MangoBreakTree.jsx`: Interactive visual representation of accumulated overtime and leave conversion.
+- `PayrollManagement.jsx` / `PayrollWallet.jsx`: Financial compensation and withdrawal managers.
 
 ### 12.16 Controller Map
-Not applicable — no controller layer; each `.php` file in §7's table is its own "controller."
+Each PHP script file under `server/api/` serves as its own independent controller.
 
 ### 12.17 Service Map
-Backend "services" = the `*Helper.php` classes listed in §12.5. Frontend "services" = `staff-frontend/src/services/` (only portal with a dedicated services folder — `UNKNOWN` exact contents, not opened this pass).
+Key backend services:
+- `CommunityDbHelper`: Schema provisioning, post fetching with likes/comments resolution.
+- `BreakDbHelper`: Break verification, Mango minute calculation, trade validation.
+- `PayrollHelper`: Contract rate calculation, session earnings sync, payout processing.
+- `CreditHelper`: Ledger balance updates and idempotency protection.
+- `AttendanceSecurityHelper`: IP filtering, proxy resolution, and device fingerprint validation.
+- `PusherHelper`: WebSocket event broadcast wrapper.
+- `SmsHelper`: Dry-run shielded SMS dispatching.
 
 ### 12.18 Model Map
-No ORM/model layer exists; §5's table list is the closest equivalent to a model map.
+The MySQL database tables defined in Section 5 serve as the data model layer.
 
 ### 12.19 Important Business Logic
-- **Credit engine idempotency pattern** (`CreditHelper.php`): every reward/penalty type uses a deterministic `event_key` (e.g. `task_reward_task_{id}`, `mkt_approved_sub_{id}`) checked against `credit_transactions` before inserting, to guarantee "credit this event exactly once" even under retries/double-clicks — except rejection penalties, which intentionally use a unique key per cycle (repeatable by design).
-- **Category credit resolution priority** (`getTaskCategoryCredit`): custom_credit on task > child category > subcategory > main category > string-name fallback > flat default of 5.
-- **Marketplace credit rules**: Dayal Stock = flat, no approve/reject delta; external marketplaces = +1 on upload, +2 more on approval (net +3), -1 on rejection (net 0).
-- **Wallet portal-splitting**: `getWallet()` computes a *separate* balance view depending on whether the caller is the `staff` portal or `reviewer` portal, filtering the same `credit_transactions` ledger by `type`/`event_key` prefix — meaning a single user's one ledger is presented as two different "portal balances" (plus the broken "all" combined view, §10 finding #4).
+- **Mango Overtime Calculation**:
+  `Available Mins = (Worked OT + Bought OT) - (Claimed Breaks + Cashed Out OT + Sold OT)`
+- **P2P Trade Financial Settlement**:
+  Selling staff receives a monetary earnings credit; buying staff incurs a monetary deduction at the seller's active hourly rate.
+- **Credit Idempotency**:
+  `event_key` uniquely identifies ledger entries to prevent double-crediting on retries.
+- **Hourly Rate Calculation**:
+  Monthly: `salary / (working_days * daily_hours)`. Yearly: `contract_amount / (working_days * duration_months * daily_hours)`.
+- **Tiffin Delta Calculation**:
+  Early return ($\le$ 40m) earns up to +25m OT; overstay ($>$ 40m) incurs up to -20m penalty.
 
 ### 12.20 Data Flow Map
-Full flows in §8.
+Described in Section 8.
 
 ### 12.21 Module Dependency Map
-All modules depend on `config/database.php` + `config/cors.php`. Credit-adjacent modules (tasks, reviewer, marketplace) depend on `CreditHelper.php`. Most write-paths depend on `notification_helper.php` (best-effort, wrapped in `try/catch` so notification failure never blocks the core action). Chat/breaks/attendance depend on `PusherHelper` for realtime push. File-handling modules (tasks, blogs, courses, brand) depend on `R2Client`/`config/r2.php`.
+All endpoints depend on `config/database.php` and `config/cors.php`. Developer suite depends on `developer_guard.php`. Database manager depends on `admin_db_guard.php`. Payroll and breaks depend on `PayrollHelper.php` and `BreakDbHelper.php`. Realtime events depend on `PusherHelper.php`.
 
 ### 12.22 Existing Bugs
-Full list in §10 (5 critical, several medium).
+Described in Section 10.
 
 ### 12.23 Incomplete Features
-PenTool Lab (student + admin sides) — untracked files, in-progress wiring per git status. `upload_course_media.php` — new, not yet traced to a frontend caller (`UNKNOWN`).
+- Live SMS Gateway integration (currently handled safely via `SmsHelper::isDryRun()` simulation mode).
+- Desktop client auto-updater: Core architecture implemented (`UpdateService.js`, `AppVersionHelper.php`, `app_releases`, `AppReleases.jsx`), with NSIS/portable binaries distributed via Cloudflare R2 and fleet telemetry logging live versions.
 
 ### 12.24 Security Concerns
-1. Unauthenticated raw-SQL endpoint (critical).
-2. Committed plaintext third-party secrets, both R2 and Pusher (critical).
-3. Unauthenticated password-hash generator exposed publicly (critical).
-4. Systemic lack of server-side token/role verification across ~170 endpoints — auth is a UX layer, not a security boundary, everywhere except the handful of `auth/*` files.
-5. CORS wildcard on `auth/*.php` while the rest of the app uses an origin allow-list — inconsistent trust boundary.
+Described in Section 10.
 
 ### 12.25 Technical Debt
-- Auth/session logic duplicated 4× (one `AuthContext` per portal) instead of a shared auth package.
-- `AgenticBlueprintViewer.jsx` duplicated 3× across portals.
-- Two parallel task-category systems (string column + FK hierarchy).
-- Tailwind major-version split (v3 vs v4) across the 4 frontends complicates any shared design-token work.
-- No central API client/error-handling layer apparent per portal beyond individual `axios` calls (`UNKNOWN` in full — not verified for every portal).
+- Lack of uniform server-side token middleware across legacy endpoints.
+- Tailwind CSS version divergence (v3 vs v4).
+- Redundant duplication of layout and auth components across portals.
+- Dual task category representations.
 
 ### 12.26 Naming Conventions
-PHP: `snake_case` filenames matching their action (`get_x.php`, `save_x.php`, `delete_x.php`, `update_x.php`), PascalCase for helper classes (`CreditHelper`, `AttendanceSecurityHelper`). SQL: `snake_case` tables/columns, `fk_*`/`*_ibfk_*` constraint naming (mixed — some hand-named `fk_*`, some auto-generated `*_ibfk_*`, indicating manual `ALTER TABLE ADD CONSTRAINT` mixed with tool-generated migrations at different times). React: PascalCase components/pages, camelCase hooks prefixed `use*`.
+- Backend files: `snake_case.php`
+- Backend classes: `PascalCase.php` (e.g., `BreakDbHelper.php`, `CommunityDbHelper.php`)
+- Frontend components: `PascalCase.jsx`
+- Frontend hooks: `useCamelCase.js`
+- Database tables and columns: `snake_case`
 
 ### 12.27 Important Development Rules
-(Derived from code patterns, not a written style guide found in-repo.) New credit-affecting actions must go through `CreditHelper` with a unique `event_key` to preserve idempotency. New protected endpoints should — but currently mostly do not — validate `user_tokens`; any new admin-only endpoint should explicitly add that check rather than copying the existing unguarded pattern. New frontend routes should follow the existing per-portal `routes/` guard pattern.
+1. **Never bypass `BreakDbHelper`** when calculating overtime minutes or managing break records.
+2. **Always use atomic transactions** (`beginTransaction` / `commit` / `rollBack`) when modifying financial ledgers or multi-table records.
+3. **Always assign unique `event_key` values** in `credit_transactions` to guarantee idempotency.
+4. **Never execute unvalidated queries** in database endpoints.
+5. **Always provide rule-based fallbacks** when integrating external AI APIs (e.g., Gemini).
+6. **Always respect dry-run flags** in `SmsHelper` to prevent accidental cost deductions.
 
 ### 12.28 Critical Files
-Full list in §11.
+Described in Section 11.
 
 ### 12.29 Areas That Require Extra Care
-- `server/api/admin/database/*` — direct DB access surface; any change must add auth before anything else.
-- `CreditHelper.php` — a bug here can silently corrupt every user's wallet balance across the whole platform (as §10 finding #4 already demonstrates).
-- `server/config/r2.php` / `PusherHelper.php` — rotate these credentials and move to `.env` before any public repo exposure.
-- Cron scripts (`auto_checkout.php` especially) — timing bugs here affect real attendance records for all staff, not just a UI glitch.
+- **Financial & Payroll Calculations**: Any error in `PayrollHelper` or `BreakDbHelper` directly affects staff compensation.
+- **Admin Database Controller**: Fully secured with `admin_db_guard.php`.
+- **WebRTC Remote Input Control**: `input_injector.exe` controls physical hardware on staff computers.
+- **Credit Engine**: Direct impact on gamification balances.
 
 ### 12.30 Unknown / Unclear Areas
-See §13.
+Described in Section 13.
 
 ---
 
 # 13. UNKNOWN / UNCERTAIN AREAS
 
-- Exact behavior of `api/auth/logout.php` and `api/auth/sync.php` (files exist, not opened in full).
-- `server/migrations/` contents — folder listed, individual migration files not inventoried.
-- Full component-level breakdown of all 4 frontends' `components/` folders (~dozens of files each) — only `pages/` were enumerated exhaustively.
-- `staff-frontend/src/services/` contents — the only portal with a dedicated services layer; not opened.
-- Whether `admin/courses/upload_course_media.php` (untracked) is wired to any frontend UI yet.
-- Exact request/response schema for each of the ~170 individual endpoints (file-level map given in §7; per-field contracts not transcribed for all of them).
-- Whether `server/migrations/` represents applied history or a pending-migration queue (no migration-runner tooling found).
-- Full content of `.agents/skills/` beyond `master-blueprint` — other skill files in that directory were not read this pass.
+1. **Production SMS Gateway Credentials**: Live SMS gateway endpoints and credentials are not yet configured; the system operates safely under `SmsHelper` simulation mode.
+2. **Native Input Injector Source Code**: `electron/input_injector.exe` is a pre-compiled Windows executable without raw source code in the repository. Its command protocol (`MOVE x y`, `CLICK btn`, `KEY key`) is inferred from `electron/main.cjs`.
+3. **Turn/Relay Servers for WebRTC**: WebRTC configuration currently uses public Google STUN servers (`stun.l.google.com:19302`). Environments behind symmetric NAT firewalls may require a dedicated TURN server for live screen streaming.

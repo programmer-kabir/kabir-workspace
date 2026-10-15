@@ -30,13 +30,28 @@ try {
         exit;
     }
 
-    $query = "INSERT INTO user_breaks (user_id, date, break_type, start_time, status) VALUES (:user_id, :date, :break_type, :start_time, 'Active')";
+    // Rule: Only one Tiffin break permitted per employee per calendar day
+    if ($break_type === 'Tiffin') {
+        $tCheck = $db->prepare("SELECT id FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' AND status = 'Completed' LIMIT 1");
+        $tCheck->execute([':user_id' => $user_id, ':date' => $date]);
+        if ($tCheck->rowCount() > 0) {
+            echo json_encode(["status" => "error", "message" => "You have already completed your daily scheduled Tiffin break for today. Any further breaks require earned Mango Overtime."]);
+            exit;
+        }
+    }
+
+    $purpose = !empty($data->purpose) ? trim($data->purpose) : ($break_type === 'Tiffin' ? 'Tiffin' : 'Personal');
+    $reason = !empty($data->reason) ? trim($data->reason) : null;
+
+    $query = "INSERT INTO user_breaks (user_id, date, break_type, purpose, reason, start_time, status) VALUES (:user_id, :date, :break_type, :purpose, :reason, :start_time, 'Active')";
     $stmt = $db->prepare($query);
     
     if ($stmt->execute([
         ':user_id' => $user_id,
         ':date' => $date,
         ':break_type' => $break_type,
+        ':purpose' => $purpose,
+        ':reason' => $reason,
         ':start_time' => $start_time
     ])) {
         echo json_encode([
@@ -45,7 +60,9 @@ try {
             "data" => [
                 "id" => $db->lastInsertId(),
                 "start_time" => $start_time,
-                "break_type" => $break_type
+                "break_type" => $break_type,
+                "purpose" => $purpose,
+                "reason" => $reason
             ]
         ]);
     } else {

@@ -13,7 +13,7 @@ if(isset($data->email)) {
     $name = isset($data->name) ? $data->name : 'Staff Member';
     
     // Check if user exists
-    $query = "SELECT id, name, email, phone, status, profile_picture, cover_picture FROM users WHERE email = :email LIMIT 1";
+    $query = "SELECT id, name, username, email, phone, status, profile_picture, cover_picture FROM users WHERE email = :email LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':email', $email);
     $stmt->execute();
@@ -56,7 +56,7 @@ if(isset($data->email)) {
             $row['designation'] = $emp_row['designation'];
             $row['department_name'] = $emp_row['department_name'];
         } else {
-            $emp_query = "SELECT e.employee_code, e.designation, d.name AS department_name 
+            $emp_query = "SELECT e.employee_code, e.designation, d.name AS department_name, e.has_tiffin_break, e.allocated_break_minutes 
                           FROM employees e
                           LEFT JOIN departments d ON e.department_id = d.id
                           WHERE e.user_id = :user_id LIMIT 1";
@@ -67,6 +67,12 @@ if(isset($data->email)) {
             $row['employee_code'] = $emp_row['employee_code'];
             $row['designation'] = $emp_row['designation'];
             $row['department_name'] = $emp_row['department_name'];
+            
+            $hasTiffin = isset($emp_row['has_tiffin_break']) ? (int)$emp_row['has_tiffin_break'] : 1;
+            $allocBreak = isset($emp_row['allocated_break_minutes']) && $emp_row['allocated_break_minutes'] !== null ? (int)$emp_row['allocated_break_minutes'] : 0;
+            $row['has_tiffin_break']        = $hasTiffin;
+            $row['allocated_break_minutes'] = $allocBreak;
+            $row['is_manual_break']         = ($hasTiffin === 0 || ($allocBreak > 0 && $hasTiffin === 0));
         }
 
         echo json_encode([

@@ -88,19 +88,33 @@ function syncInstallmentPaymentCash($mysqli, $paymentId, $cardId, $amount, $paid
         $payStmt->close();
     }
 
-    // 2. Fetch Customer Name strictly by joining installment_cards.user_id with users.user_id
+    // 2. Fetch Customer Name and card installment type strictly by joining installment_cards.user_id with users.user_id
     $custStmt = $mysqli->prepare("
-        SELECT ic.card_id, ic.user_id, ic.product_name, u.name AS customer_name
+        SELECT ic.card_id, ic.user_id, ic.product_name, ic.installment_type, ic.remarks, u.name AS customer_name
         FROM installment_cards ic
         LEFT JOIN users u ON u.user_id = ic.user_id
-        WHERE ic.card_id = ? OR ic.id = ?
-        ORDER BY (ic.card_id = ?) DESC
+        WHERE ic.card_id = ?
         LIMIT 1
     ");
-    $custStmt->bind_param("iii", $cardId, $cardId, $cardId);
+    $custStmt->bind_param("i", $cardId);
     $custStmt->execute();
     $cRes = $custStmt->get_result()->fetch_assoc();
     $custStmt->close();
+
+    $cardInstType = strtolower(trim($cRes['installment_type'] ?? ''));
+    $cardRemarks  = strtolower(trim($cRes['remarks'] ?? ''));
+    $isDailyCard  = ($cardInstType === 'daily' || $cardRemarks === 'daily');
+
+    // 🔥 দৈনিক কিস্তির গ্রাহকদের কোনো মাসিক কিস্তিই ক্যাশ ইন হবে না (সম্পূর্ণ ব্লক)
+    if ($isDailyCard) {
+        $delStmt = $mysqli->prepare("UPDATE cash SET is_deleted = 1 WHERE refId = ?");
+        if ($delStmt) {
+            $delStmt->bind_param("s", $refId);
+            $delStmt->execute();
+            $delStmt->close();
+        }
+        return true; // নতুন কোনো Cash In এন্ট্রি হবে না
+    }
 
     $customerName = !empty($cRes['customer_name']) ? trim($cRes['customer_name']) : "Customer";
     $productName = !empty($cRes['product_name']) ? trim($cRes['product_name']) : "";
@@ -266,11 +280,10 @@ function syncFullSettlementCash($mysqli, $cardId, $amount, $principal, $profit, 
         SELECT ic.card_id, ic.user_id, ic.product_name, u.name AS customer_name
         FROM installment_cards ic
         LEFT JOIN users u ON u.user_id = ic.user_id
-        WHERE ic.card_id = ? OR ic.id = ?
-        ORDER BY (ic.card_id = ?) DESC
+        WHERE ic.card_id = ?
         LIMIT 1
     ");
-    $custStmt->bind_param("iii", $cardId, $cardId, $cardId);
+    $custStmt->bind_param("i", $cardId);
     $custStmt->execute();
     $cRes = $custStmt->get_result()->fetch_assoc();
     $custStmt->close();

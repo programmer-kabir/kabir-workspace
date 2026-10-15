@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.exe
+*.dll
+*.bin
+.env
+.env.*
+!.env.example

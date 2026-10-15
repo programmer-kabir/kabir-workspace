@@ -145,18 +145,31 @@ if(isset($data->task_id) && isset($data->user_id) && isset($data->status)) {
             if($update_stmt->execute()) {
                 // Insert submission files into task_submissions table if provided
                 if ($status === 'In Review' && isset($data->submission_files) && is_array($data->submission_files)) {
-                    $ins_sub = $db->prepare("INSERT INTO task_submissions (task_id, user_id, file_type, file_name, file_url, file_key, file_size, file_ext, mime_type) VALUES (:task_id, :user_id, :file_type, :file_name, :file_url, :file_key, :file_size, :file_ext, :mime_type)");
+                    $ins_sub = $db->prepare("INSERT INTO task_submissions (task_id, user_id, file_type, file_name, file_url, file_key, storage_provider, file_size, file_ext, mime_type) VALUES (:task_id, :user_id, :file_type, :file_name, :file_url, :file_key, :storage_provider, :file_size, :file_ext, :mime_type)");
                     foreach ($data->submission_files as $f) {
+                        $rawKey = !empty($f->key) ? $f->key : (!empty($f->url) ? $f->url : '');
+                        $cleanKey = preg_replace('/^https?:\/\/[^\/]+\//i', '', $rawKey);
+                        $provider = !empty($f->storage_provider) ? $f->storage_provider : 'r2';
+
+                        $fileKey = $cleanKey;
+                        $fileUrl = $cleanKey;
+
+                        if ($provider === 'gdrive') {
+                            $fileKey = !empty($f->key) ? $f->key : "task_submissions/task_{$task_id}/" . ($f->name ?? 'file');
+                            $fileUrl = !empty($f->url) ? $f->url : (!empty($f->file_id) ? "https://drive.google.com/file/d/{$f->file_id}/view" : $fileKey);
+                        }
+
                         $ins_sub->execute([
-                            ':task_id'   => $task_id,
-                            ':user_id'   => $user_id,
-                            ':file_type' => isset($f->file_type) ? $f->file_type : 'source',
-                            ':file_name' => isset($f->name) ? $f->name : 'file',
-                            ':file_url'  => isset($f->url) ? $f->url : '',
-                            ':file_key'  => isset($f->key) ? $f->key : '',
-                            ':file_size' => isset($f->size) ? intval($f->size) : 0,
-                            ':file_ext'  => isset($f->ext) ? $f->ext : '',
-                            ':mime_type' => isset($f->mime) ? $f->mime : 'application/octet-stream'
+                            ':task_id'          => $task_id,
+                            ':user_id'          => $user_id,
+                            ':file_type'        => isset($f->file_type) ? $f->file_type : 'source',
+                            ':file_name'        => isset($f->name) ? $f->name : 'file',
+                            ':file_url'         => $fileUrl,
+                            ':file_key'         => $fileKey,
+                            ':storage_provider' => $provider,
+                            ':file_size'        => isset($f->size) ? intval($f->size) : 0,
+                            ':file_ext'         => isset($f->ext) ? $f->ext : '',
+                            ':mime_type'        => isset($f->mime) ? $f->mime : 'application/octet-stream'
                         ]);
                     }
                 }

@@ -191,7 +191,7 @@ if ($monthParam) {
             u.mobile as customer_mobile
         FROM installment_payments ip
         LEFT JOIN installment_cards ic ON $cardJoinExpr
-        LEFT JOIN users u ON ic.user_id = u.id
+        LEFT JOIN users u ON (u.user_id = ic.user_id OR (u.user_id IS NULL AND u.id = ic.user_id))
         WHERE ip.status = 'Paid' 
           AND ip.paid_date BETWEEN ? AND ?
         ORDER BY ip.paid_date DESC, ip.id DESC
@@ -232,7 +232,7 @@ if ($monthParam) {
             u.name as customer_name,
             u.mobile as customer_mobile
         FROM installment_cards ic
-        LEFT JOIN users u ON ic.user_id = u.id
+        LEFT JOIN users u ON (u.user_id = ic.user_id OR (u.user_id IS NULL AND u.id = ic.user_id))
         WHERE (ic.delivery_date BETWEEN ? AND ? OR (ic.delivery_date IS NULL AND DATE(ic.created_at) BETWEEN ? AND ?))
         ORDER BY ic.delivery_date DESC, ic.id DESC
     ";

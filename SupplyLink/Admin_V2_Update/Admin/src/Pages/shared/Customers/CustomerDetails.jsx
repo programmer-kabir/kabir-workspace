@@ -108,9 +108,16 @@ const CustomerDetails = () => {
     const regular = payments.filter((p) => Number(p.installment_no) > 0);
     const all = hasDown ? [downPayment, ...regular] : regular;
 
-    const paidCount = all.filter((p) => p.status === "Paid").length;
+    const isCardFullyPaid = card.status === "Fully Paid";
+    const paidCount = all.filter(
+      (p) => p.status === "Paid" || p.status === "Waived" || isCardFullyPaid
+    ).length;
     const total = Number(card.installment_count) + (hasDown ? 1 : 0);
-    const progress = total ? Math.round((paidCount / total) * 100) : 0;
+    const progress = isCardFullyPaid
+      ? 100
+      : total
+      ? Math.round((paidCount / total) * 100)
+      : 0;
 
     return { ...card, payments, progress };
   });

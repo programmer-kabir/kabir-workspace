@@ -96,12 +96,36 @@ $summary = [
     'total_days' => 0,
     'present' => 0,
     'late' => 0,
+    'leave' => 0,
     'absent' => 0,
     'total_overtime_seconds' => 0,
     'total_short_seconds' => 0,
     'total_expected_seconds' => 0,
     'total_worked_seconds' => 0
 ];
+
+// Get Approved Leaves and Mango Full Day Breaks for this period
+$leaves_by_date = [];
+try {
+    $lv_stmt = $db->prepare("SELECT start_date, end_date, type FROM leave_requests WHERE user_id = :user_id AND status = 'Approved' AND start_date <= :end_date AND end_date >= :start_date");
+    $lv_stmt->execute([':user_id' => $user_id, ':start_date' => $start_date, ':end_date' => $end_date]);
+    while ($lv = $lv_stmt->fetch(PDO::FETCH_ASSOC)) {
+        $cur = strtotime($lv['start_date']);
+        $last = strtotime($lv['end_date']);
+        while ($cur <= $last) {
+            $leaves_by_date[date('Y-m-d', $cur)] = $lv['type'] ?: 'Approved Leave';
+            $cur = strtotime('+1 day', $cur);
+        }
+    }
+} catch (Throwable $e) {}
+
+try {
+    $mb_stmt = $db->prepare("SELECT date, reason FROM user_breaks WHERE user_id = :user_id AND break_type = 'Mango Full Day' AND status = 'Approved' AND date >= :start_date AND date <= :end_date");
+    $mb_stmt->execute([':user_id' => $user_id, ':start_date' => $start_date, ':end_date' => $end_date]);
+    while ($mb = $mb_stmt->fetch(PDO::FETCH_ASSOC)) {
+        $leaves_by_date[$mb['date']] = 'Mango Paid Leave';
+    }
+} catch (Throwable $e) {}
 
 $today_str = date('Y-m-d');
 $loop_end_date = ($end_date > $today_str) ? $today_str : date('Y-m-d', strtotime($end_date));
@@ -201,11 +225,13 @@ while ($current_date_ts <= $end_date_ts) {
         // No check in
         if ($is_holiday) {
             $row['status'] = 'Holiday';
-        }
-        
-        if ($is_weekend && !$is_holiday) {
+        } else if ($is_weekend) {
             $row['status'] = 'Weekend';
-        } else if (!$is_holiday && !$is_weekend) {
+        } else if (isset($leaves_by_date[$current_date_str])) {
+            $row['status'] = 'Leave';
+            $row['leave_title'] = $leaves_by_date[$current_date_str];
+            $summary['leave']++;
+        } else {
             $row['status'] = 'Absent';
             $summary['absent']++;
         }

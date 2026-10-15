@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../config/R2Client.php';
+require_once __DIR__ . '/admin_db_guard.php';
 
 header('Content-Type: application/json');
 
@@ -9,6 +10,8 @@ $dbStartTime = microtime(true);
 $database = new Database();
 $db = $database->getConnection();
 $dbLatencyMs = round((microtime(true) - $dbStartTime) * 1000);
+
+$adminUser = verifyAdminDbAccess($db);
 
 $dbStatus = [
     'connected' => false,

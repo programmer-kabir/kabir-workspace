@@ -53,7 +53,7 @@ try {
 
     // Recent withdrawals
     $stmtWd = $pdo->prepare("
-        SELECT id, amount, withdrawal_type, status, payment_method, account_details, transaction_reference, admin_notes, requested_at, processed_at
+        SELECT id, amount, COALESCE(overtime_hours_cashed, 0) AS overtime_hours_cashed, withdrawal_type, status, payment_method, account_details, transaction_reference, admin_notes, requested_at, processed_at
         FROM staff_withdrawals
         WHERE scheme_id = :scheme_id
         ORDER BY id DESC LIMIT 50

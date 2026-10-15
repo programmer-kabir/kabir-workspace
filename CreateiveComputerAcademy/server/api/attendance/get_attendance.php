@@ -18,15 +18,21 @@ $today = date('Y-m-d');
 $current_month = date('m');
 $current_year = date('Y');
 
-// Get Employee Shift Hours
-$emp_query = "SELECT shift_hours FROM employees WHERE user_id = :user_id LIMIT 1";
+// Get Employee Shift Hours & Break Rules
+$emp_query = "SELECT shift_hours, has_tiffin_break, allocated_break_minutes FROM employees WHERE user_id = :user_id LIMIT 1";
 $emp_stmt = $db->prepare($emp_query);
 $emp_stmt->bindParam(':user_id', $user_id);
 $emp_stmt->execute();
 $shift_hours = 8; // Default
+$has_tiffin_break = 1;
+$allocated_break_minutes = 0;
 if($emp_stmt->rowCount() > 0) {
-    $shift_hours = $emp_stmt->fetch(PDO::FETCH_ASSOC)['shift_hours'];
+    $emp_row = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+    $shift_hours = $emp_row['shift_hours'] ?? 8;
+    $has_tiffin_break = isset($emp_row['has_tiffin_break']) ? (int)$emp_row['has_tiffin_break'] : 1;
+    $allocated_break_minutes = isset($emp_row['allocated_break_minutes']) && $emp_row['allocated_break_minutes'] !== null ? (int)$emp_row['allocated_break_minutes'] : 0;
 }
+$is_manual_break = ($has_tiffin_break === 0 || ($allocated_break_minutes > 0 && $has_tiffin_break === 0));
 
 // Get Today's Status
 $today_query = "SELECT check_in, check_out, status, COALESCE(is_forgotten_checkout, 0) as is_forgotten_checkout FROM attendance WHERE user_id = :user_id AND date = :today LIMIT 1";
@@ -40,8 +46,8 @@ if($today_stmt->rowCount() > 0) {
     $today_status = $today_stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Get Total Break Time Today
-$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :user_id AND date = :today";
+// Get Total Break Time Today (Completed in-shift breaks only)
+$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :user_id AND date = :today AND status = 'Completed' AND break_type != 'Mango Full Day'";
 $break_stmt = $db->prepare($break_query);
 $break_stmt->bindParam(':user_id', $user_id);
 $break_stmt->bindParam(':today', $today);
@@ -132,6 +138,9 @@ echo json_encode([
     "today" => $today_status,
     "total_break_minutes" => (int)$total_break_minutes,
     "shift_hours" => (int)$shift_hours,
+    "has_tiffin_break" => (bool)$has_tiffin_break,
+    "allocated_break_minutes" => (int)$allocated_break_minutes,
+    "is_manual_break" => (bool)$is_manual_break,
     "history" => $history
 ]);
 ?>

@@ -10,7 +10,9 @@ const Account = () => {
   const { user, updateUserProfile } = useAuth();
   const { isUsersLoading, refetch, users = [] } = useUsers();
 
-  const currentUser = users.find((u) => String(u?.id) === String(user?.id));
+  const currentUser = users.find(
+    (u) => Number(u?.user_id ?? u?.id) === Number(user?.user_id ?? user?.id)
+  );
 
   const [formData, setFormData] = useState({
     name: "",

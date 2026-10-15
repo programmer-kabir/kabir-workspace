@@ -102,7 +102,10 @@ export default function PayrollWallet() {
     }
   };
 
+  const [includeOvertimeCashout, setIncludeOvertimeCashout] = useState(false);
+
   const openWithdrawModal = () => {
+    setIncludeOvertimeCashout(false);
     if (savedPayoutSettings && savedPayoutSettings.account_number) {
       setPaymentMethod(savedPayoutSettings.payment_method || 'bkash');
     } else {
@@ -170,9 +173,16 @@ export default function PayrollWallet() {
       return;
     }
 
-    const available = data?.summary?.available_withdrawable || 0;
+    const available = (data?.summary?.available_withdrawable || 0) + (includeOvertimeCashout ? (data?.summary?.overtime_bank?.cash_value || 0) : 0);
+    const minLimit = Number(data?.summary?.min_withdrawal_limit || 0);
+
+    if (minLimit > 0 && amountNum < minLimit) {
+      toast.error(`উত্তোলন করতে ন্যূনতম ৳${minLimit.toLocaleString()} প্রয়োজন। দয়া করে ওভারটাইম যোগ করুন অথবা ব্যালেন্স পরবর্তী মাসের সাথে রোলওভার হবে।`);
+      return;
+    }
+
     if (amountNum > available) {
-      toast.error(`Amount exceeds available withdrawable balance (৳${available.toLocaleString()}).`);
+      toast.error(`Amount exceeds available withdrawable balance (৳${Math.floor(available).toLocaleString()}).`);
       return;
     }
 
@@ -205,7 +215,8 @@ export default function PayrollWallet() {
         user_id: currentUser.id,
         amount: amountNum,
         payment_method: paymentMethod,
-        account_details: finalDetails
+        account_details: finalDetails,
+        overtime_hours: includeOvertimeCashout ? (summary.overtime_bank?.available_hours || 0) : 0
       });
 
       if (res.data.status === 'success') {
@@ -360,8 +371,8 @@ export default function PayrollWallet() {
             <div className="flex flex-col items-end gap-1">
               <button
                 onClick={openWithdrawModal}
-                disabled={!summary.can_withdraw}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-md transition duration-200 ${summary.can_withdraw
+                disabled={Number(summary.available_withdrawable || 0) <= 0 && Number(summary.overtime_bank?.available_hours || 0) <= 0}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-md transition duration-200 ${(Number(summary.available_withdrawable || 0) > 0 || Number(summary.overtime_bank?.available_hours || 0) > 0)
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
                   }`}
@@ -369,9 +380,9 @@ export default function PayrollWallet() {
                 <FiArrowUpRight className="w-5 h-5" />
                 Request Withdrawal
               </button>
-              {!summary.can_withdraw && summary.available_withdrawable > 0 && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                  Min. ৳{Number(summary.min_withdrawal_limit || 500).toLocaleString()} required
+              {Number(summary.min_withdrawal_limit || 0) > 0 && (
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  Min. ৳{Number(summary.min_withdrawal_limit).toLocaleString()} required
                 </span>
               )}
             </div>
@@ -832,7 +843,9 @@ export default function PayrollWallet() {
                           <td className="py-3">৳ {Number(item.applied_rate).toFixed(2)}/h</td>
                           <td className="py-3 font-bold text-emerald-600 dark:text-emerald-400">৳ {Number(item.earned_amount).toFixed(2)}</td>
                           <td className="py-3 text-right">
-                            {item.is_surplus == 1 ? (
+                            {item.source_type === 'mango_leave' ? (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold" title="Paid Mango Break Day">🥭 Mango Leave</span>
+                            ) : item.is_surplus == 1 ? (
                               <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">Surplus</span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold">Contract</span>
@@ -878,7 +891,14 @@ export default function PayrollWallet() {
                       data.recent_withdrawals.map((w) => (
                         <tr key={w.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">{w.requested_at?.split(' ')[0]}</td>
-                          <td className="py-3 font-bold text-slate-900 dark:text-white">৳ {Number(w.amount).toFixed(2)}</td>
+                          <td className="py-3 font-bold text-slate-900 dark:text-white">
+                            ৳ {Number(w.amount).toFixed(2)}
+                            {Number(w.overtime_hours_cashed || 0) > 0 && (
+                              <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold" title={`${w.overtime_hours_cashed}h Overtime cashed out`}>
+                                🥭 +{w.overtime_hours_cashed}h OT
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 capitalize">{w.payment_method}</td>
                           <td className="py-3 text-slate-400 font-mono text-[11px]">{w.transaction_reference || '—'}</td>
                           <td className="py-3 text-right">
@@ -911,7 +931,7 @@ export default function PayrollWallet() {
       {/* Withdrawal Request Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative space-y-5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative space-y-5">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Request Payout</h3>
@@ -945,6 +965,53 @@ export default function PayrollWallet() {
                 </div>
               </div>
 
+              {/* Mango Overtime Bank Conversion Box (Money vs Mango Choice) */}
+              {summary.overtime_bank && Number(summary.overtime_bank.available_hours || 0) > 0 && (
+                <div className={`p-4 rounded-2xl border transition duration-200 ${includeOvertimeCashout ? 'bg-amber-500/10 border-amber-500/40 text-amber-900 dark:text-amber-200 shadow-sm' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'}`}>
+                  <label htmlFor="otCashoutToggle" className="flex items-start justify-between gap-3 cursor-pointer select-none">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl mt-0.5">🥭</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                            ম্যাঙ্গো ওভারটাইম ব্যাংক {summary.overtime_bank.cycle_label ? `(${summary.overtime_bank.cycle_label})` : ''} ({summary.overtime_bank.available_hours}h / {summary.overtime_bank.ripe_mangoes}টি আম)
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                            Money vs Mango
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                          {summary.overtime_bank.cycle_label ? `${summary.overtime_bank.cycle_label} মাসের ` : ''}আপনার কাছে <strong>{summary.overtime_bank.available_hours} ঘণ্টা</strong> ওভারটাইম জমা আছে (মূল্য: <strong>৳{Number(summary.overtime_bank.cash_value).toLocaleString()}</strong>)। আপনি কি এই ওভারটাইম টাকায় ক্যাশ আউট করতে চান?
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="otCashoutToggle"
+                      checked={includeOvertimeCashout}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setIncludeOvertimeCashout(checked);
+                        const baseVal = Number(summary.available_withdrawable) || 0;
+                        const otVal = Number(summary.overtime_bank.cash_value) || 0;
+                        if (checked) {
+                          setWithdrawAmount(Math.floor(baseVal + otVal));
+                        } else {
+                          setWithdrawAmount(Math.floor(baseVal));
+                        }
+                      }}
+                      className="w-5 h-5 accent-amber-500 rounded cursor-pointer shrink-0 mt-1"
+                    />
+                  </label>
+                  {includeOvertimeCashout && (
+                    <div className="mt-3 pt-3 border-t border-amber-500/20 flex items-center justify-between text-xs font-bold text-amber-700 dark:text-amber-300">
+                      <span>✓ গাছ থেকে {summary.overtime_bank.available_hours} ঘণ্টা ওভারটাইম ক্যাশে রূপান্তর হবে</span>
+                      <span className="text-sm font-black">+ ৳{Number(summary.overtime_bank.cash_value).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -958,8 +1025,8 @@ export default function PayrollWallet() {
                   <input
                     type="number"
                     step="1"
-                    min={summary.min_withdrawal_limit || 5000}
-                    max={summary.available_withdrawable || 0}
+                    min={summary?.min_withdrawal_limit || 5000}
+                    max={(summary.available_withdrawable || 0) + (includeOvertimeCashout ? (summary.overtime_bank?.cash_value || 0) : 0)}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder={`e.g. ${summary.min_withdrawal_limit || 5000}`}
@@ -968,7 +1035,10 @@ export default function PayrollWallet() {
                   />
                   <button
                     type="button"
-                    onClick={() => setWithdrawAmount(summary.available_withdrawable || '')}
+                    onClick={() => {
+                      const maxVal = (summary.available_withdrawable || 0) + (includeOvertimeCashout ? (summary.overtime_bank?.cash_value || 0) : 0);
+                      setWithdrawAmount(Math.floor(maxVal));
+                    }}
                     className="absolute right-2 top-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl hover:bg-indigo-200 transition cursor-pointer"
                   >
                     MAX
@@ -1031,6 +1101,27 @@ export default function PayrollWallet() {
                 </div>
               )}
 
+              {/* Minimum salary threshold alert inside modal */}
+              {(() => {
+                const minLimit = Number(summary.min_withdrawal_limit || 0);
+                const numAmount = Number(withdrawAmount) || 0;
+                const isUnderMinSalary = (minLimit > 0 && numAmount < minLimit);
+
+                if (!isUnderMinSalary) return null;
+
+                return (
+                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                    <FiAlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">উত্তোলন সীমা অপূর্ণ (ক্যাশ আউট লক)</p>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                        আপনার নির্ধারিত মাসিক স্যালারি <strong>৳ {minLimit.toLocaleString()}</strong>। বর্তমান নির্বাচিত ব্যালেন্স <strong>৳ {numAmount.toLocaleString()}</strong> হওয়ায় উত্তোলন সাময়িকভাবে লক রয়েছে। উত্তোলন আনলক করতে দয়া করে উপরের <strong>"ম্যাঙ্গো ওভারটাইম ক্যাশ আউট"</strong> বক্সে টিক দিন।
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="pt-2 flex items-center justify-end gap-3">
                 <button
                   type="button"
@@ -1039,14 +1130,25 @@ export default function PayrollWallet() {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition disabled:opacity-50 cursor-pointer"
-                >
-                  {submitting ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-                  Submit Request
-                </button>
+                {(() => {
+                  const minLimit = Number(summary.min_withdrawal_limit || 0);
+                  const numAmount = Number(withdrawAmount) || 0;
+                  const isUnderMinSalary = (minLimit > 0 && numAmount < minLimit);
+
+                  return (
+                    <button
+                      type="submit"
+                      disabled={submitting || isUnderMinSalary}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg transition ${isUnderMinSalary
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                        : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer disabled:opacity-50'
+                        }`}
+                    >
+                      {submitting ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
+                      Submit Request
+                    </button>
+                  );
+                })()}
               </div>
             </form>
           </div>

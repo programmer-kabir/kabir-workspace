@@ -47,7 +47,8 @@ const BreakRequestsWidget = () => {
       const channel = pusherInstance.subscribe('staff-breaks');
 
       channel.bind('break-requested', (data) => {
-        toast.info(`☕ Break Request: ${data.user_name} requested ${data.estimated_minutes}m ${data.break_type} break!`, {
+        const purposeTag = data.purpose ? `[${data.purpose}] ` : '';
+        toast.info(`☕ Break Request: ${data.user_name} requested ${data.estimated_minutes}m ${purposeTag}${data.break_type} break!`, {
           duration: 7000
         });
         setPendingRequests((prev) => [data, ...prev.filter((p) => p.id !== data.id)]);
@@ -155,8 +156,14 @@ const BreakRequestsWidget = () => {
                     </div>
 
                     <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                        Type: <span className="text-amber-600 dark:text-amber-400">{req.break_type}</span>
+                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
+                        <span>Type:</span>
+                        <span className="text-amber-600 dark:text-amber-400">{req.break_type}</span>
+                        {req.purpose && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase">
+                            {req.purpose}
+                          </span>
+                        )}
                       </p>
                       {req.reason && (
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium italic mt-0.5 line-clamp-2">
@@ -218,7 +225,7 @@ const BreakRequestsWidget = () => {
                     {b.name || `Staff #${b.user_id}`}
                   </p>
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
-                    {b.break_type} Break {b.start_time ? `• Started ${b.start_time.split(' ')[1]?.slice(0, 5)}` : ''}
+                    {b.purpose ? `${b.purpose} • ` : ''}{b.break_type} Break {b.start_time ? `• Started ${b.start_time.split(' ')[1]?.slice(0, 5)}` : ''}
                   </p>
                 </div>
               </div>

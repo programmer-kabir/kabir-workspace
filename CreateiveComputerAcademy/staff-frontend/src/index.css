@@ -80,6 +80,26 @@
     padding: 10px 14px;
   }
 
+  /* Date Inputs - Dark Mode White Calendar Icon */
+  input[type="date"] {
+    color-scheme: light;
+  }
+
+  .dark input[type="date"] {
+    color-scheme: dark;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: brightness(0) invert(1) !important;
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
   /* Global Sleek Scrollbars */
   * {
     scrollbar-width: thin;

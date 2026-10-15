@@ -53,7 +53,7 @@ const Login = () => {
 
         {/* ── Left Hero Panel (Hidden on Mobile) ── */}
         <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center items-center p-12 xl:p-16 overflow-hidden bg-gradient-to-br from-indigo-50/80 via-blue-50/50 to-slate-100 dark:from-[#0b1124] dark:via-[#090d1c] dark:to-[#060913] border-r border-slate-200/80 dark:border-slate-800/60">
-          
+
           {/* Ambient Glows */}
           <div className="absolute -top-20 -left-20 w-96 h-96 bg-indigo-400/20 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-violet-400/20 dark:bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -122,12 +122,12 @@ const Login = () => {
 
         {/* ── Right Form Panel ── */}
         <div className="flex-1 flex items-center justify-center p-6  relative z-10">
-          
+
           <div className="w-full max-w-xl my-auto pt-16 lg:pt-0">
-            
+
             {/* Form Card */}
             <div className="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/90 rounded-[28px] p-8 sm:p-10 shadow-2xl shadow-slate-300/50 dark:shadow-black/70 transition-all duration-300">
-              
+
               {/* Header */}
               <div className="mb-8">
                 <span className="inline-block px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-800/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-extrabold uppercase tracking-wider mb-3">
@@ -146,7 +146,7 @@ const Login = () => {
                 <div className="relative overflow-hidden flex items-start gap-3 p-4 rounded-2xl bg-rose-50/95 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200 shadow-xl shadow-rose-500/10 dark:shadow-rose-950/40 backdrop-blur-md mb-6 animate-in slide-in-from-top-2 duration-300">
                   {/* Left accent bar */}
                   <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-rose-500 to-red-600" />
-                  
+
                   {/* Pulsing Icon Bubble */}
                   <div className="w-8 h-8 rounded-xl bg-rose-500/15 dark:bg-rose-500/25 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-sm">
                     <FiAlertCircle size={18} className="animate-pulse" />
@@ -176,11 +176,11 @@ const Login = () => {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
-                
-                {/* Email Field */}
+
+                {/* Email / Username / Phone Field */}
                 <div className="space-y-2">
                   <label className="block text-[11px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Email Address
+                    Email, Username or Phone
                   </label>
                   <div className="relative group/input">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within/input:text-indigo-600 dark:group-focus-within/input:text-indigo-400 transition-colors">
@@ -188,15 +188,15 @@ const Login = () => {
                     </div>
                     <input
                       id="staff-email"
-                      type="email"
-                      autoComplete="email"
+                      type="text"
+                      autoComplete="username"
                       required
                       value={email}
                       onChange={e => {
                         setEmail(e.target.value);
                         if (error) setError('');
                       }}
-                      placeholder="staff@creativeacademy.com"
+                      placeholder="Enter email, username or phone number"
                       className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-medium outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 dark:focus:border-indigo-500 transition-all duration-200 shadow-sm"
                     />
                   </div>

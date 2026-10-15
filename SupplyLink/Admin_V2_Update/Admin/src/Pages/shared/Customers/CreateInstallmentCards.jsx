@@ -336,7 +336,7 @@ const CreateInstallmentCards = () => {
             <FaCalculator className="text-emerald-400" /> Payment Configuration
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <IconInput
               label="Sale Type"
               icon={FaStore}
@@ -351,6 +351,24 @@ const CreateInstallmentCards = () => {
                 <option value="Cash">Cash</option>
               </select>
             </IconInput>
+
+            {saleType === "Installment" ? (
+              <IconInput
+                label="কিস্তির ধরণ (Installment Type)"
+                icon={FaCalendarAlt}
+                register={register}
+                name="installment_type"
+              >
+                <select
+                  {...register("installment_type")}
+                  defaultValue="monthly"
+                  className="bg-[#0F1B2D] text-white w-full py-2 outline-none"
+                >
+                  <option value="monthly">মাসিক কিস্তি (Monthly)</option>
+                  <option value="daily">দৈনিক কিস্তি (Daily)</option>
+                </select>
+              </IconInput>
+            ) : <div />}
 
             <IconInput
               label="Reference (Official Staff)"

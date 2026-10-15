@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText, FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo, FiDollarSign } from 'react-icons/fi';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
+  FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo,
+  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase
+} from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
 import { useAuth } from '../context/AuthContext';
@@ -64,15 +68,42 @@ const Sidebar = ({ isOpen = true, onClose }) => {
 
   const deptName = currentUser?.department_name ? currentUser.department_name.toLowerCase() : '';
   const isContentTeam = deptName.includes('content') || deptName.includes('video');
+  const isDeveloper = currentUser?.roles &&
+    currentUser.roles.some(r => ['developer', 'admin'].includes(r));
+
+  const location = useLocation();
+  const isDevRoute = location.pathname.startsWith('/developer');
+  const [devMenuOpen, setDevMenuOpen] = useState(() => {
+    const saved = localStorage.getItem('cca_dev_menu_open');
+    if (saved !== null) return saved === 'true';
+    return isDevRoute;
+  });
+
+  const toggleDevMenu = () => {
+    setDevMenuOpen(prev => {
+      const next = !prev;
+      localStorage.setItem('cca_dev_menu_open', String(next));
+      return next;
+    });
+  };
+
+  const devSubMenuItems = [
+    { name: 'Overview', transKey: 'dev_overview', path: '/developer', icon: <FiActivity size={14} /> },
+    { name: 'User Impersonator', transKey: 'dev_impersonate', path: '/developer/impersonate', icon: <FiUsers size={14} /> },
+    { name: 'System Logs', transKey: 'dev_logs', path: '/developer/logs', icon: <FiFileText size={14} /> },
+    { name: 'API & Sockets', transKey: 'dev_api_tester', path: '/developer/api-tester', icon: <FiRadio size={14} /> },
+    { name: 'Crons & Auto', transKey: 'dev_crons', path: '/developer/crons', icon: <FiClock size={14} /> },
+    { name: 'Database & Cache', transKey: 'dev_database', path: '/developer/database', icon: <FiDatabase size={14} /> },
+  ];
 
   const menuItems = [
     { name: 'Dashboard', transKey: 'dashboard', path: '/', icon: <FiHome size={19} /> },
+    { name: 'Community Wall', transKey: 'community_wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" /> },
+
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Mango Break Tree', transKey: 'mango_tree', path: '/mango-tree', icon: <span className="text-lg">🥭</span> },
-    ...(currentUser?.id !== 2
-      ? [{ name: 'Breaks Log', transKey: 'breaks_log', path: '/breaks', icon: <FiCoffee size={19} className="text-amber-500 group-hover:text-amber-400" /> }]
-      : []),
+    { name: 'Breaks Log', transKey: 'breaks_log', path: '/breaks', icon: <FiCoffee size={19} className="text-amber-500 group-hover:text-amber-400" /> },
     // Content Team gets Content Studio, Other staff gets Tasks
     ...(isContentTeam
       ? [{ name: 'Content Studio', transKey: 'content_studio', path: '/content-studio', icon: <FiVideo size={19} className="text-rose-500 group-hover:text-rose-400" /> }]
@@ -93,20 +124,18 @@ const Sidebar = ({ isOpen = true, onClose }) => {
       <div
         onClick={onClose}
         aria-hidden="true"
-        className={`fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-350 ease-in-out ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-350 ease-in-out ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
       />
 
       {/* Main Sidebar — pure translateX slide on mobile (left→right open, right→left close) */}
       <aside
         style={{ willChange: 'transform' }}
         className={`bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 h-screen flex flex-col shadow-2xl lg:shadow-xl border-r border-slate-200 dark:border-slate-800 z-50 overflow-hidden shrink-0 fixed inset-y-0 left-0 lg:static
-          transition-transform lg:transition-[transform,opacity,width] duration-[350ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
-          isOpen
+          transition-transform lg:transition-[transform,opacity,width] duration-[350ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${isOpen
             ? 'w-64 translate-x-0 lg:opacity-100'
             : '-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 pointer-events-none lg:pointer-events-auto'
-        }`}
+          }`}
       >
         <div className="w-64 h-full flex flex-col shrink-0">
           {/* Logo/Brand Area + Mobile Close Button */}
@@ -166,6 +195,91 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                   )}
                 </NavLink>
               ))}
+
+              {/* Dedicated Collapsible Dev Console for Developer & Admin */}
+              {isDeveloper && (
+                <div className="pt-2 mt-2 border-t border-slate-200/70 dark:border-slate-800/80">
+                  <button
+                    type="button"
+                    onClick={toggleDevMenu}
+                    className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${isDevRoute
+                        ? 'bg-primary-50/90 dark:bg-primary-500/15 text-primary-700 dark:text-primary-400 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] font-black'
+                        : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1 font-bold text-slate-600 dark:text-slate-400'
+                      }`}
+                  >
+                    {/* Subtle active state glow background */}
+                    {isDevRoute && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-primary-500/5 to-transparent dark:from-primary-400/10 dark:via-primary-400/5 opacity-70 pointer-events-none"></div>
+                    )}
+
+                    {/* Active indicator bar */}
+                    <div
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 rounded-r-full bg-primary-600 dark:bg-primary-400 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out ${isDevRoute ? 'h-4/5 opacity-100' : 'h-0 opacity-0 group-hover:h-1/2 group-hover:opacity-40'
+                        }`}
+                    ></div>
+
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div
+                        className={`transition-all duration-300 transform group-hover:scale-110 ${isDevRoute
+                            ? 'drop-shadow-md text-primary-600 dark:text-primary-400'
+                            : 'text-cyan-500 dark:text-cyan-400 group-hover:text-cyan-400'
+                          }`}
+                      >
+                        <FiTerminal size={19} />
+                      </div>
+                      <span className="text-xs lg:text-sm tracking-wide">{t('dev_suite')}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 relative z-10">
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                        DEV
+                      </span>
+                      <FiChevronDown
+                        size={15}
+                        className={`text-slate-400 transition-transform duration-300 ease-out ${devMenuOpen ? 'rotate-180 text-primary-600 dark:text-primary-400' : ''
+                          }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Collapsible Sub-items */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${devMenuOpen ? 'max-h-72 opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
+                      }`}
+                  >
+                    <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4.5 my-1">
+                      {devSubMenuItems.map((sub) => (
+                        <NavLink
+                          key={sub.path}
+                          to={sub.path}
+                          end={sub.path === '/developer'}
+                          onClick={handleNavClick}
+                          className={({ isActive }) =>
+                            `group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${isActive
+                              ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-black shadow-xs'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-semibold'
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`transition-colors ${isActive
+                                    ? 'text-cyan-600 dark:text-cyan-400'
+                                    : 'text-slate-400 dark:text-slate-500 group-hover:text-cyan-500'
+                                  }`}
+                              >
+                                {sub.icon}
+                              </div>
+                              <span className="truncate">{t(sub.transKey)}</span>
+                            </div>
+                          )}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </nav>
           </div>
 
@@ -180,7 +294,14 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs lg:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{currentUser?.name || 'Staff Member'}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs lg:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{currentUser?.name || 'Staff Member'}</p>
+                  {isDeveloper && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-[8px] font-black uppercase tracking-wider shrink-0">
+                      DEV
+                    </span>
+                  )}
+                </div>
                 <p className="text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 truncate">{currentUser?.employee_code || 'Pending ID'}</p>
               </div>
             </div>

@@ -260,6 +260,7 @@ const CustomerCardDetails = () => {
       first_installment_date: c.first_installment_date || "",
       supplier_id: c.supplier_id || "",
       status: c.status || "Running",
+      installment_type: c.installment_type || ((c.remarks || "").trim().toLowerCase() === "daily" ? "daily" : "monthly"),
       remarks: c.remarks || "",
     });
     setIsEditOpen(true);
@@ -320,6 +321,7 @@ const CustomerCardDetails = () => {
         first_installment_date: editForm.first_installment_date,
         supplier_id: editForm.supplier_id || null,
         status: editForm.status,
+        installment_type: editForm.installment_type || "monthly",
         remarks: editForm.remarks || "",
       };
 
@@ -746,7 +748,7 @@ const CustomerCardDetails = () => {
                 <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3">
                   📅 Dates & Status
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-medium text-gray-300">Delivery Date *</label>
                     <input
@@ -769,6 +771,19 @@ const CustomerCardDetails = () => {
                       onChange={handleChange}
                       className="w-full px-3 py-2 text-sm rounded-lg bg-[#020617] border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 date-fix"
                     />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-300">কিস্তির ধরণ (Type)</label>
+                    <select
+                      name="installment_type"
+                      value={editForm.installment_type || "monthly"}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 text-sm rounded-lg bg-[#020617] border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="monthly">মাসিক কিস্তি (Monthly)</option>
+                      <option value="daily">দৈনিক কিস্তি (Daily)</option>
+                    </select>
                   </div>
 
                   <div className="flex flex-col gap-1">

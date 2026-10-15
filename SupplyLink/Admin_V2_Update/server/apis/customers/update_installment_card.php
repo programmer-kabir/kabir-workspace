@@ -22,6 +22,9 @@ try {
     $additional_cost = (float) ($input['additional_cost'] ?? 0);
 
     $sale_type    = in_array($input['sale_type'] ?? '', ['Cash', 'Installment']) ? $input['sale_type'] : 'Installment';
+    $installment_type = in_array(strtolower(trim($input['installment_type'] ?? '')), ['daily', 'monthly']) 
+        ? strtolower(trim($input['installment_type'])) 
+        : 'monthly';
     $sale_price   = (float) ($input['sale_price'] ?? 0);
     $down_payment = (float) ($input['down_payment'] ?? 0);
 
@@ -127,6 +130,7 @@ try {
             additional_cost = ?,
             cost_price = ?,
             sale_type = ?,
+            installment_type = ?,
             sale_price = ?,
             down_payment = ?,
             total_due_amount = ?,
@@ -143,7 +147,7 @@ try {
     ");
 
     $stmt->bind_param(
-        "iisddddsdddiddssiissi",
+        "iisddddssdddiddssiissi",
         $card_id,
         $user_id,
         $product_name,
@@ -152,6 +156,7 @@ try {
         $additional_cost,
         $cost_price,
         $sale_type,
+        $installment_type,
         $sale_price,
         $down_payment,
         $total_due_amount,

@@ -62,6 +62,7 @@ try {
             "user_id" => $staffUserId,
             "user_name" => $staffName,
             "break_type" => $breakRecord['break_type'],
+            "purpose" => $breakRecord['purpose'] ?? null,
             "status" => "Active",
             "start_time" => $now,
             "reason" => $breakRecord['reason'],
@@ -118,6 +119,8 @@ try {
         $payload = [
             "break_id" => $break_id,
             "user_id" => $staffUserId,
+            "break_type" => $breakRecord['break_type'],
+            "purpose" => $breakRecord['purpose'] ?? null,
             "status" => "Rejected"
         ];
 

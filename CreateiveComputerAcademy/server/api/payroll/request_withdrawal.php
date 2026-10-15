@@ -19,6 +19,7 @@ try {
     $amount = isset($data['amount']) ? floatval($data['amount']) : 0.0;
     $paymentMethod = isset($data['payment_method']) ? trim($data['payment_method']) : 'bkash';
     $accountDetails = isset($data['account_details']) ? trim($data['account_details']) : '';
+    $overtimeHours = isset($data['overtime_hours']) ? floatval($data['overtime_hours']) : 0.0;
 
     if ($userId <= 0 || $amount <= 0) {
         http_response_code(400);
@@ -26,7 +27,7 @@ try {
         exit();
     }
 
-    $result = PayrollHelper::requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails);
+    $result = PayrollHelper::requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails, $overtimeHours);
 
     echo json_encode([
         'status' => 'success',

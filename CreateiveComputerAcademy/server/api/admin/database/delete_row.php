@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/admin_db_guard.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -10,6 +11,8 @@ if (!$db) {
     echo json_encode(["status" => "error", "message" => "Database connection failed"]);
     exit();
 }
+
+$adminUser = verifyAdminDbAccess($db);
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {

@@ -3,25 +3,26 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { toast } from 'sonner';
-import { 
-  FiSettings, 
-  FiCpu, 
-  FiEdit3, 
-  FiMoon, 
-  FiSun, 
-  FiMonitor, 
-  FiGlobe, 
-  FiBell, 
-  FiVolume2, 
-  FiCheck, 
-  FiSave, 
-  FiRefreshCw, 
+import {
+  FiSettings,
+  FiCpu,
+  FiEdit3,
+  FiMoon,
+  FiSun,
+  FiMonitor,
+  FiGlobe,
+  FiBell,
+  FiVolume2,
+  FiCheck,
+  FiSave,
+  FiRefreshCw,
   FiLayers,
   FiZap,
   FiShield,
   FiMapPin
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
+import { CategoryManager } from '../components/Settings/CategoryManager';
 
 const Settings = () => {
   const { currentUser } = useAuth();
@@ -33,12 +34,12 @@ const Settings = () => {
 
   // Settings State
   const [settings, setSettings] = useState({
-    task_creation_mode: 'agentic', // 'agentic' | 'manual'
-    theme_mode: theme || 'system', // 'light' | 'dark' | 'system'
-    language: 'bn',                // 'bn' | 'en'
-    notification_sound: 1,         // 1 | 0
-    email_notifications: 1,        // 1 | 0
-    ai_model: 'gemini-1.5-pro'     // 'gemini-1.5-pro' | 'gpt-4o' | 'claude-3-5-sonnet'
+    task_creation_mode: 'agentic',
+    theme_mode: theme || 'system',
+    language: 'bn',
+    notification_sound: 1,
+    email_notifications: 1,
+    ai_model: 'gemini-1.5-pro'
   });
 
   // System & Reviewer Credit & Attendance Security Settings State
@@ -51,9 +52,10 @@ const Settings = () => {
     office_latitude: '23.81033100',
     office_longitude: '90.41252100',
     office_geofence_radius_meters: 50,
-    attendance_security_mode: 'audit_flag',
+    attendance_security_mode: 'strict_ip',
     office_allowed_ips: '127.0.0.1,::1,182.48.76.182'
   });
+  const [detectedClientIp, setDetectedClientIp] = useState('');
   const [savingSystem, setSavingSystem] = useState(false);
   const [gettingLoc, setGettingLoc] = useState(false);
 
@@ -79,6 +81,18 @@ const Settings = () => {
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
+  };
+
+  const handleAddDetectedIp = () => {
+    if (!detectedClientIp) return;
+    const currentIps = (systemSettings.office_allowed_ips || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!currentIps.includes(detectedClientIp)) {
+      const updated = [...currentIps, detectedClientIp].join(', ');
+      setSystemSettings(prev => ({ ...prev, office_allowed_ips: updated }));
+      toast.success(`IP ${detectedClientIp} যোগ করা হয়েছে!`);
+    } else {
+      toast.info('এই IP ইতিমধ্যে অনুমোদিত তালিকায় রয়েছে!');
+    }
   };
 
   // Fetch Settings on Mount
@@ -110,6 +124,9 @@ const Settings = () => {
             ...prev,
             ...sysRes.data.settings
           }));
+          if (sysRes.data.client_ip) {
+            setDetectedClientIp(sysRes.data.client_ip);
+          }
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
@@ -157,8 +174,8 @@ const Settings = () => {
 
       if (res.data.status === 'success') {
         toast.success(
-          settings.language === 'bn' 
-            ? 'সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' 
+          settings.language === 'bn'
+            ? 'সেটিংস সফলভাবে সংরক্ষিত হয়েছে!'
             : 'Settings saved successfully!'
         );
       } else {
@@ -192,7 +209,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300 pb-12">
+    <div className=" mx-auto space-y-8 animate-in fade-in duration-300 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm">
         <div>
@@ -205,8 +222,8 @@ const Settings = () => {
                 {settings.language === 'bn' ? 'সিস্টেম ও ওয়ার্কস্পেস সেটিংস' : 'System & Workspace Settings'}
               </h1>
               <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">
-                {settings.language === 'bn' 
-                  ? 'টাস্ক ক্রিয়েশন মোড, মুড, ভাষা এবং ওয়ার্কফ্লো কনফিগার করুন' 
+                {settings.language === 'bn'
+                  ? 'টাস্ক ক্রিয়েশন মোড, মুড, ভাষা এবং ওয়ার্কফ্লো কনফিগার করুন'
                   : 'Configure task creation workflow, mood, language and system preferences'}
               </p>
             </div>
@@ -234,8 +251,8 @@ const Settings = () => {
               {settings.language === 'bn' ? 'টাস্ক পাঠানোর মোড (Task Creation Workflow)' : 'Task Creation Workflow Mode'}
             </h2>
             <p className="text-xs font-semibold text-slate-400">
-              {settings.language === 'bn' 
-                ? 'নতুন টাস্ক অ্যাসাইন করার সময় স্বয়ংক্রিয়ভাবে কোন মোডটি চালু থাকবে' 
+              {settings.language === 'bn'
+                ? 'নতুন টাস্ক অ্যাসাইন করার সময় স্বয়ংক্রিয়ভাবে কোন মোডটি চালু থাকবে'
                 : 'Select the default mode when creating and assigning tasks'}
             </p>
           </div>
@@ -245,11 +262,10 @@ const Settings = () => {
           {/* AGENTIC MODE OPTION */}
           <div
             onClick={() => updateSetting('task_creation_mode', 'agentic')}
-            className={`p-6 rounded-3xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between ${
-              settings.task_creation_mode === 'agentic'
-                ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-lg shadow-indigo-600/10'
-                : 'border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-900/40'
-            }`}
+            className={`p-6 rounded-3xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between ${settings.task_creation_mode === 'agentic'
+              ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-lg shadow-indigo-600/10'
+              : 'border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-900/40'
+              }`}
           >
             {settings.task_creation_mode === 'agentic' && (
               <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md">
@@ -285,11 +301,10 @@ const Settings = () => {
           {/* MANUAL MODE OPTION */}
           <div
             onClick={() => updateSetting('task_creation_mode', 'manual')}
-            className={`p-6 rounded-3xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between ${
-              settings.task_creation_mode === 'manual'
-                ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/30 shadow-lg shadow-blue-600/10'
-                : 'border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-900/40'
-            }`}
+            className={`p-6 rounded-3xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between ${settings.task_creation_mode === 'manual'
+              ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/30 shadow-lg shadow-blue-600/10'
+              : 'border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-900/40'
+              }`}
           >
             {settings.task_creation_mode === 'manual' && (
               <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
@@ -339,11 +354,10 @@ const Settings = () => {
           {/* Light */}
           <div
             onClick={() => updateSetting('theme_mode', 'light')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${
-              settings.theme_mode === 'light'
-                ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
+            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${settings.theme_mode === 'light'
+              ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
           >
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
               <FiSun size={20} />
@@ -357,11 +371,10 @@ const Settings = () => {
           {/* Dark */}
           <div
             onClick={() => updateSetting('theme_mode', 'dark')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${
-              settings.theme_mode === 'dark'
-                ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
+            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${settings.theme_mode === 'dark'
+              ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
           >
             <div className="w-10 h-10 rounded-xl bg-slate-900 text-slate-100 flex items-center justify-center">
               <FiMoon size={20} />
@@ -375,11 +388,10 @@ const Settings = () => {
           {/* System */}
           <div
             onClick={() => updateSetting('theme_mode', 'system')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${
-              settings.theme_mode === 'system'
-                ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
+            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${settings.theme_mode === 'system'
+              ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
           >
             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
               <FiMonitor size={20} />
@@ -412,11 +424,10 @@ const Settings = () => {
           {/* Bangla */}
           <div
             onClick={() => updateSetting('language', 'bn')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-              settings.language === 'bn'
-                ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
+            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${settings.language === 'bn'
+              ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
           >
             <div className="flex items-center gap-3">
               <span className="text-2xl">🇧🇩</span>
@@ -431,11 +442,10 @@ const Settings = () => {
           {/* English */}
           <div
             onClick={() => updateSetting('language', 'en')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-              settings.language === 'en'
-                ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
+            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${settings.language === 'en'
+              ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
           >
             <div className="flex items-center gap-3">
               <span className="text-2xl">🇺🇸</span>
@@ -769,12 +779,14 @@ const Settings = () => {
               </span>
             </div>
             <select
-              value={systemSettings.attendance_security_mode || 'audit_flag'}
+              value={systemSettings.attendance_security_mode || 'strict_ip'}
               onChange={(e) => setSystemSettings(prev => ({ ...prev, attendance_security_mode: e.target.value }))}
               className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-primary-500 cursor-pointer"
             >
-              <option value="audit_flag">Audit Mode (Allow & Flag with Alert Badge)</option>
-              <option value="strict_block">Strict Mode (Block punch if outside office)</option>
+              <option value="strict_ip">🔒 Strict IP Only (অফিসের নির্দিষ্ট IP ছাড়া হাজিরা ১০০% ব্লক)</option>
+              <option value="strict_ip_and_gps">🛡️ Strict IP + GPS (অফিস IP এবং ৫০ মিটার GPS লোকেশন দুটোই বাধ্যতামূলক)</option>
+              <option value="strict_block">📍 Strict Geofence or IP (আইপি অথবা জিপিএস সীমানা)</option>
+              <option value="audit_flag">⚠️ Audit Mode (হাজিরা এলাও, কিন্তু বাইরে থেকে দিলে ফ্ল্যাগ পড়বে)</option>
             </select>
           </div>
 
@@ -801,6 +813,9 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* 6. TASK CATEGORIES & SMART PRESETS SECTION */}
+      <CategoryManager apiBase={API_URL} />
     </div>
   );
 };

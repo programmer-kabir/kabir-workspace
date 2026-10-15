@@ -6,11 +6,11 @@ import {
   FiTag, 
   FiX, 
   FiChevronDown,
-  FiCornerDownRight,
-  FiZap
+  FiSettings
 } from 'react-icons/fi';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { CategoryManager } from '../Settings/CategoryManager';
 
 const FALLBACK_CATEGORIES = [
   {
@@ -154,6 +154,23 @@ export const CategorySelect = ({
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddIcon, setQuickAddIcon] = useState('🏷️');
   const [savingQuickAdd, setSavingQuickAdd] = useState(false);
+  const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+
+  const openQuickAdd = (level, parentId = null, defaultIcon = null) => {
+    setQuickAddLevel(level);
+    setQuickAddParentId(parentId);
+    setQuickAddName('');
+    if (defaultIcon) {
+      setQuickAddIcon(defaultIcon);
+    } else if (level === 'category') {
+      setQuickAddIcon('🎬');
+    } else if (level === 'subcategory') {
+      setQuickAddIcon('📁');
+    } else {
+      setQuickAddIcon('🏷️');
+    }
+    setIsQuickAddOpen(true);
+  };
 
   const ref = useRef(null);
   const searchInputRef = useRef(null);
@@ -316,51 +333,51 @@ export const CategorySelect = ({
     setSavingQuickAdd(true);
     try {
       const baseUrl = (apiBase || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '') + '/';
+      const resolvedParentId = quickAddLevel === 'category' 
+        ? null 
+        : (quickAddParentId || (activeCategory ? activeCategory.id : null));
+
       const payload = {
         name: quickAddName.trim(),
-        icon: quickAddIcon.trim() || '🏷️',
+        icon: quickAddIcon.trim() || (quickAddLevel === 'category' ? '📁' : quickAddLevel === 'subcategory' ? '📂' : '🏷️'),
         level: quickAddLevel,
-        parent_id: quickAddParentId || (activeCategory ? activeCategory.id : null)
+        parent_id: resolvedParentId
       };
 
       const res = await axios.post(`${baseUrl}api/categories/create_category.php`, payload);
       if (res.data && res.data.status === 'success') {
-        toast.success(`Added "${quickAddName}"!`);
+        const createdItem = res.data.data;
+        const levelLabel = quickAddLevel === 'category' ? 'Main Category' : quickAddLevel === 'subcategory' ? 'Subcategory' : 'Niche';
+        toast.success(`${levelLabel} "${quickAddName}" created successfully!`);
         await fetchCategories();
         
-        handleSelectHierarchy({
-          category_id: res.data.data?.category_id || activeCategory?.id,
-          subcategory_id: res.data.data?.subcategory_id || null,
-          child_category_id: res.data.data?.id || null,
-          full_path: res.data.data?.category_path || `${activeCategory?.name} > ${quickAddName}`,
-          name: quickAddName,
-          icon: quickAddIcon
-        });
+        if (quickAddLevel === 'category') {
+          if (createdItem?.id) {
+            setActiveTabId(createdItem.id);
+          }
+        } else if (quickAddLevel === 'subcategory') {
+          if (activeCategory?.id) {
+            setActiveTabId(activeCategory.id);
+          }
+        } else {
+          handleSelectHierarchy({
+            category_id: createdItem?.category_id || activeCategory?.id,
+            subcategory_id: createdItem?.subcategory_id || (quickAddLevel === 'subcategory' ? createdItem?.id : (quickAddParentId || null)),
+            child_category_id: createdItem?.id || null,
+            full_path: createdItem?.category_path || `${activeCategory?.name} > ${quickAddName}`,
+            name: quickAddName,
+            icon: quickAddIcon
+          });
+        }
 
         setIsQuickAddOpen(false);
         setQuickAddName('');
       } else {
-        // Local fallback
-        const full = `${activeCategory?.name || 'Custom'} > ${quickAddName}`;
-        handleSelectHierarchy({
-          id: Date.now(),
-          name: quickAddName.trim(),
-          icon: quickAddIcon.trim() || '🏷️',
-          full_path: full
-        });
-        setIsQuickAddOpen(false);
-        setQuickAddName('');
+        toast.error(res.data?.message || 'Error creating category item');
       }
     } catch (err) {
-      const full = `${activeCategory?.name || 'Custom'} > ${quickAddName}`;
-      handleSelectHierarchy({
-        id: Date.now(),
-        name: quickAddName.trim(),
-        icon: quickAddIcon.trim() || '🏷️',
-        full_path: full
-      });
-      setIsQuickAddOpen(false);
-      setQuickAddName('');
+      console.error(err);
+      toast.error('Network error creating category.');
     } finally {
       setSavingQuickAdd(false);
     }
@@ -538,92 +555,30 @@ export const CategorySelect = ({
                     </button>
                   );
                 })}
+
+                {/* + Add Main Category Tab Button */}
+                <button
+                  type="button"
+                  onClick={() => openQuickAdd('category', null, '🎬')}
+                  className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-blue-400/80 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all ml-1"
+                  title="Create New Main Category"
+                >
+                  <FiPlus size={12} />
+                  <span>+ Category</span>
+                </button>
               </div>
 
               {/* Subcategories & Niches Chips Container */}
               <div className="max-h-[340px] overflow-y-auto p-3 space-y-3.5">
                 {activeCategory && activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
-                  activeCategory.subcategories.map((sub) => {
-                    const subPath = `${activeCategory.name} > ${sub.name}`;
-                    const isSubSelected = value === subPath;
+                  <>
+                    {activeCategory.subcategories.map((sub) => {
+                      const subPath = `${activeCategory.name} > ${sub.name}`;
 
-                    return (
-                      <div key={sub.id} className="space-y-1.5">
-                        {/* Subcategory Label & Direct Select */}
-                        <div className="flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => handleSelectHierarchy({
-                              category_id: activeCategory.id,
-                              subcategory_id: sub.id,
-                              category_name: activeCategory.name,
-                              subcategory_name: sub.name,
-                              full_path: subPath,
-                              icon: sub.icon || activeCategory.icon,
-                              credit: sub.credit || activeCategory.credit || 5
-                            })}
-                            className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 group transition-colors"
-                          >
-                            <span className="text-sm">{sub.icon || '📄'}</span>
-                            <span>{sub.name}</span>
-                            <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                              (Select All)
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setQuickAddParentId(sub.id);
-                              setQuickAddLevel('child');
-                              setIsQuickAddOpen(true);
-                            }}
-                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
-                          >
-                            <FiPlus size={10} /> Add Niche
-                          </button>
-                        </div>
-
-                        {/* Specific Niches as Clean Clickable Chips */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {sub.children && sub.children.length > 0 ? (
-                            sub.children.map((child) => {
-                              const childPath = `${activeCategory.name} > ${sub.name} > ${child.name}`;
-                              const isSelected = value === childPath;
-
-                              return (
-                                <button
-                                  key={child.id}
-                                  type="button"
-                                  onClick={() => handleSelectHierarchy({
-                                    category_id: activeCategory.id,
-                                    subcategory_id: sub.id,
-                                    child_category_id: child.id,
-                                    category_name: activeCategory.name,
-                                    subcategory_name: sub.name,
-                                    child_name: child.name,
-                                    full_path: childPath,
-                                    icon: child.icon || sub.icon || activeCategory.icon,
-                                    credit: child.credit || sub.credit || activeCategory.credit || 5,
-                                    checklists: child.default_checklists || [],
-                                    specs: child.default_specs || null,
-                                    estimated_minutes: child.estimated_minutes || 90
-                                  })}
-                                  className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-150 ${
-                                    isSelected
-                                      ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-500 text-blue-600 dark:text-blue-300 shadow-xs font-bold ring-1 ring-blue-500/20'
-                                      : 'bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shadow-xs'
-                                  }`}
-                                >
-                                  <span className="text-xs">{child.icon || '🏷️'}</span>
-                                  <span>{child.name}</span>
-                                  {child.default_checklists && child.default_checklists.length > 0 && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 ml-0.5" title={`${child.default_checklists.length} checklists included`} />
-                                  )}
-                                </button>
-                              );
-                            })
-                          ) : (
+                      return (
+                        <div key={sub.id} className="space-y-1.5">
+                          {/* Subcategory Label & Direct Select */}
+                          <div className="flex items-center justify-between">
                             <button
                               type="button"
                               onClick={() => handleSelectHierarchy({
@@ -632,20 +587,124 @@ export const CategorySelect = ({
                                 category_name: activeCategory.name,
                                 subcategory_name: sub.name,
                                 full_path: subPath,
-                                icon: sub.icon || activeCategory.icon
+                                icon: sub.icon || activeCategory.icon,
+                                credit: sub.credit || activeCategory.credit || 5
                               })}
-                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                              className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 group transition-colors"
                             >
-                              Select {sub.name}
+                              <span className="text-sm">{sub.icon || '📄'}</span>
+                              <span>{sub.name}</span>
+                              <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                (Select All)
+                              </span>
                             </button>
-                          )}
+
+                            <button
+                              type="button"
+                              onClick={() => openQuickAdd('child', sub.id, '🏷️')}
+                              className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                            >
+                              <FiPlus size={10} /> Add Niche
+                            </button>
+                          </div>
+
+                          {/* Specific Niches as Clean Clickable Chips */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {sub.children && sub.children.length > 0 ? (
+                              sub.children.map((child) => {
+                                const childPath = `${activeCategory.name} > ${sub.name} > ${child.name}`;
+                                const isSelected = value === childPath;
+
+                                return (
+                                  <button
+                                    key={child.id}
+                                    type="button"
+                                    onClick={() => handleSelectHierarchy({
+                                      category_id: activeCategory.id,
+                                      subcategory_id: sub.id,
+                                      child_category_id: child.id,
+                                      category_name: activeCategory.name,
+                                      subcategory_name: sub.name,
+                                      child_name: child.name,
+                                      full_path: childPath,
+                                      icon: child.icon || sub.icon || activeCategory.icon,
+                                      credit: child.credit || sub.credit || activeCategory.credit || 5,
+                                      checklists: child.default_checklists || [],
+                                      specs: child.default_specs || null,
+                                      estimated_minutes: child.estimated_minutes || 90
+                                    })}
+                                    className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-150 ${
+                                      isSelected
+                                        ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-500 text-blue-600 dark:text-blue-300 shadow-xs font-bold ring-1 ring-blue-500/20'
+                                        : 'bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shadow-xs'
+                                    }`}
+                                  >
+                                    <span className="text-xs">{child.icon || '🏷️'}</span>
+                                    <span>{child.name}</span>
+                                    {child.default_checklists && child.default_checklists.length > 0 && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 ml-0.5" title={`${child.default_checklists.length} checklists included`} />
+                                    )}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSelectHierarchy({
+                                  category_id: activeCategory.id,
+                                  subcategory_id: sub.id,
+                                  category_name: activeCategory.name,
+                                  subcategory_name: sub.name,
+                                  full_path: subPath,
+                                  icon: sub.icon || activeCategory.icon
+                                })}
+                                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                              >
+                                Select {sub.name}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+
+                    <div className="pt-2 border-t border-dashed border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => openQuickAdd('subcategory', activeCategory.id, '📁')}
+                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                      >
+                        <FiPlus size={11} /> Add Another Subcategory under {activeCategory.name}
+                      </button>
+                    </div>
+                  </>
                 ) : (
-                  <div className="py-6 text-center text-slate-400 text-xs font-semibold">
-                    No subcategories available under {activeCategory?.name}.
+                  <div className="py-8 text-center space-y-3">
+                    <div className="text-3xl">{activeCategory?.icon || '📁'}</div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                        No subcategories yet under {activeCategory?.name || 'this category'}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Add a subcategory (e.g. Reels & Shorts Editing) or a direct niche to get started.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => openQuickAdd('subcategory', activeCategory?.id, '📁')}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+                      >
+                        <FiPlus size={12} /> Add First Subcategory
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openQuickAdd('child', activeCategory?.id, '🏷️')}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <FiPlus size={12} /> Add Direct Niche
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -655,30 +714,61 @@ export const CategorySelect = ({
           {/* ── Footer / Quick Add Form ── */}
           <div className="p-2.5 border-t border-slate-100 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/90">
             {!isQuickAddOpen ? (
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => openQuickAdd('category', null, '🎬')}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-200/50 dark:border-blue-800/40 transition-colors"
+                  >
+                    <FiPlus size={11} /> + Main Category
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openQuickAdd('subcategory', activeCategory?.id, '📁')}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-1 rounded-lg border border-indigo-200/50 dark:border-indigo-800/40 transition-colors"
+                  >
+                    <FiPlus size={11} /> + Subcategory
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openQuickAdd('child', activeCategory?.subcategories?.[0]?.id || activeCategory?.id, '🏷️')}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/60 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-600/40 transition-colors"
+                  >
+                    <FiPlus size={11} /> + Niche
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuickAddName('');
-                    setQuickAddLevel('child');
-                    setQuickAddParentId(activeCategory?.subcategories?.[0]?.id || null);
-                    setIsQuickAddOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  onClick={() => setIsManagerModalOpen(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors ml-auto"
+                  title="Open full Category & Niche Manager"
                 >
-                  <FiPlus size={13} /> Add Custom Niche to {activeCategory?.name || 'Category'}
+                  <FiSettings size={12} />
+                  <span>Manage</span>
                 </button>
-
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Auto-syncs checklists
-                </span>
               </div>
             ) : (
-              <form onSubmit={handleQuickAddSubmit} className="space-y-2 animate-in fade-in duration-150">
+              <div 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleQuickAddSubmit(e);
+                  }
+                }}
+                className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-blue-500/30 space-y-2 animate-in fade-in duration-150 shadow-sm"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
                     <FiTag size={12} className="text-blue-500" />
-                    Add New Niche Type:
+                    {quickAddLevel === 'category'
+                      ? 'Create New Main Category'
+                      : quickAddLevel === 'subcategory'
+                        ? `Add Subcategory under "${activeCategory?.name || 'Category'}"`
+                        : `Add Niche under "${activeCategory?.name || 'Category'}"`}
                   </span>
                   <button
                     type="button"
@@ -695,7 +785,7 @@ export const CategorySelect = ({
                     value={quickAddIcon}
                     onChange={(e) => setQuickAddIcon(e.target.value)}
                     placeholder="🏷️"
-                    className="w-9 h-7 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-blue-500"
+                    className="w-9 h-7 text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-blue-500"
                     title="Emoji Icon"
                   />
                   <input
@@ -704,21 +794,48 @@ export const CategorySelect = ({
                     required
                     value={quickAddName}
                     onChange={(e) => setQuickAddName(e.target.value)}
-                    placeholder="e.g. Real Estate Brochure or TikTok Ad"
-                    className="flex-1 h-7 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-blue-500"
+                    placeholder={
+                      quickAddLevel === 'category'
+                        ? 'e.g. Video & Motion or 3D Animation'
+                        : quickAddLevel === 'subcategory'
+                          ? 'e.g. Reels & Shorts Editing'
+                          : 'e.g. Talking Head Reel with Captions'
+                    }
+                    className="flex-1 h-7 px-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-blue-500"
                   />
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleQuickAddSubmit}
                     disabled={savingQuickAdd}
                     className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all disabled:opacity-50"
                   >
                     {savingQuickAdd ? 'Saving...' : 'Add'}
                   </button>
                 </div>
-              </form>
+              </div>
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Full Category Manager Modal */}
+      {isManagerModalOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl p-6 relative">
+            <button 
+              type="button" 
+              onClick={() => {
+                setIsManagerModalOpen(false);
+                fetchCategories();
+              }}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 transition-colors z-10"
+              title="Close"
+            >
+              <FiX size={18} />
+            </button>
+            <CategoryManager apiBase={apiBase} />
+          </div>
         </div>
       )}
     </div>

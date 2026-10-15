@@ -1,0 +1,8 @@
+{
+  "maintenance_enabled": false,
+  "allowed_roles": ["developer", "admin"],
+  "maintenance_message": "সিস্টেম আপগ্রেড ও ডাটাবেজ অপটিমাইজেশন চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত। কিছুক্ষণের মধ্যেই সিস্টেম আবার সচল হবে।",
+  "sms_dry_run": false,
+  "updated_at": "2026-10-12 13:20:00",
+  "updated_by": "Developer"
+}
