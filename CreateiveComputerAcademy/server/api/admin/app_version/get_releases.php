@@ -1,16 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../config/AppVersionHelper.php';
+require_once __DIR__ . '/../../../config/cors.php';
 
 try {
     $database = new Database();
@@ -28,9 +19,16 @@ try {
     $latestVersion = $latestRelease ? $latestRelease['version'] : '1.0.0';
 
     // 2. Fetch fleet status & staff versions
-    $staffSql = "SELECT sav.*, u.name as staff_name, u.email as staff_email, u.avatar as staff_avatar, u.role, u.department
+    $staffSql = "SELECT sav.*, 
+                        u.name as staff_name, 
+                        u.email as staff_email, 
+                        COALESCE(u.profile_picture, '') as staff_avatar, 
+                        COALESCE(e.designation, 'Staff') as role, 
+                        COALESCE(d.name, 'General') as department
         FROM staff_app_versions sav
         JOIN users u ON sav.user_id = u.id
+        LEFT JOIN employees e ON u.id = e.user_id
+        LEFT JOIN departments d ON e.department_id = d.id
         ORDER BY sav.last_seen_at DESC";
     $staffStmt = $db->query($staffSql);
     $staffVersions = $staffStmt->fetchAll(PDO::FETCH_ASSOC);
