@@ -3,16 +3,176 @@ import axios from 'axios';
 import {
   FiFolder, FiFolderPlus, FiFile, FiFilePlus, FiSearch, FiRefreshCw,
   FiSave, FiRotateCcw, FiShield, FiCode, FiCheck, FiAlertTriangle,
-  FiChevronRight, FiChevronDown, FiClock, FiHardDrive, FiX, FiLayers
+  FiChevronRight, FiChevronDown, FiClock, FiHardDrive, FiX, FiLayers,
+  FiDatabase, FiFileText, FiFolderMinus
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputeracademy.com/';
 
+// Helper to determine file icon
+const FileTypeIcon = ({ ext }) => {
+  switch (ext) {
+    case 'php':
+      return <span className="text-[9px] font-black tracking-tighter text-indigo-400 bg-indigo-950/80 px-1 py-0.5 rounded border border-indigo-700/60 leading-none">PHP</span>;
+    case 'json':
+      return <span className="text-[10px] font-bold text-amber-400 font-mono leading-none">{'{}'}</span>;
+    case 'sql':
+      return <FiDatabase size={12} className="text-emerald-400 shrink-0" />;
+    case 'md':
+    case 'txt':
+    case 'log':
+      return <FiFileText size={12} className="text-slate-400 shrink-0" />;
+    default:
+      return <FiFile size={12} className="text-slate-400 shrink-0" />;
+  }
+};
+
+// Recursive Tree Node Component
+const TreeNode = ({
+  node,
+  depth = 0,
+  activePath,
+  onOpenFile,
+  expandedFolders,
+  toggleFolder,
+  isDirty
+}) => {
+  const isDir = node.type === 'dir';
+  const isExpanded = !!expandedFolders[node.path];
+  const isSelected = activePath === node.path;
+  const paddingLeft = depth * 14 + 8;
+
+  if (isDir) {
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+
+    return (
+      <div className="relative">
+        <div
+          onClick={(e) => toggleFolder(node.path, e)}
+          style={{ paddingLeft: `${paddingLeft}px` }}
+          className={`flex items-center gap-1.5 py-1.5 pr-2 rounded-lg cursor-pointer select-none text-xs transition group ${
+            isExpanded
+              ? 'text-slate-200 hover:bg-slate-800/60'
+              : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+          }`}
+        >
+          <span className="w-3.5 h-3.5 flex items-center justify-center text-slate-500 group-hover:text-slate-300 shrink-0">
+            {isExpanded ? (
+              <FiChevronDown size={13} className="text-slate-400" />
+            ) : (
+              <FiChevronRight size={13} className="text-slate-500" />
+            )}
+          </span>
+          <FiFolder
+            size={14}
+            className={`shrink-0 transition-colors ${
+              isExpanded ? 'text-amber-400' : 'text-amber-500/80'
+            }`}
+          />
+          <span className="truncate font-semibold tracking-tight">{node.name}</span>
+          {node.children && (
+            <span className="text-[10px] text-slate-600 font-mono ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+              {node.children.length}
+            </span>
+          )}
+        </div>
+
+        {/* Children Subtree with Vertical Indentation Guide */}
+        {isExpanded && hasChildren && (
+          <div className="relative">
+            <div
+              style={{ left: `${paddingLeft + 6}px` }}
+              className="absolute top-0 bottom-1 w-[1px] bg-slate-800/80 pointer-events-none"
+            />
+            {node.children.map((child) => (
+              <TreeNode
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                activePath={activePath}
+                onOpenFile={onOpenFile}
+                expandedFolders={expandedFolders}
+                toggleFolder={toggleFolder}
+                isDirty={isDirty}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // File Item
+  const filePaddingLeft = depth * 14 + 22; // Indent aligned with folder text
+  const fileIsDirty = isSelected && isDirty;
+
+  return (
+    <div
+      onClick={() => onOpenFile(node.path)}
+      style={{ paddingLeft: `${filePaddingLeft}px` }}
+      className={`flex items-center justify-between py-1.5 pr-2.5 rounded-lg cursor-pointer transition select-none text-xs group ${
+        isSelected
+          ? 'bg-emerald-600/20 text-emerald-300 font-semibold border-l-2 border-emerald-500'
+          : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'
+      }`}
+    >
+      <div className="flex items-center gap-2 truncate">
+        <FileTypeIcon ext={node.extension} />
+        <span className="truncate font-mono text-[11px]">{node.name}</span>
+      </div>
+      {fileIsDirty && (
+        <span
+          className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0 ml-2 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+          title="Unsaved changes"
+        />
+      )}
+    </div>
+  );
+};
+
+// Filter a recursive tree by search query
+function filterTree(nodes, query) {
+  if (!query.trim()) return nodes;
+  const q = query.toLowerCase();
+
+  const filtered = [];
+  for (const node of nodes) {
+    if (node.type === 'dir') {
+      const filteredChildren = filterTree(node.children || [], query);
+      const nameMatch = node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q);
+      if (nameMatch || filteredChildren.length > 0) {
+        filtered.push({
+          ...node,
+          children: filteredChildren
+        });
+      }
+    } else {
+      if (node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q)) {
+        filtered.push(node);
+      }
+    }
+  }
+  return filtered;
+}
+
+// Extract all directory paths from tree for expand-all
+function getAllDirPaths(nodes, acc = {}) {
+  for (const node of nodes) {
+    if (node.type === 'dir') {
+      acc[node.path] = true;
+      if (node.children) {
+        getAllDirPaths(node.children, acc);
+      }
+    }
+  }
+  return acc;
+}
+
 export default function ServerCodeEditor() {
   const { currentUser } = useAuth();
-  const [items, setItems] = useState([]);
+  const [treeData, setTreeData] = useState([]);
   const [loadingTree, setLoadingTree] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState({ 'api': true, 'config': true });
@@ -59,7 +219,27 @@ export default function ServerCodeEditor() {
         headers: getHeaders()
       });
       if (res.data?.status === 'success') {
-        setItems(res.data.items || []);
+        const receivedTree = res.data.tree || [];
+        setTreeData(receivedTree);
+
+        // Auto-expand root directories on initial load
+        if (Object.keys(expandedFolders).length <= 2) {
+          const initialExpanded = {};
+          receivedTree.forEach(node => {
+            if (node.type === 'dir') {
+              initialExpanded[node.path] = true;
+              // Expand 1 level down as well (e.g., api/admin)
+              if (node.children) {
+                node.children.forEach(sub => {
+                  if (sub.type === 'dir' && ['admin', 'attendance', 'auth', 'developer'].includes(sub.name)) {
+                    initialExpanded[sub.path] = true;
+                  }
+                });
+              }
+            }
+          });
+          setExpandedFolders(prev => ({ ...prev, ...initialExpanded }));
+        }
       } else {
         toast.error(res.data?.message || 'Failed to list server files');
       }
@@ -225,26 +405,50 @@ try {
     }
   };
 
-  // Filtered files & folder toggle
-  const toggleFolder = (dirPath) => {
+  // Folder toggling
+  const toggleFolder = (dirPath, e) => {
+    e?.stopPropagation?.();
     setExpandedFolders(prev => ({
       ...prev,
       [dirPath]: !prev[dirPath]
     }));
   };
 
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(it => it.path.toLowerCase().includes(q) || it.name.toLowerCase().includes(q));
-  }, [items, searchQuery]);
+  const handleExpandAll = () => {
+    const all = getAllDirPaths(treeData);
+    setExpandedFolders(all);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedFolders({});
+  };
+
+  // Filtered Tree & Auto-Expand when searching
+  const filteredTree = useMemo(() => {
+    if (!searchQuery.trim()) return treeData;
+    return filterTree(treeData, searchQuery);
+  }, [treeData, searchQuery]);
+
+  // When search query is entered, auto-expand matching directories
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const matching = getAllDirPaths(filteredTree);
+      setExpandedFolders(prev => ({ ...prev, ...matching }));
+    }
+  }, [searchQuery, filteredTree]);
+
+  // Breadcrumbs calculation
+  const breadcrumbs = useMemo(() => {
+    if (!activePath) return [];
+    return activePath.split('/');
+  }, [activePath]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-950 text-slate-100 overflow-hidden">
       {/* Top Header Bar */}
       <header className="h-14 border-b border-slate-800 bg-slate-900/90 px-5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
             <FiCode size={18} />
           </div>
           <div>
@@ -255,7 +459,7 @@ try {
               </span>
             </h1>
             <p className="text-[11px] text-slate-400">
-              Direct In-Browser PHP Code Editor & Endpoint Creator (Admin & Developer Privileged)
+              Direct Server File Tree & Live Code Editor (Admin & Developer Privileged)
             </p>
           </div>
         </div>
@@ -263,7 +467,7 @@ try {
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           {activePath && (
-            <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer mr-3 select-none">
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer mr-3 select-none">
               <input
                 type="checkbox"
                 checked={autoBackup}
@@ -278,7 +482,7 @@ try {
             <button
               onClick={() => setEditorContent(originalContent)}
               disabled={!isDirty || savingFile}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 disabled:opacity-40 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 disabled:opacity-40 transition cursor-pointer"
               title="Discard unsaved edits"
             >
               <FiRotateCcw size={14} />
@@ -289,7 +493,7 @@ try {
           <button
             onClick={handleSaveFile}
             disabled={!activePath || !isDirty || savingFile}
-            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg transition shadow-sm ${
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition shadow-sm cursor-pointer ${
               isDirty
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30 ring-1 ring-emerald-400/40'
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
@@ -305,14 +509,28 @@ try {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Explorer Sidebar */}
         <aside className="w-80 border-r border-slate-800/80 bg-slate-900/60 flex flex-col shrink-0 select-none">
-          {/* Explorer Tools */}
-          <div className="p-3 border-b border-slate-800/80 space-y-2 shrink-0">
+          {/* Explorer Header Tools */}
+          <div className="p-3 border-b border-slate-800/80 space-y-2.5 shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <FiHardDrive size={13} className="text-slate-400" />
-                Server Explorer (server/)
+                <FiHardDrive size={13} className="text-emerald-400" />
+                Server Explorer
               </span>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={handleExpandAll}
+                  title="Expand All Folders"
+                  className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition text-[11px] font-mono px-1.5"
+                >
+                  +All
+                </button>
+                <button
+                  onClick={handleCollapseAll}
+                  title="Collapse All Folders"
+                  className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition text-[11px] font-mono px-1.5"
+                >
+                  -All
+                </button>
                 <button
                   onClick={() => setShowNewModal(true)}
                   title="Create New File / Folder"
@@ -335,60 +553,46 @@ try {
               <FiSearch className="absolute left-2.5 top-2.5 text-slate-500" size={13} />
               <input
                 type="text"
-                placeholder="Search endpoints / files..."
+                placeholder="Search files / folders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950/70 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300"
+                >
+                  <FiX size={12} />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Files List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-0.5 font-mono text-xs">
+          {/* Hierarchical Tree Container */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar font-mono text-xs">
             {loadingTree ? (
-              <div className="p-4 text-center text-slate-500 text-xs">Loading server directory...</div>
-            ) : filteredItems.length === 0 ? (
-              <div className="p-4 text-center text-slate-500 text-xs">No files matching filter.</div>
+              <div className="p-6 text-center text-slate-500 text-xs flex flex-col items-center gap-2">
+                <FiRefreshCw className="animate-spin text-emerald-400" size={18} />
+                Loading hierarchical tree...
+              </div>
+            ) : filteredTree.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-xs">
+                No matching files or folders found.
+              </div>
             ) : (
-              filteredItems.map((item) => {
-                const isSelected = activePath === item.path;
-                const isDir = item.type === 'dir';
-
-                if (isDir) {
-                  const isExp = expandedFolders[item.path];
-                  return (
-                    <div
-                      key={item.path}
-                      onClick={() => toggleFolder(item.path)}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-slate-300 hover:bg-slate-800/60 cursor-pointer font-bold text-xs"
-                    >
-                      {isExp ? <FiChevronDown size={14} className="text-slate-500" /> : <FiChevronRight size={14} className="text-slate-500" />}
-                      <FiFolder className="text-amber-400 shrink-0" size={14} />
-                      <span className="truncate">{item.name}</span>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={item.path}
-                    onClick={() => handleOpenFile(item.path)}
-                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
-                      isSelected
-                        ? 'bg-emerald-600/20 text-emerald-300 font-semibold border-l-2 border-emerald-500 pl-2'
-                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <FiFile size={13} className={item.extension === 'php' ? 'text-indigo-400' : 'text-slate-400'} />
-                      <span className="truncate">{item.name}</span>
-                    </div>
-                    {isSelected && isDirty && (
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="Unsaved changes" />
-                    )}
-                  </div>
-                );
-              })
+              filteredTree.map((node) => (
+                <TreeNode
+                  key={node.path}
+                  node={node}
+                  depth={0}
+                  activePath={activePath}
+                  onOpenFile={handleOpenFile}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  isDirty={isDirty}
+                />
+              ))
             )}
           </div>
         </aside>
@@ -397,23 +601,37 @@ try {
         <main className="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
           {activePath ? (
             <>
-              {/* Active Tab Bar */}
+              {/* Active Tab & Breadcrumb Bar */}
               <div className="h-9 bg-slate-900 border-b border-slate-800/80 px-4 flex items-center justify-between text-xs shrink-0 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-slate-300 font-semibold">{fileData?.filename || activePath}</span>
-                  <span className="text-[11px] text-slate-500 font-mono">({activePath})</span>
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span className="text-slate-500 font-mono text-[11px]">server</span>
+                  {breadcrumbs.map((part, index) => (
+                    <React.Fragment key={index}>
+                      <span className="text-slate-600 text-[10px]">&gt;</span>
+                      <span
+                        className={`font-mono truncate ${
+                          index === breadcrumbs.length - 1
+                            ? 'text-slate-200 font-bold'
+                            : 'text-slate-400'
+                        }`}
+                      >
+                        {part}
+                      </span>
+                    </React.Fragment>
+                  ))}
+
                   {isDirty ? (
-                    <span className="text-[10px] font-bold text-amber-400 bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.2 rounded-full flex items-center gap-1">
-                      ● Unsaved Edits
+                    <span className="ml-2 text-[10px] font-bold text-amber-400 bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.2 rounded-full flex items-center gap-1 shrink-0">
+                      ● Unsaved
                     </span>
                   ) : (
-                    <span className="text-[10px] font-medium text-emerald-400 flex items-center gap-1">
+                    <span className="ml-2 text-[10px] font-medium text-emerald-400 flex items-center gap-1 shrink-0">
                       <FiCheck size={11} /> Saved
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-4 text-[11px] text-slate-500 font-mono">
+                <div className="flex items-center gap-4 text-[11px] text-slate-500 font-mono shrink-0 ml-2">
                   <span>Lines: {lineCount}</span>
                   <span>Size: {Math.round((editorContent.length || 0) / 1024 * 10) / 10} KB</span>
                   {fileData?.last_modified && (
@@ -476,11 +694,11 @@ try {
               </div>
               <h2 className="text-base font-bold text-slate-300 mb-1">No File Selected</h2>
               <p className="text-xs text-slate-500 max-w-sm mb-4 leading-relaxed">
-                Click any PHP file in the left Explorer to open and edit live code on Hostinger, or create a brand new file.
+                Click any file in the left Explorer tree to open and edit live code on Hostinger, or create a brand new endpoint.
               </p>
               <button
                 onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
               >
                 <FiFilePlus size={15} />
                 Create New Endpoint
@@ -501,7 +719,7 @@ try {
               </h3>
               <button
                 onClick={() => setShowNewModal(false)}
-                className="text-slate-400 hover:text-slate-200 p-1"
+                className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
               >
                 <FiX size={16} />
               </button>
@@ -514,7 +732,7 @@ try {
                   <button
                     type="button"
                     onClick={() => setNewType('file')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition ${
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition cursor-pointer ${
                       newType === 'file'
                         ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
                         : 'bg-slate-950 border-slate-800 text-slate-400'
@@ -525,7 +743,7 @@ try {
                   <button
                     type="button"
                     onClick={() => setNewType('folder')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition ${
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition cursor-pointer ${
                       newType === 'folder'
                         ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
                         : 'bg-slate-950 border-slate-800 text-slate-400'
@@ -571,13 +789,13 @@ try {
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition cursor-pointer"
                 >
                   Create {newType === 'folder' ? 'Folder' : 'File'}
                 </button>

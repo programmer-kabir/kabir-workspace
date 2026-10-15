@@ -1,10 +1,4 @@
 <?php
-/**
- * Server Code Editor Security Guard & Path Resolver
- * Grants access strictly to users with 'admin' or 'developer' role.
- * Enforces strict jail inside the server/ directory to prevent traversal attacks.
- */
-
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
 
