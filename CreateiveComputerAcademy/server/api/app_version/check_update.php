@@ -21,7 +21,7 @@ try {
         $input = $_REQUEST;
     }
 
-    $clientVersion = isset($input['version']) ? trim($input['version']) : (isset($_GET['version']) ? trim($_GET['version']) : '1.0.0');
+    $clientVersion = trim($input['client_version'] ?? $input['version'] ?? $_GET['client_version'] ?? $_GET['version'] ?? '1.0.0');
     $userId        = isset($input['user_id']) ? intval($input['user_id']) : 0;
     $deviceName    = isset($input['device_name']) ? trim($input['device_name']) : null;
     $platform      = isset($input['platform']) ? trim($input['platform']) : 'Windows';
