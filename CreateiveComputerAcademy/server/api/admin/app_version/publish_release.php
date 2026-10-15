@@ -140,9 +140,52 @@ try {
         ':pub_by'  => $publishedBy
     ]);
 
+    // Dispatch Notifications & Realtime Pusher Broadcast to all staff
+    try {
+        require_once __DIR__ . '/../../notifications/notification_helper.php';
+        require_once __DIR__ . '/../../../config/PusherHelper.php';
+
+        $notifTitle = "🚀 New Desktop App v{$version} Released!";
+        $notifMsg   = "Admin has released Desktop Attendance v{$version}" . (!empty($notes) ? ": " . substr($notes, 0, 100) : ".");
+        $priority   = $isMandatory ? 'urgent' : 'high';
+
+        NotificationHelper::sendToRole(
+            $db, 
+            'staff', 
+            $publishedBy, 
+            $notifTitle, 
+            $notifMsg, 
+            'app_update', 
+            'staff', 
+            '/attendance', 
+            $priority, 
+            [
+                'version'      => $version,
+                'download_url' => $downloadUrl,
+                'is_mandatory' => $isMandatory,
+                'title'        => $title
+            ]
+        );
+
+        // Also broadcast instant event to all listening desktop clients
+        $pusher = new PusherHelper();
+        $pusher->trigger('app-releases-channel', 'new-release', [
+            'version'               => $version,
+            'release_title'         => $title,
+            'release_notes'         => $notes,
+            'category'              => $category,
+            'is_mandatory'          => $isMandatory,
+            'min_supported_version' => $minSupported,
+            'download_url'          => $downloadUrl,
+            'published_at'          => date('Y-m-d H:i:s')
+        ]);
+    } catch (Exception $notifErr) {
+        error_log("Failed to dispatch release notification: " . $notifErr->getMessage());
+    }
+
     echo json_encode([
         "status"       => "success",
-        "message"      => "Version v{$version} published successfully!",
+        "message"      => "Version v{$version} published successfully! Staff notified.",
         "version"      => $version,
         "download_url" => $downloadUrl,
         "is_mandatory" => $isMandatory

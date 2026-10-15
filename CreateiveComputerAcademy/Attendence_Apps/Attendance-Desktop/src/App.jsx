@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Pusher from 'pusher-js';
 import { useAuth } from './context/AuthContext';
 import TitleBar from './components/TitleBar';
 import Login from './components/Login';
 import AttendanceView from './components/AttendanceView';
 import ForceUpdateModal from './components/ForceUpdateModal';
 import updateService from './services/UpdateService';
+import { soundFx } from './utils/soundFx';
 
 function App() {
   const { currentUser, logout } = useAuth();
@@ -56,6 +58,48 @@ function App() {
     }, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [checkForUpdates]);
+
+  // Real-time Pusher listener: Instantly triggers modal when Admin publishes a new release
+  useEffect(() => {
+    let pusher = null;
+    let channel = null;
+    try {
+      pusher = new Pusher('82a63711fed4b73bd74d', {
+        cluster: 'ap2',
+        forceTLS: true
+      });
+      channel = pusher.subscribe('app-releases-channel');
+      channel.bind('new-release', (data) => {
+        if (!data || !data.version) return;
+        updateService.getVersion().then(currVer => {
+          if (data.version !== currVer) {
+            setUpdateInfo({
+              has_update: true,
+              is_mandatory: !!data.is_mandatory,
+              latest_version: data.version,
+              current_version: currVer,
+              release: data
+            });
+            setShowUpdateModal(true);
+            try { soundFx.playSuccess(); } catch (e) {}
+            if (window.electronAPI?.showNotification) {
+              window.electronAPI.showNotification(
+                'New Update Available',
+                `CCA Desktop Attendance v${data.version} has been published!`
+              );
+            }
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('Realtime release listener failed:', e);
+    }
+
+    return () => {
+      if (channel) channel.unbind_all();
+      if (pusher) pusher.disconnect();
+    };
+  }, []);
 
   // Log workstation heartbeat telemetry when staff is active
   useEffect(() => {
