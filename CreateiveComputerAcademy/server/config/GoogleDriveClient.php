@@ -7,6 +7,8 @@
  * Authenticates via Google Service Account JWT (RS256).
  */
 
+require_once __DIR__ . '/env.php';
+
 class GoogleDriveClient {
     private $credentialsPath;
     private $credentials = null;
@@ -32,12 +34,27 @@ class GoogleDriveClient {
      * Loads and parses the Service Account / OAuth JSON
      */
     private function loadCredentials() {
-        if (!file_exists($this->credentialsPath)) {
-            return;
+        if (file_exists($this->credentialsPath)) {
+            $raw = @file_get_contents($this->credentialsPath);
+            if ($raw) {
+                $this->credentials = @json_decode($raw, true);
+            }
         }
-        $raw = @file_get_contents($this->credentialsPath);
-        if ($raw) {
-            $this->credentials = @json_decode($raw, true);
+
+        // Fallback: Read directly from server/.env if credentials file is missing or incomplete
+        if (empty($this->credentials['client_id']) && function_exists('env')) {
+            $clientId = env('GOOGLE_DRIVE_CLIENT_ID');
+            $clientSecret = env('GOOGLE_DRIVE_CLIENT_SECRET');
+            $refreshToken = env('GOOGLE_DRIVE_REFRESH_TOKEN');
+            if (!empty($clientId) && !empty($refreshToken)) {
+                $this->credentials = [
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
+                    'refresh_token' => $refreshToken,
+                    'type' => 'authorized_user',
+                    'user_email' => env('GOOGLE_DRIVE_USER_EMAIL', 'creativecomputeracademybd@gmail.com')
+                ];
+            }
         }
     }
 
