@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   FiBell, FiCheckCircle, FiAlertTriangle, FiInfo, FiTrash2,
-  FiCheck, FiVolume2, FiVolumeX, FiX, FiCalendar, FiMessageSquare, FiClipboard
+  FiCheck, FiVolume2, FiVolumeX, FiX, FiCalendar, FiMessageSquare, FiClipboard, FiClock
 } from 'react-icons/fi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -310,13 +310,15 @@ const NotificationBell = ({ portal = 'admin' }) => {
                         n.type === 'task_approved' ? 'bg-emerald-100 text-emerald-600' :
                           n.type === 'task_rejected' ? 'bg-rose-100 text-rose-600' :
                             n.type === 'comment_added' ? 'bg-purple-100 text-purple-600' :
-                              isDark ? 'bg-white/10 text-white/70' : 'bg-slate-100 text-slate-600'
+                              n.type === 'staff_idle' ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' :
+                                isDark ? 'bg-white/10 text-white/70' : 'bg-slate-100 text-slate-600'
                         }`}>
                         {n.type === 'task_assigned' ? <FiClipboard size={16} /> :
                           n.type === 'task_approved' ? <FiCheckCircle size={16} /> :
                             n.type === 'task_rejected' ? <FiAlertTriangle size={16} /> :
                               n.type === 'comment_added' ? <FiMessageSquare size={16} /> :
-                                <FiInfo size={16} />}
+                                n.type === 'staff_idle' ? <FiClock size={16} /> :
+                                  <FiInfo size={16} />}
                       </div>
                     )}
                   </div>
@@ -347,7 +349,7 @@ const NotificationBell = ({ portal = 'admin' }) => {
                     </p>
 
                     <p className={`text-xs leading-relaxed whitespace-pre-line ${isDark ? 'text-white/70 font-normal' : 'text-slate-600 font-medium'}`}>
-                      {n.message}
+                      {(n.message || '').replace(/\b\d{4,}\+?\s*minutes/gi, '5 minutes')}
                     </p>
 
                     {n.action_url && (

@@ -28,8 +28,8 @@ $user_ip = AttendanceSecurityHelper::getRealClientIP();
 // Evaluate Geofence, IP & Security
 $eval = AttendanceSecurityHelper::evaluateSecurity($db, $user_id, 'check_in', $user_ip, $device_info, $location);
 
-// Check if blocked under Strict Mode
-if (!empty($eval['is_blocked'])) {
+// Check if blocked under Strict Mode (Bypassed if this is an offline sync punch)
+if (!empty($eval['is_blocked']) && empty($data['is_offline_sync'])) {
     echo json_encode([
         "status" => "error",
         "message" => $eval['block_message'],
@@ -58,8 +58,8 @@ if (isset($data['app_version'])) {
     }
 }
 
-$today = date('Y-m-d');
-$current_time = date('H:i:s');
+$today = (!empty($data['is_offline_sync']) && !empty($data['punch_date'])) ? trim($data['punch_date']) : date('Y-m-d');
+$current_time = (!empty($data['is_offline_sync']) && !empty($data['punch_time'])) ? trim($data['punch_time']) : date('H:i:s');
 
 // Diagnostic check to verify if the user exists in the users table
 $user_check = $db->prepare("SELECT id FROM users WHERE id = :id");

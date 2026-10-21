@@ -39,6 +39,18 @@ try {
         $db->exec("ALTER TABLE `employees` MODIFY COLUMN `employment_status` VARCHAR(50) NOT NULL DEFAULT 'Active'");
     } catch (Exception $colEx) {}
 
+    try {
+        $db->exec("ALTER TABLE `employees` ADD COLUMN `is_student` TINYINT(1) DEFAULT 0");
+    } catch (Exception $colEx) {}
+
+    try {
+        $db->exec("ALTER TABLE `employees` ADD COLUMN `student_leave_quota` INT DEFAULT 3");
+    } catch (Exception $colEx) {}
+
+    try {
+        $db->exec("ALTER TABLE `employees` ADD COLUMN `student_institution` VARCHAR(150) NULL");
+    } catch (Exception $colEx) {}
+
     $db->beginTransaction();
 
     // ── Update users table ───────────────────────────────────────────────────
@@ -191,6 +203,18 @@ try {
     if (isset($data->tiffin_duration_minutes)) {
         $emp_fields[] = 'tiffin_duration_minutes = :tiffin_duration_minutes';
         $emp_params[':tiffin_duration_minutes'] = intval($data->tiffin_duration_minutes);
+    }
+    if (isset($data->is_student)) {
+        $emp_fields[] = 'is_student = :is_student';
+        $emp_params[':is_student'] = !empty($data->is_student) ? 1 : 0;
+    }
+    if (isset($data->student_leave_quota)) {
+        $emp_fields[] = 'student_leave_quota = :student_leave_quota';
+        $emp_params[':student_leave_quota'] = max(0, intval($data->student_leave_quota));
+    }
+    if (isset($data->student_institution)) {
+        $emp_fields[] = 'student_institution = :student_institution';
+        $emp_params[':student_institution'] = trim($data->student_institution) !== '' ? trim($data->student_institution) : null;
     }
 
     if (!empty($emp_fields)) {

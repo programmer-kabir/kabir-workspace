@@ -23,6 +23,46 @@ if(
     exit;
 }
 
+require_once 'StudentLeaveHelper.php';
+
+// Validate Student Academic Leave against monthly quota
+if (trim($data->type) === 'Student Academic Leave') {
+    $reqMonth = date('Y-m', strtotime($data->start_date));
+    $quota = StudentLeaveHelper::getQuotaSummary($db, $data->user_id, $reqMonth);
+
+    if (!$quota['is_student']) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Only staff registered as College/University students can apply for Student Academic Leave."
+        ]);
+        exit;
+    }
+
+    // Calculate requested working days (excluding Friday)
+    $curTs = strtotime($data->start_date);
+    $endTs = strtotime($data->end_date);
+    $reqDays = 0;
+    while ($curTs <= $endTs) {
+        if (date('N', $curTs) != 5) {
+            $reqDays++;
+        }
+        $curTs = strtotime('+1 day', $curTs);
+    }
+
+    if ($reqDays <= 0) {
+        echo json_encode(["status" => "error", "message" => "Invalid leave date range selected."]);
+        exit;
+    }
+
+    if ($reqDays > $quota['remaining_days']) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Requested {$reqDays} day(s) exceed your remaining student leave quota for this month ({$quota['remaining_days']} day(s) remaining out of {$quota['monthly_quota']})."
+        ]);
+        exit;
+    }
+}
+
 $query = "INSERT INTO leave_requests (user_id, start_date, end_date, type, reason) VALUES (:user_id, :start_date, :end_date, :type, :reason)";
 $stmt = $db->prepare($query);
 

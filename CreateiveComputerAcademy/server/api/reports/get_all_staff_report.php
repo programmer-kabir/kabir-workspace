@@ -244,7 +244,7 @@ try {
             if ($st === 'absent') {
                 $absent_days++;
             }
-            if ($st === 'leave') {
+            if ($st === 'leave' || $st === 'student leave') {
                 $leave_days++;
             }
 

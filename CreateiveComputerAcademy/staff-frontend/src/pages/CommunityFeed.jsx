@@ -956,14 +956,14 @@ export default function CommunityFeed() {
                 {post.image_url && (
                   <div
                     onClick={() => setLightboxImage(`${API_BASE}${post.image_url}`)}
-                    className="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 max-h-[460px] cursor-pointer group relative bg-slate-950/5 flex items-center justify-center"
+                    className="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 max-h-[520px] cursor-pointer group relative bg-slate-100 dark:bg-slate-950/60 flex items-center justify-center p-1"
                   >
                     <img
                       src={`${API_BASE}${post.image_url}`}
                       alt="Post Attachment"
-                      className="w-full h-auto max-h-[460px] object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                      className="w-auto max-w-full max-h-[510px] object-contain rounded-xl transition-transform duration-300 group-hover:scale-[1.01]"
                     />
-                    <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                    <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold rounded-2xl">
                       <span>Click to view full image</span>
                     </div>
                   </div>

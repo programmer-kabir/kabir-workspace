@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   joining_date: '', resignation_date: '',
   shift_start: '09:00:00', shift_end: '17:00:00', allocated_break_minutes: 60,
   has_tiffin_break: 1, tiffin_start_time: '13:20', tiffin_end_time: '14:00', tiffin_duration_minutes: 40,
+  is_student: 0, student_leave_quota: 3, student_institution: '',
 };
 
 // ── Role badge ───────────────────────────────────────────────────────────────
@@ -328,6 +329,50 @@ const StaffModal = ({ mode, formData, setFormData, departments, onClose, onSubmi
               </>
             )}
 
+            {/* Student Staff Configuration */}
+            <div className="col-span-full pt-4 border-t border-slate-100 dark:border-slate-700">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.is_student)}
+                  onChange={e => setFormData({ ...formData, is_student: e.target.checked ? 1 : 0 })}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    <span>🎓 College / University Student Staff</span>
+                  </span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Enables monthly academic leave quota (Unpaid, zero Mango deduction, no absence penalty).
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {Boolean(formData.is_student) && (
+              <>
+                <Field label="Monthly Student Leave Quota (Days)">
+                  <input
+                    type="number" min="1" max="15"
+                    value={formData.student_leave_quota}
+                    onChange={e => setFormData({ ...formData, student_leave_quota: parseInt(e.target.value) || 3 })}
+                    placeholder="e.g. 3 or 4"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                </Field>
+
+                <Field label="College / University Name">
+                  <input
+                    type="text"
+                    value={formData.student_institution || ''}
+                    onChange={e => setFormData({ ...formData, student_institution: e.target.value })}
+                    placeholder="e.g. MC College, Sylhet"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                </Field>
+              </>
+            )}
+
           </div>
         </div>
 
@@ -486,6 +531,9 @@ const StaffDirectory = () => {
       tiffin_start_time: staff.tiffin_start_time ? staff.tiffin_start_time.substring(0, 5) : '13:20',
       tiffin_end_time: staff.tiffin_end_time ? staff.tiffin_end_time.substring(0, 5) : '14:00',
       tiffin_duration_minutes: staff.tiffin_duration_minutes !== undefined ? staff.tiffin_duration_minutes : 40,
+      is_student: staff.is_student ? 1 : 0,
+      student_leave_quota: staff.student_leave_quota !== undefined ? staff.student_leave_quota : 3,
+      student_institution: staff.student_institution || '',
     });
     setFormError('');
     setEditOpen(true);
@@ -661,6 +709,12 @@ const StaffDirectory = () => {
                     <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5">{staff.designation || 'Staff Member'}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <RoleBadge role={staff.role} />
+                      {Boolean(staff.is_student) && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 shadow-xs">
+                          <span>🎓 Student</span>
+                          <span>({staff.student_leave_quota || 3}d/mo)</span>
+                        </span>
+                      )}
                       {staff.status === 'inactive' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
                           Login Blocked

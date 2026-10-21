@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
@@ -98,8 +98,12 @@ const AdminLayout = ({ children }) => {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <NotificationBell portal="admin" />
-            <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 transition-colors">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0">
+            <Link
+              to="/profile"
+              className="flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 transition-all cursor-pointer group shadow-2xs"
+              title="Admin Profile & Settings"
+            >
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0 group-hover:ring-2 group-hover:ring-blue-500/30 transition-all">
                 {currentUser?.profile_picture ? (
                   <img
                     src={`${import.meta.env.VITE_API_BASE_URL}${currentUser.profile_picture}`}
@@ -110,8 +114,10 @@ const AdminLayout = ({ children }) => {
                   <span>{currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}</span>
                 )}
               </div>
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{currentUser?.name || 'Admin'}</span>
-            </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {currentUser?.name || 'Admin'}
+              </span>
+            </Link>
           </div>
         </header>
 

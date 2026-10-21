@@ -20,6 +20,7 @@ import Messages from './pages/Messages';
 import AttendanceDisputes from './pages/AttendanceDisputes';
 import DailyRoster from './pages/DailyRoster';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import { Toaster } from 'sonner';
 
 import LeaveManagement from './pages/LeaveManagement';
@@ -33,6 +34,8 @@ import ContentStudioAdmin from './pages/ContentStudioAdmin';
 import PayrollManagement from './pages/PayrollManagement';
 import CommunityWall from './pages/CommunityWall';
 import LiveScreenMonitor from './pages/LiveScreenMonitor';
+import IdleAlerts from './pages/IdleAlerts';
+import WorkstationVideoLogs from './pages/WorkstationVideoLogs';
 import ServerCodeEditor from './pages/ServerCodeEditor';
 import NotFound from './pages/NotFound';
 
@@ -62,6 +65,18 @@ function App() {
           <Route path="/screen-monitor" element={
             <ProtectedRoute>
               <AdminLayout><LiveScreenMonitor /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/idle-alerts" element={
+            <ProtectedRoute>
+              <AdminLayout><IdleAlerts /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workstation-video-logs" element={
+            <ProtectedRoute>
+              <AdminLayout><WorkstationVideoLogs /></AdminLayout>
             </ProtectedRoute>
           } />
 
@@ -230,6 +245,12 @@ function App() {
           <Route path="/settings" element={
             <ProtectedRoute>
               <AdminLayout><Settings /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <AdminLayout><Profile /></AdminLayout>
             </ProtectedRoute>
           } />
 

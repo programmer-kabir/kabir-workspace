@@ -60,6 +60,11 @@ try {
         $shift_start = (!empty($emp_shift['shift_start'])) ? $emp_shift['shift_start'] : '09:00:00';
         $shift_end   = (!empty($emp_shift['shift_end']))   ? $emp_shift['shift_end']   : '17:00:00';
 
+        $isStudentLeave = ($leave_data['type'] === 'Student Academic Leave');
+        $attStatus = $isStudentLeave ? 'Student Leave' : 'Leave';
+        $attCin = $isStudentLeave ? null : $shift_start;
+        $attCout = $isStudentLeave ? null : $shift_end;
+
         // Loop through all dates in the range
         $cur_ts = strtotime($start_date);
         $end_ts = strtotime($end_date);
@@ -74,20 +79,22 @@ try {
 
             if ($existing_att) {
                 // Update existing record
-                $upd_att = $db->prepare("UPDATE attendance SET status = 'Leave', check_in = :cin, check_out = :cout, is_forgotten_checkout = 0 WHERE id = :aid");
+                $upd_att = $db->prepare("UPDATE attendance SET status = :status, check_in = :cin, check_out = :cout, is_forgotten_checkout = 0 WHERE id = :aid");
                 $upd_att->execute([
-                    ':cin'  => $shift_start,
-                    ':cout' => $shift_end,
-                    ':aid'  => $existing_att['id']
+                    ':status' => $attStatus,
+                    ':cin'    => $attCin,
+                    ':cout'   => $attCout,
+                    ':aid'    => $existing_att['id']
                 ]);
             } else {
-                // Insert new record with Leave status
-                $ins_att = $db->prepare("INSERT INTO attendance (user_id, date, check_in, check_out, status, is_forgotten_checkout) VALUES (:uid, :date, :cin, :cout, 'Leave', 0)");
+                // Insert new record with Leave/Student Leave status
+                $ins_att = $db->prepare("INSERT INTO attendance (user_id, date, check_in, check_out, status, is_forgotten_checkout) VALUES (:uid, :date, :cin, :cout, :status, 0)");
                 $ins_att->execute([
-                    ':uid'  => $user_id,
-                    ':date' => $dt_str,
-                    ':cin'  => $shift_start,
-                    ':cout' => $shift_end
+                    ':uid'    => $user_id,
+                    ':date'   => $dt_str,
+                    ':cin'    => $attCin,
+                    ':cout'   => $attCout,
+                    ':status' => $attStatus
                 ]);
             }
 
@@ -95,7 +102,7 @@ try {
         }
     } elseif ($data->status === 'Rejected') {
         // If rejected, remove or reset auto-created Leave attendance records for this date range
-        $del_att = $db->prepare("DELETE FROM attendance WHERE user_id = :uid AND date >= :start AND date <= :end AND status = 'Leave'");
+        $del_att = $db->prepare("DELETE FROM attendance WHERE user_id = :uid AND date >= :start AND date <= :end AND status IN ('Leave', 'Student Leave')");
         $del_att->execute([
             ':uid'   => $user_id,
             ':start' => $start_date,

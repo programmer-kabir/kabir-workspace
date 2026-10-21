@@ -72,7 +72,15 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  const value = { currentUser, login, logout };
+  // ── Update User in local storage and state ──────────────────────────────────
+  const updateUser = (updatedFields) => {
+    if (!currentUser) return;
+    const updated = { ...currentUser, ...updatedFields };
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+    setCurrentUser(updated);
+  };
+
+  const value = { currentUser, login, logout, updateUser };
 
   return (
     <AuthContext.Provider value={value}>

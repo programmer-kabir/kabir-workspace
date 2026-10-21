@@ -639,7 +639,7 @@ const Dashboard = () => {
 
         {/* 2. Mango Break Bank Balance */}
         <div
-          onClick={() => navigate('/mango-break-tree')}
+          onClick={() => navigate('/mango-tree')}
           className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">

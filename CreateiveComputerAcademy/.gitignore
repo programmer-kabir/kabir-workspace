@@ -47,3 +47,6 @@ server/backups/*
 !server/backups/.htaccess
 !server/backups/.gitkeep
 
+
+server/config/google_drive_token_cache.json
+*token_cache*.json

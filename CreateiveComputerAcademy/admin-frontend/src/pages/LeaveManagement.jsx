@@ -234,7 +234,14 @@ const LeaveManagement = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{leave.type} Leave</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{leave.type}</span>
+                        {leave.type === 'Student Academic Leave' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            🎓 Student Quota (Unpaid)
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                         <FiCalendar size={12} className="shrink-0" /> 
                         <span className="truncate">{new Date(leave.start_date).toLocaleDateString()} - {new Date(leave.end_date).toLocaleDateString()}</span>

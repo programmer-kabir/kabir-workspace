@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud, FiCode } from 'react-icons/fi';
+import { NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
+import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud, FiCode, FiFilm, FiUser } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -11,6 +11,7 @@ const AdminSidebar = ({ isOpen = true }) => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingDisputes, setPendingDisputes] = useState(0);
+  const [idleAlertCount, setIdleAlertCount] = useState(0);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -35,6 +36,15 @@ const AdminSidebar = ({ isOpen = true }) => {
         }
       } catch (error) {
         console.error('Error fetching disputes count', error);
+      }
+
+      try {
+        const res = await axios.get((import.meta.env.VITE_API_BASE_URL) + 'api/admin/screen_monitor/get_idle_alerts.php?status=idle&limit=1');
+        if (res.data.status === 'success' && res.data.data?.stats) {
+          setIdleAlertCount(res.data.data.stats.currently_idle_count || 0);
+        }
+      } catch (error) {
+        // Non-blocking
       }
     };
 
@@ -80,13 +90,15 @@ const AdminSidebar = ({ isOpen = true }) => {
       ]
     },
     { name: 'Task Oversight', path: '/tasks', icon: <FiCheckSquare size={18} /> },
-    { name: 'Live Screen Monitor', path: '/screen-monitor', icon: <FiMonitor size={18} className="text-cyan-400" /> },
+
     {
       name: 'Work & Attendance',
       icon: <FiClock size={18} />,
-      badge: pendingDisputes,
+      badge: (pendingDisputes || 0) + (idleAlertCount || 0),
       subItems: [
         { name: 'Live Screen Monitor 🛰️', path: '/screen-monitor' },
+        { name: 'Workstation Video Vault 🎥', path: '/workstation-video-logs' },
+        { name: 'Inactivity Alerts ⏳', path: '/idle-alerts', badge: idleAlertCount },
         { name: 'Daily Roster', path: '/attendance' },
         { name: 'Leave Approvals', path: '/leave' },
         { name: 'Attendance Disputes', path: '/attendance-disputes', badge: pendingDisputes }
@@ -97,8 +109,6 @@ const AdminSidebar = ({ isOpen = true }) => {
       icon: <FiBarChart2 size={18} />,
       subItems: [
         { name: 'Company Master Report', path: '/master-report' },
-        { name: 'Typing Master Reports', path: '/typing-reports' },
-        { name: 'Pen Tool Master Reports', path: '/pentool-reports' },
         { name: 'Staff Reports', path: '/reports' },
         { name: 'Reviewer Reports', path: '/reviewer-report' }
       ]
@@ -112,6 +122,7 @@ const AdminSidebar = ({ isOpen = true }) => {
     { name: 'App Version Control', path: '/app-releases', icon: <FiDownloadCloud size={18} className="text-indigo-400" /> },
     { name: 'Server Code Editor', path: '/server-editor', icon: <FiCode size={18} className="text-emerald-400" /> },
     { name: 'Settings', path: '/settings', icon: <FiSettings size={18} /> },
+    { name: 'Profile', path: '/profile', icon: <FiUser size={18} /> },
   ];
 
   // Auto-expand menu on active child
@@ -237,8 +248,12 @@ const AdminSidebar = ({ isOpen = true }) => {
         {/* User Profile & Logout Bottom Bar */}
         <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
           <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shadow-2xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs shadow-2xs overflow-hidden shrink-0">
+            <Link
+              to="/profile"
+              className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition cursor-pointer group"
+              title="View Admin Profile"
+            >
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs shadow-2xs overflow-hidden shrink-0 group-hover:ring-2 group-hover:ring-blue-500/30 transition-all">
                 {currentUser?.profile_picture ? (
                   <img
                     src={`${import.meta.env.VITE_API_BASE_URL}${currentUser.profile_picture}`}
@@ -250,14 +265,14 @@ const AdminSidebar = ({ isOpen = true }) => {
                 )}
               </div>
               <div className="flex-1 overflow-hidden min-w-0">
-                <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-tight">{currentUser?.name || 'Administrator'}</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{currentUser?.name || 'Administrator'}</p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{currentUser?.email || 'admin@cca.com'}</p>
               </div>
-            </div>
+            </Link>
 
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors shrink-0"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors shrink-0 cursor-pointer"
               title="Sign Out"
             >
               <FiLogOut size={16} />

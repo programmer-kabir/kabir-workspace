@@ -57,6 +57,20 @@ try {
     $stmt->execute($unread_params);
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // One-time auto-clean of any corrupted legacy 71583+ minutes notifications
+    try {
+        $db->exec("
+            UPDATE notifications 
+            SET message = REPLACE(message, '71583+ minutes', '5 minutes')
+            WHERE message LIKE '%idle for%71583%'
+        ");
+        $db->exec("
+            UPDATE notifications 
+            SET message = REPLACE(message, '71582+ minutes', '5 minutes')
+            WHERE message LIKE '%idle for%71582%'
+        ");
+    } catch (Exception $e) {}
+
     // Format metadata as JSON object if string & clean title of any leading '?' marks
     foreach ($notifications as &$n) {
         $n['id'] = (int)$n['id'];
@@ -66,6 +80,9 @@ try {
         if (!empty($n['title'])) {
             $n['title'] = preg_replace('/^[\?\s\x00-\x1F\x7F]+/u', '', $n['title']);
             $n['title'] = ltrim($n['title'], '? ');
+        }
+        if (!empty($n['message']) && strpos($n['message'], 'idle for') !== false) {
+            $n['message'] = preg_replace('/\b\d{4,}\+?\s*minutes/i', '5 minutes', $n['message']);
         }
         if (!empty($n['metadata']) && is_string($n['metadata'])) {
             $n['metadata'] = json_decode($n['metadata'], true);

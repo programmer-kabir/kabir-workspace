@@ -363,7 +363,7 @@ const NotificationBell = ({ portal = 'staff' }) => {
                     </p>
 
                     <p className={`text-xs leading-relaxed whitespace-pre-line ${isDark ? 'text-white/70 font-normal' : 'text-slate-600 font-medium'}`}>
-                      {n.message}
+                      {(n.message || '').replace(/\b\d{4,}\+?\s*minutes/gi, '5 minutes')}
                     </p>
 
                     {n.action_url && (

@@ -97,6 +97,7 @@ $summary = [
     'present' => 0,
     'late' => 0,
     'leave' => 0,
+    'student_leave' => 0,
     'absent' => 0,
     'total_overtime_seconds' => 0,
     'total_short_seconds' => 0,
@@ -162,19 +163,26 @@ while ($current_date_ts <= $end_date_ts) {
     $row['is_weekend'] = $is_weekend;
     $row['is_holiday'] = $is_holiday;
     
+    // Determine if this date is an approved leave or student leave
+    $db_status = isset($db_records[$current_date_str]) ? $db_records[$current_date_str]['status'] : null;
+    $leave_type = isset($leaves_by_date[$current_date_str]) ? $leaves_by_date[$current_date_str] : null;
+    $is_student_leave = ($db_status === 'Student Leave' || $leave_type === 'Student Academic Leave');
+    $is_regular_leave = ($db_status === 'Leave' || ($leave_type && !$is_student_leave));
+
     if (!$is_weekend && !$is_holiday) {
         $summary['total_days']++;
     }
     
-    // Calculate expected seconds for this day
-    $expected_seconds = $is_weekend ? 0 : ($shift_hours * 3600);
+    // Calculate expected seconds for this day (Student leave and approved leaves excuse daily expected duty)
+    $expected_seconds = ($is_weekend || $is_student_leave) ? 0 : ($shift_hours * 3600);
     if (isset($holidays[$current_date_str])) {
         $expected_seconds = $holidays[$current_date_str]['expected_hours'] * 3600;
     }
-    $summary['total_expected_seconds'] += $expected_seconds;
+    if (!$is_student_leave) {
+        $summary['total_expected_seconds'] += $expected_seconds;
+    }
     
     if (isset($db_records[$current_date_str])) {
-        // They checked in
         $db_row = $db_records[$current_date_str];
         $row['check_in'] = $db_row['check_in'];
         $row['check_out'] = $db_row['check_out'];
@@ -182,6 +190,19 @@ while ($current_date_ts <= $end_date_ts) {
         
         if ($row['status'] === 'Present') $summary['present']++;
         if ($row['status'] === 'Late') $summary['late']++;
+        if ($row['status'] === 'Student Leave' || $is_student_leave) {
+            $row['status'] = 'Student Leave';
+            $row['is_unpaid'] = true;
+            $row['leave_title'] = $leave_type ?: 'Student Academic Leave';
+            $row['expected_hours'] = '0h 0m';
+            $row['total_hours'] = '0h 0m';
+            $summary['student_leave']++;
+        } elseif ($row['status'] === 'Leave' || $is_regular_leave) {
+            $row['status'] = 'Leave';
+            $row['leave_title'] = $leave_type ?: 'Approved Leave';
+            $row['expected_hours'] = '0h 0m';
+            $summary['leave']++;
+        }
         
         if($row['check_in'] && $row['check_out']) {
             $in_time = strtotime($row['check_in']);
@@ -228,9 +249,15 @@ while ($current_date_ts <= $end_date_ts) {
         } else if ($is_weekend) {
             $row['status'] = 'Weekend';
         } else if (isset($leaves_by_date[$current_date_str])) {
-            $row['status'] = 'Leave';
+            $isStudentLv = ($leaves_by_date[$current_date_str] === 'Student Academic Leave');
+            $row['status'] = $isStudentLv ? 'Student Leave' : 'Leave';
             $row['leave_title'] = $leaves_by_date[$current_date_str];
-            $summary['leave']++;
+            $row['is_unpaid'] = $isStudentLv;
+            if ($isStudentLv) {
+                $summary['student_leave']++;
+            } else {
+                $summary['leave']++;
+            }
         } else {
             $row['status'] = 'Absent';
             $summary['absent']++;

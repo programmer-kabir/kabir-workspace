@@ -26,6 +26,7 @@ const PayrollWallet = React.lazy(() => import('./pages/PayrollWallet'));
 const MangoBreakTree = React.lazy(() => import('./pages/MangoBreakTree'));
 const CommunityFeed = React.lazy(() => import('./pages/CommunityFeed'));
 const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
+const DesktopAppDownload = React.lazy(() => import('./pages/DesktopAppDownload'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -74,6 +75,14 @@ function App() {
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <Attendance />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/desktop-app" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <DesktopAppDownload />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

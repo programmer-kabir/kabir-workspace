@@ -342,23 +342,37 @@ export function getUserLocation() {
       return;
     }
 
+    let resolved = false;
+    const done = (val) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(val);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      done(null);
+    }, 2500);
+
     const options = {
       enableHighAccuracy: true,
-      timeout: 5000,
+      timeout: 2500,
       maximumAge: 60000
     };
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        resolve({
+        clearTimeout(timer);
+        done({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy || 15
         });
       },
       (err) => {
+        clearTimeout(timer);
         console.warn('Geolocation probe notice:', err.message);
-        resolve(null);
+        done(null);
       },
       options
     );

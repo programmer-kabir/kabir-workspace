@@ -2,7 +2,7 @@
 // config/cors.php
 date_default_timezone_set('Asia/Dhaka');
 
-$allowed_origins = ['https://staff.creativecomputeracademy.com', 'https://admin.creativecomputeracademy.com', 'https://audit.creativecomputeracademy.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175','http://localhost:5176','http://localhost:5180'];
+$allowed_origins = ['https://staff.creativecomputeracademy.com', 'https://admin.creativecomputeracademy.com', 'https://audit.creativecomputeracademy.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175','http://localhost:5176','http://localhost:5180','http://localhost:5185'];
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowed_origins) && !headers_sent()) {
     header("Access-Control-Allow-Origin: " . $origin);

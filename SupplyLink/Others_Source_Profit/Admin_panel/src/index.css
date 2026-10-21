@@ -1,0 +1,332 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   SUPPLYLINK DESIGN SYSTEM - MODERN DARK THEME TOKENS & UTILITIES
+   ========================================================================== */
+
+:root {
+  /* Canvas & Surfaces */
+  --sl-canvas-bg: #060a14;
+  --sl-canvas-glow: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99, 102, 241, 0.14), transparent 75%);
+  --sl-surface-base: #0d162b;
+  --sl-surface-elevated: #131f3a;
+  --sl-surface-subtle: #091022;
+
+  /* Borders */
+  --sl-border-subtle: rgba(255, 255, 255, 0.08);
+  --sl-border-light: rgba(255, 255, 255, 0.16);
+  --sl-border-focus: #6366f1;
+
+  /* Accents */
+  --sl-indigo: #6366f1;
+  --sl-purple: #8b5cf6;
+  --sl-emerald: #10b981;
+  --sl-rose: #f43f5e;
+  --sl-amber: #f59e0b;
+  --sl-sky: #38bdf8;
+}
+
+body {
+  font-family: 'Inter', 'Hind Siliguri', 'Kalpurush', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--sl-canvas-bg);
+  color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Canvas Background with Ambient Glow ===== */
+.canvas-bg {
+  background-color: #060a14;
+  background-image: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99, 102, 241, 0.14), transparent 75%);
+  background-attachment: fixed;
+}
+
+/* ===== Card Surfaces with Apple/Stripe-like Glass Finish ===== */
+.card-surface {
+  background: #0d162b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-surface:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.card-surface-elevated {
+  background: #131f3a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 1rem;
+  box-shadow: 0 14px 35px -10px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+/* ===== Buttons Hierarchy ===== */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 14px 28px -5px rgba(99, 102, 241, 0.55);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-success:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 14px 28px -5px rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+.btn-success:active {
+  transform: scale(0.98);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  box-shadow: 0 10px 20px -5px rgba(244, 63, 94, 0.35);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-danger:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 14px 28px -5px rgba(244, 63, 94, 0.5);
+  transform: translateY(-1px);
+}
+.btn-danger:active {
+  transform: scale(0.98);
+}
+
+/* ===== Form Controls (Input & Select) ===== */
+.input-dark {
+  width: 100%;
+  background: #091122;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  color: #f8fafc;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-dark::placeholder {
+  color: #64748b;
+}
+.input-dark:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Date / Month input dark mode enhancements */
+input[type="date"],
+input[type="month"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+
+/* ===== Badges ===== */
+.badge-emerald {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.badge-rose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+.badge-indigo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.badge-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* ===== Typography Utilities ===== */
+.font-money {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+/* ===== Date picker fix ===== */
+.date-fix::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
+  opacity: 0.9;
+  cursor: pointer;
+}
+.date-fix::-webkit-datetime-edit {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== SupplyLink Modal Scrollbar ===== */
+.sl-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) rgba(15, 23, 42, 0.25);
+}
+.sl-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sl-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.25);
+  border-radius: 999px;
+}
+.sl-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+.sl-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+.print-hide {
+  display: none !important;
+}
+
+@media print {
+  #app-scroll-container {
+    top: 7mm !important;
+    bottom: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    position: relative !important;
+    overflow: visible !important;
+    padding-top: 0 !important;
+  }
+}
+
+@font-face {
+  font-family: "Kalpurush";
+  src: url("./assets/fonts/Kalpurush-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Kalpurush";
+  src: url("./assets/fonts/Kalpurush-Bold.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+}

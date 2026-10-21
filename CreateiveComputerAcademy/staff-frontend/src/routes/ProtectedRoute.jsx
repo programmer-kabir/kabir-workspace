@@ -7,12 +7,16 @@ import { FiAlertOctagon, FiRefreshCw, FiShield, FiClock } from 'react-icons/fi';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const ProtectedRoute = ({ children }) => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isImpersonating } = useAuth();
   const [maintenance, setMaintenance] = useState({ active: false, message: '' });
   const [checking, setChecking] = useState(true);
 
-  const isPrivileged = currentUser?.roles &&
-    currentUser.roles.some(r => ['developer', 'admin'].includes(r));
+  // Privileged if role is developer/admin, OR if developer is impersonating another user
+  const isPrivileged = Boolean(
+    (currentUser?.roles && currentUser.roles.some(r => ['developer', 'admin'].includes(r))) ||
+    isImpersonating ||
+    localStorage.getItem('cca_original_dev_session')
+  );
 
   useEffect(() => {
     // Developers & Admins completely bypass maintenance checks
@@ -27,7 +31,8 @@ const ProtectedRoute = ({ children }) => {
         if (res.data?.status === 'success' && res.data.maintenance_enabled) {
           setMaintenance({
             active: true,
-            message: res.data.maintenance_message || 'সিস্টেম মেইনটেন্যান্স চলছে।'
+            message: res.data.maintenance_message || 'সিস্টেম মেইনটেন্যান্স চলছে।',
+            updated_by: res.data.updated_by || 'Developer'
           });
         }
       } catch (err) {
@@ -88,8 +93,11 @@ const ProtectedRoute = ({ children }) => {
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-300 text-xs leading-relaxed text-left space-y-2">
-            <div className="font-bold text-rose-400 text-[11px] uppercase tracking-wider">
-              Announcement from Engineering Team:
+            <div className="font-bold text-rose-400 text-[11px] uppercase tracking-wider flex items-center justify-between">
+              <span>Announcement by Developer:</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                By Developer {maintenance.updated_by ? `(${maintenance.updated_by})` : ''}
+              </span>
             </div>
             <p className="whitespace-pre-line text-xs font-sans text-slate-200">
               {maintenance.message}

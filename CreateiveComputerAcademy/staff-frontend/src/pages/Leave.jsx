@@ -18,6 +18,7 @@ const Leave = () => {
   const [reason, setReason] = useState('');
   
   const [message, setMessage] = useState('');
+  const [studentQuota, setStudentQuota] = useState(null);
   
   const fetchLeaves = async () => {
     if(!currentUser) return;
@@ -36,8 +37,19 @@ const Leave = () => {
     }
   };
 
+  const fetchStudentQuota = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}api/leave/get_student_quota.php?user_id=${currentUser.id}`);
+      if (res.data?.status === 'success' && res.data?.data) {
+        setStudentQuota(res.data.data);
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchLeaves();
+    fetchStudentQuota();
   }, [currentUser]);
 
   const filteredLeaves = leaves.filter(l => {
@@ -83,6 +95,7 @@ const Leave = () => {
         setReason('');
         setType('Casual');
         fetchLeaves(); // Refresh list
+        fetchStudentQuota();
       } else {
         setMessage({ text: res.data.message || 'Failed to submit application.', type: 'error' });
       }
@@ -128,7 +141,15 @@ const Leave = () => {
       </div>
 
       {/* Leave Balance / Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className={`grid grid-cols-1 ${studentQuota?.is_student ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-8`}>
+        {studentQuota?.is_student && (
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-lg shadow-indigo-600/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-20 text-5xl">🎓</div>
+            <h3 className="text-indigo-100 font-bold mb-1">Student Leave Left</h3>
+            <div className="text-4xl font-extrabold">{studentQuota.remaining_days} <span className="text-lg font-normal text-indigo-200">/ {studentQuota.monthly_quota} Days</span></div>
+            <p className="text-[11px] text-indigo-200 mt-2 font-medium">Unpaid • Zero Mango deduction</p>
+          </div>
+        )}
         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-20"><FiCheckCircle size={64} /></div>
             <h3 className="text-emerald-100 font-medium mb-1">Casual Leaves Taken</h3>
@@ -213,10 +234,22 @@ const Leave = () => {
                                 onChange={(e) => setType(e.target.value)}
                                 className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-2.5 outline-none transition-all"
                             >
+                                {studentQuota?.is_student && (
+                                    <option value="Student Academic Leave">
+                                        🎓 Student Academic Leave ({studentQuota.remaining_days} days left)
+                                    </option>
+                                )}
                                 <option value="Casual">Casual Leave</option>
                                 <option value="Medical">Medical Leave</option>
                                 <option value="Unpaid">Unpaid Leave</option>
                             </select>
+
+                            {type === 'Student Academic Leave' && (
+                                <div className="mt-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed shadow-xs">
+                                    <p className="font-bold">🎓 স্টুডেন্ট একাডেমিক ছুটি:</p>
+                                    <p className="mt-0.5">এই ছুটির জন্য কোনো বেতন প্রদান হবে না (Unpaid Day), তবে আপনার জমানো ম্যাঙ্গো (ওভারটাইম) ব্যালেন্স থেকে ১ মিনিটও কাটা হবে না এবং কোনো জরিমানা হবে না। চলতি মাসের অবশিষ্ট কোটা: <strong>{studentQuota?.remaining_days || 0} দিন</strong>।</p>
+                                </div>
+                            )}
                         </div>
 
                         <div>
