@@ -262,13 +262,9 @@ function startInactivityWatchdog() {
 
 function getIconPath() {
   if (app.isPackaged) {
-    const resIco = path.join(process.resourcesPath, 'favicon.ico');
-    const resPng = path.join(process.resourcesPath, 'logo.png');
-    return process.platform === 'win32' ? resIco : resPng;
+    return path.join(process.resourcesPath, 'logo.png');
   }
-  const icoPath = path.join(__dirname, '../public/favicon.ico');
-  const pngPath = path.join(__dirname, '../public/logo.png');
-  return process.platform === 'win32' ? icoPath : pngPath;
+  return path.join(__dirname, '../public/logo.png');
 }
 
 function createWindow() {

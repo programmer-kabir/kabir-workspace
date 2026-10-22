@@ -45,6 +45,13 @@ export const sidebarMenu = [
     icon: MdOutlineDashboard,
     roles: ["admin", "developer", "manager", "staff"],
   },
+  // REQUESTS & APPROVALS
+  {
+    label: "Requests & Approvals",
+    path: "/approval-center",
+    icon: TbClipboardList,
+    roles: ["admin", "developer", "manager", "staff"],
+  },
 
   {
   type: "collapse",

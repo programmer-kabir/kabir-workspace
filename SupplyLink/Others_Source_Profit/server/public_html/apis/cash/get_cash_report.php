@@ -20,9 +20,11 @@ function sendJson($data, $status = 200) {
 // ✅ Get All Cash Data
 // ==========================
 $stmt = $mysqli->prepare("
-    SELECT *
-    FROM cash
-    ORDER BY date DESC, id DESC
+    SELECT c.*,
+        (SELECT ce.id FROM cash_edits ce WHERE ce.cash_id = c.id AND ce.status = 'pending' LIMIT 1) AS pending_edit_id,
+        (SELECT ce.new_amount FROM cash_edits ce WHERE ce.cash_id = c.id AND ce.status = 'pending' LIMIT 1) AS pending_new_amount
+    FROM cash c
+    ORDER BY c.date DESC, c.id DESC
 ");
 
 $stmt->execute();

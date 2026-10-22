@@ -106,9 +106,14 @@ export function useDeveloperConsole() {
         maintenance_enabled: false,
         sms_dry_run: false,
         maintenance_message: '',
+        user_maintenance_message: '',
+        allowed_user_ids: [],
+        blocked_user_ids: [],
+        user_restricted_routes: {},
         updated_at: '',
         updated_by: ''
     });
+    const [editUserMaintenanceMsg, setEditUserMaintenanceMsg] = useState('');
     const [logs, setLogs] = useState([
         { id: 1, time: new Date().toLocaleTimeString(), type: 'info', msg: 'Developer Console session initialized.' }
     ]);
@@ -213,18 +218,30 @@ export function useDeveloperConsole() {
             };
             if (field === 'maintenance_message') {
                 payload.maintenance_message = editMaintenanceMsg;
+            } else if (field === 'user_maintenance_message') {
+                payload.user_maintenance_message = editUserMaintenanceMsg;
             }
             const res = await axios.post(`${API_BASE}api/developer/toggle_maintenance.php`, payload);
             if (res.data?.status === 'success') {
                 setMaintenanceConfig(res.data.data);
-                toast.success(
-                    field === 'maintenance_enabled'
-                        ? value ? '🚨 System Maintenance Activated!' : '✅ System Maintenance Deactivated - Site Public'
-                        : field === 'sms_dry_run'
-                            ? value ? '🛡️ SMS Dry-Run Mode Enabled (Simulated)' : '⚡ Live SMS Mode Enabled'
-                            : 'Maintenance message saved!'
-                );
-                addLog(`Updated ${field} to ${String(value)}`, 'warning');
+                let successMsg = 'Maintenance configuration updated!';
+                if (field === 'maintenance_enabled') {
+                    successMsg = value ? '🚨 System Maintenance Activated!' : '✅ System Maintenance Deactivated - Site Public';
+                } else if (field === 'sms_dry_run') {
+                    successMsg = value ? '🛡️ SMS Dry-Run Mode Enabled (Simulated)' : '⚡ Live SMS Mode Enabled';
+                } else if (field === 'allowed_user_ids') {
+                    successMsg = '✅ Allowed users bypass list updated!';
+                } else if (field === 'blocked_user_ids') {
+                    successMsg = '🚨 Targeted maintenance blocklist updated!';
+                } else if (field === 'maintenance_message') {
+                    successMsg = 'Site maintenance message saved!';
+                } else if (field === 'user_maintenance_message') {
+                    successMsg = 'Targeted user maintenance message saved!';
+                } else if (field === 'user_restricted_routes') {
+                    successMsg = 'Module-level route restrictions saved!';
+                }
+                toast.success(successMsg);
+                addLog(`Updated ${field} to ${JSON.stringify(value)}`, 'warning');
             } else {
                 toast.error(res.data?.message || 'Failed to update maintenance state');
             }
@@ -234,6 +251,28 @@ export function useDeveloperConsole() {
             setMaintenanceSaving(false);
         }
     };
+
+    const handleSetUserRouteRestriction = async (targetUserId, routes, message = '') => {
+        const idStr = String(targetUserId);
+        const currentRules = maintenanceConfig.user_restricted_routes || {};
+        const updatedRules = {
+            ...currentRules,
+            [idStr]: {
+                routes: Array.isArray(routes) ? routes : [],
+                message: message ? message.trim() : '',
+                updated_at: new Date().toISOString()
+            }
+        };
+        await handleToggleMaintenance('user_restricted_routes', updatedRules);
+    };
+
+    const handleRemoveUserRouteRestriction = async (targetUserId) => {
+        const idStr = String(targetUserId);
+        const currentRules = { ...(maintenanceConfig.user_restricted_routes || {}) };
+        delete currentRules[idStr];
+        delete currentRules[Number(targetUserId)];
+        await handleToggleMaintenance('user_restricted_routes', currentRules);
+    };
     const fetchMaintenanceStatus = useCallback(async () => {
         try {
             setMaintenanceLoading(true);
@@ -242,6 +281,7 @@ export function useDeveloperConsole() {
             if (res.data?.status === 'success') {
                 setMaintenanceConfig(res.data.data);
                 setEditMaintenanceMsg(res.data.data.maintenance_message || '');
+                setEditUserMaintenanceMsg(res.data.data.user_maintenance_message || '');
             }
         } catch (err) {
             console.error('Failed to fetch maintenance status', err);
@@ -788,12 +828,12 @@ export function useDeveloperConsole() {
         return l.type === logFilter;
     });
 
-    // ── 1. Impersonator initial load ──────────────────────────────────────────
+    // ── 1. Users initial load ──────────────────────────────────────────
     useEffect(() => {
-        if (activeTab === 'impersonate' && users.length === 0) {
+        if (users.length === 0) {
             fetchUsers();
         }
-    }, [activeTab, fetchUsers, users.length]);
+    }, [fetchUsers, users.length]);
 
     // ── 2. Server logs initial load ───────────────────────────────────────────
     useEffect(() => {
@@ -940,6 +980,7 @@ export function useDeveloperConsole() {
         maintenanceLoading, setMaintenanceLoading,
         maintenanceSaving, setMaintenanceSaving,
         editMaintenanceMsg, setEditMaintenanceMsg,
+        editUserMaintenanceMsg, setEditUserMaintenanceMsg,
         wsChannel, setWsChannel,
         wsEvent, setWsEvent,
         wsPayload, setWsPayload,
@@ -955,6 +996,8 @@ export function useDeveloperConsole() {
         fetchServerErrorLog,
         confirmClearServerErrorLog,
         handleToggleMaintenance,
+        handleSetUserRouteRestriction,
+        handleRemoveUserRouteRestriction,
         fetchMaintenanceStatus,
         handleDownloadSnapshot,
         handleDownloadFullSystemSnapshot,

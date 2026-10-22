@@ -96,6 +96,77 @@ if (!$stmt->execute()) {
     exit;
 }
 
+// 🔥 AUTOMATIC CASH IN SYNC
+$cashRefId = "daily_installment_" . $id;
+$stmtCheckCash = $mysqli->prepare("SELECT id FROM cash WHERE refId = ? LIMIT 1");
+if ($stmtCheckCash) {
+    $stmtCheckCash->bind_param("s", $cashRefId);
+    $stmtCheckCash->execute();
+    $foundCash = $stmtCheckCash->get_result()->fetch_assoc();
+    $stmtCheckCash->close();
+
+    if ($foundCash) {
+        $stmtUpCash = $mysqli->prepare("
+            UPDATE cash 
+            SET amount = ?, date = ?, remarks = CONCAT(COALESCE(remarks, ''), ' [এডিট: ৳', ?, ' - ', ?, ']')
+            WHERE id = ?
+        ");
+        if ($stmtUpCash) {
+            $amtStr = number_format($amount, 2);
+            $stmtUpCash->bind_param("dsssi", $amount, $date, $amtStr, $updateAt, $foundCash['id']);
+            $stmtUpCash->execute();
+            $stmtUpCash->close();
+        }
+    } else {
+        // Fetch customer name for new cash row if not exists
+        $stmtCust = $mysqli->prepare("
+            SELECT u.name FROM users u 
+            JOIN customer_installment_cards c ON c.user_id = u.id 
+            WHERE c.id = ? LIMIT 1
+        ");
+        $custName = "গ্রাহক";
+        if ($stmtCust) {
+            $stmtCust->bind_param("i", $cardId);
+            $stmtCust->execute();
+            $rC = $stmtCust->get_result()->fetch_assoc();
+            if ($rC && !empty($rC['name'])) $custName = $rC['name'];
+            $stmtCust->close();
+        }
+
+        $cashType     = "in";
+        $cashSource   = "{$custName} - কার্ড #{$cardId} (দৈনিক কিস্তি)";
+        $cashPurpose  = "দৈনিক কিস্তি আদায়";
+        $cashCategory = "daily-installment";
+        $cashRemarks  = "দৈনিক কিস্তি আদায় (এডিটেড): {$custName}, কার্ড #{$cardId}";
+        $cashApproval = "approved";
+
+        $stmtInsCash = $mysqli->prepare("
+            INSERT INTO cash 
+            (type, source, purpose, amount, category, refId, remarks, date, createdAt, approval_status, approved_by, approved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        if ($stmtInsCash) {
+            $stmtInsCash->bind_param(
+                "sssdssssssis",
+                $cashType,
+                $cashSource,
+                $cashPurpose,
+                $amount,
+                $cashCategory,
+                $cashRefId,
+                $cashRemarks,
+                $date,
+                $updateAt,
+                $cashApproval,
+                $receiver,
+                $updateAt
+            );
+            $stmtInsCash->execute();
+            $stmtInsCash->close();
+        }
+    }
+}
+
 // 🔥 Updated Data
 $stmt = $mysqli->prepare("SELECT * FROM daily_installments WHERE id = ?");
 $stmt->bind_param("i", $id);

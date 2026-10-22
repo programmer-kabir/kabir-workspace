@@ -29,7 +29,7 @@ const AdminLogin = () => {
       toast.success("Login successful");
       navigate("/");
     } else {
-      toast.error("Invalid ID or Password");
+      toast.error(res.message || "Invalid ID or Password");
     }
   };
 

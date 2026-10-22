@@ -9,14 +9,14 @@ import {
 import { MdCategory, MdNotes } from "react-icons/md";
 import { toast } from "react-toastify";
 
-const CashOutModal = ({ openCashOutModal, onClose }) => {
+const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [isCompanyExpense, setIsCompanyExpense] = useState(false);
   const [formData, setFormData] = useState({
     date: "",
     source: "",
     amount: "",
-      category: "purchase",
+    category: "purchase",
     purpose: "",
   });
 
@@ -28,7 +28,8 @@ const CashOutModal = ({ openCashOutModal, onClose }) => {
     }));
   }, []);
 
-  if (!openCashOutModal) return null;
+  const isModalOpen = openCashOutModal || isOpen;
+  if (!isModalOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,19 +52,15 @@ const CashOutModal = ({ openCashOutModal, onClose }) => {
 
       // 🆕 যদি ইউজার টিকমার্ক দেয়, তবে source কলামে 'company-expense' যাবে, অন্যথায় খালি যাবে।
       const finalSource = isCompanyExpense ? "company-expense" : "";
-const payload = {
-  ...formData,
-  amount: Number(formData.amount),
-  source: isCompanyExpense ? "company-expense" : "",
-};
-
+      const payload = {
+        ...formData,
+        amount: Number(formData.amount),
+        source: finalSource,
+      };
 
       const res = await axios.post(
         `${import.meta.env.VITE_LOCALHOST_KEY}/cash/cashOut.php`,
-        
         payload
-        ,
-
       );
 
       if (!res.data?.success) {
@@ -71,19 +68,30 @@ const payload = {
         return;
       }
 
-      toast.success("Cash Out Success ✅");
+      const toastPayload = {
+        title: "ক্যাশ আউট সফল হয়েছে! 💸",
+        message: `${formData.purpose ? `${formData.purpose} বাবদ ` : ""}৳ ${Number(formData.amount).toLocaleString()} ক্যাশ আউট সম্পন্ন হয়েছে।`,
+        tag: formData.category || (isCompanyExpense ? "Company Expense" : "Cash Out"),
+        amount: formData.amount,
+        type: "success",
+      };
 
       // 🆕 ফর্ম রিসেটের সাথে চেকবক্সটিও রিসেট (false) করে দেওয়া হচ্ছে
       setFormData({
         date: new Date().toISOString().split("T")[0],
         source: "",
         amount: "",
-        category: "",
+        category: "purchase",
         purpose: "",
       });
       setIsCompanyExpense(false);
 
       onClose();
+      if (onSuccess) {
+        onSuccess(toastPayload);
+      } else {
+        toast.success("Cash Out Success ✅");
+      }
     } catch (err) {
       toast.error("Error submitting!");
     } finally {

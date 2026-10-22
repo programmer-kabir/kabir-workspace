@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useState, useRef } from "react";
+import axios from "axios";
 import useDashboardData from "../../utils/Hooks/dashboard/useDashboardData";
 import { useReactToPrint } from "react-to-print";
-import { useRef } from "react";
 import { MONTHS } from "../../../public/month";
 import ReportTable from "../ReportTable/ReportTable";
+import { FaGoogleDrive } from "react-icons/fa";
+import LuxuryToast from "../Modal/LuxuryToast";
 
 const DashboardReport = () => {
+  const [isDriveSaving, setIsDriveSaving] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
   const {
     customerInstallmentCards,
     customerInstallmentPayments,
@@ -161,14 +165,73 @@ const DashboardReport = () => {
     documentTitle: `Dashboard_Report_${new Date().toISOString().split("T")[0]}`,
   });
 
+  const handleSaveToDrive = async () => {
+    try {
+      setIsDriveSaving(true);
+      const res = await axios.post(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/cash/save_daily_report_drive.php`
+      );
+
+      if (res.data?.success) {
+        setLuxuryToast({
+          title: "গুগল ড্রাইভে সংরক্ষিত! 📁",
+          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে Google Drive-এ সেভ হয়েছে (${res.data.file_name})।`,
+          tag: "Google Drive Sync",
+          amount: totalCash,
+          type: "success",
+        });
+      } else {
+        setLuxuryToast({
+          title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+          message:
+            res.data?.error ||
+            "ড্রাইভে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
+          tag: "Drive Error",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      setLuxuryToast({
+        title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          "ড্রাইভে ফাইল সেভ করতে সমস্যা হয়েছে।",
+        tag: "Drive Error",
+        type: "error",
+      });
+    } finally {
+      setIsDriveSaving(false);
+    }
+  };
+
   return (
     <>
       <div className="bg-white text-black p-6 print:p-2">
         <p className="text-center mb-5">Date: {today}</p>
-        <div className="flex justify-end mb-4">
+        <div className="flex items-center justify-end gap-3 mb-4 print:hidden">
+          <button
+            type="button"
+            onClick={handleSaveToDrive}
+            disabled={isDriveSaving}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-md transition disabled:opacity-50 cursor-pointer"
+          >
+            {isDriveSaving ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>ড্রাইভে সেভ হচ্ছে...</span>
+              </>
+            ) : (
+              <>
+                <FaGoogleDrive className="text-base" />
+                <span>Save to Google Drive</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={handlePrint}
-            className="btn bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
+            className="btn bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold"
           >
             Print Report
           </button>
@@ -576,6 +639,12 @@ const DashboardReport = () => {
   }
       }
     `}</style>
+
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={5000}
+      />
     </>
   );
 };

@@ -96,6 +96,32 @@ export default function MangoBreakTree() {
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('current');
   const [availableMonths, setAvailableMonths] = useState([]);
+  const [boyBouncing, setBoyBouncing] = useState(false);
+  const [boyQuoteIndex, setBoyQuoteIndex] = useState(0);
+
+  const handleBoyClick = (e) => {
+    e?.stopPropagation?.();
+    try {
+      soundFx?.playPop?.();
+    } catch { }
+    setBoyBouncing(true);
+    const boyQuotes = [
+      extraBasketMangoesCount > 0
+        ? `মাশাল্লাহ! গাছে ৪টি আর ঝুড়িতে +${extraBasketMangoesCount}টি পাকা আম জমা হয়েছে! 🧺🥭`
+        : 'কখন যে পাকা টসটসে আমটা পড়বে! 🥭🤤',
+      'এক কামড় দিতে পারলে মনটা জুড়িয়ে যেত! 😋',
+      'গাছের ডালে ঝুলছে মিষ্টি আম, আমার ছুটি হবে রঙিন! ✨',
+      'খোকা গাছে তাকিয়ে দিন গুনছে, ওভারটাইমের পাকা আম! 👦🥭'
+    ];
+    const currentQuote = boyQuotes[boyQuoteIndex % boyQuotes.length];
+    setBoyQuoteIndex((prev) => (prev + 1) % boyQuotes.length);
+    toast(currentQuote, {
+      icon: '🥭',
+      duration: 3500,
+      description: 'খোকা অধীর আগ্রহে গাছের পাকা আমের দিকে চেয়ে আছে!'
+    });
+    setTimeout(() => setBoyBouncing(false), 700);
+  };
 
   const fetchTreeData = useCallback(async (targetMonth = selectedMonth) => {
     if (!currentUser?.id) return;
@@ -170,13 +196,26 @@ export default function MangoBreakTree() {
 
   const summary = data?.summary || {};
   const ripeCount = summary?.ripe_mangoes_count || 0;
-  // Ensure displayed ripe mangoes strictly match the current view's ripeCount
-  const mangoes = (data?.mangoes || []).slice(0, ripeCount);
+  // All ripe mangoes earned by the user
+  const allRipeMangoes = (data?.mangoes || []).slice(0, ripeCount);
+  // Display rule: Maximum 4 ripe mangoes on the tree branches at once
+  const maxTreeRipeMangoes = 4;
+  const treeMangoes = allRipeMangoes.slice(0, maxTreeRipeMangoes);
+  // Any extra ripe mangoes beyond 4 are stored in the rustic Harvest Basket
+  const extraBasketMangoesCount = Math.max(0, ripeCount - maxTreeRipeMangoes);
   const growingMango = data?.growing_mango || null;
   const shiftHours = summary?.shift_hours || 8;
   const totalOvertime = summary?.total_overtime_hours || 0;
   const availableBreakHours = summary?.available_break_hours || 0;
   const availableBreakDays = summary?.available_break_days || 0;
+
+  // Safe collision-free coordinates for the 4 tree mangoes (Crown Apex, High Left, High Right, Mid Right)
+  const safeTreePositions = [
+    { x: 38, y: 24, branch: 'crown-left' },   // High Left Crown (y=24% is ~163px, boy's head is at y=440px -> 277px clearance!)
+    { x: 62, y: 24, branch: 'crown-right' },  // High Right Crown
+    { x: 50, y: 20, branch: 'crown-apex' },   // Apex Center Top
+    { x: 66, y: 34, branch: 'mid-right' }     // Mid Right Branch (far right, opposite side from boy)
+  ];
 
   return (
     <div className="mx-auto space-y-8 animate-fadeIn  pb-12">
@@ -376,14 +415,14 @@ export default function MangoBreakTree() {
 
         {/* Card 4: Net Overtime Balance vs Overtime Debt */}
         <div className={`text-white p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between group hover:shadow-lg transition duration-300 ${summary?.has_overtime_debt
-            ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 hover:shadow-rose-600/30'
-            : 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 hover:shadow-amber-500/20'
+          ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 hover:shadow-rose-600/30'
+          : 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 hover:shadow-amber-500/20'
           }`}>
           <div>
             <div className="flex items-center justify-between text-white/90 mb-3">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs border ${summary?.has_overtime_debt
-                  ? 'bg-black/25 text-rose-100 border-rose-300/40'
-                  : 'bg-white/20 text-white border-white/20'
+                ? 'bg-black/25 text-rose-100 border-rose-300/40'
+                : 'bg-white/20 text-white border-white/20'
                 }`}>
                 {summary?.has_overtime_debt ? '4. Debt' : '4. Overtime Balance'} &bull; {summary?.selected_month_label || 'Month'}
               </span>
@@ -450,7 +489,7 @@ export default function MangoBreakTree() {
                     <button
                       type="button"
                       onClick={() => {
-                        const firstRipe = mangoes.find(m => m.type === 'ripe') || mangoes[0];
+                        const firstRipe = allRipeMangoes.find(m => m.type === 'ripe') || allRipeMangoes[0];
                         if (firstRipe) {
                           setSelectedMango(firstRipe);
                           setIsClaimModalOpen(true);
@@ -539,10 +578,10 @@ export default function MangoBreakTree() {
             onClick={() => setActiveLedgerTab('tiffin')}
             title="Click to view Tiffin break efficiency details"
             className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 cursor-pointer transition hover:scale-105 ${Number(summary?.total_tiffin_bonus_hours || 0) > 0
-                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
-                : Number(summary?.total_tiffin_penalty_hours || 0) > 0
-                  ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/50'
-                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/50'
+              ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
+              : Number(summary?.total_tiffin_penalty_hours || 0) > 0
+                ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/50'
+                : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/50'
               }`}
           >
             <span>🥪 Tiffin Impact: <strong>{
@@ -584,7 +623,14 @@ export default function MangoBreakTree() {
           <div className="flex items-center gap-3 md:gap-4 text-xs font-bold shrink-0 bg-slate-50 dark:bg-slate-800/80 p-2.5 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex-wrap">
             <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
               <span className="text-base">🥭</span>
-              <span>Ripe ({ripeCount})</span>
+              <span>
+                Ripe ({ripeCount})
+                {extraBasketMangoesCount > 0 && (
+                  <span className="ml-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                    (গাছে ৪টি • ঝুড়িতে {extraBasketMangoesCount}টি)
+                  </span>
+                )}
+              </span>
             </div>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-700" />
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
@@ -629,6 +675,27 @@ export default function MangoBreakTree() {
             @keyframes basketGlow {
               0%, 100% { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25); }
               50% { box-shadow: 0 8px 30px rgba(245, 158, 11, 0.45); }
+            }
+            @keyframes boyIdleBreath {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-3px); }
+            }
+            @keyframes boyThoughtFloat {
+              0%, 100% { transform: translateY(0px); opacity: 0.95; }
+              50% { transform: translateY(-5px); opacity: 1; }
+            }
+            @keyframes boyJumpAction {
+              0% { transform: translateY(0) scale(1, 1); }
+              20% { transform: translateY(5px) scale(1.06, 0.94); }
+              50% { transform: translateY(-28px) scale(0.95, 1.06); }
+              75% { transform: translateY(-8px) scale(1.02, 0.98); }
+              100% { transform: translateY(0) scale(1, 1); }
+            }
+            .boy-idle {
+              animation: boyIdleBreath 3.2s ease-in-out infinite;
+            }
+            .boy-jumping {
+              animation: boyJumpAction 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
             }
           `}</style>
 
@@ -715,6 +782,39 @@ export default function MangoBreakTree() {
               <filter id="foliageShadow" x="-10%" y="-10%" width="120%" height="120%">
                 <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#064e3b" floodOpacity="0.35" />
               </filter>
+
+              {/* Boy Character Design Gradients */}
+              <linearGradient id="boySkinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffedd5" />
+                <stop offset="100%" stopColor="#fed7aa" />
+              </linearGradient>
+
+              <linearGradient id="boyHairGrad" x1="0%" y1="0%" x2="60%" y2="100%">
+                <stop offset="0%" stopColor="#451a03" />
+                <stop offset="60%" stopColor="#271103" />
+                <stop offset="100%" stopColor="#0f0501" />
+              </linearGradient>
+
+              <linearGradient id="boyShirtGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="45%" stopColor="#ea580c" />
+                <stop offset="100%" stopColor="#c2410c" />
+              </linearGradient>
+
+              <linearGradient id="boyShortsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#1e3a8a" />
+                <stop offset="100%" stopColor="#0f172a" />
+              </linearGradient>
+
+              <linearGradient id="boySneakerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#b91c1c" />
+              </linearGradient>
+
+              <linearGradient id="boyBubbleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="100%" stopColor="#fef3c7" />
+              </linearGradient>
             </defs>
 
             {/* Sun in upper corner with radiant sunbeams */}
@@ -867,21 +967,165 @@ export default function MangoBreakTree() {
               <path d="M860,250 C885,245 895,260 905,265 C890,275 872,270 858,262 Z" fill="#22c55e" />
               <path d="M790,130 C810,105 822,112 832,115 C820,132 805,135 788,132 Z" fill="#4ade80" />
             </g>
+
+            {/* ============================================================== */}
+            {/* CUTE BOY CHARACTER LOOKING UP AT MANGOES (INTERACTIVE)          */}
+            {/* ============================================================== */}
+            <g
+              id="eagerBoyIllustration"
+              onClick={handleBoyClick}
+              className={`select-none cursor-pointer group/boy ${boyBouncing ? 'boy-jumping' : 'boy-idle'}`}
+              style={{
+                pointerEvents: 'auto',
+                transformOrigin: '325px 614px'
+              }}
+            >
+              <title>আমের দিকে চেয়ে থাকা খোকা (ক্লিক করুন!)</title>
+
+              {/* Ground Shadow underneath the Boy */}
+              <ellipse cx="325" cy="614" rx="36" ry="7" fill="#04230c" opacity="0.45" />
+
+              {/* --- Shoes & Feet --- */}
+              {/* Left Sneaker (slightly back) */}
+              <rect x="298" y="610" width="22" height="4" rx="2" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.8" />
+              <path d="M299,610 C298,604 306,601 313,605 C319,608 319,610 320,610 Z" fill="url(#boySneakerGrad)" />
+              <path d="M316,610 C317,607 319,607 320,610 Z" fill="#ffffff" />
+              <path d="M305,606 L311,608 M304,608 L310,610" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
+
+              {/* Right Sneaker (forward towards tree) */}
+              <rect x="330" y="612" width="24" height="4" rx="2" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.8" />
+              <path d="M331,612 C330,605 340,602 348,607 C354,610 354,612 354,612 Z" fill="url(#boySneakerGrad)" />
+              <path d="M349,612 C350,608 353,608 354,612 Z" fill="#ffffff" />
+              <path d="M337,607 L343,609 M336,609 L342,611" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
+
+              {/* --- Socks --- */}
+              <rect x="303" y="598" width="11" height="8" rx="2" fill="#ffffff" />
+              <line x1="303" y1="601" x2="314" y2="601" stroke="#3b82f6" strokeWidth="1" />
+              <rect x="334" y="600" width="11" height="8" rx="2" fill="#ffffff" />
+              <line x1="334" y1="603" x2="345" y2="603" stroke="#3b82f6" strokeWidth="1" />
+
+              {/* --- Legs --- */}
+              <rect x="304" y="568" width="10" height="32" rx="5" fill="url(#boySkinGrad)" />
+              <rect x="335" y="568" width="10" height="34" rx="5" fill="url(#boySkinGrad)" />
+              <path d="M306,585 Q309,587 312,585" stroke="#ea580c" strokeWidth="1" strokeLinecap="round" opacity="0.3" fill="none" />
+              <path d="M337,586 Q340,588 343,586" stroke="#ea580c" strokeWidth="1" strokeLinecap="round" opacity="0.3" fill="none" />
+
+              {/* --- Denim Shorts --- */}
+              <path d="M298,536 C298,535 348,535 348,536 L348,570 C348,573 328,573 328,570 L323,552 L318,570 C318,573 298,573 298,570 Z" fill="url(#boyShortsGrad)" />
+              <rect x="297" y="567" width="21" height="4.5" rx="1.5" fill="#2563eb" opacity="0.6" />
+              <rect x="328" y="567" width="21" height="4.5" rx="1.5" fill="#2563eb" opacity="0.6" />
+              <path d="M302,544 Q310,556 314,562" stroke="#f59e0b" strokeWidth="0.9" strokeDasharray="2,2" fill="none" opacity="0.8" />
+              <path d="M344,544 Q336,556 332,562" stroke="#f59e0b" strokeWidth="0.9" strokeDasharray="2,2" fill="none" opacity="0.8" />
+              <rect x="297" y="535" width="52" height="4.5" rx="1" fill="#334155" />
+              <rect x="320" y="534" width="7" height="6.5" rx="1.5" fill="#f59e0b" stroke="#78350f" strokeWidth="0.8" />
+
+              {/* --- Torso & Mango T-Shirt --- */}
+              <path d="M301,482 C312,479 336,479 347,482 L349,537 C349,538 299,538 299,537 Z" fill="url(#boyShirtGrad)" />
+              <path d="M315,480 Q324,487 333,480" stroke="#ffffff" strokeWidth="3" fill="none" strokeLinecap="round" />
+              {/* Cute mango emblem on chest */}
+              <ellipse cx="328" cy="504" rx="5" ry="6.5" fill="#fde047" transform="rotate(-15 328 504)" />
+              <path d="M328,498 Q331,496 333,498" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+
+              {/* --- Left Arm (Relaxed at side) --- */}
+              <path d="M301,482 C293,487 290,496 290,503 L298,505 C299,499 301,490 304,485 Z" fill="url(#boyShirtGrad)" />
+              <path d="M293,503 C291,514 292,525 295,534 C299,534 302,532 299,522 C297,515 296,507 297,504 Z" fill="url(#boySkinGrad)" />
+              <circle cx="296" cy="535" r="4.5" fill="url(#boySkinGrad)" />
+
+              {/* --- Right Arm (Excitedly pointing up at mangoes) --- */}
+              <path d="M344,482 C350,483 356,488 358,495 L351,497 C349,492 346,486 343,484 Z" fill="url(#boyShirtGrad)" />
+              <path d="M352,488 C360,474 368,456 376,438 C381,440 383,444 378,450 C371,465 364,481 356,494 Z" fill="url(#boySkinGrad)" />
+              <circle cx="377" cy="439" r="4.5" fill="url(#boySkinGrad)" />
+              <path d="M376,438 Q384,428 388,422" stroke="url(#boySkinGrad)" strokeWidth="3.6" strokeLinecap="round" fill="none" />
+
+              {/* --- Neck --- */}
+              <rect x="319" y="470" width="9" height="14" rx="3" fill="url(#boySkinGrad)" transform="rotate(7 323 477)" />
+
+              {/* --- Head Tilted Upwards looking at Canopy --- */}
+              <g transform="rotate(-15 324 452)">
+                {/* Back hair shadow */}
+                <ellipse cx="323" cy="442" rx="18" ry="19" fill="#1f0e04" />
+
+                {/* Ear */}
+                <path d="M309,448 C306,444 308,440 311,441 L313,450 C310,450 308,449 309,448 Z" fill="url(#boySkinGrad)" />
+
+                {/* Face Contour */}
+                <path d="M312,450 C310,436 322,427 335,429 C348,431 355,442 353,454 C351,466 337,472 325,468 C316,465 312,458 312,450 Z" fill="url(#boySkinGrad)" />
+
+                {/* Rosy Cheeks */}
+                <ellipse cx="320" cy="453" rx="4.5" ry="3" fill="#f87171" opacity="0.55" />
+                <ellipse cx="343" cy="455" rx="4.5" ry="3" fill="#f87171" opacity="0.55" />
+
+                {/* Left Eye looking up-right */}
+                <ellipse cx="323" cy="445" rx="5" ry="6.5" fill="#0f172a" />
+                <circle cx="325" cy="443" r="2.2" fill="#ffffff" />
+                <circle cx="322" cy="447" r="1.1" fill="#ffffff" />
+                <path d="M318,446 Q323,439 328,445" stroke="#020617" strokeWidth="1.2" fill="none" />
+
+                {/* Right Eye looking up-right */}
+                <ellipse cx="339" cy="446" rx="5" ry="6.5" fill="#0f172a" />
+                <circle cx="341" cy="444" r="2.2" fill="#ffffff" />
+                <circle cx="338" cy="448" r="1.1" fill="#ffffff" />
+                <path d="M334,447 Q339,440 344,446" stroke="#020617" strokeWidth="1.2" fill="none" />
+
+                {/* Eyebrows arched in wonder */}
+                <path d="M317,437 Q323,432 329,436" stroke="#451a03" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+                <path d="M334,437 Q340,432 346,437" stroke="#451a03" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+                {/* Cute Nose */}
+                <path d="M331,448 Q333,450 330,451" stroke="#ea580c" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+
+                {/* Excited Open Smile */}
+                <path d="M326,456 Q333,465 340,456 Q333,460 326,456 Z" fill="#881337" stroke="#4c0519" strokeWidth="0.8" />
+                <path d="M328,456 Q333,459 338,456" fill="#ffffff" />
+                <path d="M329,461 Q333,458 337,461" fill="#fb7185" />
+
+                {/* Styled Trendy Hair */}
+                <path d="M310,440 C308,426 316,415 328,414 C342,412 355,420 357,432 C359,440 354,444 350,442 C346,434 338,426 328,427 C322,428 316,434 315,441 C314,440 312,442 310,440 Z" fill="url(#boyHairGrad)" />
+                <path d="M324,417 Q330,409 337,416 Q345,411 349,420 Q358,417 356,428" stroke="#5c2e0b" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              </g>
+
+              {/* --- Thought Bubble Floating Above Boy --- */}
+              <circle cx="352" cy="402" r="3.5" fill="#ffffff" opacity="0.9" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.12))" />
+              <circle cx="360" cy="388" r="5" fill="#ffffff" opacity="0.95" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.12))" />
+
+              <g style={{ animation: 'boyThoughtFloat 3.5s ease-in-out infinite' }}>
+                <rect
+                  x="328"
+                  y="335"
+                  width="172"
+                  height="44"
+                  rx="22"
+                  fill="url(#boyBubbleGrad)"
+                  stroke="#f59e0b"
+                  strokeWidth="1.6"
+                  filter="drop-shadow(0 4px 12px rgba(0,0,0,0.15))"
+                />
+                <text x="344" y="362" fontSize="16">🤤</text>
+                <text x="368" y="354" fontSize="11" fontWeight="800" fill="#92400e" fontFamily="sans-serif">
+                  {extraBasketMangoesCount > 0 ? `ঝুড়িতে +${extraBasketMangoesCount}টি আম জমা!` : 'কখন পড়বে আমটা!'}
+                </text>
+                <text x="368" y="368" fontSize="9.5" fontWeight="700" fill="#b45309" fontFamily="sans-serif">
+                  {extraBasketMangoesCount > 0 ? `গাছে ৪টি • ঝুড়িতে ${extraBasketMangoesCount}টি 🧺` : 'পাকা আম দেখছে খোকা 🥭'}
+                </text>
+              </g>
+            </g>
           </svg>
 
           {/* ============================================================== */}
           {/* 4. INTERACTIVE MANGOES WITH DEDICATED BRANCH ANCHORS & LEAVES  */}
+          {/* Displaying maximum 4 ripe mangoes on tree on safe coordinates   */}
           {/* ============================================================== */}
-          {mangoes.map((mango, idx) => {
+          {treeMangoes.map((mango, idx) => {
             const swayDelay = ((idx * 0.45) % 2.5).toFixed(2);
             const swayDuration = (3.2 + (idx % 3) * 0.5).toFixed(2);
+            const pos = safeTreePositions[idx % safeTreePositions.length];
             return (
               <div
                 key={mango.id || idx}
                 onClick={() => handleMangoClick(mango)}
                 style={{
-                  left: `${Math.min(64, Math.max(36, Number(mango.position?.x || 50)))}%`,
-                  top: `${Math.min(46, Math.max(20, Number(mango.position?.y || 30)))}%`
+                  left: `${pos.x}%`,
+                  top: `${pos.y}%`
                 }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 group select-none"
                 title={`Click to inspect: ${mango.title} (+${mango.hours}h Break)`}
@@ -1058,13 +1302,14 @@ export default function MangoBreakTree() {
 
           {/* ============================================================== */}
           {/* 5. GROWING / UNRIPE MANGO (IN PROGRESS)                        */}
+          {/* Positioned safely at center mid-canopy (Total on tree = max 5) */}
           {/* ============================================================== */}
           {growingMango && (
             <div
               onClick={() => handleMangoClick(growingMango)}
               style={{
-                left: `${Math.min(64, Math.max(36, Number(growingMango.position?.x || 50)))}%`,
-                top: `${Math.min(46, Math.max(20, Number(growingMango.position?.y || 30)))}%`
+                left: '50%',
+                top: '33%'
               }}
               className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 group select-none"
               title={`Ripening: ${growingMango.current_hours}h / ${growingMango.target_hours}h`}
@@ -1155,29 +1400,54 @@ export default function MangoBreakTree() {
 
           {/* ============================================================== */}
           {/* 6. RUSTIC HARVEST WICKER BASKET ON ORCHARD LAWN                */}
+          {/* Stores overflow ripe mangoes beyond the 4 on the tree          */}
           {/* ============================================================== */}
           {ripeCount > 0 && (
-            <div className="absolute right-6 md:right-12 bottom-4 md:bottom-6 z-20 flex items-center gap-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-amber-300/60 dark:border-amber-700/60 shadow-lg" style={{ animation: 'basketGlow 4s ease-in-out infinite' }}>
-              <div className="relative text-2xl">
+            <div
+              onClick={() => {
+                const firstRipe = allRipeMangoes[0];
+                if (firstRipe) {
+                  try { soundFx?.playPop?.(); } catch { }
+                  setSelectedMango(firstRipe);
+                  setIsClaimModalOpen(true);
+                }
+              }}
+              className="absolute right-4 sm:right-8 md:right-12 bottom-3 sm:bottom-5 z-20 flex items-center gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border-2 border-amber-400 dark:border-amber-600 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all select-none group"
+              style={{ animation: 'basketGlow 4s ease-in-out infinite' }}
+              title="ক্লিক করে ছুটি বা টাকা রেডিম করুন ➔"
+            >
+              <div className="relative text-3xl shrink-0">
                 <span>🧺</span>
-                <span className="absolute -top-1 -right-1 text-sm animate-bounce">🥭</span>
+                <span className="absolute -top-1.5 -right-1.5 text-base animate-bounce">🥭</span>
+                {extraBasketMangoesCount > 0 && (
+                  <span className="absolute -bottom-1 -left-1 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-black border border-white dark:border-slate-900 shadow-sm animate-pulse">
+                    +{extraBasketMangoesCount}
+                  </span>
+                )}
               </div>
               <div className="text-left">
-                <div className="text-[11px] font-black text-amber-900 dark:text-amber-300 flex items-center gap-1">
+                <div className="text-xs font-black text-amber-950 dark:text-amber-200 flex items-center gap-1.5 flex-wrap">
                   <span>Harvest Ready:</span>
-                  <span className="px-1.5 py-0.2 rounded-md bg-amber-500 text-white text-[10px]">
+                  <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-white text-[11px] font-black shadow-xs">
                     {ripeCount} Mango{ripeCount > 1 ? 'es' : ''}
                   </span>
+                  {extraBasketMangoesCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-black shadow-xs animate-pulse">
+                      +{extraBasketMangoesCount} ঝুড়িতে জমা
+                    </span>
+                  )}
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                  {ripeCount} paid break day{ripeCount > 1 ? 's' : ''} stored in orchard
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                  {extraBasketMangoesCount > 0
+                    ? `গাছে ৪টি • ঝুড়িতে ${extraBasketMangoesCount}টি • ক্লিক করে রেডিম করুন ➔`
+                    : `${ripeCount} paid break day${ripeCount > 1 ? 's' : ''} stored in orchard • ক্লিক করুন ➔`}
                 </div>
               </div>
             </div>
           )}
 
           {/* Empty Tree Banner when 0 Mangoes */}
-          {mangoes.length === 0 && !growingMango && (
+          {allRipeMangoes.length === 0 && !growingMango && (
             <div className="absolute inset-x-8 bottom-8 md:bottom-12 max-w-lg mx-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 text-center shadow-xl space-y-2 z-20 animate-fadeIn">
               <span className="text-3xl">🌱</span>
               <h4 className="text-base font-bold text-slate-900 dark:text-white">Your Mango Tree is Waiting to Bloom!</h4>
@@ -1218,15 +1488,15 @@ export default function MangoBreakTree() {
             <button
               onClick={() => setActiveLedgerTab('overtime')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 ${activeLedgerTab === 'overtime'
-                  ? 'bg-white dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-sm border border-emerald-200/90 dark:border-emerald-500/40 ring-2 ring-emerald-500/10 dark:ring-0 font-extrabold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-sm border border-emerald-200/90 dark:border-emerald-500/40 ring-2 ring-emerald-500/10 dark:ring-0 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
             >
               <span className="text-sm">🌿</span>
               <span>Overtime</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-colors ${activeLedgerTab === 'overtime'
-                  ? 'bg-emerald-100 dark:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-emerald-100 dark:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                 {data?.contributions?.length || 0}
               </span>
@@ -1236,15 +1506,15 @@ export default function MangoBreakTree() {
             <button
               onClick={() => setActiveLedgerTab('short_time')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 ${activeLedgerTab === 'short_time'
-                  ? 'bg-white dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 shadow-sm border border-rose-200/90 dark:border-rose-500/40 ring-2 ring-rose-500/10 dark:ring-0 font-extrabold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 shadow-sm border border-rose-200/90 dark:border-rose-500/40 ring-2 ring-rose-500/10 dark:ring-0 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
             >
               <span className="text-sm">⏱️</span>
               <span>Short Time</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-colors ${activeLedgerTab === 'short_time'
-                  ? 'bg-rose-100 dark:bg-rose-500/30 text-rose-800 dark:text-rose-200'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-rose-100 dark:bg-rose-500/30 text-rose-800 dark:text-rose-200'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                 {data?.gaps?.length || 0}
               </span>
@@ -1254,15 +1524,15 @@ export default function MangoBreakTree() {
             <button
               onClick={() => setActiveLedgerTab('leaves')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 ${activeLedgerTab === 'leaves'
-                  ? 'bg-white dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-sm border border-amber-200/90 dark:border-amber-500/40 ring-2 ring-amber-500/10 dark:ring-0 font-extrabold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-sm border border-amber-200/90 dark:border-amber-500/40 ring-2 ring-amber-500/10 dark:ring-0 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
             >
               <span className="text-sm">🏖️</span>
               <span>Leaves Deducted</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-colors ${activeLedgerTab === 'leaves'
-                  ? 'bg-amber-100 dark:bg-amber-500/30 text-amber-800 dark:text-amber-200'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-amber-100 dark:bg-amber-500/30 text-amber-800 dark:text-amber-200'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                 {data?.leaves_taken?.length || 0}
               </span>
@@ -1272,15 +1542,15 @@ export default function MangoBreakTree() {
             <button
               onClick={() => setActiveLedgerTab('tiffin')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 ${activeLedgerTab === 'tiffin'
-                  ? 'bg-white dark:bg-orange-500/15 text-orange-700 dark:text-orange-300 shadow-sm border border-orange-200/90 dark:border-orange-500/40 ring-2 ring-orange-500/10 dark:ring-0 font-extrabold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-orange-500/15 text-orange-700 dark:text-orange-300 shadow-sm border border-orange-200/90 dark:border-orange-500/40 ring-2 ring-orange-500/10 dark:ring-0 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
             >
               <span className="text-sm">🥪</span>
               <span>Tiffin Breaks</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-colors ${activeLedgerTab === 'tiffin'
-                  ? 'bg-orange-100 dark:bg-orange-500/30 text-orange-800 dark:text-orange-200'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-orange-100 dark:bg-orange-500/30 text-orange-800 dark:text-orange-200'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                 {data?.tiffin_history?.length || summary?.tiffin_summary?.total_tiffin_count || 0}
               </span>
@@ -1290,15 +1560,15 @@ export default function MangoBreakTree() {
             <button
               onClick={() => setActiveLedgerTab('claims')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 ${activeLedgerTab === 'claims'
-                  ? 'bg-white dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 shadow-sm border border-indigo-200/90 dark:border-indigo-500/40 ring-2 ring-indigo-500/10 dark:ring-0 font-extrabold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 shadow-sm border border-indigo-200/90 dark:border-indigo-500/40 ring-2 ring-indigo-500/10 dark:ring-0 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
             >
               <span className="text-sm">🥭</span>
               <span>Claimed Breaks</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-colors ${activeLedgerTab === 'claims'
-                  ? 'bg-indigo-100 dark:bg-indigo-500/30 text-indigo-800 dark:text-indigo-200'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-indigo-100 dark:bg-indigo-500/30 text-indigo-800 dark:text-indigo-200'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                 {data?.recent_claims?.length || 0}
               </span>
@@ -1551,8 +1821,8 @@ export default function MangoBreakTree() {
                           <tr
                             key={idx}
                             className={`transition-colors duration-150 ${leave.type === 'Absent'
-                                ? 'bg-rose-50/40 dark:bg-rose-950/20 hover:bg-rose-50/70'
-                                : 'hover:bg-slate-50/90 dark:hover:bg-slate-800/40'
+                              ? 'bg-rose-50/40 dark:bg-rose-950/20 hover:bg-rose-50/70'
+                              : 'hover:bg-slate-50/90 dark:hover:bg-slate-800/40'
                               }`}
                           >
                             <td className="py-3.5 px-4">
@@ -1573,8 +1843,8 @@ export default function MangoBreakTree() {
                             </td>
                             <td className="py-3.5 px-4">
                               <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black border ${leave.type === 'Absent'
-                                  ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                 }`}>
                                 {leave.type === 'Absent' ? 'Absent ⚠️' : leave.type}
                               </span>
@@ -1593,8 +1863,8 @@ export default function MangoBreakTree() {
                             </td>
                             <td className="py-3.5 px-4 text-right">
                               <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border shadow-2xs ${leave.type === 'Absent'
-                                  ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-700/80 font-black'
-                                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/60'
+                                ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-700/80 font-black'
+                                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/60'
                                 }`}>
                                 {leave.type === 'Absent' ? '-8h Debt Impact' : '- Deducted'}
                               </span>
@@ -1650,11 +1920,10 @@ export default function MangoBreakTree() {
                       return (
                         <tr
                           key={idx}
-                          className={`transition-colors duration-150 ${
-                            isOverBreak
-                              ? 'bg-rose-50/20 dark:bg-rose-950/10 hover:bg-rose-50/50 dark:hover:bg-rose-950/20'
-                              : 'hover:bg-slate-50/90 dark:hover:bg-slate-800/40'
-                          }`}
+                          className={`transition-colors duration-150 ${isOverBreak
+                            ? 'bg-rose-50/20 dark:bg-rose-950/10 hover:bg-rose-50/50 dark:hover:bg-rose-950/20'
+                            : 'hover:bg-slate-50/90 dark:hover:bg-slate-800/40'
+                            }`}
                         >
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
@@ -1674,23 +1943,21 @@ export default function MangoBreakTree() {
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black border shadow-2xs ${
-                                isOverBreak
-                                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700/60'
-                                  : isSold
-                                    ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60'
-                                    : isFullDay
-                                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
-                                      : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
-                              }`}>
+                              <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black border shadow-2xs ${isOverBreak
+                                ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700/60'
+                                : isSold
+                                  ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60'
+                                  : isFullDay
+                                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+                                }`}>
                                 {claim.type || 'Mango Break'}
                               </span>
                               {claim.purpose && (
-                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${
-                                  isOverBreak
-                                    ? 'bg-rose-100/70 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${isOverBreak
+                                  ? 'bg-rose-100/70 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                  }`}>
                                   {isOverBreak ? '⚠️ ' : '🎯 '}{claim.purpose}
                                 </span>
                               )}
@@ -1714,20 +1981,18 @@ export default function MangoBreakTree() {
                             {claim.reason || 'Overtime Break'}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold border shadow-2xs ${
-                              isOverBreak
-                                ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/60'
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold border shadow-2xs ${isOverBreak
+                              ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/60'
+                              : claim.status === 'Pending'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/60'
+                                : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60'
+                              }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isOverBreak
+                                ? 'bg-rose-500'
                                 : claim.status === 'Pending'
-                                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/60'
-                                  : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                isOverBreak
-                                  ? 'bg-rose-500'
-                                  : claim.status === 'Pending'
-                                    ? 'bg-amber-500 animate-pulse'
-                                    : 'bg-emerald-500'
-                              }`} />
+                                  ? 'bg-amber-500 animate-pulse'
+                                  : 'bg-emerald-500'
+                                }`} />
                               <span>{claim.status}</span>
                             </span>
                           </td>

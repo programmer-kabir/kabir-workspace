@@ -65,6 +65,21 @@ $stmt->bind_param("i", $id);
 
 // Execute
 if ($stmt->execute()) {
+    // Also remove associated cash-in entry and edit requests
+    $cashRef = "inv_inst_" . $id;
+    $delCash = $mysqli->prepare("DELETE FROM cash WHERE refId = ?");
+    if ($delCash) {
+        $delCash->bind_param("s", $cashRef);
+        $delCash->execute();
+        $delCash->close();
+    }
+    $delEdits = $mysqli->prepare("DELETE FROM investment_installment_edits WHERE installment_id = ?");
+    if ($delEdits) {
+        $delEdits->bind_param("i", $id);
+        $delEdits->execute();
+        $delEdits->close();
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Installment deleted successfully",

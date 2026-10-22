@@ -321,7 +321,7 @@ const CreateInstallmentCards = () => {
             </div>
 
             {/* Supplier ID */}
-            <div className="md:col-span-2">
+            <div>
               <IconInput
                 label="সাপ্লায়ার আইডি (Supplier ID)"
                 icon={FaStore}
@@ -329,6 +329,39 @@ const CreateInstallmentCards = () => {
                 name="supplier_id"
                 placeholder="সাপ্লায়ার আইডি (ঐচ্ছিক)"
                 type="number"
+              />
+            </div>
+
+            {/* Installment Type (Regular vs Daily) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold tracking-wide text-cyan-300">
+                কিস্তির ধরণ (Installment Type) *
+              </label>
+              <div className="flex items-center gap-2.5 bg-[#091122] border border-cyan-500/30 rounded-xl px-3.5 py-2.5 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
+                <FaCalendarAlt className="text-cyan-400 shrink-0" />
+                <select
+                  {...register("is_daily")}
+                  defaultValue={0}
+                  className="bg-transparent text-white w-full py-0.5 text-sm outline-none cursor-pointer"
+                >
+                  <option value={0} className="bg-[#0b132b] text-white">
+                    সাধারণ কিস্তি (Regular Installment)
+                  </option>
+                  <option value={1} className="bg-[#0b132b] text-cyan-300 font-bold">
+                    ⚡ দৈনিক কিস্তি (Daily Installment)
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* Remarks */}
+            <div className="md:col-span-2">
+              <IconInput
+                label="মন্তব্য (Remarks - নোট/তথ্য)"
+                icon={FaHashtag}
+                register={register}
+                name="remarks"
+                placeholder="যেকোনো বিশেষ মন্তব্য বা নোট..."
               />
             </div>
           </div>

@@ -119,6 +119,7 @@ export default function DeveloperConsole() {
     maintenanceLoading, setMaintenanceLoading,
     maintenanceSaving, setMaintenanceSaving,
     editMaintenanceMsg, setEditMaintenanceMsg,
+    editUserMaintenanceMsg, setEditUserMaintenanceMsg,
     wsChannel, setWsChannel,
     wsEvent, setWsEvent,
     wsPayload, setWsPayload,
@@ -134,6 +135,8 @@ export default function DeveloperConsole() {
     fetchServerErrorLog,
     confirmClearServerErrorLog,
     handleToggleMaintenance,
+    handleSetUserRouteRestriction,
+    handleRemoveUserRouteRestriction,
     fetchMaintenanceStatus,
     handleDownloadSnapshot,
     handleDownloadFullSystemSnapshot,
@@ -187,10 +190,17 @@ export default function DeveloperConsole() {
           telemetry={telemetry}
           copySpecs={copySpecs}
           currentUser={currentUser}
+          users={users}
+          usersLoading={usersLoading}
+          fetchUsers={fetchUsers}
           maintenanceConfig={maintenanceConfig}
           handleToggleMaintenance={handleToggleMaintenance}
+          handleSetUserRouteRestriction={handleSetUserRouteRestriction}
+          handleRemoveUserRouteRestriction={handleRemoveUserRouteRestriction}
           editMaintenanceMsg={editMaintenanceMsg}
           setEditMaintenanceMsg={setEditMaintenanceMsg}
+          editUserMaintenanceMsg={editUserMaintenanceMsg}
+          setEditUserMaintenanceMsg={setEditUserMaintenanceMsg}
           pusherStatus={pusherStatus}
           maintenanceSaving={maintenanceSaving}
         />

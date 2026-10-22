@@ -6,6 +6,7 @@ import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
 import { toast } from "react-toastify";
 import useUsers from "../../../utils/Hooks/useUsers";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 const Input = ({ label, name, value, onChange }) => (
   <div className="flex flex-col gap-1">
     <label className="text-xs text-gray-400">{label}</label>
@@ -33,21 +34,23 @@ const CustomerCardDetails = () => {
     (c) => String(c.id) === String(cardId),
   );
   const [isEditOpen, setIsEditOpen] = useState(false);
-const [editForm, setEditForm] = useState({});
-const handleEditCard = (card) => {
-  setEditForm({
-    ...card,
-    remarks: card.remarks || ""
-  });
-  setIsEditOpen(true);
-};
-const handleChange = (e) => {
-  const { name, value } = e.target;
-  setEditForm((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
+  const [luxuryToast, setLuxuryToast] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const handleEditCard = (card) => {
+    setEditForm({
+      ...card,
+      remarks: card.remarks || "",
+      is_daily: Number(card.is_daily) === 1 ? 1 : 0
+    });
+    setIsEditOpen(true);
+  };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
   const officialStaff = useMemo(() => {
     const allowedRoles = ["admin", "manager", "staff", "developer"];
 
@@ -65,47 +68,58 @@ const handleChange = (e) => {
       return allowedRoles.includes(String(role).toLowerCase());
     });
   }, [users]);
-const handleUpdateCard = async (e) => {
-  e.preventDefault();
+  const handleUpdateCard = async (e) => {
+    e.preventDefault();
 
-  try {
-    const formData = new FormData();
+    try {
+      const formData = new FormData();
 
-    // ✅ ONLY required fields
-    formData.append("id", editForm.id);
-    formData.append("card_number", editForm.card_number);
-    formData.append("user_id", editForm.user_id);
-    formData.append("reference_user_id", editForm.reference_user_id);
-    formData.append("product_name", editForm.product_name);
-    formData.append("mrp", editForm.mrp);
-    formData.append("purchase_price", editForm.purchase_price);
-    formData.append("additional_cost", editForm.additional_cost);
-    formData.append("sale_price", editForm.sale_price);
-    formData.append("down_payment", editForm.down_payment);
-    formData.append("installment_count", editForm.installment_count);
-    formData.append("per_installment_amount", editForm.per_installment_amount);
-    formData.append("delivery_date", editForm.delivery_date);
-    formData.append("first_installment_date", editForm.first_installment_date);
-    formData.append("status", editForm.status);
-    formData.append("remarks", editForm.remarks);
+      // ✅ ONLY required fields
+      formData.append("id", editForm.id);
+      formData.append("card_number", editForm.card_number);
+      formData.append("user_id", editForm.user_id);
+      formData.append("reference_user_id", editForm.reference_user_id);
+      formData.append("product_name", editForm.product_name);
+      formData.append("mrp", editForm.mrp);
+      formData.append("purchase_price", editForm.purchase_price);
+      formData.append("additional_cost", editForm.additional_cost);
+      formData.append("sale_price", editForm.sale_price);
+      formData.append("down_payment", editForm.down_payment);
+      formData.append("installment_count", editForm.installment_count);
+      formData.append("per_installment_amount", editForm.per_installment_amount);
+      formData.append("delivery_date", editForm.delivery_date);
+      formData.append("first_installment_date", editForm.first_installment_date);
+      formData.append("status", editForm.status);
+      formData.append("remarks", editForm.remarks);
+      formData.append("is_daily", editForm.is_daily ? 1 : 0);
 
-    const res = await fetch(
-      `${import.meta.env.VITE_LOCALHOST_KEY}/customers/update_installment_card.php`,
-      {
-        method: "POST",
-        body: formData,
+      const res = await fetch(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/customers/update_installment_card.php`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await res.json();
+
+      if (!result.success) {
+        toast.error(result.message || "Update failed");
+        return;
       }
-    );
 
-    const result = await res.json();
-
-    if (!result.success) {
-      toast.error(result.message || "Update failed");
-      return;
-    }
-
-    toast.success("Card Updated ✅");
-    setIsEditOpen(false);
+      if (editForm.status === "Fully Paid") {
+        setLuxuryToast({
+          title: "সম্পূর্ণ পরিশোধিত! 🎉",
+          message: `কার্ড #${editForm.card_number || editForm.id} সম্পূর্ণ পরিশোধিত (Fully Paid) হিসেবে চিহ্নিত করা হয়েছে।`,
+          tag: `কার্ড #${editForm.card_number || editForm.id}`,
+          amount: editForm.sale_price,
+          type: "success",
+        });
+      } else {
+        toast.success("Card Updated ✅");
+      }
+      setIsEditOpen(false);
 
   } catch (err) {
 
@@ -151,7 +165,12 @@ const input= "w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 te
               </p>
             </div>
 
-           <div className="space-x-3">
+           <div className="space-x-3 flex items-center">
+             {Number(card.is_daily) === 1 && (
+               <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
+                 ⚡ দৈনিক কিস্তি (Daily)
+               </span>
+             )}
              <span
               className="text-xs px-3 py-1 rounded-full"
               style={{
@@ -418,6 +437,19 @@ onClick={()=>handleEditCard(card)}
               </select>
             </div>
 
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-cyan-300 font-semibold">কিস্তির ধরণ (Card Type)</label>
+              <select
+                name="is_daily"
+                value={Number(editForm.is_daily) === 1 ? 1 : 0}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, is_daily: Number(e.target.value) }))}
+                className={`${input} border-cyan-500/40`}
+              >
+                <option value={0}>সাধারণ কিস্তি (Regular)</option>
+                <option value={1}>⚡ দৈনিক কিস্তি (Daily Installment)</option>
+              </select>
+            </div>
+
           </div>
         </div>
 
@@ -455,6 +487,11 @@ onClick={()=>handleEditCard(card)}
     </div>
   </div>
 )}
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={5000}
+      />
     </div>
   );
 };

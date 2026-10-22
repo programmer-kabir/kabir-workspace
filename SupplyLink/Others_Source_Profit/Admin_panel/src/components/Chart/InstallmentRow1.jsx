@@ -317,13 +317,17 @@ export const InstallmentRow = ({
       const data = await res.json();
 
       if (data.success) {
-        toast.success(
-          `কার্ড ${card.id} সফলভাবে সম্পূর্ণ পরিশোধ (Fully Paid) হিসেবে আপডেট করা হয়েছে।`,
-        );
-
-        setTimeout(() => {
-          navigate("/customers/installment_cards");
-        }, 200);
+        navigate("/customers/installment_cards", {
+          state: {
+            luxuryToast: {
+              title: "সম্পূর্ণ পরিশোধিত! 🎉",
+              message: `কার্ড #${card.card_number || card.id} সম্পূর্ণ পরিশোধিত (Fully Paid) হিসেবে চিহ্নিত করা হয়েছে।`,
+              tag: `কার্ড #${card.card_number || card.id}`,
+              amount: card.sale_price || card.total_due_amount,
+              type: "success",
+            },
+          },
+        });
       }
     } catch (err) {
       toast.error("কার্ড আপডেট করা যায়নি");

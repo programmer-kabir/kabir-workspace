@@ -43,6 +43,7 @@ $sql = "
         ic.description,
         ic.memo,
         ic.remarks,
+        ic.is_daily,
         ic.reference_user_id,
         ic.created_at
     FROM installment_cards ic
@@ -68,6 +69,7 @@ while ($row = $result->fetch_assoc()) {
     $row["user_id"]               = (int)$row["user_id"];
     $row["supplier_id"]           = (int)$row["supplier_id"];
     $row["installment_count"]     = (int)$row["installment_count"];
+    $row["is_daily"]              = (int)($row["is_daily"] ?? 0);
 
     $row["mrp"]                   = (float)$row["mrp"];
     $row["purchase_price"]        = (float)$row["purchase_price"];

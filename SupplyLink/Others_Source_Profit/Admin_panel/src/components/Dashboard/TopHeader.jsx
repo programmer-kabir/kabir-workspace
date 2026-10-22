@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { FiMenu, FiBell } from "react-icons/fi";
 import { useAuth } from "../../Provider/AuthProvider";
 import useUsers from "../../utils/Hooks/useUsers";
+import useInstallmentNotifications from "../../utils/Hooks/Customers/useInstallmentNotifications";
+import NotificationDropdown from "./NotificationDropdown";
 
 const TopHeader = ({ onMenuClick }) => {
   const { user } = useAuth() || {};
@@ -11,9 +13,28 @@ const TopHeader = ({ onMenuClick }) => {
   const userRole =
     targetRoles?.find((role) => user?.role?.includes(role)) || "Staff";
 
+  // Check if current user is Admin or Developer
+  const isAdminOrDev = ["admin", "developer"].some((r) =>
+    user?.role?.includes(r)
+  );
+
+  const {
+    notifications,
+    unreadCount,
+    pendingRequests,
+    pendingCount,
+    refetch,
+    markAsRead,
+    markAllAsRead,
+  } = useInstallmentNotifications(currentUser || user, userRole);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Badge count: pendingCount for admin/dev, unreadCount for staff/manager
+  const badgeCount = isAdminOrDev ? pendingCount : unreadCount;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#060a14]/80 backdrop-blur-xl print:hidden transition-all duration-200">
+    <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#060a14]/80 backdrop-blur-xl print:hidden transition-all duration-200">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
         {/* Left side: Mobile hamburger & desktop system status */}
         <div className="flex items-center gap-3">
@@ -36,14 +57,41 @@ const TopHeader = ({ onMenuClick }) => {
 
         {/* Right side: Notifications & User profile pill */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <button
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-slate-300 transition hover:bg-white/10 hover:text-white"
-            aria-label="Notifications"
-          >
-            <FiBell className="h-4 w-4" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-[#060a14]" />
-          </button>
+          {/* Bell Icon & Notification Dropdown Container */}
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none cursor-pointer"
+              aria-label="Notifications"
+            >
+              <FiBell className="h-4 w-4" />
+              {badgeCount > 0 ? (
+                <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-lg ring-2 ring-[#060a14] animate-pulse">
+                  {badgeCount}
+                </span>
+              ) : unreadCount > 0 ? (
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-[#060a14]" />
+              ) : (
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-slate-600 ring-2 ring-[#060a14]" />
+              )}
+            </button>
 
+            {/* Real Header Notification Dropdown directly below Bell Icon */}
+            <NotificationDropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              notifications={notifications}
+              unreadCount={unreadCount}
+              pendingCount={pendingCount}
+              onRefresh={refetch}
+              markAsRead={markAsRead}
+              markAllAsRead={markAllAsRead}
+              isAdminOrDev={isAdminOrDev}
+              userRole={userRole}
+            />
+          </div>
+
+          {/* User Profile Pill */}
           <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] py-1.5 pl-3 pr-2 transition hover:border-white/15">
             <div className="text-right hidden sm:block">
               <div className="text-xs font-semibold text-white tracking-tight">

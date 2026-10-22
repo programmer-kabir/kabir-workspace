@@ -13,7 +13,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>
       <AuthProvider>
-        <ToastContainer />
+        <ToastContainer theme="dark" position="top-right" autoClose={3000} />
 
         <RouterProvider router={routes} />
       </AuthProvider>

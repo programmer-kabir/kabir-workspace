@@ -38,8 +38,9 @@ try {
         ? (int) $_POST['reference_user_id']
         : null;
 
-    $status  = $_POST['status'] ?? 'Running';
-    $remarks = $_POST['remarks'] ?? null;
+    $status   = $_POST['status'] ?? 'Running';
+    $remarks  = $_POST['remarks'] ?? null;
+    $is_daily = isset($_POST['is_daily']) ? (int)$_POST['is_daily'] : (strtolower(trim($remarks ?? '')) === 'daily' ? 1 : 0);
 
     /* ================= VALIDATION ================= */
     if ($id <= 0) {
@@ -127,12 +128,13 @@ try {
             supplier_id = ?,
             reference_user_id = ?,
             status = ?,
-            remarks = ?
+            remarks = ?,
+            is_daily = ?
         WHERE id = ?
     ");
 
     $stmt->bind_param(
-        "sisddddsdddiddssiissi",
+        "sisddddsdddiddssiissii",
         $card_number,
         $user_id,
         $product_name,
@@ -153,6 +155,7 @@ try {
         $reference_user_id,
         $status,
         $remarks,
+        $is_daily,
         $id
     );
 

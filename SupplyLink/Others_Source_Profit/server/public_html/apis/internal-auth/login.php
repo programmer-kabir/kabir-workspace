@@ -30,9 +30,9 @@ if (!$id || !$password) {
 
 /* 🔥 STEP 1: USER + ALL ROLES FETCH (BY ID OR MOBILE) */
 $stmt = $mysqli->prepare("
-    SELECT u.id, u.password, r.role
+    SELECT u.id, u.name, u.photo, u.mobile, u.password, r.role
     FROM users u
-    JOIN user_roles r ON r.user_id = u.id
+    LEFT JOIN user_roles r ON r.user_id = u.id
     WHERE u.id = ? OR u.mobile = ?
 ");
 $idStr = trim((string)$id);
@@ -67,24 +67,31 @@ if ($password !== $userData['password']) {
 /* 🔥 STEP 4: SESSION SAVE (ARRAY ROLE) */
 $_SESSION['user'] = [
     "id" => (int)$userData['id'],
+    "name" => $userData['name'] ?? null,
+    "photo" => $userData['photo'] ?? null,
+    "mobile" => $userData['mobile'] ?? null,
     "role" => $roles // ✅ multiple role array
 ];
 
 /* 🔥 ACTIVITY LOG */
-require_once __DIR__ . "/../helpers/log_activity.php";
+try {
+    require_once __DIR__ . "/../helpers/log_activity.php";
 
-logActivity(
-    "auth",
-    "login",
-    "User logged in",
-    "user",
-    (int)$userData['id'],
-    null,
-    [
-        "login_id" => (int)$id,
-        "roles" => $roles
-    ]
-);
+    logActivity(
+        "auth",
+        "login",
+        "User logged in",
+        "user",
+        (int)$userData['id'],
+        null,
+        [
+            "login_id" => (int)$id,
+            "roles" => $roles
+        ]
+    );
+} catch (Throwable $e) {
+    error_log("Login activity logging failed: " . $e->getMessage());
+}
 
 /* 🔥 RESPONSE */
 echo json_encode([

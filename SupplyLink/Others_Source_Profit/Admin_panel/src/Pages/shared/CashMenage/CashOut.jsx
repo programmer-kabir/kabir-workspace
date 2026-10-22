@@ -3,6 +3,8 @@ import useCashReports from "../../../utils/Hooks/cash/useCashReports";
 import Loader from "../../../components/Loader/Loader";
 import CashStateCard from "../../../components/cash/CashStateCard";
 import CashOutModal from "../../../components/cash/CashOutModal";
+import CashEditModal from "../../../components/cash/CashEditModal";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 import {
   ArrowUpRight,
   Filter,
@@ -16,11 +18,14 @@ import {
   Clock,
   ArrowRight,
   Banknote,
+  Edit3,
 } from "lucide-react";
 
 const CashOut = () => {
-  const { CashReports, isCashReportsError, isCashReportsLoading } =
+  const { CashReports, isCashReportsError, isCashReportsLoading, refetch } =
     useCashReports();
+  const [editingCash, setEditingCash] = useState(null);
+  const [luxuryToast, setLuxuryToast] = useState(null);
   const [selectedDate, setSelectedDate] = React.useState("");
   const [selectedMonth, setSelectedMonth] = React.useState("");
   const [selectedYear, setSelectedYear] = React.useState("");
@@ -631,13 +636,14 @@ const CashOut = () => {
                 <th className="px-5 py-3.5 text-right">টাকার পরিমাণ</th>
                 <th className="px-5 py-3.5">মন্তব্য (Remarks)</th>
                 <th className="px-5 py-3.5 text-center">তারিখ</th>
+                <th className="px-5 py-3.5 text-center">অ্যাকশন</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-white/[0.06]">
               {FilteredCashOut.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center">
+                  <td colSpan={7} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-center">
                       <CheckCircle2 className="h-8 w-8 text-rose-400 mb-2 opacity-80" />
                       <p className="text-sm font-medium text-slate-300">কোনো ক্যাশ আউট লেনদেন পাওয়া যায়নি</p>
@@ -646,55 +652,77 @@ const CashOut = () => {
                   </td>
                 </tr>
               ) : (
-                FilteredCashOut.map((cash, index) => (
-                  <tr
-                    key={cash.id}
-                    className="transition-colors hover:bg-white/[0.03]"
-                  >
-                    <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
-                      {FilteredCashOut.length - index}
-                    </td>
+                FilteredCashOut.map((cash, index) => {
+                  const hasPendingEdit = !!cash.pending_edit_id;
 
-                    <td className="px-5 py-3.5 font-medium text-white">
-                      {cash.purpose || "N/A"}
-                    </td>
+                  return (
+                    <tr
+                      key={cash.id}
+                      className="transition-colors hover:bg-white/[0.03]"
+                    >
+                      <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
+                        {FilteredCashOut.length - index}
+                      </td>
 
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${categoryStyle(
-                          cash.category
-                        )}`}
-                      >
-                        {categoryName(cash.category)}
-                      </span>
-                    </td>
+                      <td className="px-5 py-3.5 font-medium text-white">
+                        <div className="flex flex-col">
+                          <span>{cash.purpose || "N/A"}</span>
+                          {hasPendingEdit && (
+                            <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                              ⏳ সংশোধনাধীন (প্রস্তাবিত: ৳{Number(cash.pending_new_amount || 0).toLocaleString()})
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
-                    <td className="px-5 py-3.5 text-right">
-                      <span className="font-mono text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-full">
-                        ৳ {Number(cash.amount).toLocaleString()}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-3.5 max-w-[200px]">
-                      {cash.remarks ? (
-                        <p
-                          onClick={() => setSelectedRemark(cash.remarks)}
-                          className="truncate text-xs text-slate-300 hover:text-indigo-400 cursor-pointer transition flex items-center gap-1"
-                          title="বিস্তারিত দেখতে ক্লিক করুন"
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${categoryStyle(
+                            cash.category
+                          )}`}
                         >
-                          <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
-                          <span className="truncate">{cash.remarks}</span>
-                        </p>
-                      ) : (
-                        <span className="text-slate-600 text-xs">—</span>
-                      )}
-                    </td>
+                          {categoryName(cash.category)}
+                        </span>
+                      </td>
 
-                    <td className="px-5 py-3.5 text-center font-mono text-xs text-slate-400">
-                      {cash.date}
-                    </td>
-                  </tr>
-                ))
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="font-mono text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-full">
+                          ৳ {Number(cash.amount).toLocaleString()}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-3.5 max-w-[200px]">
+                        {cash.remarks ? (
+                          <p
+                            onClick={() => setSelectedRemark(cash.remarks)}
+                            className="truncate text-xs text-slate-300 hover:text-indigo-400 cursor-pointer transition flex items-center gap-1"
+                            title="বিস্তারিত দেখতে ক্লিক করুন"
+                          >
+                            <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
+                            <span className="truncate">{cash.remarks}</span>
+                          </p>
+                        ) : (
+                          <span className="text-slate-600 text-xs">—</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-center font-mono text-xs text-slate-400">
+                        {cash.date}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-center">
+                        <button
+                          onClick={() => setEditingCash(cash)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-300 cursor-pointer"
+                          title="সংশোধনের অনুরোধ পাঠান"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          <span>সংশোধন</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -727,7 +755,27 @@ const CashOut = () => {
       <CashOutModal
         openCashOutModal={openCashOutModal}
         onClose={() => setOpenCashOutModal(false)}
+        onSuccess={(toastPayload) => {
+          refetch();
+          if (toastPayload) {
+            setLuxuryToast(toastPayload);
+          }
+        }}
       />
+
+      <CashEditModal
+        isOpen={!!editingCash}
+        cashItem={editingCash}
+        onClose={() => setEditingCash(null)}
+        onSuccess={(toastPayload) => {
+          refetch();
+          if (toastPayload) {
+            setLuxuryToast(toastPayload);
+          }
+        }}
+      />
+
+      <LuxuryToast toast={luxuryToast} onClose={() => setLuxuryToast(null)} duration={4500} />
     </div>
   );
 };

@@ -9,7 +9,7 @@ import {
 import { MdCategory, MdNotes } from "react-icons/md";
 import { toast } from "react-toastify";
 
-const CashInModal = ({ openCashInModal, onClose }) => {
+const CashInModal = ({ openCashInModal, isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     date: "",
     source: "",
@@ -27,7 +27,8 @@ const CashInModal = ({ openCashInModal, onClose }) => {
     }));
   }, []);
 
-  if (!openCashInModal) return null;
+  const isModalOpen = openCashInModal || isOpen;
+  if (!isModalOpen) return null;
 
   // handle input change
   const handleChange = (e) => {
@@ -60,7 +61,14 @@ const CashInModal = ({ openCashInModal, onClose }) => {
         toast.error(res.data?.message || "Failed!");
         return;
       }
-        toast.success("Cash In Success ✅");
+
+      const toastPayload = {
+        title: "ক্যাশ ইন সফল হয়েছে! 💰",
+        message: `${formData.source ? `${formData.source} থেকে ` : ""}৳ ${Number(formData.amount).toLocaleString()} ক্যাশ ইন সফলভাবে রেকর্ড হয়েছে।`,
+        tag: formData.category || "Cash In",
+        amount: formData.amount,
+        type: "success",
+      };
 
       // reset form
       setFormData({
@@ -72,7 +80,11 @@ const CashInModal = ({ openCashInModal, onClose }) => {
         remarks: "",
       });
       onClose();
-      
+      if (onSuccess) {
+        onSuccess(toastPayload);
+      } else {
+        toast.success("Cash In Success ✅");
+      }
     } catch (err) {
       toast.error("Error submitting!");
     }

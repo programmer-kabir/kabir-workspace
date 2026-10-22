@@ -15,11 +15,12 @@ import {
 } from "react-icons/fa";
 import { RiBankCardLine } from "react-icons/ri";
 import useCustomerInstallmentPayments from "../../../utils/Hooks/Customers/useCustomerInstallmentPayments";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Loader from "../../../components/Loader/Loader";
 import NoDataFound from "../../../components/NoData/NoDataFound";
 import { useAuth } from "../../../Provider/AuthProvider";
 import BackButton from "../../../components/BackButton/BackButton";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 
 const STATUS_STYLES = {
   Running: "bg-blue-500/15 text-blue-300 border-blue-500/30",
@@ -29,8 +30,17 @@ const STATUS_STYLES = {
 
 const InstallmentCards = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [luxuryToast, setLuxuryToast] = useState(null);
+
+  React.useEffect(() => {
+    if (location.state?.luxuryToast) {
+      setLuxuryToast(location.state.luxuryToast);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const {
     isCustomerInstallmentsCardsLoading,
@@ -323,7 +333,11 @@ const InstallmentCards = () => {
               <div className="mt-4 pt-3 border-t border-white/[0.08]">
                 {currentUser?.role !== "staff" && item.status !== "Fully Paid" ? (
                   <Link
-                    to={`/customer/create_installment_chart?cardId=${item.id}`}
+                    to={
+                      paymentCardMap[String(item.id)]
+                        ? `/customer/update_installment_chart?cardId=${item.id}`
+                        : `/customer/create_installment_chart?cardId=${item.id}`
+                    }
                     className="block w-full"
                   >
                     <button
@@ -362,6 +376,9 @@ const InstallmentCards = () => {
           ))}
         </div>
       )}
+
+      {/* Luxury Floating Toast */}
+      <LuxuryToast toast={luxuryToast} onClose={() => setLuxuryToast(null)} duration={5000} />
     </div>
   );
 };

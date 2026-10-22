@@ -41,14 +41,28 @@ export const AuthProvider = ({ children }) => {
         },
       );
 
-      const data = await res.json();
-      if (data?.user) {
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        data = null;
+      }
+
+      if (res.ok && data?.user) {
         setUser(data.user);
         return { success: true };
       }
-      return { success: false };
+
+      return {
+        success: false,
+        message:
+          data?.message ||
+          (res.status >= 500
+            ? "Server Error (500) - Please check server logs"
+            : "Invalid ID or Password"),
+      };
     } catch (err) {
-      return { success: false };
+      return { success: false, message: "Network error or server unreachable" };
     } finally {
       setLoading(false);
     }

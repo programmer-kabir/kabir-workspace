@@ -86,6 +86,9 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
     // profit = (purchase + additional) - sale
     $profit = $cost_price - $sale_price;
 
+    $remarks  = isset($_POST['remarks']) ? trim($_POST['remarks']) : null;
+    $is_daily = isset($_POST['is_daily']) ? (int)$_POST['is_daily'] : (strtolower(trim($remarks ?? '')) === 'daily' ? 1 : 0);
+
     /* ================= INSERT ================= */
     $stmt = $mysqli->prepare("
         INSERT INTO installment_cards (
@@ -106,16 +109,18 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
             delivery_date,
             first_installment_date,
             supplier_id,
-               reference_user_id,
+            reference_user_id,
+            remarks,
+            is_daily,
             status,
             created_at
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, 'Running', NOW()
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Running', NOW()
         )
     ");
 
     $stmt->bind_param(
-        "sisddddsdddiddssii",
+        "sisddddsdddiddssiisi",
         $card_number,            // s
         $user_id,                // i
         $product_name,           // s
@@ -132,9 +137,10 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
         $profit,                 // d
         $delivery_date,          // s
         $first_installment_date, // s
-        $supplier_id,             // i
-            $reference_user_id       // i ✅ NEW
-
+        $supplier_id,            // i
+        $reference_user_id,      // i
+        $remarks,                // s
+        $is_daily                // i
     );
 
     $stmt->execute();

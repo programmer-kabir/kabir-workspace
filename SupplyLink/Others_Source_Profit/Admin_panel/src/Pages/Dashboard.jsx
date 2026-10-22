@@ -12,6 +12,9 @@ import StateCardCopy from "../components/Dashboard/StateCardCopy";
 import DashboardReport from "../components/Dashboard/DashboardReport";
 import { Link } from "react-router-dom";
 import { BarChart3, FileText, ArrowRight } from "lucide-react";
+import { FaGoogleDrive } from "react-icons/fa";
+import axios from "axios";
+import LuxuryToast from "../components/Modal/LuxuryToast";
 
 const Dashboard = () => {
   const [filterType, setFilterType] = useState("daily");
@@ -21,6 +24,48 @@ const Dashboard = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activePreset, setActivePreset] = useState("");
+  const [isDriveSaving, setIsDriveSaving] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
+
+  const handleSaveToDrive = async () => {
+    try {
+      setIsDriveSaving(true);
+      const res = await axios.post(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/cash/save_daily_report_drive.php`
+      );
+
+      if (res.data?.success) {
+        setLuxuryToast({
+          title: "গুগল ড্রাইভে সংরক্ষিত! 📁",
+          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে Google Drive-এ সেভ হয়েছে (${res.data.file_name})।`,
+          tag: "Google Drive Sync",
+          amount: res.data.summary?.todayNet,
+          type: "success",
+        });
+      } else {
+        setLuxuryToast({
+          title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+          message:
+            res.data?.error ||
+            "ড্রাইভে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
+          tag: "Drive Error",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      setLuxuryToast({
+        title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          "ড্রাইভে ফাইল সেভ করতে সমস্যা হয়েছে।",
+        tag: "Drive Error",
+        type: "error",
+      });
+    } finally {
+      setIsDriveSaving(false);
+    }
+  };
 
   const {
     customerInstallmentCards,
@@ -194,13 +239,34 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <Link to="/today-report">
-            <button className="btn-primary self-start sm:self-auto">
-              <FileText className="h-4 w-4" />
-              <span>আজকের রিপোর্ট (Today Report)</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleSaveToDrive}
+              disabled={isDriveSaving}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white shadow-lg shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isDriveSaving ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>ড্রাইভে সেভ হচ্ছে...</span>
+                </>
+              ) : (
+                <>
+                  <FaGoogleDrive className="text-sm text-emerald-200" />
+                  <span>Save to Google Drive</span>
+                </>
+              )}
             </button>
-          </Link>
+
+            <Link to="/today-report">
+              <button className="btn-primary">
+                <FileText className="h-4 w-4" />
+                <span>আজকের রিপোর্ট (Today Report)</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Filter Toolbar */}
@@ -261,6 +327,13 @@ const Dashboard = () => {
 
       {/* 🔹 Upcoming Maturity Cards Table */}
       <NextClosedCardProfit />
+
+      {/* Luxury Toast */}
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={5000}
+      />
     </div>
   );
 };

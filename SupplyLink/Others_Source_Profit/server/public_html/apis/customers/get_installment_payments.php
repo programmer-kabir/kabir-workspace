@@ -35,7 +35,10 @@ $sql = "
         ip.signature,
         ip.status,
         ip.created_at,
-        ip.collected_by
+        ip.collected_by,
+        ip.has_pending_edit,
+        (SELECT COUNT(*) FROM installment_payment_edits ipe WHERE ipe.payment_id = ip.id) AS edit_count,
+        (SELECT MAX(created_at) FROM installment_payment_edits ipe WHERE ipe.payment_id = ip.id) AS last_edited_at
     FROM installment_payments ip
     LEFT JOIN installment_cards ic ON ic.id = ip.card_id
     
@@ -45,6 +48,7 @@ $sql = "
     )
     
     ORDER BY ip.id ASC
+
 ";
 
 $result = $mysqli->query($sql);
@@ -69,6 +73,8 @@ while ($row = $result->fetch_assoc()) {
     $row["due_amount"]        = (float)$row["due_amount"];
     $row["principal_amount"] = (float)$row["principal_amount"];
     $row["profit_amount"]    = (float)$row["profit_amount"];
+    $row["has_pending_edit"] = (int)($row["has_pending_edit"] ?? 0);
+    $row["edit_count"]       = (int)($row["edit_count"] ?? 0);
 
     $data[] = $row;
 }

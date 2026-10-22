@@ -42,7 +42,11 @@ $query = "
         
         -- Financial calculations
         COALESCE(c.total_collected, 0) AS total_collected,
-        COALESCE(c.collections_count, 0) AS collections_count
+        COALESCE(c.collections_count, 0) AS collections_count,
+
+        -- Pending Edit Request
+        (SELECT e.id FROM other_asset_edits e WHERE e.asset_id = a.id AND e.status = 'pending' LIMIT 1) AS pending_edit_id,
+        (SELECT e.new_purchase_price FROM other_asset_edits e WHERE e.asset_id = a.id AND e.status = 'pending' LIMIT 1) AS pending_new_price
 
     FROM other_assets a
     

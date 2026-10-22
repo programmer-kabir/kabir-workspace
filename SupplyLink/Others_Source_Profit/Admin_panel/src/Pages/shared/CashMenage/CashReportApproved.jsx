@@ -4,6 +4,7 @@ import Loader from "../../../components/Loader/Loader";
 import { useAuth } from "../../../Provider/AuthProvider";
 import axios from "axios";
 import { toast } from "react-toastify";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 import {
   ShieldCheck,
   Clock,
@@ -34,6 +35,7 @@ const CashReportApproved = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   const reports = useMemo(() => {
     if (Array.isArray(CashReports)) return CashReports;
@@ -112,7 +114,13 @@ const CashReportApproved = () => {
       );
 
       if (result.data.success) {
-        toast.success(result.data.message || "লেনদেন সফলভাবে অনুমোদিত হয়েছে");
+        setLuxuryToast({
+          title: "ক্যাশ লেনদেন অনুমোদিত! ✅",
+          message: `${cash.type === "in" ? "ক্যাশ ইন" : "ক্যাশ আউট"} (${cash.source || cash.purpose || "অনুমোদন"}) বাবদ ৳ ${Number(cash.amount || 0).toLocaleString()} সফলভাবে অনুমোদিত হয়েছে।`,
+          tag: cash.category ? `${cash.type === "in" ? "ইন" : "আউট"}: ${cash.category}` : (cash.type === "in" ? "Cash In" : "Cash Out"),
+          amount: cash.amount,
+          type: "success",
+        });
         setRejectModal(false);
         setRejectReason("");
         setSelectedCash(null);
@@ -145,7 +153,13 @@ const CashReportApproved = () => {
       );
 
       if (result.data.success) {
-        toast.success(result.data.message || "লেনদেন বাতিল করা হয়েছে");
+        setLuxuryToast({
+          title: "ক্যাশ লেনদেন বাতিল! 🚫",
+          message: `${selectedCash.type === "in" ? "ক্যাশ ইন" : "ক্যাশ আউট"} (${selectedCash.source || selectedCash.purpose || "লেনদেন"}) বাবদ ৳ ${Number(selectedCash.amount || 0).toLocaleString()} বাতিল করা হয়েছে। কারণ: ${rejectReason.trim()}`,
+          tag: "লেনদেন বাতিল",
+          amount: selectedCash.amount,
+          type: "error",
+        });
         setRejectModal(false);
         setRejectReason("");
         setSelectedCash(null);
@@ -783,6 +797,12 @@ const CashReportApproved = () => {
           </div>
         </div>
       )}
+
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={4500}
+      />
     </div>
   );
 };

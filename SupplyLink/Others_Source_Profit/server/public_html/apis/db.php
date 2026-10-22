@@ -4,9 +4,9 @@ define('DEBUG', true); // ডেবাগিং: লোকাল/টেস্ট
 date_default_timezone_set('Asia/Dhaka');
 
 $DB_HOST = "localhost";       
-$DB_USER = 'u647959341_sl_user';
-$DB_PASS = '122333$upplyL';
-$DB_NAME = 'u647959341_sl_db';
+$DB_USER = "root";
+$DB_PASS = "";
+$DB_NAME = "u647959341_sl_app_db";
 
 $mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
 $mysqli->query("SET time_zone = '+06:00'");

@@ -73,6 +73,7 @@ import Account from "../Pages/shared/Account/Account";
 import MonthlyOverviewsTest from "../Pages/shared/Customers/MonthlyOverviewsTest";
 import OtherSourcesAssets from "../Pages/shared/OtherSourcesProfit/OtherSourcesAssets";
 import OtherSourcesCollections from "../Pages/shared/OtherSourcesProfit/OtherSourcesCollections";
+import ApprovalCenter from "../Pages/shared/ApprovalCenter/ApprovalCenter";
 
 const routes = createBrowserRouter([
   {
@@ -284,12 +285,24 @@ const routes = createBrowserRouter([
                 element: <InstallmentPayments />,
               },
               {
+                path: "/approval-center",
+                element: <ApprovalCenter />,
+              },
+              {
+                path: "/customers/installment_edit_requests",
+                element: <ApprovalCenter />,
+              },
+              {
                 path: "/customers/create_installment_cards",
                 element: <CreateInstallmentCards />,
               },
 
               {
                 path: "/customer/create_installment_chart",
+                element: <InstallmentChart />,
+              },
+              {
+                path: "/customer/update_installment_chart",
                 element: <InstallmentChart />,
               },
               {

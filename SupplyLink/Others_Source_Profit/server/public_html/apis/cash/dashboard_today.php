@@ -18,46 +18,46 @@ function sendJson($data) {
 $today = date("Y-m-d");
 
 // ==========================
-// ✅ Today Deposit (IN)
+// ✅ Today Deposit (IN) - Only Approved
 // ==========================
 $stmt = $mysqli->prepare("
     SELECT IFNULL(SUM(amount), 0) AS total 
     FROM cash 
-    WHERE type='in' AND date=?
+    WHERE type='in' AND date=? AND approval_status='approved'
 ");
 $stmt->bind_param("s", $today);
 $stmt->execute();
 $deposit = $stmt->get_result()->fetch_assoc()['total'];
 
 // ==========================
-// ✅ Today Withdraw (OUT)
+// ✅ Today Withdraw (OUT) - Only Approved
 // ==========================
 $stmt = $mysqli->prepare("
     SELECT IFNULL(SUM(amount), 0) AS total 
     FROM cash 
-    WHERE type='out' AND date=?
+    WHERE type='out' AND date=? AND approval_status='approved'
 ");
 $stmt->bind_param("s", $today);
 $stmt->execute();
 $withdraw = $stmt->get_result()->fetch_assoc()['total'];
 
 // ==========================
-// ✅ Total IN
+// ✅ Total IN - Only Approved
 // ==========================
 $res = $mysqli->query("
     SELECT IFNULL(SUM(amount), 0) AS total 
     FROM cash 
-    WHERE type='in'
+    WHERE type='in' AND approval_status='approved'
 ");
 $totalIn = $res->fetch_assoc()['total'];
 
 // ==========================
-// ✅ Total OUT
+// ✅ Total OUT - Only Approved
 // ==========================
 $res = $mysqli->query("
     SELECT IFNULL(SUM(amount), 0) AS total 
     FROM cash 
-    WHERE type='out'
+    WHERE type='out' AND approval_status='approved'
 ");
 $totalOut = $res->fetch_assoc()['total'];
 

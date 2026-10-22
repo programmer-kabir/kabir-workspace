@@ -30,9 +30,12 @@ import {
   FaCoins,
   FaBriefcase,
   FaFileContract,
+  FaEdit,
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
+import AssetEditModal from "../../../components/OtherSources/AssetEditModal";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
@@ -66,8 +69,16 @@ const OtherSourcesAssets = () => {
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAssetForEdit, setSelectedAssetForEdit] = useState(null);
+  const [luxuryToast, setLuxuryToast] = useState(null);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [selectedAssetForAgreement, setSelectedAssetForAgreement] = useState(null);
+
+  const handleOpenEditModal = (asset) => {
+    setSelectedAssetForEdit(asset);
+    setShowEditModal(true);
+  };
 
   // Dividend Modal (For Company Shares / Equity)
   const [showDividendModal, setShowDividendModal] = useState(false);
@@ -623,15 +634,22 @@ const OtherSourcesAssets = () => {
                         </div>
                       </div>
 
-                      <span
-                        className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
-                          asset.status === "sold"
-                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold"
-                            : "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold"
-                        }`}
-                      >
-                        {asset.status === "sold" ? "শেয়ার একজিট / বিক্রিত" : "শেয়ার হোল্ডিং (Equity)"}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
+                            asset.status === "sold"
+                              ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold"
+                              : "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold"
+                          }`}
+                        >
+                          {asset.status === "sold" ? "শেয়ার একজিট / বিক্রিত" : "শেয়ার হোল্ডিং (Equity)"}
+                        </span>
+                        {asset.pending_edit_id && (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                            ⏳ সংশোধনাধীন (৳{Number(asset.pending_new_price || 0).toLocaleString()})
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Investment & Shareholding Details */}
@@ -793,6 +811,15 @@ const OtherSourcesAssets = () => {
                         </button>
 
                         <button
+                          onClick={() => handleOpenEditModal(asset)}
+                          className="py-2 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                          title="শেয়ারের তথ্য ও বিনিয়োগ মূল্য সংশোধন"
+                        >
+                          <FaEdit size={11} />
+                          <span>সংশোধন</span>
+                        </button>
+
+                        <button
                           onClick={() => handleOpenSellModal(asset)}
                           className="py-2 px-3 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-purple-100 border border-purple-500/30 font-semibold text-xs flex items-center justify-center gap-1 transition cursor-pointer"
                           title="শেয়ার বিক্রি বা একজিট"
@@ -830,21 +857,28 @@ const OtherSourcesAssets = () => {
                       </div>
                     </div>
 
-                    <span
-                      className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
-                        asset.status === "sold"
-                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold"
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
+                          asset.status === "sold"
+                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold"
+                            : hasAgreement
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20"
+                        }`}
+                      >
+                        {asset.status === "sold"
+                          ? "বিক্রিত (Sold)"
                           : hasAgreement
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20"
-                      }`}
-                    >
-                      {asset.status === "sold"
-                        ? "বিক্রিত (Sold)"
-                        : hasAgreement
-                        ? "ভাড়ায় চলছে (Rented)"
-                        : "ইন স্টক (In Stock)"}
-                    </span>
+                          ? "ভাড়ায় চলছে (Rented)"
+                          : "ইন স্টক (In Stock)"}
+                      </span>
+                      {asset.pending_edit_id && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                          ⏳ সংশোধনাধীন (৳{Number(asset.pending_new_price || 0).toLocaleString()})
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Purchase & Cash Out Info */}
@@ -994,8 +1028,17 @@ const OtherSourcesAssets = () => {
                       </button>
 
                       <button
+                        onClick={() => handleOpenEditModal(asset)}
+                        className="py-2 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        title="অ্যাসেটের তথ্য ও ক্রয়মূল্য সংশোধন"
+                      >
+                        <FaEdit size={11} />
+                        <span>সংশোধন</span>
+                      </button>
+
+                      <button
                         onClick={() => handleOpenTerminateModal(asset)}
-                        className="py-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        className="py-2 px-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
                         title="ভাড়া না দিলে চুক্তি বাতিল করে সম্পদ অফিসে ফেরত নিন (Repossess)"
                       >
                         <FaUndoAlt size={11} className="text-red-400" />
@@ -1004,7 +1047,7 @@ const OtherSourcesAssets = () => {
 
                       <button
                         onClick={() => navigate("/other-sources/collections")}
-                        className="py-2 px-3 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        className="py-2 px-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
                         title="চলতি মাসের কালেকশন দেখুন"
                       >
                         <FaReceipt size={12} />
@@ -1019,6 +1062,15 @@ const OtherSourcesAssets = () => {
                       >
                         <FaHandshake size={12} />
                         <span>ভাড়া দিন (চুক্তি)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenEditModal(asset)}
+                        className="py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                        title="অ্যাসেটের তথ্য ও ক্রয়মূল্য সংশোধন"
+                      >
+                        <FaEdit size={11} />
+                        <span>সংশোধন</span>
                       </button>
 
                       <button
@@ -2194,6 +2246,24 @@ const OtherSourcesAssets = () => {
           </div>
         </div>
       )}
+      {/* Asset Edit Request Modal */}
+      <AssetEditModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedAssetForEdit(null);
+        }}
+        asset={selectedAssetForEdit}
+        onSuccess={(toastPayload) => {
+          fetchAssets();
+          if (toastPayload) {
+            setLuxuryToast(toastPayload);
+          }
+        }}
+      />
+
+      {/* Luxury Floating Toast Notification */}
+      <LuxuryToast toast={luxuryToast} onClose={() => setLuxuryToast(null)} duration={4500} />
     </div>
   );
 };

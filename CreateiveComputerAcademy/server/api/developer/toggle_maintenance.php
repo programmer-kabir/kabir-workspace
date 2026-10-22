@@ -1,6 +1,6 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
+require_once dirname(__DIR__, 2) . '/config/cors.php';
+require_once dirname(__DIR__, 2) . '/config/database.php';
 require_once __DIR__ . '/developer_guard.php';
 
 $database = new Database();
@@ -48,6 +48,24 @@ if (isset($data['maintenance_message']) && !empty(trim($data['maintenance_messag
     $config['maintenance_message'] = trim($data['maintenance_message']);
 }
 
+if (isset($data['user_maintenance_message']) && !empty(trim($data['user_maintenance_message']))) {
+    $config['user_maintenance_message'] = trim($data['user_maintenance_message']);
+}
+
+if (isset($data['allowed_user_ids'])) {
+    $ids = is_array($data['allowed_user_ids']) ? $data['allowed_user_ids'] : explode(',', (string)$data['allowed_user_ids']);
+    $config['allowed_user_ids'] = array_values(array_unique(array_filter(array_map('intval', $ids))));
+}
+
+if (isset($data['blocked_user_ids'])) {
+    $ids = is_array($data['blocked_user_ids']) ? $data['blocked_user_ids'] : explode(',', (string)$data['blocked_user_ids']);
+    $config['blocked_user_ids'] = array_values(array_unique(array_filter(array_map('intval', $ids))));
+}
+
+if (isset($data['user_restricted_routes'])) {
+    $config['user_restricted_routes'] = is_array($data['user_restricted_routes']) ? $data['user_restricted_routes'] : [];
+}
+
 $config['updated_at'] = date('Y-m-d H:i:s');
 $config['updated_by'] = $devUser['name'] ?? 'Developer';
 
@@ -61,6 +79,10 @@ try {
         $pusher->trigger('community-channel', 'system-maintenance-update', [
             'maintenance_enabled' => $config['maintenance_enabled'],
             'message' => $config['maintenance_message'],
+            'allowed_user_ids' => $config['allowed_user_ids'] ?? [],
+            'blocked_user_ids' => $config['blocked_user_ids'] ?? [],
+            'user_maintenance_message' => $config['user_maintenance_message'] ?? '',
+            'user_restricted_routes' => $config['user_restricted_routes'] ?? [],
             'updated_by' => $config['updated_by']
         ]);
     }

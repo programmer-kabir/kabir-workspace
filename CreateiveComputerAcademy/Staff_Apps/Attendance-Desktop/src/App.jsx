@@ -46,14 +46,36 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [maintenance, setMaintenance] = useState({ active: false, message: '', updated_by: '' });
+  const [maintenance, setMaintenance] = useState({
+    active: false,
+    message: '',
+    updated_by: '',
+    allowed_user_ids: [],
+    blocked_user_ids: [],
+    user_maintenance_message: '',
+    is_allowed_user: false,
+    is_blocked_user: false
+  });
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
 
-  const isPrivileged = Boolean(
+  const isDevOrAdmin = Boolean(
     (currentUser?.roles && currentUser.roles.some(r => ['developer', 'admin'].includes(r))) ||
     isImpersonating ||
     localStorage.getItem('cca_desktop_original_dev_session')
   );
+
+  const desktopUserId = currentUser?.id ? Number(currentUser.id) : null;
+  const isExplicitlyAllowed = Boolean(
+    desktopUserId && (maintenance.is_allowed_user || maintenance.allowed_user_ids?.map(Number).includes(desktopUserId))
+  );
+  const isTargetBlocked = Boolean(
+    !isDevOrAdmin &&
+    desktopUserId &&
+    (maintenance.is_blocked_user || maintenance.blocked_user_ids?.map(Number).includes(desktopUserId))
+  );
+
+  const isPrivileged = isDevOrAdmin || isExplicitlyAllowed;
+  const shouldBlockDesktop = isTargetBlocked || (!isDevOrAdmin && !isExplicitlyAllowed && maintenance.active);
 
   // Layout & Navigation State matching staff-frontend paths
   const [activeTab, setActiveTab] = useState('/');
@@ -73,7 +95,7 @@ function App() {
 
   // Check server maintenance status on app start / user change
   useEffect(() => {
-    if (isPrivileged || !currentUser) {
+    if (!currentUser) {
       setCheckingMaintenance(false);
       return;
     }
@@ -81,11 +103,17 @@ function App() {
     const checkMaintenance = async () => {
       try {
         const apiBase = (getApiBase() || '').replace(/\/+$/, '') + '/';
-        const res = await axios.get(`${apiBase}api/developer/get_public_maintenance.php`);
-        if (res.data?.status === 'success' && res.data.maintenance_enabled) {
+        const userIdParam = currentUser?.id ? `?user_id=${currentUser.id}` : '';
+        const res = await axios.get(`${apiBase}api/developer/get_public_maintenance.php${userIdParam}`);
+        if (res.data?.status === 'success') {
           setMaintenance({
-            active: true,
+            active: Boolean(res.data.maintenance_enabled),
             message: res.data.maintenance_message || 'সিস্টেম মেইনটেন্যান্স চলছে।',
+            user_maintenance_message: res.data.user_maintenance_message || '',
+            allowed_user_ids: Array.isArray(res.data.allowed_user_ids) ? res.data.allowed_user_ids : [],
+            blocked_user_ids: Array.isArray(res.data.blocked_user_ids) ? res.data.blocked_user_ids : [],
+            is_allowed_user: Boolean(res.data.is_allowed_user),
+            is_blocked_user: Boolean(res.data.is_blocked_user),
             updated_by: res.data.updated_by || 'Developer'
           });
         }
@@ -97,7 +125,7 @@ function App() {
     };
 
     checkMaintenance();
-  }, [currentUser, isPrivileged]);
+  }, [currentUser?.id]);
 
   // Toggle Compact vs Full Workstation Mode
   const handleToggleCompactMode = () => {
@@ -378,7 +406,7 @@ function App() {
 
   return (
     <div className="h-screen w-screen flex bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden select-none">
-      {currentUser && !isPrivileged && maintenance.active ? (
+      {currentUser && shouldBlockDesktop ? (
         <div className="flex-1 flex flex-col h-full bg-slate-950 text-white relative overflow-hidden">
           <TitleBar onLogout={logout} user={currentUser} />
           <div className="flex-1 flex items-center justify-center p-4 relative">
@@ -394,27 +422,31 @@ function App() {
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-black uppercase tracking-wider">
                   <FiClock className="w-3.5 h-3.5" />
-                  <span>System Downtime Active</span>
+                  <span>{isTargetBlocked && !maintenance.active ? 'User Workstation Maintenance' : 'System Downtime Active'}</span>
                 </div>
                 <h1 className="text-2xl font-black text-white tracking-tight">
-                  Maintenance Underway
+                  {isTargetBlocked && !maintenance.active ? 'Account Under Maintenance' : 'Maintenance Underway'}
                 </h1>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-300 text-xs leading-relaxed text-left space-y-2">
                 <div className="font-bold text-rose-400 text-[11px] uppercase tracking-wider flex items-center justify-between">
-                  <span>Announcement by Developer:</span>
+                  <span>{isTargetBlocked && !maintenance.active ? 'Notice for Your Workstation:' : 'Announcement by Developer:'}</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                    By Developer {maintenance.updated_by ? `(${maintenance.updated_by})` : ''}
+                    {isTargetBlocked && !maintenance.active ? `User #${desktopUserId || ''}` : `By ${maintenance.updated_by || 'Developer'}`}
                   </span>
                 </div>
                 <p className="whitespace-pre-line text-xs font-sans text-slate-200">
-                  {maintenance.message}
+                  {isTargetBlocked && !maintenance.active
+                    ? (maintenance.user_maintenance_message || 'আপনার অ্যাকাউন্টে ডাটাবেজ অপটিমাইজেশন ও মেইনটেনেন্স চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।')
+                    : (maintenance.message || 'সিস্টেম আপগ্রেড ও অপটিমাইজেশন চলছে।')}
                 </p>
               </div>
 
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                All workstation actions and automated cron workflows are safely paused. We will automatically restore access once the maintenance window is concluded.
+                {isTargetBlocked && !maintenance.active
+                  ? 'আপনার অ্যাকাউন্টের ডাটাবেজ ব্যাকআপ ও সিকিউরিটি সিঙ্ক চলছে। কিছুক্ষণের মধ্যে স্বয়ংক্রিয়ভাবে অ্যাক্সেস পুনরুদ্ধার হবে।'
+                  : 'All workstation actions and automated cron workflows are safely paused. We will automatically restore access once the maintenance window is concluded.'}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
