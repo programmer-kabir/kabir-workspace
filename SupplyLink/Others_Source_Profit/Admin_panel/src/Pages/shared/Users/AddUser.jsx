@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 import { ID_TYPES, ROLES } from "./UsersType";
 import {
   FaUser,
   FaPhone,
+  FaEnvelope,
   FaIdCard,
   FaMapMarkerAlt,
   FaLock,
@@ -42,6 +44,7 @@ const AddUser = () => {
   const [preview, setPreview] = useState("");
   const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
   const fileRef = useRef(null);
   const photoReg = register("photo");
 
@@ -64,9 +67,27 @@ const AddUser = () => {
 
     for (let field of requiredFields) {
       if (!data[field.key]) {
+        setLuxuryToast({
+          title: "তথ্য অসম্পূর্ণ ⚠️",
+          message: field.message,
+          tag: "ফর্ম ভ্যালিডেশন",
+          type: "warning",
+        });
         toast.error(field.message);
         return;
       }
+    }
+
+    // Optional email format validation
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+      setLuxuryToast({
+        title: "ভুল ইমেইল ফরম্যাট ⚠️",
+        message: "দয়া করে সঠিক ইমেইল এড্রেস প্রদান করুন (যেমন: user@example.com)",
+        tag: "ইমেইল ভ্যালিডেশন",
+        type: "warning",
+      });
+      toast.error("সঠিক ইমেইল ফরম্যাট দিন");
+      return;
     }
 
     setIsSubmitting(true);
@@ -93,16 +114,37 @@ const AddUser = () => {
 
       const result = await res.json();
       if (!result.success) {
-        toast.error(result.message || "User create failed");
+        const errorDetail = result.error ? `${result.message}: ${result.error}` : (result.message || "User create failed");
+        setLuxuryToast({
+          title: "ইউজার তৈরি ব্যর্থ ❌",
+          message: errorDetail,
+          tag: "সিস্টেম এরর",
+          type: "error",
+        });
+        toast.error(errorDetail);
         return;
       }
 
+      const roleLabel = ROLE_DISPLAY_NAMES[data.role] || data.role;
+      setLuxuryToast({
+        title: "ইউজার সফলভাবে তৈরি হয়েছে 🎉",
+        message: `${data.name} এর প্রোফাইল ও ${roleLabel} অ্যাক্সেস নিশ্চিত হয়েছে। অ্যাডমিন${data.email ? " ও ইউজারের" : ""} ইমেইলে তথ্য ও ছবি পাঠানো হয়েছে।`,
+        tag: `আইডি: #${result.user_id || "NEW"} • ${data.email || data.mobile}`,
+        type: "success",
+      });
       toast.success("ইউজার সফলভাবে তৈরি হয়েছে 🎉");
+
       setPreview("");
       setFileName("");
       if (fileRef.current) fileRef.current.value = "";
       reset(); // form clear
     } catch (error) {
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        tag: "নেটওয়ার্ক এরর",
+        type: "error",
+      });
       toast.error("সার্ভার সমস্যা হয়েছে");
     } finally {
       setIsSubmitting(false);
@@ -158,6 +200,16 @@ const AddUser = () => {
               register={register}
               name="mobile"
               placeholder="যেমন: 01712345678"
+            />
+
+            {/* EMAIL */}
+            <IconInput
+              label="ইমেইল এড্রেস (Email Address)"
+              icon={FaEnvelope}
+              register={register}
+              name="email"
+              type="email"
+              placeholder="যেমন: user@example.com"
             />
 
             {/* ID TYPE & ID NUMBER */}
@@ -225,7 +277,7 @@ const AddUser = () => {
             />
 
             {/* PASSWORD */}
-            <div className="md:col-span-2">
+            <div className="">
               <IconInput
                 label="লগইন পাসওয়ার্ড (Default Password)"
                 icon={FaLock}
@@ -348,6 +400,13 @@ const AddUser = () => {
           </div>
         </form>
       </div>
+
+      {/* Luxury Notification Toast */}
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={5000}
+      />
     </div>
   );
 };

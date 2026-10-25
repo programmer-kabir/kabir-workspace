@@ -1,8 +1,8 @@
 <?php
 /**
- * Daily Google Drive Report Backup Cron Job
- * Schedule to run every day at 11:50 PM (23:50 BD Time)
- * Cron Expression: 50 23 * * * (Asia/Dhaka) or 50 17 * * * (UTC)
+ * Daily Report Backup Cron Job
+ * Schedule to run every day at 11:55 PM (23:55 BD Time)
+ * Cron Expression: 55 23 * * * (Asia/Dhaka)
  */
 
 ini_set('display_errors', 1);
@@ -12,7 +12,6 @@ date_default_timezone_set('Asia/Dhaka');
 
 require_once __DIR__ . '/../apis/db.php';
 require_once __DIR__ . '/../apis/helpers/DailyReportPdf.php';
-require_once __DIR__ . '/../apis/helpers/google_drive_uploader.php';
 
 $logFile = __DIR__ . '/daily_drive_backup.log';
 $timestamp = date("Y-m-d H:i:s");
@@ -24,86 +23,131 @@ function logCron($msg, $file) {
 }
 
 logCron("--------------------------------------------------", $logFile);
-logCron("[$timestamp] Daily Drive Backup Cron Started...", $logFile);
+logCron("[$timestamp] Daily Report Backup Started...", $logFile);
 
 try {
-    // 1. Fetch Today Approved Deposit (IN)
-    $stmtIn = $mysqli->prepare("
-        SELECT IFNULL(SUM(amount), 0) AS total 
+    // 1. Fetch Opening Cash Balance (< Today, Approved Only)
+    $stmtOpen = $mysqli->prepare("
+        SELECT 
+            IFNULL(SUM(CASE WHEN type='in' THEN amount ELSE 0 END), 0) AS total_in,
+            IFNULL(SUM(CASE WHEN type='out' THEN amount ELSE 0 END), 0) AS total_out
         FROM cash 
-        WHERE type='in' AND date=? AND approval_status='approved'
+        WHERE approval_status='approved' AND date < ?
+    ");
+    $stmtOpen->bind_param("s", $today);
+    $stmtOpen->execute();
+    $openRes = $stmtOpen->get_result()->fetch_assoc();
+    $stmtOpen->close();
+
+    $openIn = (float)($openRes['total_in'] ?? 0);
+    $openOut = (float)($openRes['total_out'] ?? 0);
+    $openingCash = $openIn - $openOut;
+
+    // 2. Fetch Today's Approved Cash In Transactions
+    $stmtIn = $mysqli->prepare("
+        SELECT id, source, purpose, category, amount, refId, remarks, date, createdAt
+        FROM cash 
+        WHERE type='in' AND approval_status='approved' AND date=?
+        ORDER BY id ASC
     ");
     $stmtIn->bind_param("s", $today);
     $stmtIn->execute();
-    $deposit = (float)$stmtIn->get_result()->fetch_assoc()['total'];
+    $resIn = $stmtIn->get_result();
+
+    $cashInRows = [];
+    $totalCashIn = 0;
+    $idxIn = 1;
+    while ($row = $resIn->fetch_assoc()) {
+        $amt = (float)$row['amount'];
+        $totalCashIn += $amt;
+        $source = !empty($row['source']) ? $row['source'] : 'Cash In';
+        $purpose = !empty($row['purpose']) ? $row['purpose'] : (!empty($row['remarks']) ? $row['remarks'] : '-');
+        $category = !empty($row['category']) ? $row['category'] : 'Regular';
+
+        $cashInRows[] = [
+            $idxIn++,
+            "V-" . $row['id'],
+            $source,
+            $purpose,
+            $category,
+            number_format($amt, 2)
+        ];
+    }
     $stmtIn->close();
 
-    // 2. Fetch Today Approved Withdraw (OUT)
+    // 3. Fetch Today's Approved Cash Out Transactions
     $stmtOut = $mysqli->prepare("
-        SELECT IFNULL(SUM(amount), 0) AS total 
+        SELECT id, source, purpose, category, amount, refId, remarks, date, createdAt
         FROM cash 
-        WHERE type='out' AND date=? AND approval_status='approved'
+        WHERE type='out' AND approval_status='approved' AND date=?
+        ORDER BY id ASC
     ");
     $stmtOut->bind_param("s", $today);
     $stmtOut->execute();
-    $withdraw = (float)$stmtOut->get_result()->fetch_assoc()['total'];
+    $resOut = $stmtOut->get_result();
+
+    $cashOutRows = [];
+    $totalCashOut = 0;
+    $idxOut = 1;
+    while ($row = $resOut->fetch_assoc()) {
+        $amt = (float)$row['amount'];
+        $totalCashOut += $amt;
+        $source = !empty($row['source']) ? $row['source'] : 'Expense Head';
+        $purpose = !empty($row['purpose']) ? $row['purpose'] : (!empty($row['remarks']) ? $row['remarks'] : '-');
+        $category = !empty($row['category']) ? $row['category'] : 'Expense';
+
+        $cashOutRows[] = [
+            $idxOut++,
+            "V-" . $row['id'],
+            $source,
+            $purpose,
+            $category,
+            number_format($amt, 2)
+        ];
+    }
     $stmtOut->close();
 
-    // 3. Hand Cash
-    $resIn = $mysqli->query("SELECT IFNULL(SUM(amount), 0) AS total FROM cash WHERE type='in' AND approval_status='approved'");
-    $totalIn = (float)$resIn->fetch_assoc()['total'];
-
-    $resOut = $mysqli->query("SELECT IFNULL(SUM(amount), 0) AS total FROM cash WHERE type='out' AND approval_status='approved'");
-    $totalOut = (float)$resOut->fetch_assoc()['total'];
-
-    $todayNet = $deposit - $withdraw;
-    $handCash = $totalIn - $totalOut;
+    // 4. Ledger Calculations
+    $netToday = $totalCashIn - $totalCashOut;
+    $closingBalance = $openingCash + $netToday;
 
     $summary = [
-        'todayDeposit' => $deposit,
-        'todayWithdraw' => $withdraw,
-        'todayNet' => $todayNet,
-        'handCash' => $handCash
+        'date' => $today,
+        'openingCash' => $openingCash,
+        'totalCashIn' => $totalCashIn,
+        'totalCashOut' => $totalCashOut,
+        'netToday' => $netToday,
+        'closingBalance' => $closingBalance,
+        'inCount' => count($cashInRows),
+        'outCount' => count($cashOutRows)
     ];
 
-    // 4. Fetch All Approved Transactions for Today
-    $stmtTxs = $mysqli->prepare("
-        SELECT id, type, source, purpose, amount, category, date, createdAt
-        FROM cash 
-        WHERE date=? AND approval_status='approved'
-        ORDER BY id ASC
-    ");
-    $stmtTxs->bind_param("s", $today);
-    $stmtTxs->execute();
-    $txsResult = $stmtTxs->get_result();
-    $transactions = [];
-    while ($row = $txsResult->fetch_assoc()) {
-        $transactions[] = $row;
-    }
-    $stmtTxs->close();
-
-    // 5. Generate PDF
+    // 5. Generate Multi-Page PDF
     $pdfGen = new DailyReportPdf();
-    $pdfBinary = $pdfGen->generateReport($summary, $transactions);
+    $pdfBinary = $pdfGen->generateReport($summary, $cashInRows, $cashOutRows);
 
-    // 6. Upload to Google Drive
-    $credPath = dirname(__DIR__, 2) . '/google_drive_credentials.json';
-    if (!file_exists($credPath)) {
-        $credPath = 'c:/Users/CCA/Desktop/kabir-workspace/SupplyLink/Others_Source_Profit/server/google_drive_credentials.json';
+    // 6. Save PDF to Hostinger uploads/daily_report/[date].pdf
+    $baseUploadDir = dirname(__DIR__, 1) . '/uploads';
+    $dailyReportDir = $baseUploadDir . '/daily_report';
+
+    if (!is_dir($dailyReportDir)) {
+        if (!mkdir($dailyReportDir, 0755, true) && !is_dir($dailyReportDir)) {
+            throw new Exception("uploads/daily_report ডিরেক্টরি তৈরি করা যায়নি");
+        }
     }
 
-    $folderId = '1XLMw3dr-LJSFJYf7BnQucnQ6hLmoK7aQ';
-    $fileName = 'Daily_Report_' . date("Y-m-d_h-iA") . '.pdf';
+    $fileName = $today . '.pdf';
+    $filePath = $dailyReportDir . '/' . $fileName;
 
-    $uploader = new GoogleDriveUploader($credPath, $folderId);
-    $uploadRes = $uploader->uploadFile($fileName, $pdfBinary, 'application/pdf');
+    if (file_put_contents($filePath, $pdfBinary) === false) {
+        throw new Exception("Hostinger সার্ভারে PDF ফাইল সংরক্ষণ করা যায়নি। ফোল্ডার পারমিশন চেক করুন।");
+    }
 
-    $fileId = $uploadRes['id'] ?? 'N/A';
-    logCron("[$timestamp] SUCCESS: File uploaded successfully! [File: $fileName | ID: $fileId]", $logFile);
-    logCron("[$timestamp] SUMMARY: Deposit: $deposit | Withdraw: $withdraw | Net: $todayNet | Hand: $handCash", $logFile);
+    logCron("[$timestamp] SUCCESS: File saved to uploads/daily_report/{$fileName}", $logFile);
+    logCron("[$timestamp] SUMMARY: Opening: $openingCash | In: $totalCashIn | Out: $totalCashOut | Net: $netToday | Closing: $closingBalance", $logFile);
 
 } catch (Throwable $e) {
     logCron("[$timestamp] ERROR: " . $e->getMessage(), $logFile);
 }
 
-logCron("[$timestamp] Daily Drive Backup Cron Completed.", $logFile);
+logCron("[$timestamp] Daily Report Backup Completed.", $logFile);

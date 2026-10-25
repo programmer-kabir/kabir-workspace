@@ -121,6 +121,12 @@ if (!$ok) {
 $newId = $stmt->insert_id;
 $stmt->close();
 
+$actorData = [
+    "id"   => isset($input["actor_id"]) ? (int)$input["actor_id"] : null,
+    "name" => isset($input["actor_name"]) ? trim($input["actor_name"]) : "Admin / Staff",
+    "role" => isset($input["actor_role"]) ? trim($input["actor_role"]) : "admin"
+];
+
 // Return created row (optional but helpful)
 $get = $mysqli->prepare("SELECT * FROM investment_cards WHERE id = ?");
 if ($get) {
@@ -133,9 +139,66 @@ if ($get) {
     $row = null;
 }
 
+// 👤 Ensure user has 'investor' role assigned
+try {
+    $roleStmt = $mysqli->prepare("
+        INSERT INTO user_roles (user_id, role, assigned_at) 
+        VALUES (?, 'investor', NOW())
+        ON DUPLICATE KEY UPDATE assigned_at = assigned_at
+    ");
+    if ($roleStmt) {
+        $roleStmt->bind_param("i", $investor_id);
+        $roleStmt->execute();
+        $roleStmt->close();
+    }
+} catch (Throwable $e) {
+    error_log("Failed to assign investor role: " . $e->getMessage());
+}
+
+// 📧 Fetch investor details for email notification
+$userData = null;
+$userStmt = $mysqli->prepare("SELECT id, name, mobile, email, id_number FROM users WHERE id = ? LIMIT 1");
+if ($userStmt) {
+    $userStmt->bind_param("i", $investor_id);
+    $userStmt->execute();
+    $uRes = $userStmt->get_result();
+    $userData = $uRes ? $uRes->fetch_assoc() : null;
+    $userStmt->close();
+}
+
+// 👔 Fetch reference staff details if present
+$staffData = null;
+if (!empty($reference_user_id)) {
+    $sStmt = $mysqli->prepare("SELECT id, name, mobile, email FROM users WHERE id = ? LIMIT 1");
+    if ($sStmt) {
+        $sStmt->bind_param("i", $reference_user_id);
+        $sStmt->execute();
+        $sRes = $sStmt->get_result();
+        $staffData = $sRes ? $sRes->fetch_assoc() : null;
+        $sStmt->close();
+    }
+}
+
+// 🚀 Send Email & In-App Notification (Admin alert + User notice if email exists)
+try {
+    require_once __DIR__ . '/../helpers/mailer.php';
+    $cardData = [
+        "id"            => $newId,
+        "card_name"     => $card_name,
+        "payment_type"  => $payment_type,
+        "start_date"    => $start_date,
+        "maturity_date" => $row['maturity_date'] ?? date('Y-m-d', strtotime('+1 year', strtotime($start_date))),
+        "status"        => $status,
+    ];
+    sendInvestmentCardCreatedNotification($cardData, $userData, $actorData, $staffData);
+} catch (Throwable $e) {
+    error_log("Investment card email notification failed: " . $e->getMessage());
+}
+
 echo json_encode([
     "success" => true,
-    "message" => "Investment card created",
+    "message" => "ইনভেস্টমেন্ট কার্ড সফলভাবে তৈরি হয়েছে!",
     "id" => (int)$newId,
     "data" => $row
 ], JSON_UNESCAPED_UNICODE);
+

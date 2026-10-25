@@ -26,10 +26,13 @@ import {
   FaSearch,
   FaFilter,
   FaUserShield,
+  FaEnvelope,
 } from "react-icons/fa";
 import NoDataFound from "../../../components/NoData/NoDataFound";
 import BackButton from "../../../components/BackButton/BackButton";
 import { toast } from "react-toastify";
+import { useAuth } from "../../../Provider/AuthProvider";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 
 const ROLE_BADGE_STYLES = {
   admin: "bg-rose-500/15 text-rose-300 border-rose-500/30",
@@ -52,11 +55,13 @@ const FILTER_ROLES = [
 ];
 
 const AllUsers = () => {
+  const { user: currentAuthUser } = useAuth() || {};
   const { isUsersLoading, users, isUsersError, refetch } = useUsers();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [editUser, setEditUser] = useState(null);
   const [openModal, setOpenModal] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   // 👁️ User Dashboard View Modal State
   const [viewUser, setViewUser] = useState(null);
@@ -92,7 +97,10 @@ const AllUsers = () => {
   }, [users, search, roleFilter]);
 
   const handleEdit = (user) => {
-    setEditUser(user);
+    setEditUser({
+      ...user,
+      email: user.email || "",
+    });
     setOpenModal(true);
   };
 
@@ -216,18 +224,29 @@ const AllUsers = () => {
       const formData = new FormData();
 
       formData.append("id", editUser.id);
-      formData.append("name", editUser.name);
-      formData.append("mobile", editUser.mobile);
-      formData.append("id_number", editUser.id_number);
-      formData.append("address", editUser.address);
+      formData.append("name", editUser.name || "");
+      formData.append("mobile", editUser.mobile || "");
+      formData.append("email", editUser.email || "");
+      formData.append("id_number", editUser.id_number || "");
+      formData.append("address", editUser.address || "");
 
-      if (editUser.photo) {
+      if (editUser.photo instanceof File) {
         formData.append("photo", editUser.photo);
+      }
+
+      if (currentAuthUser) {
+        formData.append("actor_id", currentAuthUser.id || 0);
+        formData.append("actor_name", currentAuthUser.name || "");
+        const roleStr = Array.isArray(currentAuthUser.role)
+          ? currentAuthUser.role.join(",")
+          : (currentAuthUser.role || "");
+        formData.append("actor_role", roleStr);
       }
 
       const res = await fetch(
         `${import.meta.env.VITE_LOCALHOST_KEY}/users/update_user.php`,
         {
+          credentials: "include",
           method: "POST",
           body: formData,
         }
@@ -236,14 +255,32 @@ const AllUsers = () => {
       const data = await res.json();
 
       if (data.success) {
-        toast.success("Updated!");
+        setLuxuryToast({
+          title: "ইউজার তথ্য সফলভাবে আপডেট হয়েছে 🎉",
+          message: `${editUser?.name || "ইউজার"} এর তথ্য সফলভাবে আপডেট ও অডিট সিস্টেমে সংরক্ষিত হয়েছে।`,
+          tag: `আইডি: #${editUser?.id} • ${editUser?.mobile || ""}`,
+          type: "success",
+        });
+        toast.success(data.message || "ইউজার সফলভাবে আপডেট হয়েছে 🎉");
         setOpenModal(false);
         refetch();
       } else {
-        toast.error(data.message);
+        setLuxuryToast({
+          title: "আপডেট ব্যর্থ হয়েছে ❌",
+          message: data.message || "ইউজার তথ্য সংরক্ষণ করা যায়নি।",
+          tag: "সিস্টেম এরর",
+          type: "error",
+        });
+        toast.error(data.message || "আপডেট ব্যর্থ হয়েছে");
       }
     } catch (err) {
-      toast.error("Server Error");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        tag: "নেটওয়ার্ক এরর",
+        type: "error",
+      });
+      toast.error("সার্ভার এরর");
     }
   };
 
@@ -400,6 +437,13 @@ const AllUsers = () => {
                     <p className="flex items-center gap-2">
                       <FaIdCard className="text-slate-500 shrink-0" size={12} />
                       <span className="font-mono text-slate-300 truncate">ID: {user.id_number}</span>
+                    </p>
+                  ) : null}
+
+                  {user.email ? (
+                    <p className="flex items-center gap-2">
+                      <FaEnvelope className="text-sky-400 shrink-0" size={11} />
+                      <span className="font-mono text-sky-300 truncate">{user.email}</span>
                     </p>
                   ) : null}
 
@@ -914,6 +958,27 @@ const AllUsers = () => {
                 />
               </div>
 
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FaEnvelope className="text-sky-400" size={11} /> ইমেইল (Email)
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-normal">
+                    {editUser?.email ? "✅ ইমেইল দেওয়া আছে" : "⚠️ দিলে সক্রিয়করণ/রসিদ মেইল যাবে"}
+                  </span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="user@example.com (ঐচ্ছিক)"
+                  className="input-dark font-mono"
+                  value={editUser?.email || ""}
+                  onChange={(e) =>
+                    setEditUser({ ...editUser, email: e.target.value })
+                  }
+                />
+              </div>
+
               {/* ID Number */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-300">আইডি নম্বর (ID Number)</label>
@@ -997,6 +1062,13 @@ const AllUsers = () => {
           </div>
         </div>
       )}
+
+      {/* 🌟 Luxury Toast Notification */}
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={4500}
+      />
     </div>
   );
 };

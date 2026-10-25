@@ -258,7 +258,11 @@ const OtherSourcesAssets = () => {
   const handleDividendSubmit = async (e) => {
     e.preventDefault();
     if (Number(dividendForm.amount) <= 0) {
-      return toast.error("সঠিক লভ্যাংশের পরিমাণ প্রদান করুন");
+      return setLuxuryToast({
+        title: "সঠিক পরিমাণ দিন ⚠️",
+        message: "সঠিক লভ্যাংশের পরিমাণ প্রদান করুন।",
+        type: "warning",
+      });
     }
 
     try {
@@ -274,14 +278,28 @@ const OtherSourcesAssets = () => {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "লভ্যাংশ সফলভাবে গ্রহণ করা হয়েছে 🎉");
+        setLuxuryToast({
+          title: "লভ্যাংশ আদায় সম্পন্ন 🎉",
+          message: `${selectedAssetForDividend?.asset_name || "কোম্পানি শেয়ার"} এর (${dividendForm.billing_month}) মাসের লভ্যাংশ সফলভাবে ক্যাশে জমা হয়েছে।`,
+          tag: selectedAssetForDividend?.asset_name || "শেয়ার ডিভিডেন্ড",
+          amount: Number(dividendForm.amount),
+          type: "success",
+        });
         setShowDividendModal(false);
         fetchAssets();
       } else {
-        toast.error(data.message || "লভ্যাংশ সংরক্ষণ ব্যর্থ");
+        setLuxuryToast({
+          title: "সংরক্ষণ ব্যর্থ ❌",
+          message: data.message || "লভ্যাংশ সংরক্ষণ করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর, পরে চেষ্টা করুন");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingDividend(false);
     }

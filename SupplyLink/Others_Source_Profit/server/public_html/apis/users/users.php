@@ -48,6 +48,7 @@ $sql = "
         u.id,
         u.name,
         u.mobile,
+        u.email,
         u.id_number,
         u.address,
         u.password,
@@ -60,8 +61,10 @@ $sql = "
         u.id,
         u.name,
         u.mobile,
+        u.email,
         u.id_number,
         u.address,
+        u.password,
         u.photo
     ORDER BY u.id ASC
 ";

@@ -70,7 +70,11 @@ export default function InvestorDetails() {
   }, [currentCardProfit]);
 
   const isLoading =
-    isUsersLoading || inInvestInstallmentsLoading || isInvestmentCardsLoading || isProfitAnalyticsLoading;
+    isUsersLoading ||
+    inInvestInstallmentsLoading ||
+    isInvestmentCardsLoading ||
+    isProfitAnalyticsLoading ||
+    (!isInvestmentCardsError && (!investmentCards?.length || !investorCard));
 
   const isError =
     isUsersError || isInvestInstallmentsError || isInvestmentCardsError || isUProfitAnalyticsError;

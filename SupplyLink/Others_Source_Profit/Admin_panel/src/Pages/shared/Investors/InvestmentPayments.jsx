@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import useInvestmentCards from "../../../utils/Investors/useInvestmentCards";
 import { useSearchParams, Link } from "react-router-dom";
-import useInvestInstallment from "../../../utils/Investors/useInvestInstallment";
 import { toast } from "react-toastify";
 import useUsers from "../../../utils/Hooks/useUsers";
 import NoDataFound from "../../../components/NoData/NoDataFound";
@@ -25,7 +24,8 @@ import {
   FiCheck,
   FiPrinter,
   FiClock,
-  FiShield
+  FiShield,
+  FiLoader
 } from "react-icons/fi";
 import { FaMoneyBillWave, FaReceipt, FaCoins } from "react-icons/fa";
 import LuxuryActionModal from "../../../components/Modal/LuxuryActionModal";
@@ -37,9 +37,13 @@ export default function InvestmentPayments() {
   const [searchParams] = useSearchParams();
   const cardIdRaw = searchParams.get("card_id");
   const cardId = Number(cardIdRaw);
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
   const [installmentNo, setInstallmentNo] = useState("");
   const [amount, setAmount] = useState("");
+  const [installmentDate, setInstallmentDate] = useState(new Date().toISOString().split("T")[0]);
   const { user } = useAuth();
+  const userRole = String(user?.role || "").toLowerCase();
+  const isAdminOrDev = ["admin", "developer"].includes(userRole);
 
   // Luxury Toast state
   const [luxuryToast, setLuxuryToast] = useState(null);
@@ -78,27 +82,53 @@ export default function InvestmentPayments() {
   });
 
   const { investmentCards, isInvestmentCardsLoading, isInvestmentCardsError } = useInvestmentCards();
-  const {
-    investInstallments,
-    inInvestInstallmentsLoading,
-    isInvestInstallmentsError,
-    refetch,
-  } = useInvestInstallment();
-
   const { users, isUsersLoading, isUsersError } = useUsers();
+
+  // ⚡ Fast card-level installments state & fetcher (only ~10-20 rows instead of 14,000+)
+  const [cardInvestInstallments, setCardInvestInstallments] = useState([]);
+  const [isInstallmentsLoading, setIsInstallmentsLoading] = useState(true);
+  const [isInstallmentsError, setIsInstallmentsError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchCardInstallments = useCallback(async (silent = false) => {
+    if (!cardId) return;
+    if (!silent) setIsInstallmentsLoading(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getAllInstallments.php?investment_card_no=${cardId}`
+      );
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data)) {
+        setCardInvestInstallments(json.data);
+        setIsInstallmentsError(false);
+      } else {
+        setIsInstallmentsError(true);
+      }
+    } catch (e) {
+      console.error("Error fetching card installments:", e);
+      setIsInstallmentsError(true);
+    } finally {
+      if (!silent) setIsInstallmentsLoading(false);
+    }
+  }, [cardId]);
+
+  useEffect(() => {
+    fetchCardInstallments();
+  }, [fetchCardInstallments]);
 
   const card = useMemo(
     () => investmentCards.find((c) => String(c.id) === String(cardId)),
     [investmentCards, cardId],
   );
 
-  const cardInvestInstallments = useMemo(
-    () =>
-      investInstallments.filter(
-        (i) => String(i.investment_card_no) === String(cardId),
-      ),
-    [investInstallments, cardId],
-  );
+  const lastInstallmentAmount = useMemo(() => {
+    if (!cardInvestInstallments || cardInvestInstallments.length === 0) return null;
+    const sorted = [...cardInvestInstallments].sort(
+      (a, b) => Number(b.investment_no || 0) - Number(a.investment_no || 0),
+    );
+    const lastAmt = sorted[0]?.amount;
+    return lastAmt ? Number(lastAmt) : null;
+  }, [cardInvestInstallments]);
 
   const filteredInstallments = useMemo(() => {
     let data = [...cardInvestInstallments];
@@ -160,23 +190,67 @@ export default function InvestmentPayments() {
   }, [cardInvestInstallments]);
 
   const handleInvestInstallments = async () => {
-    if (!installmentNo) return toast.error("কিস্তি নং দিতে হবে");
-    if (!amount) return toast.error("পরিমাণ দিতে হবে");
-    if (Number(amount) <= 0)
-      return toast.error("পরিমাণ অবশ্যই ০ এর বেশি হতে হবে");
-    if (!card?.id || !card?.investor_id)
-      return toast.error("কার্ড তথ্য পাওয়া যায়নি");
+    if (!installmentNo) {
+      setLuxuryToast({
+        title: "কিস্তি নং আবশ্যক ⚠️",
+        message: "অনুগ্রহ করে কিস্তি নম্বর প্রদান করুন।",
+        type: "warning",
+      });
+      return;
+    }
+    if (!amount) {
+      setLuxuryToast({
+        title: "পরিমাণ আবশ্যক ⚠️",
+        message: "অনুগ্রহ করে কিস্তির টাকার পরিমাণ লিখুন।",
+        type: "warning",
+      });
+      return;
+    }
+    if (Number(amount) <= 0) {
+      setLuxuryToast({
+        title: "অকার্যকর পরিমাণ ⚠️",
+        message: "কিস্তির পরিমাণ অবশ্যই ০ এর বেশি হতে হবে।",
+        type: "warning",
+      });
+      return;
+    }
+    if (!installmentDate) {
+      setLuxuryToast({
+        title: "তারিখ আবশ্যক ⚠️",
+        message: "অনুগ্রহ করে কিস্তির কালেকশন তারিখ নির্বাচন করুন।",
+        type: "warning",
+      });
+      return;
+    }
+    if (!isAdminOrDev && installmentDate > today) {
+      setLuxuryToast({
+        title: "ভবিষ্যতের তারিখ নিষিদ্ধ ⚠️",
+        message: "ভবিষ্যতের তারিখে কিস্তি এন্ট্রি দেওয়া সম্ভব নয়।",
+        type: "warning",
+      });
+      return;
+    }
+    if (!card?.id || !card?.investor_id) {
+      setLuxuryToast({
+        title: "কার্ড তথ্য পাওয়া যায়নি ⚠️",
+        message: "বিনিয়োগ কার্ডের তথ্য সঠিকভাবে লোড হয়নি।",
+        type: "warning",
+      });
+      return;
+    }
 
-    const today = new Date().toISOString().split("T")[0];
+    const finalDate = (isAdminOrDev && installmentDate) ? installmentDate : (installmentDate || today);
+
     const data = {
       investment_card_no: Number(card?.id),
       investor_id: Number(card?.investor_id),
       installment_no: Number(installmentNo),
-      installment_date: today,
+      installment_date: finalDate,
       amount: Number(amount),
-      signature_by: user?.id,
+      signature_by: user?.id || 0,
     };
 
+    setIsSubmitting(true);
     try {
       const res = await fetch(
         `${import.meta.env.VITE_LOCALHOST_KEY}/investors/insert_investment_installment.php`,
@@ -187,14 +261,42 @@ export default function InvestmentPayments() {
         },
       );
 
-      const result = await res.json();
+      const rawText = await res.text();
+      let result = null;
+      try {
+        result = JSON.parse(rawText);
+      } catch (parseErr) {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        }
+      }
 
-      if (!result.success) {
-        toast.error(result.error || "কিছু একটা সমস্যা হয়েছে");
+      if (!result || !result.success) {
+        setLuxuryToast({
+          title: "কিস্তি যোগ ব্যর্থ ❌",
+          message: result?.error || result?.message || "সার্ভার থেকে সঠিক সাড়া পাওয়া যায়নি",
+          type: "error",
+        });
         return;
       }
 
       const resData = result?.data || {};
+
+      // ⚡ Optimistic UI: তাৎক্ষণিক টেবিলে কিস্তি যুক্ত করা (0ms Latency)
+      const newCreatedInstallment = {
+        id: result?.insert_id || Date.now(),
+        investment_card_no: Number(card?.id),
+        investor_id: Number(card?.investor_id),
+        investment_no: Number(installmentNo),
+        investment_date: finalDate,
+        amount: Number(amount),
+        signature_by: user?.name || userRole || "কর্মী",
+        active_days: 0,
+      };
+
+      setCardInvestInstallments((prev) => [newCreatedInstallment, ...prev]);
+
       setSuccessReceipt({
         isOpen: true,
         investorName: resData.investor_name || card?.card_name || mergedInvestmentCards?.name || "ইনভেস্টর",
@@ -202,17 +304,33 @@ export default function InvestmentPayments() {
         cardName: resData.card_name || card?.card_name,
         installmentNo: resData.installment_no || installmentNo,
         amount: Number(resData.amount || amount),
-        date: resData.date || today,
+        date: resData.date || finalDate,
         collectorName: resData.collector_name || user?.name || "স্টাফ",
         collectorId: user?.id,
         avatarUrl: avatarUrl,
       });
 
-      toast.success(`${card?.card_name || "ইনভেস্টর"} এর বিনিয়োগ কিস্তি সফলভাবে যোগ হয়েছে`);
-      refetch();
+      setLuxuryToast({
+        title: "কিস্তি আদায় সম্পন্ন 🎉",
+        message: `${card?.card_name || "ইনভেস্টর"} এর কিস্তি #${installmentNo} (${finalDate}) সফলভাবে যোগ হয়েছে।`,
+        tag: `কিস্তি #${installmentNo}`,
+        amount: Number(amount),
+        type: "success",
+      });
+
       setAmount("");
+      setInstallmentDate(today);
+
+      // ব্যাকগ্রাউন্ডে সাইলেন্ট রিফ্রেশ (কোনো লোডার আসবে না)
+      fetchCardInstallments(true);
     } catch (error) {
-      toast.error("সার্ভারে সমস্যা হয়েছে");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
+        type: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -265,11 +383,29 @@ export default function InvestmentPayments() {
 
   const handleUpdate = async () => {
     if (!editingRow?.id) return;
-    if (!editDate) return toast.error("তারিখ দিতে হবে");
-    if (!editAmount || Number(editAmount) <= 0)
-      return toast.error("সঠিক পরিমাণ দিন");
+    if (!editDate) {
+      setLuxuryToast({
+        title: "তারিখ প্রয়োজন ⚠️",
+        message: "অনুগ্রহ করে কিস্তির তারিখ প্রদান করুন।",
+        type: "warning",
+      });
+      return;
+    }
+    if (!editAmount || Number(editAmount) <= 0) {
+      setLuxuryToast({
+        title: "সঠিক পরিমাণ দিন ⚠️",
+        message: "কিস্তির পরিমাণ অবশ্যই ০ এর চেয়ে বেশি হতে হবে।",
+        type: "warning",
+      });
+      return;
+    }
     if (!update_reason.trim()) {
-      return toast.error("সংশোধনের সঠিক কারণ লিখতে হবে");
+      setLuxuryToast({
+        title: "কারণ উল্লেখ করুন ⚠️",
+        message: "সংশোধনের সঠিক কারণ লিখতে হবে।",
+        type: "warning",
+      });
+      return;
     }
 
     const payload = {
@@ -292,7 +428,11 @@ export default function InvestmentPayments() {
       const result = await res.json();
 
       if (!result?.success) {
-        toast.error(result?.error || "অনুরোধ পাঠানো যায়নি");
+        setLuxuryToast({
+          title: "অনুরোধ পাঠানো যায়নি ❌",
+          message: result?.error || "কিছু একটা সমস্যা হয়েছে।",
+          type: "error",
+        });
         return;
       }
 
@@ -306,7 +446,11 @@ export default function InvestmentPayments() {
         type: "warning",
       });
     } catch (e) {
-      toast.error("সার্ভারে সমস্যা হয়েছে");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারে যোগাযোগ করা যায়নি।",
+        type: "error",
+      });
     }
   };
 
@@ -400,19 +544,36 @@ export default function InvestmentPayments() {
               body: JSON.stringify({ id: Number(row.id) }),
             }
           );
-          const result = await res.json();
+          const rawText = await res.text();
+          let result = null;
+          try {
+            result = JSON.parse(rawText);
+          } catch (parseErr) {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              result = JSON.parse(jsonMatch[0]);
+            }
+          }
+
           setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
 
-          if (!result?.success) {
+          const isSuccess = result?.success || rawText.includes('"success":true') || rawText.includes('deleted');
+
+          if (!isSuccess) {
             setLuxuryToast({
               title: "Delete করা যায়নি ❌",
-              message: result?.error || "মুছে ফেলা যায়নি",
+              message: result?.error || result?.message || "মুছে ফেলা যায়নি",
               type: "error",
             });
             return;
           }
 
-          refetch();
+          // ⚡ Optimistic UI: তাৎক্ষণিক ডিলিট
+          setCardInvestInstallments((prev) =>
+            prev.filter((item) => Number(item.id) !== Number(row?.id))
+          );
+          fetchCardInstallments(true);
+
           setLuxuryToast({
             title: "সফলভাবে মুছে ফেলা হয়েছে! ✅",
             message: "কিস্তি ও সংশ্লিষ্ট ক্যাশ সফলভাবে মুছে ফেলা হয়েছে।",
@@ -433,11 +594,13 @@ export default function InvestmentPayments() {
     });
   };
 
-  if (
-    inInvestInstallmentsLoading ||
+  const isPageLoading =
     isUsersLoading ||
-    isInvestmentCardsLoading
-  ) {
+    isInvestmentCardsLoading ||
+    (isInstallmentsLoading && cardInvestInstallments.length === 0) ||
+    (!isInvestmentCardsError && (!investmentCards?.length || (cardId && !card)));
+
+  if (isPageLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader />
@@ -446,7 +609,7 @@ export default function InvestmentPayments() {
     );
   }
 
-  if (isInvestInstallmentsError || isUsersError || isInvestmentCardsError) {
+  if (isInstallmentsError || isUsersError || isInvestmentCardsError) {
     return (
       <NoDataFound
         message="ডাটা লোড করা যায়নি"
@@ -455,9 +618,15 @@ export default function InvestmentPayments() {
     );
   }
 
-  const targetRoles = ["developer", "staff", "manager", "admin"];
-  const userRole = targetRoles.find((role) => user?.role?.includes(role)) || "staff";
-  const isAdminOrDev = ["admin", "developer"].some((r) => user?.role?.includes(r));
+  if (cardId && !card) {
+    return (
+      <NoDataFound
+        message="বিনিয়োগ কার্ড পাওয়া যায়নি"
+        subMessage={`কার্ড আইডি #${cardId} এর কোনো তথ্য পাওয়া যায়নি।`}
+      />
+    );
+  }
+
   const canDelete = isAdminOrDev; // শুধুমাত্র অ্যাডমিন এবং ডেভেলপার ডিলিট করতে পারবে
   const showAction = true;
 
@@ -520,7 +689,7 @@ export default function InvestmentPayments() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
-          <div className="sm:col-span-4">
+          <div className="sm:col-span-3">
             <label className="text-xs font-semibold text-slate-300 mb-1 block">
               কিস্তি নং (Slip / No)
             </label>
@@ -536,15 +705,61 @@ export default function InvestmentPayments() {
             </div>
           </div>
 
-          <div className="sm:col-span-5">
-            <label className="text-xs font-semibold text-slate-300 mb-1 block">
-              পরিমাণ (Amount in BDT)
+          <div className="sm:col-span-3">
+            <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+              <span>কালেকশন তারিখ</span>
+              {isAdminOrDev ? (
+                <span className="text-[10px] text-amber-400 font-medium">
+                  ★ পুরানো তারিখ নির্বাচন
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-400 font-normal">
+                  (আজকের তারিখ)
+                </span>
+              )}
             </label>
+            <div className="relative">
+              <FiCalendar className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${isAdminOrDev ? "text-amber-400" : "text-slate-400"}`} />
+              <input
+                type="date"
+                value={installmentDate}
+                onChange={(e) => setInstallmentDate(e.target.value)}
+                readOnly={!isAdminOrDev}
+                max={isAdminOrDev ? undefined : today}
+                className={`w-full rounded-xl bg-black/40 border pl-10 pr-3 py-2 text-sm text-white font-mono focus:outline-none transition ${
+                  isAdminOrDev
+                    ? "border-amber-500/40 focus:border-amber-400/70 cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+                    : "border-white/10 opacity-75 cursor-not-allowed"
+                }`}
+                title={
+                  isAdminOrDev
+                    ? "অ্যাডমিন/ডেভেলপার প্রিভিলেজ: আপনি যেকোনো পুরানো তারিখ নির্বাচন করতে পারেন"
+                    : "শুধুমাত্র অ্যাডমিন এবং ডেভেলপার পুরানো তারিখ পরিবর্তন করতে পারেন"
+                }
+              />
+            </div>
+          </div>
+
+          <div className="sm:col-span-3">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-300">
+                পরিমাণ (Amount in BDT)
+              </label>
+              {amount && (
+                <button
+                  type="button"
+                  onClick={() => setAmount("")}
+                  className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer"
+                >
+                  ক্লিয়ার ✕
+                </button>
+              )}
+            </div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400 font-bold text-sm">৳</span>
               <input
                 type="number"
-                placeholder="যেমন: 5000"
+                placeholder="যেমন: 500"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full rounded-xl bg-black/40 border border-white/10 pl-9 pr-4 py-2.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-cyan-400/50"
@@ -554,13 +769,95 @@ export default function InvestmentPayments() {
 
           <div className="sm:col-span-3">
             <button
+              disabled={isSubmitting}
               onClick={handleInvestInstallments}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-950/50 transition cursor-pointer"
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white shadow-lg transition ${
+                isSubmitting
+                  ? "bg-slate-700 cursor-not-allowed opacity-80"
+                  : "bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 cursor-pointer shadow-cyan-950/50"
+              }`}
             >
-              <FiPlus className="h-4 w-4" />
-              <span>কিস্তি জমা করুন</span>
+              {isSubmitting ? (
+                <>
+                  <FiLoader className="h-4 w-4 animate-spin text-cyan-300" />
+                  <span>জমা হচ্ছে...</span>
+                </>
+              ) : (
+                <>
+                  <FiPlus className="h-4 w-4" />
+                  <span>কিস্তি জমা করুন</span>
+                </>
+              )}
             </button>
           </div>
+        </div>
+
+        {/* Quick Amount Suggestion Pills */}
+        <div className="mt-3.5 pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1 mr-1">
+              <span className="text-cyan-400 text-xs">⚡</span> সাজেস্ট:
+            </span>
+            {[50, 100, 200, 300, 500, 1000].map((amt) => {
+              const isSelected = String(amount) === String(amt);
+              return (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setAmount(String(amt))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer border ${
+                    isSelected
+                      ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)] ring-1 ring-cyan-400/50"
+                      : "bg-white/[0.04] border-white/10 text-slate-300 hover:bg-cyan-500/15 hover:border-cyan-500/30 hover:text-white"
+                  }`}
+                  title={`ক্লিক করে টাকার পরিমাণ ৳${amt} নির্ধারণ করুন`}
+                >
+                  <span>৳{amt}</span>
+                </button>
+              );
+            })}
+
+            {lastInstallmentAmount && ![50, 100, 200, 300, 500, 1000].includes(lastInstallmentAmount) && (
+              <button
+                type="button"
+                onClick={() => setAmount(String(lastInstallmentAmount))}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                  String(amount) === String(lastInstallmentAmount)
+                    ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400/50"
+                    : "bg-emerald-950/30 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50"
+                }`}
+                title={`পূর্ববর্তী কিস্তির পরিমাণ ৳${lastInstallmentAmount} নির্ধারণ করুন`}
+              >
+                <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-sans font-medium">
+                  পূর্বের কিস্তি
+                </span>
+                <span>৳{lastInstallmentAmount}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Quick Increment */}
+          {amount && Number(amount) > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-slate-500 mr-0.5 hidden sm:inline">যোগ:</span>
+              <button
+                type="button"
+                onClick={() => setAmount(String(Number(amount) + 50))}
+                className="px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-cyan-300 transition cursor-pointer"
+                title="বর্তমান পরিমাণে +৫০ টাকা যোগ করুন"
+              >
+                +৫০
+              </button>
+              <button
+                type="button"
+                onClick={() => setAmount(String(Number(amount) + 100))}
+                className="px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-cyan-300 transition cursor-pointer"
+                title="বর্তমান পরিমাণে +১০০ টাকা যোগ করুন"
+              >
+                +১০০
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -818,13 +1115,44 @@ export default function InvestmentPayments() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1 block">নতুন পরিমাণ (New Amount ৳)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-300 block">নতুন পরিমাণ (New Amount ৳)</label>
+                  {editAmount && (
+                    <button
+                      type="button"
+                      onClick={() => setEditAmount("")}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer"
+                    >
+                      ক্লিয়ার ✕
+                    </button>
+                  )}
+                </div>
                 <input
                   type="number"
                   value={editAmount}
                   onChange={(e) => setEditAmount(e.target.value)}
                   className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono font-bold outline-none focus:border-cyan-400/50"
                 />
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-slate-400">সাজেস্ট:</span>
+                  {[50, 100, 200, 300, 500, 1000].map((amt) => {
+                    const isSelected = String(editAmount) === String(amt);
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setEditAmount(String(amt))}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer border ${
+                          isSelected
+                            ? "bg-amber-500/25 border-amber-400 text-amber-300 ring-1 ring-amber-400/40"
+                            : "bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white"
+                        }`}
+                      >
+                        ৳{amt}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

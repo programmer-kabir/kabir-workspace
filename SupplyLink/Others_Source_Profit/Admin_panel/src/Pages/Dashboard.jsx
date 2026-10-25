@@ -36,30 +36,30 @@ const Dashboard = () => {
 
       if (res.data?.success) {
         setLuxuryToast({
-          title: "গুগল ড্রাইভে সংরক্ষিত! 📁",
-          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে Google Drive-এ সেভ হয়েছে (${res.data.file_name})।`,
-          tag: "Google Drive Sync",
+          title: "সার্ভারে সংরক্ষিত! 📁",
+          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে সার্ভারে সেভ হয়েছে (${res.data.file_path || res.data.file_name})।`,
+          tag: "Server Saved",
           amount: res.data.summary?.todayNet,
           type: "success",
         });
       } else {
         setLuxuryToast({
-          title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+          title: "সংরক্ষণ ব্যর্থ! ⚠",
           message:
             res.data?.error ||
-            "ড্রাইভে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
-          tag: "Drive Error",
+            "সার্ভারে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
+          tag: "Save Error",
           type: "error",
         });
       }
     } catch (err) {
       setLuxuryToast({
-        title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+        title: "সংরক্ষণ ব্যর্থ! ⚠",
         message:
           err.response?.data?.error ||
           err.message ||
-          "ড্রাইভে ফাইল সেভ করতে সমস্যা হয়েছে।",
-        tag: "Drive Error",
+          "সার্ভারে ফাইল সেভ করতে সমস্যা হয়েছে।",
+        tag: "Save Error",
         type: "error",
       });
     } finally {

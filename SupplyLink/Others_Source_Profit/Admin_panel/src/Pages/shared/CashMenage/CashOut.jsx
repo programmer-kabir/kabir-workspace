@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import useCashReports from "../../../utils/Hooks/cash/useCashReports";
 import Loader from "../../../components/Loader/Loader";
 import CashStateCard from "../../../components/cash/CashStateCard";
@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Banknote,
   Edit3,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const CashOut = () => {
@@ -39,15 +41,21 @@ const CashOut = () => {
     max: "",
   });
 
-  const normalCashOut = Array.isArray(CashReports)
-    ? CashReports.filter(
-        (cash) => cash.type === "out" && cash.approval_status === "approved"
-      )
-    : [];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
-  const AllCashOut = [...normalCashOut].sort((a, b) => {
-    return new Date(b.date) - new Date(a.date);
-  });
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, selectedMonth, selectedYear, startDate, endDate, selectedCategory, selectedRemark, priceRange]);
+
+  const AllCashOut = useMemo(() => {
+    const normal = Array.isArray(CashReports)
+      ? CashReports.filter(
+          (cash) => cash.type === "out" && cash.approval_status === "approved"
+        )
+      : [];
+    return normal.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [CashReports]);
 
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -55,35 +63,155 @@ const CashOut = () => {
     years.push(year);
   }
 
-  const DateFilteredCashOut = AllCashOut.filter((cash) => {
-    const cashDate = new Date(cash.date);
-    const cashYear = cashDate.getFullYear().toString();
-    const cashMonth = `${cashDate.getFullYear()}-${String(
-      cashDate.getMonth() + 1
-    ).padStart(2, "0")}`;
+  const DateFilteredCashOut = useMemo(() => {
+    return AllCashOut.filter((cash) => {
+      const cashDate = new Date(cash.date);
+      const cashYear = cashDate.getFullYear().toString();
+      const cashMonth = `${cashDate.getFullYear()}-${String(
+        cashDate.getMonth() + 1
+      ).padStart(2, "0")}`;
 
-    if (selectedDate && cash.date !== selectedDate) return false;
-    if (selectedMonth && cashMonth !== selectedMonth) return false;
-    if (selectedYear && cashYear !== selectedYear) return false;
+      if (selectedDate && cash.date !== selectedDate) return false;
+      if (selectedMonth && cashMonth !== selectedMonth) return false;
+      if (selectedYear && cashYear !== selectedYear) return false;
 
-    if (startDate) {
-      const current = new Date(cash.date).getTime();
-      const start = new Date(startDate).getTime();
-      if (current < start) return false;
-    }
-    if (endDate) {
-      const current = new Date(cash.date).getTime();
-      const end = new Date(endDate).getTime();
-      if (current > end) return false;
-    }
+      if (startDate) {
+        const current = new Date(cash.date).getTime();
+        const start = new Date(startDate).getTime();
+        if (current < start) return false;
+      }
+      if (endDate) {
+        const current = new Date(cash.date).getTime();
+        const end = new Date(endDate).getTime();
+        if (current > end) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [AllCashOut, selectedDate, selectedMonth, selectedYear, startDate, endDate]);
 
-  const FilteredCashOut = DateFilteredCashOut.filter((cash) => {
-    if (selectedCategory) {
-      if (selectedCategory === "others") {
-        const knownCategories = [
+  const FilteredCashOut = useMemo(() => {
+    return DateFilteredCashOut.filter((cash) => {
+      if (selectedCategory) {
+        if (selectedCategory === "others") {
+          const knownCategories = [
+            "salary",
+            "purchase",
+            "rent",
+            "bill",
+            "office-expense",
+            "loan-repayment",
+            "loan-given",
+            "investor-payout",
+            "profit-payout",
+            "asset_purchase",
+            "share_investment",
+          ];
+          if (knownCategories.includes(cash.category?.toLowerCase().trim())) {
+            return false;
+          }
+        } else if (cash.category?.toLowerCase().trim() !== selectedCategory) {
+          return false;
+        }
+      }
+      const amount = Number(cash.amount);
+      if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
+        return false;
+      }
+      if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
+        return false;
+      }
+      return true;
+    });
+  }, [DateFilteredCashOut, selectedCategory, priceRange]);
+
+  const SummaryCashOut = useMemo(() => {
+    return DateFilteredCashOut.filter((cash) => {
+      const amount = Number(cash.amount);
+      if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
+        return false;
+      }
+      if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
+        return false;
+      }
+      return true;
+    });
+  }, [DateFilteredCashOut, priceRange]);
+
+  const totalCashOut = useMemo(() => {
+    return SummaryCashOut.reduce((total, item) => total + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const salaryTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "salary"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const purchaseTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "purchase"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const rentTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "rent"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const billTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "bill"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const officeExpenseTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "office-expense"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const loanRepaymentTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "loan-repayment"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const investorPayoutTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "investor-payout"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const profitPayoutTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "profit-payout"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const loanGivenTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.trim() === "loan-given"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const assetPurchaseTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "asset_purchase"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const shareInvestmentTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) => item.category?.toLowerCase().trim() === "share_investment"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
+
+  const otherTotal = useMemo(() => {
+    return SummaryCashOut.filter(
+      (item) =>
+        ![
           "salary",
           "purchase",
           "rent",
@@ -95,100 +223,15 @@ const CashOut = () => {
           "profit-payout",
           "asset_purchase",
           "share_investment",
-        ];
-        if (knownCategories.includes(cash.category?.toLowerCase().trim())) {
-          return false;
-        }
-      } else if (cash.category?.toLowerCase().trim() !== selectedCategory) {
-        return false;
-      }
-    }
-    const amount = Number(cash.amount);
-    if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
-      return false;
-    }
-    if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
-      return false;
-    }
-    return true;
-  });
+        ].includes(item.category?.toLowerCase().trim())
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashOut]);
 
-  const SummaryCashOut = DateFilteredCashOut.filter((cash) => {
-    const amount = Number(cash.amount);
-    if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
-      return false;
-    }
-    if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
-      return false;
-    }
-    return true;
-  });
-
-  const totalCashOut = SummaryCashOut.reduce(
-    (total, item) => total + Number(item.amount),
-    0
-  );
-
-  const salaryTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "salary"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const purchaseTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "purchase"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const rentTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "rent"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const billTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "bill"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const officeExpenseTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "office-expense"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const loanRepaymentTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "loan-repayment"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const investorPayoutTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "investor-payout"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const profitPayoutTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "profit-payout"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const loanGivenTotal = SummaryCashOut.filter(
-    (item) => item.category?.trim() === "loan-given"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const assetPurchaseTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "asset_purchase"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const shareInvestmentTotal = SummaryCashOut.filter(
-    (item) => item.category?.toLowerCase().trim() === "share_investment"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const otherTotal = SummaryCashOut.filter(
-    (item) =>
-      ![
-        "salary",
-        "purchase",
-        "rent",
-        "bill",
-        "office-expense",
-        "loan-repayment",
-        "loan-given",
-        "investor-payout",
-        "profit-payout",
-        "asset_purchase",
-        "share_investment",
-      ].includes(item.category?.toLowerCase().trim())
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
+  const totalPages = Math.ceil(FilteredCashOut.length / pageSize) || 1;
+  const paginatedCashOut = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return FilteredCashOut.slice(start, start + pageSize);
+  }, [FilteredCashOut, currentPage, pageSize]);
 
   const categoryName = (category) => {
     switch (category?.toLowerCase().trim()) {
@@ -652,8 +695,9 @@ const CashOut = () => {
                   </td>
                 </tr>
               ) : (
-                FilteredCashOut.map((cash, index) => {
+                paginatedCashOut.map((cash, index) => {
                   const hasPendingEdit = !!cash.pending_edit_id;
+                  const itemIndex = FilteredCashOut.length - ((currentPage - 1) * pageSize + index);
 
                   return (
                     <tr
@@ -661,7 +705,7 @@ const CashOut = () => {
                       className="transition-colors hover:bg-white/[0.03]"
                     >
                       <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
-                        {FilteredCashOut.length - index}
+                        {itemIndex}
                       </td>
 
                       <td className="px-5 py-3.5 font-medium text-white">
@@ -727,6 +771,45 @@ const CashOut = () => {
             </tbody>
           </table>
         </div>
+
+        {/* 🔹 Pagination Controls */}
+        {FilteredCashOut.length > pageSize && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-white/[0.08] bg-slate-900/40">
+            <div className="text-xs text-slate-400">
+              মোট <span className="font-bold text-white">{FilteredCashOut.length}</span> টির মধ্যে{" "}
+              <span className="font-bold text-white">
+                {(currentPage - 1) * pageSize + 1}
+              </span>{" "}
+              থেকে{" "}
+              <span className="font-bold text-white">
+                {Math.min(currentPage * pageSize, FilteredCashOut.length)}
+              </span>{" "}
+              দেখাচ্ছে
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs font-semibold text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" /> আগের পেজ
+              </button>
+
+              <span className="px-3 py-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+                পেজ {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs font-semibold text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer flex items-center gap-1"
+              >
+                পরের পেজ <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Remarks Modal Popup */}

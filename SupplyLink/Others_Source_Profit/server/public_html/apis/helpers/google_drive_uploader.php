@@ -94,7 +94,7 @@ class GoogleDriveUploader {
             $content .
             $close_delim;
 
-        $url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink';
+        $url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink';
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -116,8 +116,43 @@ class GoogleDriveUploader {
             $msg = $data['error']['message'] ?? $response;
             if ($httpCode === 404) {
                 $msg .= " (অনুগ্রহ করে গুগল ড্রাইভ ফোল্ডারটিতে 'drive-reporter@supplylink-report.iam.gserviceaccount.com' কে Editor হিসেবে Share করুন)";
+            } else if ($httpCode === 403 && (stripos($msg, 'storage quota') !== false || stripos($msg, 'shared drives') !== false)) {
+                $msg = "গুগল সার্ভিস অ্যাকাউন্টের নিজস্ব ড্রাইভ স্টোরেজ কোটা (0 MB) থাকে না। ফাইলটি সেভ করতে গুগল ড্রাইভ ফোল্ডারটি কোনও Google Workspace 'Shared Drive'-এ তৈরি করতে হবে, অথবা Google Apps Script Webhook ব্যবহার করতে হবে।";
             }
             throw new Exception("Drive upload failed (HTTP $httpCode): " . $msg);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Upload directly via Google Apps Script Web App (Free for personal @gmail.com accounts)
+     */
+    public function uploadViaAppsScript($webhookUrl, $filename, $content, $mimeType = 'application/pdf') {
+        $postData = json_encode([
+            'folderId' => $this->folderId,
+            'fileName' => $filename,
+            'mimeType' => $mimeType,
+            'content'  => base64_encode($content)
+        ]);
+
+        $ch = curl_init($webhookUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $data = json_decode($response, true);
+        if ($httpCode >= 400 || empty($data['success'])) {
+            $err = $data['error'] ?? $response;
+            throw new Exception("Apps Script upload failed (HTTP $httpCode): " . $err);
         }
 
         return $data;

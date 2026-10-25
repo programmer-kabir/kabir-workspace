@@ -24,6 +24,7 @@ import {
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
@@ -45,6 +46,7 @@ const OtherSourcesCollections = () => {
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   // Collect Modal
   const [showCollectModal, setShowCollectModal] = useState(false);
@@ -116,7 +118,11 @@ const OtherSourcesCollections = () => {
   const handleCollectSubmit = async (e) => {
     e.preventDefault();
     if (Number(collectForm.amount) <= 0) {
-      return toast.error("আদায়ের সঠিক পরিমাণ দিন");
+      return setLuxuryToast({
+        title: "সঠিক পরিমাণ দিন ⚠️",
+        message: "আদায়ের সঠিক টাকার পরিমাণ লিখুন।",
+        type: "warning",
+      });
     }
 
     try {
@@ -140,14 +146,28 @@ const OtherSourcesCollections = () => {
 
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "টাকা সফলভাবে আদায় করা হয়েছে 🎉");
+        setLuxuryToast({
+          title: "ভাড়া আদায় সম্পন্ন 🎉",
+          message: `${collectTarget?.asset_name || "অ্যাসেট"} এর (${selectedMonth}) মাসের ভাড়া সফলভাবে আদায় করা হয়েছে।`,
+          tag: collectTarget?.lessee_name ? `ভাড়াটিয়া: ${collectTarget.lessee_name}` : "ভাড়া আদায়",
+          amount: Number(collectForm.amount),
+          type: "success",
+        });
         setShowCollectModal(false);
         fetchCollections(selectedMonth);
       } else {
-        toast.error(data.message || "কালেকশন সংরক্ষণ ব্যর্থ");
+        setLuxuryToast({
+          title: "আদায় ব্যর্থ ❌",
+          message: data.message || "কালেকশন সংরক্ষণ করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingCollect(false);
     }
@@ -553,6 +573,9 @@ const OtherSourcesCollections = () => {
           </div>
         </div>
       )}
+
+      {/* Luxury Floating Toast Notification */}
+      <LuxuryToast toast={luxuryToast} onClose={() => setLuxuryToast(null)} duration={4500} />
     </div>
   );
 };

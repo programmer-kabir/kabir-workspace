@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { InstallmentItemRow } from "./InstallmentItemRow";
 import { DownPaymentRow } from "./DownPaymentRow";
 import InstallmentHistoryModal from "./InstallmentHistoryModal";
+import { EarlySettlementModal } from "../Modal/EarlySettlementModal";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -86,6 +87,7 @@ export const InstallmentRow = ({
   const [savedRowIndex, setSavedRowIndex] = useState(null);
   const [popup, setPopup] = useState(null);
   const [isCardHistoryOpen, setIsCardHistoryOpen] = useState(false);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
 
   useEffect(() => {
     const handleUpdateEvent = () => {
@@ -337,7 +339,8 @@ export const InstallmentRow = ({
 
   /* ================= MARK FULL PAID ================= */
   const isAllPaid =
-    payments.length > 0 && payments.every((p) => p.status === "Paid");
+    payments.length > 0 &&
+    payments.every((p) => p.status === "Paid" || p.status === "Waived");
 
   const handleMarkFullPaid = async () => {
     try {
@@ -375,126 +378,7 @@ export const InstallmentRow = ({
 
   /* ================= FULL SETTLEMENT / EARLY CLOSE ================= */
   const handleEarlyClose = () => {
-    const updated = [...payments];
-    const firstUnpaidIndex = updated.findIndex((p) => p.status !== "Paid");
-    if (firstUnpaidIndex === -1) return;
-
-    const currentItem = updated[firstUnpaidIndex];
-
-    const totalPaidPrincipalAmount = updated
-      .filter((p) => p.status === "Paid")
-      .reduce((sum, p) => sum + Number(p.principal_amount || 0), 0);
-
-    const totalPaidProfitAmount = updated
-      .filter((p) => p.status === "Paid")
-      .reduce((sum, p) => sum + Number(p.profit_amount || 0), 0);
-
-    const totalPrincipal = Number(card?.cost_price || 0);
-    const totalProfit = Number(card?.sale_price || 0) - totalPrincipal;
-
-    const lastPrincipal = totalPrincipal - totalPaidPrincipalAmount;
-    const lastProfit = totalProfit - totalPaidProfitAmount;
-    const lastAmount = lastPrincipal + lastProfit;
-
-    Swal.fire({
-      title: "সম্পূর্ণ নিষ্পত্তি (Full Settlement)",
-      html: `
-      <div style="text-align: left; font-size: 14px; color: #cbd5e1; line-height: 1.6;">
-        <p>আপনি কি এই কার্ডের <b>অবশিষ্ট সকল কিস্তি একসাথে নিষ্পত্তি</b> করতে চান?</p>
-        
-        <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin: 15px 0;">
-          <p style="margin: 0; font-size: 12px; color: #94a3b8;">চূড়ান্ত পরিশোধযোগ্য মোট অর্থ:</p>
-          <p style="font-size: 22px; font-weight: bold; color: #22c55e; margin: 5px 0 0 0;">
-            ৳ ${lastAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-          <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 12px; color: #94a3b8;">
-            <span>মূলধন: ৳ ${lastPrincipal.toFixed(2)}</span>
-            <span>লাভ: ৳ ${lastProfit.toFixed(2)}</span>
-          </div>
-        </div>
-
-        <ul style="padding-left: 20px; margin: 10px 0; font-size: 13px; color: #e2e8f0;">
-          <li>✔ বর্তমান কিস্তি চূড়ান্ত পরিমাণে সমন্বয় হবে</li>
-          <li>✔ ভবিষ্যতের অবশিষ্ট কিস্তিগুলো স্বয়ংক্রিয়ভাবে বন্ধ হবে</li>
-          <li>✔ কার্ডটি <b>Fully Paid</b> হিসেবে চিহ্নিত হবে</li>
-        </ul>
-
-        <p style="color: #f87171; font-size: 12px; margin-top: 10px;">
-          ⚠ এই কাজটি পুনর্বার পরিবর্তন করা যাবে না।
-        </p>
-      </div>
-    `,
-      icon: "warning",
-      background: "#080e1e",
-      color: "#f8fafc",
-      showCancelButton: true,
-      confirmButtonColor: "#16a34a",
-      cancelButtonColor: "#475569",
-      confirmButtonText: "হ্যাঁ, সম্পূর্ণ ক্লোজ করুন",
-      cancelButtonText: "বাতিল",
-      customClass: {
-        popup: "rounded-2xl border border-slate-800",
-      },
-    }).then(async (result) => {
-      if (!result.isConfirmed) return;
-
-      Swal.fire({
-        title: "প্রক্রিয়াধীন...",
-        text: "বকেয়া কিস্তি নিষ্পত্তি সম্পন্ন হচ্ছে...",
-        icon: "info",
-        background: "#080e1e",
-        color: "#f8fafc",
-        allowOutsideClick: false,
-        showConfirmButton: false,
-      });
-
-      try {
-        await fetch(
-          `${import.meta.env.VITE_LOCALHOST_KEY}/customers/installment_full_close.php`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              card_id: currentItem.card_id,
-              installment_no: currentItem.installment_no,
-              due_amount: lastAmount,
-              principal_amount: lastPrincipal,
-              profit_amount: lastProfit,
-            }),
-          },
-        );
-
-        updated[firstUnpaidIndex] = {
-          ...updated[firstUnpaidIndex],
-          due_amount: lastAmount,
-          principal_amount: lastPrincipal,
-          profit_amount: lastProfit,
-          status: "Paid",
-          paid_date: today,
-        };
-
-        const finalList = updated.slice(0, firstUnpaidIndex + 1);
-        setPayments(finalList);
-        refetch?.();
-
-        Swal.fire({
-          title: "সফল হয়েছে!",
-          text: "কার্ডের সকল কিস্তি সফলভাবে নিষ্পত্তি হয়েছে।",
-          icon: "success",
-          background: "#080e1e",
-          color: "#f8fafc",
-          confirmButtonColor: "#16a34a",
-        });
-      } catch (err) {
-        Swal.fire({
-          title: "ব্যর্থ হয়েছে",
-          text: "নিষ্পত্তি প্রক্রিয়ায় সমস্যা হয়েছে।",
-          icon: "error",
-          background: "#080e1e",
-          color: "#f8fafc",
-        });
-      }
-    });
+    setIsSettlementModalOpen(true);
   };
 
   return (
@@ -547,6 +431,7 @@ export const InstallmentRow = ({
               {/* ===== EXISTING PAYMENTS (VIEW & UPDATE) ===== */}
               {payments.map((item, index) => {
                 const isPaid = item.status === "Paid";
+                const isWaived = item.status === "Waived";
                 const isSavingThis = savingIndex === index;
                 const isSavedRecently = savedRowIndex === index;
 
@@ -560,7 +445,9 @@ export const InstallmentRow = ({
                       <div className="flex items-center gap-2 font-medium whitespace-nowrap">
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${
-                            Boolean(item.has_pending_edit)
+                            isWaived
+                              ? "bg-purple-400 shadow-[0_0_8px_#c084fc]"
+                              : Boolean(item.has_pending_edit)
                               ? "bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-pulse"
                               : isPaid
                               ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
@@ -569,7 +456,9 @@ export const InstallmentRow = ({
                         />
                         <span
                           className={`text-xs ${
-                            isPaid
+                            isWaived
+                              ? "text-purple-300 font-semibold"
+                              : isPaid
                               ? "text-slate-100 font-semibold"
                               : "text-slate-300"
                           }`}
@@ -620,7 +509,11 @@ export const InstallmentRow = ({
 
                     {/* 6. Paid Date */}
                     <td className="py-1 px-2">
-                      {isPaid ? (
+                      {isWaived ? (
+                        <div className="w-full text-center rounded-full bg-purple-950/40 border border-purple-500/30 px-3 py-1.5 text-[11px] font-semibold text-purple-300">
+                          মওকুফ (Waived)
+                        </div>
+                      ) : isPaid ? (
                         <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-slate-200">
                           {item.paid_date || today}
                         </div>
@@ -635,11 +528,12 @@ export const InstallmentRow = ({
                     <td className="py-1 px-2">
                       <div className="relative">
                         <select
+                          disabled={isWaived}
                           value={item.payment_method || "Cash"}
                           onChange={(e) =>
                             handlePaymentMethodChange(index, e.target.value)
                           }
-                          className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-200 text-center font-medium focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none pr-6"
+                          className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-200 text-center font-medium focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none pr-6 disabled:opacity-50"
                         >
                           <option value="Cash" className="bg-[#0b1324]">
                             Cash
@@ -664,18 +558,23 @@ export const InstallmentRow = ({
                     <td className="py-1 px-2">
                       <input
                         type="text"
-                        placeholder="Receipt #"
+                        disabled={isWaived}
+                        placeholder={isWaived ? "মওকুফ" : "Receipt #"}
                         value={item.receipt_number || ""}
                         onChange={(e) =>
                           handleReceiptChange(index, e.target.value)
                         }
-                        className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 text-center focus:outline-none focus:border-cyan-500"
+                        className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 text-center focus:outline-none focus:border-cyan-500 disabled:opacity-50"
                       />
                     </td>
 
                     {/* 9. Status */}
                     <td className="py-1 px-2">
-                      {Boolean(item.has_pending_edit) ? (
+                      {isWaived ? (
+                        <div className="w-full rounded-full px-3 py-1.5 text-xs font-bold text-center bg-purple-500/15 border border-purple-500/40 text-purple-300 shadow-sm shadow-purple-500/10">
+                          Waived (ছাড়)
+                        </div>
+                      ) : Boolean(item.has_pending_edit) ? (
                         <div
                           className="relative"
                           title="এই কিস্তিটি আনপেইড করার অনুরোধ বর্তমানে অ্যাডমিনের অনুমোদনের অপেক্ষায় রয়েছে"
@@ -709,6 +608,12 @@ export const InstallmentRow = ({
                               className="bg-[#0b1324] text-slate-300"
                             >
                               Unpaid
+                            </option>
+                            <option
+                              value="Waived"
+                              className="bg-[#1f0f35] text-purple-300 font-semibold"
+                            >
+                              Waived (ছাড়)
                             </option>
                           </select>
                           <span
@@ -781,7 +686,7 @@ export const InstallmentRow = ({
             <b className="text-rose-400 font-mono text-sm">
               ৳{" "}
               {payments
-                .filter((p) => p.status !== "Paid")
+                .filter((p) => p.status !== "Paid" && p.status !== "Waived")
                 .reduce((sum, p) => sum + Number(p.due_amount || 0), 0)
                 .toLocaleString()}
             </b>
@@ -803,14 +708,15 @@ export const InstallmentRow = ({
             </button>
           )}
 
-          {/* Full Settlement Button */}
-          {payments.length > 0 && payments.some((p) => p.status !== "Paid") && (
+          {/* Early Settlement Button */}
+          {payments.length > 0 && payments.some((p) => p.status !== "Paid" && p.status !== "Waived") && (
             <button
+              type="button"
               onClick={handleEarlyClose}
-              className="flex items-center gap-2 rounded-xl px-5 py-2.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-sm font-bold text-white shadow-lg shadow-rose-900/40 hover:brightness-110 hover:scale-[1.02] transition-all cursor-pointer"
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-sm font-bold text-white shadow-lg shadow-orange-950/40 hover:brightness-110 hover:scale-[1.02] transition-all cursor-pointer"
             >
-              <FaFire className="text-amber-300" />
-              দ্রুত নিষ্পত্তি (Full Settlement)
+              <FaFire className="text-amber-200" />
+              অগ্রিম নিষ্পত্তি ও ছাড় (Early Settlement)
             </button>
           )}
 
@@ -928,6 +834,19 @@ export const InstallmentRow = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ================= EARLY SETTLEMENT MODAL ================= */}
+      <EarlySettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setIsSettlementModalOpen(false)}
+        card={card}
+        customerName={card?.customer?.name || card?.user_name || "গ্রাহক"}
+        payments={payments}
+        user={user}
+        onSettlementSuccess={() => {
+          refetch?.();
+        }}
+      />
 
       {/* ================= AUDIT HISTORY MODAL ================= */}
       <InstallmentHistoryModal

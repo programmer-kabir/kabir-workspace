@@ -100,7 +100,12 @@ export default function InvestorDetailsWithId() {
     setPage(1);
   }, [q, userId]);
 
-  if (isUsersLoading || isInvestmentCardsLoading) {
+  const isPageLoading =
+    isUsersLoading ||
+    isInvestmentCardsLoading ||
+    (!isUsersError && (!users?.length || (userId && !investor)));
+
+  if (isPageLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader />

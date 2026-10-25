@@ -1,36 +1,23 @@
 <?php
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 // CORS
 header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 
 // DB
 require_once __DIR__ . '/../db.php';
 
-// helper
 function sendJson($data, $status = 200) {
     http_response_code($status);
-    echo json_encode($data);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// ==========================
-// ✅ Get Date
-// ==========================
-$date = $_GET["date"] ?? null;
+// 1. Get & Validate Date
+$date = $_GET["date"] ?? date("Y-m-d");
 
-if (!$date) {
-    sendJson([
-        "success" => false,
-        "message" => "Date required"
-    ], 400);
-}
-
-// ==========================
-// ✅ Validate Date
-// ==========================
 if (!date_create($date)) {
     sendJson([
         "success" => false,
@@ -38,60 +25,65 @@ if (!date_create($date)) {
     ], 400);
 }
 
-// ==========================
-// ✅ Cash In List
-// ==========================
-$stmt = $mysqli->prepare("
-    SELECT * FROM cash 
-    WHERE type='in' AND date=?
-    ORDER BY id DESC
-");
-$stmt->bind_param("s", $date);
-$stmt->execute();
-$cashIn = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-// ==========================
-// ✅ Cash Out List
-// ==========================
-$stmt = $mysqli->prepare("
-    SELECT * FROM cash 
-    WHERE type='out' AND date=?
-    ORDER BY id DESC
-");
-$stmt->bind_param("s", $date);
-$stmt->execute();
-$cashOut = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-// ==========================
-// ✅ Totals (SQL way - FAST)
-// ==========================
-$stmt = $mysqli->prepare("
-    SELECT type, IFNULL(SUM(amount),0) as total 
+// 2. Opening Cash (< date, approved only)
+$stmtOpen = $mysqli->prepare("
+    SELECT 
+        IFNULL(SUM(CASE WHEN type='in' THEN amount ELSE 0 END), 0) AS total_in,
+        IFNULL(SUM(CASE WHEN type='out' THEN amount ELSE 0 END), 0) AS total_out
     FROM cash 
-    WHERE date=? 
-    GROUP BY type
+    WHERE approval_status='approved' AND date < ?
+");
+$stmtOpen->bind_param("s", $date);
+$stmtOpen->execute();
+$openRes = $stmtOpen->get_result()->fetch_assoc();
+$openingCash = (float)($openRes['total_in'] ?? 0) - (float)($openRes['total_out'] ?? 0);
+$stmtOpen->close();
+
+// 3. Cash In List (Approved Only)
+$stmt = $mysqli->prepare("
+    SELECT * FROM cash 
+    WHERE type='in' AND date=? AND approval_status='approved'
+    ORDER BY id ASC
 ");
 $stmt->bind_param("s", $date);
 $stmt->execute();
-$rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$cashInList = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
+// 4. Cash Out List (Approved Only)
+$stmt = $mysqli->prepare("
+    SELECT * FROM cash 
+    WHERE type='out' AND date=? AND approval_status='approved'
+    ORDER BY id ASC
+");
+$stmt->bind_param("s", $date);
+$stmt->execute();
+$cashOutList = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// 5. Calculate Totals
 $totalIn = 0;
-$totalOut = 0;
-
-foreach ($rows as $r) {
-    if ($r['type'] === 'in') $totalIn = $r['total'];
-    if ($r['type'] === 'out') $totalOut = $r['total'];
+foreach ($cashInList as $cin) {
+    $totalIn += (float)$cin['amount'];
 }
 
-// ==========================
-// ✅ Response
-// ==========================
+$totalOut = 0;
+foreach ($cashOutList as $cout) {
+    $totalOut += (float)$cout['amount'];
+}
+
+$net = $totalIn - $totalOut;
+$closingBalance = $openingCash + $net;
+
+// 6. Response
 sendJson([
     "success" => true,
     "date" => $date,
+    "openingCash" => (float)$openingCash,
     "totalIn" => (float)$totalIn,
     "totalOut" => (float)$totalOut,
-    "net" => (float)$totalIn - (float)$totalOut,
-    "cashInList" => $cashIn,
-    "cashOutList" => $cashOut
+    "net" => (float)$net,
+    "closingBalance" => (float)$closingBalance,
+    "cashInList" => $cashInList,
+    "cashOutList" => $cashOutList
 ]);

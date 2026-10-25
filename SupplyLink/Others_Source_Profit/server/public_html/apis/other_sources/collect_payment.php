@@ -97,10 +97,38 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
+    $colId = $stmt->insert_id;
+
+    // 📧 Automated Notification to Admin in isolated try-catch
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $emailData = [
+            'title'      => 'অ্যাসেট ভাড়া আদায় রশিদ',
+            'party_name' => "{$lessee_name} ({$asset_name})",
+            'category'   => 'মাসিক ভাড়া / লিজ আদায়',
+            'amount'     => $amount,
+            'date'       => $collection_date,
+            'slip_no'    => $billing_month,
+            'card_id'    => "Asset #{$asset_id}",
+            'collector'  => 'অফিস ক্যাশিয়ার',
+            'notes'      => 'মাসিক ভাড়া/লিজ আদায় সফলভাবে ক্যাশ ইন-এ যুক্ত হয়েছে।'
+        ];
+        $emailHtml = renderSupplyLinkEmailTemplate($emailData);
+        $emailSubject = "ভাড়া আদায় রশিদ - {$asset_name} ({$billing_month})";
+        sendSupplyLinkNotification(null, $emailSubject, $emailHtml, [
+            'type'    => 'rental_collected',
+            'title'   => "ভাড়া আদায়: {$asset_name}",
+            'message' => "{$lessee_name} এর নিকট থেকে {$asset_name} এর ({$billing_month}) মাসের ভাড়া ৳" . number_format($amount) . " আদায় হয়েছে।",
+            'link'    => '/other-sources/collections'
+        ]);
+    } catch (Throwable $mailErr) {
+        error_log("Rent collection email non-fatal error: " . $mailErr->getMessage());
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "টাকা সফলভাবে আদায় করা হয়েছে এবং ক্যাশ-ইন সম্পন্ন হয়েছে",
-        "collection_id" => $stmt->insert_id,
+        "collection_id" => $colId,
         "cash_id" => $cash_id
     ]);
 } else {

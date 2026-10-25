@@ -24,6 +24,7 @@ import {
 import { FaMoneyBillWave, FaReceipt } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
+import LuxuryToast from "../../../components/Modal/LuxuryToast";
 
 const DailyInstallmentsUsers = () => {
   const {
@@ -41,6 +42,7 @@ const DailyInstallmentsUsers = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptModal, setReceiptModal] = useState(null);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   const userRoles = Array.isArray(user?.role) ? user.role : [user?.role];
   const allowedRoles = ["staff", "manager", "admin", "developer"];
@@ -178,6 +180,14 @@ const DailyInstallmentsUsers = () => {
       const data = res.data;
       if (data.success) {
         toast.success("দৈনিক কিস্তি সফলভাবে আদায় ও ক্যাশ ইন হয়েছে ✅");
+
+        setLuxuryToast({
+          title: "দৈনিক কিস্তি আদায় সফল! 🎉",
+          message: `গ্রাহক ${selectedCard?.customer?.name || "গ্রাহক"} এর কার্ড #${selectedCard?.id} এ ৳${Number(formData.amount).toLocaleString()} জমা হয়েছে ও ইমেইল নোটিফিকেশন পাঠানো হয়েছে।`,
+          tag: `রসিদ #${data.receipt?.id || data.data?.id}`,
+          amount: formData.amount,
+          type: "success",
+        });
 
         // Trigger Receipt Modal
         setReceiptModal({
@@ -839,8 +849,16 @@ const DailyInstallmentsUsers = () => {
           </div>,
           document.body
         )}
+
+      {/* 🌟 Luxury Toast Notification */}
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={4500}
+      />
     </div>
   );
 };
 
 export default DailyInstallmentsUsers;
+

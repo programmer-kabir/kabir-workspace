@@ -1,208 +1,253 @@
 <?php
 /**
- * Standalone Minimal PDF 1.4 Generator for Daily Financial Reports
- * Pure PHP, zero external dependencies.
+ * Daily Financial Report PDF Builder
+ * Generates an executive, clean, multi-page white report directly from the `cash` ledger.
+ * Pure PHP 8, zero dependencies.
  */
 
 class DailyReportPdf {
-    private $objects = [];
-    private $pageObjects = [];
-    private $stream = "";
+    private $pages = [];
+    private $currentPageStream = "";
+    private $y = 780;
+    private $pageNumber = 1;
+    private $dateStr = "";
 
-    public function generateReport($summary, $transactions) {
+    public function generateReport($summary, $cashInRows, $cashOutRows, $categoryBreakdown = []) {
+        $this->pages = [];
+        $this->currentPageStream = "";
+        $this->pageNumber = 1;
+
         date_default_timezone_set('Asia/Dhaka');
-        $dateStr = date("d M, Y");
-        $timeStr = date("h:i A");
+        $this->dateStr = date("d M, Y", strtotime($summary['date'] ?? date("Y-m-d")));
 
-        $deposit = number_format((float)($summary['todayDeposit'] ?? 0), 2);
-        $withdraw = number_format((float)($summary['todayWithdraw'] ?? 0), 2);
-        $net = number_format((float)($summary['todayNet'] ?? 0), 2);
-        $hand = number_format((float)($summary['handCash'] ?? 0), 2);
+        $this->startNewPage();
 
-        $stream = "";
-        
-        // Background Dark Slate Theme for header
-        $stream .= "0.04 0.07 0.13 rg\n"; // Dark background (#0a1222)
-        $stream .= "0 0 595 842 re f\n"; // Full A4 page
+        // 1. Executive Cash Summary Box
+        $this->drawCashSummaryBox(
+            $summary['openingCash'] ?? 0,
+            $summary['totalCashIn'] ?? 0,
+            $summary['totalCashOut'] ?? 0,
+            $summary['netToday'] ?? 0,
+            $summary['closingBalance'] ?? 0
+        );
 
-        // Card Container (White / Clean Slate Panel)
-        $stream .= "0.07 0.11 0.18 rg\n"; // Panel background (#121d30)
-        $stream .= "20 20 555 802 re f\n";
+        // 2. Table: Approved Cash In Transactions
+        $this->drawTable(
+            "1. Approved Cash In Transactions (আজকের মোট জমা)",
+            ["#", "Voucher", "Source / Depositor", "Purpose / Particulars", "Category", "Amount (BDT)"],
+            [25, 55, 150, 145, 80, 80],
+            $cashInRows,
+            $summary['totalCashIn'] ?? 0,
+            "Total Cash In",
+            [0, 0.5, 0.2] // Green total
+        );
 
-        // Top Accent Bar (Gradient Cyan/Indigo simulation)
-        $stream .= "0.25 0.40 0.95 rg\n"; // Royal Blue top accent
-        $stream .= "20 816 555 6 re f\n";
+        // 3. Table: Approved Cash Out Transactions
+        $this->drawTable(
+            "2. Approved Cash Out Transactions (আজকের মোট খরচ ও প্রদান)",
+            ["#", "Voucher", "Expense Head / Source", "Purpose / Particulars", "Category", "Amount (BDT)"],
+            [25, 55, 150, 145, 80, 80],
+            $cashOutRows,
+            $summary['totalCashOut'] ?? 0,
+            "Total Cash Out",
+            [0.8, 0.1, 0.1] // Red total
+        );
 
-        // Title and Header
-        $stream .= "BT\n";
-        $stream .= "/F2 20 Tf\n";
-        $stream .= "1 1 1 rg\n"; // White text
-        $stream .= "40 782 Td\n";
-        $stream .= "(SupplyLink Operational - Daily Cash Report) Tj\n";
-        $stream .= "ET\n";
+        // 4. Signatures Block
+        $this->drawSignatures();
 
-        // Subtitle
-        $stream .= "BT\n";
-        $stream .= "/F1 10 Tf\n";
-        $stream .= "0.6 0.7 0.85 rg\n"; // Slate light
-        $stream .= "40 765 Td\n";
-        $stream .= "(Bangladesh Time: " . $dateStr . " | " . $timeStr . " [Asia/Dhaka]) Tj\n";
-        $stream .= "ET\n";
-
-        // Divider
-        $stream .= "0.2 0.28 0.42 RG\n";
-        $stream .= "1 w\n";
-        $stream .= "40 750 m 555 750 l S\n";
-
-        // 4 KPI Summary Cards
-        // Card 1: Deposit (IN) - Emerald
-        $this->drawKpiCard($stream, 40, 670, 120, 65, "TODAY DEPOSIT (IN)", "BDT " . $deposit, [0.06, 0.72, 0.50]);
-        // Card 2: Withdraw (OUT) - Amber/Rose
-        $this->drawKpiCard($stream, 170, 670, 120, 65, "TODAY EXPENSE (OUT)", "BDT " . $withdraw, [0.95, 0.40, 0.45]);
-        // Card 3: Net Balance
-        $this->drawKpiCard($stream, 300, 670, 120, 65, "TODAY NET BALANCE", "BDT " . $net, [0.30, 0.65, 1.00]);
-        // Card 4: Hand Cash
-        $this->drawKpiCard($stream, 430, 670, 125, 65, "TOTAL HAND CASH", "BDT " . $hand, [0.85, 0.65, 0.20]);
-
-        // Transactions Section Title
-        $stream .= "BT\n";
-        $stream .= "/F2 13 Tf\n";
-        $stream .= "1 1 1 rg\n";
-        $stream .= "40 635 Td\n";
-        $stream .= "(Approved Transactions for Today) Tj\n";
-        $stream .= "ET\n";
-
-        // Table Header
-        $stream .= "0.15 0.22 0.35 rg\n";
-        $stream .= "40 605 515 22 re f\n";
-
-        $stream .= "BT\n";
-        $stream .= "/F2 9 Tf\n";
-        $stream .= "0.9 0.95 1 rg\n";
-        $stream .= "50 612 Td (SL) Tj\n";
-        $stream .= "75 612 Td (TYPE) Tj\n";
-        $stream .= "135 612 Td (SOURCE / PURPOSE) Tj\n";
-        $stream .= "315 612 Td (CATEGORY) Tj\n";
-        $stream .= "420 612 Td (AMOUNT (BDT)) Tj\n";
-        $stream .= "500 612 Td (STATUS) Tj\n";
-        $stream .= "ET\n";
-
-        // Table Rows
-        $y = 585;
-        $count = 0;
-        foreach ($transactions as $idx => $t) {
-            if ($y < 70) break; // page height guard
-            $count++;
-            $isEven = ($idx % 2 === 0);
-            
-            // Row background
-            if ($isEven) {
-                $stream .= "0.10 0.15 0.25 rg\n";
-            } else {
-                $stream .= "0.08 0.12 0.21 rg\n";
-            }
-            $stream .= "40 " . ($y - 5) . " 515 20 re f\n";
-
-            // Row text
-            $type = strtoupper($t['type'] ?? 'IN');
-            $source = substr($this->cleanAscii($t['source'] ?? $t['purpose'] ?? 'General'), 0, 30);
-            $cat = substr($this->cleanAscii($t['category'] ?? 'Regular'), 0, 18);
-            $amt = number_format((float)($t['amount'] ?? 0), 2);
-
-            $stream .= "BT\n";
-            $stream .= "/F1 8.5 Tf\n";
-            $stream .= "0.85 0.9 0.95 rg\n";
-            $stream .= "50 $y Td (" . ($idx + 1) . ") Tj\n";
-            
-            // Colored Type
-            if ($type === 'IN') {
-                $stream .= "0.2 0.85 0.55 rg\n";
-            } else {
-                $stream .= "1 0.45 0.45 rg\n";
-            }
-            $stream .= "75 $y Td (" . $type . ") Tj\n";
-
-            $stream .= "0.85 0.9 0.95 rg\n";
-            $stream .= "135 $y Td (" . $source . ") Tj\n";
-            $stream .= "315 $y Td (" . $cat . ") Tj\n";
-            
-            // Amount
-            $stream .= "/F2 8.5 Tf\n";
-            if ($type === 'IN') {
-                $stream .= "0.2 0.85 0.55 rg\n";
-            } else {
-                $stream .= "1 0.45 0.45 rg\n";
-            }
-            $stream .= "420 $y Td (" . $amt . ") Tj\n";
-
-            $stream .= "0.3 0.8 1 rg\n";
-            $stream .= "/F1 7.5 Tf\n";
-            $stream .= "500 $y Td (Approved) Tj\n";
-            $stream .= "ET\n";
-
-            $y -= 22;
-        }
-
-        if ($count === 0) {
-            $stream .= "BT\n";
-            $stream .= "/F1 9 Tf\n";
-            $stream .= "0.6 0.7 0.8 rg\n";
-            $stream .= "200 " . ($y - 5) . " Td (No cash transactions recorded for today.) Tj\n";
-            $stream .= "ET\n";
-            $y -= 25;
-        }
-
-        // Footer
-        $stream .= "0.2 0.28 0.42 RG\n";
-        $stream .= "40 45 m 555 45 l S\n";
-
-        $stream .= "BT\n";
-        $stream .= "/F1 8 Tf\n";
-        $stream .= "0.5 0.6 0.75 rg\n";
-        $stream .= "40 32 Td (Generated by SupplyLink Operational System | Confidential Financial Audit Record) Tj\n";
-        $stream .= "450 32 Td (Page 1 of 1) Tj\n";
-        $stream .= "ET\n";
-
-        return $this->buildPdfBinary($stream);
+        return $this->buildPdfBinary();
     }
 
-    private function drawKpiCard(&$stream, $x, $y, $w, $h, $title, $value, $accentColor) {
-        // Box
-        $stream .= "0.10 0.16 0.26 rg\n";
-        $stream .= "$x $y $w $h re f\n";
+    private function startNewPage() {
+        if (!empty($this->currentPageStream)) {
+            $this->drawFooter();
+            $this->pages[] = $this->currentPageStream;
+        }
+        $this->currentPageStream = "";
+        $this->y = 800;
 
-        // Left accent strip
-        $stream .= "{$accentColor[0]} {$accentColor[1]} {$accentColor[2]} rg\n";
-        $stream .= "$x $y 3.5 $h re f\n";
+        // Pure white background
+        $this->currentPageStream .= "1 1 1 rg\n";
+        $this->currentPageStream .= "0 0 595 842 re f\n";
 
-        // Border outline
-        $stream .= "0.18 0.25 0.38 RG\n";
-        $stream .= "0.8 w\n";
-        $stream .= "$x $y $w $h re S\n";
+        // Header Title
+        $this->currentPageStream .= "BT\n/F2 13 Tf\n0.1 0.1 0.1 rg\n30 812 Td (SupplyLink Operational - Daily Cash Ledger Report) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F1 8.5 Tf\n0.35 0.35 0.35 rg\n410 812 Td (Date: " . $this->cleanText($this->dateStr) . ") Tj\nET\n";
+        $this->currentPageStream .= "0.7 0.7 0.7 RG\n0.5 w\n30 805 m 565 805 l S\n";
 
-        // Text
-        $stream .= "BT\n";
-        $stream .= "/F1 7 Tf\n";
-        $stream .= "0.65 0.75 0.85 rg\n";
-        $stream .= ($x + 8) . " " . ($y + $h - 18) . " Td (" . $title . ") Tj\n";
-        $stream .= "ET\n";
-
-        $stream .= "BT\n";
-        $stream .= "/F2 11.5 Tf\n";
-        $stream .= "1 1 1 rg\n";
-        $stream .= ($x + 8) . " " . ($y + 16) . " Td (" . $value . ") Tj\n";
-        $stream .= "ET\n";
+        $this->y = 785;
     }
 
-    private function cleanAscii($str) {
-        $str = preg_replace('/[^\x20-\x7E]/', '', $str);
+    private function drawFooter() {
+        $this->currentPageStream .= "0.7 0.7 0.7 RG\n0.5 w\n30 35 m 565 35 l S\n";
+        $this->currentPageStream .= "BT\n/F1 7.5 Tf\n0.4 0.4 0.4 rg\n30 25 Td (Generated by SupplyLink Cash Registry | Confidential Financial Audit Record) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F1 7.5 Tf\n0.4 0.4 0.4 rg\n510 25 Td (Page " . $this->pageNumber . ") Tj\nET\n";
+        $this->pageNumber++;
+    }
+
+    private function checkPageSpace($neededHeight) {
+        if ($this->y - $neededHeight < 55) {
+            $this->startNewPage();
+        }
+    }
+
+    private function cleanText($str) {
+        // Strip non-printable or high bytes for standard Helvetica ASCII compatibility
+        $str = preg_replace('/[^\x20-\x7E]/', ' ', (string)$str);
         $str = str_replace(['(', ')', '\\'], ['[', ']', '/'], $str);
+        $str = preg_replace('/\s+/', ' ', $str);
         return trim($str);
     }
 
-    private function buildPdfBinary($contentStream) {
-        $streamLen = strlen($contentStream);
+    private function drawCashSummaryBox($opening, $in, $out, $net, $closing) {
+        $boxHeight = 115;
+        $this->checkPageSpace($boxHeight + 15);
 
+        $x = 30;
+        $w = 535;
+        $y = $this->y - $boxHeight;
+
+        // Outer border
+        $this->currentPageStream .= "0 0 0 RG\n1 w\n";
+        $this->currentPageStream .= "$x $y $w $boxHeight re S\n";
+
+        // Box Title Header with light tint
+        $this->currentPageStream .= "0.95 0.95 0.97 rg\n";
+        $this->currentPageStream .= "$x " . ($y + $boxHeight - 24) . " $w 24 re f\n";
+        $this->currentPageStream .= "0 0 0 RG\n0.5 w\n";
+        $this->currentPageStream .= "$x " . ($y + $boxHeight - 24) . " $w 24 re S\n";
+
+        $this->currentPageStream .= "BT\n/F2 11 Tf\n0 0 0 rg\n" . ($x + 180) . " " . ($y + $boxHeight - 16) . " Td (" . $this->cleanText($this->dateStr) . " Cash Summary) Tj\nET\n";
+
+        // 1. Opening Cash
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0.2 0.2 0.2 rg\n50 " . ($y + 73) . " Td (1. Opening Cash Balance) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0.1 0.1 0.1 rg\n440 " . ($y + 73) . " Td (BDT " . number_format((float)$opening, 2) . ") Tj\nET\n";
+        $this->currentPageStream .= "0.9 0.9 0.9 RG\n0.5 w\n45 " . ($y + 68) . " m 550 " . ($y + 68) . " l S\n";
+
+        // 2. Total Cash In
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0.2 0.2 0.2 rg\n50 " . ($y + 55) . " Td (2. Today Approved Cash In) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0 0.55 0.2 rg\n440 " . ($y + 55) . " Td (BDT " . number_format((float)$in, 2) . ") Tj\nET\n";
+        $this->currentPageStream .= "0.9 0.9 0.9 RG\n0.5 w\n45 " . ($y + 50) . " m 550 " . ($y + 50) . " l S\n";
+
+        // 3. Total Cash Out
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0.2 0.2 0.2 rg\n50 " . ($y + 37) . " Td (3. Today Approved Cash Out) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F2 9 Tf\n0.8 0.1 0.1 rg\n440 " . ($y + 37) . " Td (BDT " . number_format((float)$out, 2) . ") Tj\nET\n";
+        $this->currentPageStream .= "0.9 0.9 0.9 RG\n0.5 w\n45 " . ($y + 32) . " m 550 " . ($y + 32) . " l S\n";
+
+        // 4. Net Cash Balance (Closing)
+        $closeColor = ($closing >= 0) ? "0 0.35 0.75 rg" : "0.8 0.1 0.1 rg";
+        $this->currentPageStream .= "BT\n/F2 10 Tf\n0 0 0 rg\n50 " . ($y + 14) . " Td (4. Closing Hand Cash Balance) Tj\nET\n";
+        $this->currentPageStream .= "BT\n/F2 10 Tf\n$closeColor\n440 " . ($y + 14) . " Td (BDT " . number_format((float)$closing, 2) . ") Tj\nET\n";
+
+        $this->y = $y - 18;
+    }
+
+    private function drawTable($title, $columns, $colWidths, $rows, $totalAmount = null, $totalLabel = "Total", $totalColor = [0, 0, 0]) {
+        $rowHeight = 17;
+        $headerHeight = 19;
+        $titleHeight = 18;
+        $tableW = array_sum($colWidths);
+        $x = 30;
+
+        // Section Title
+        $this->checkPageSpace($titleHeight + $headerHeight + $rowHeight + 20);
+        $this->currentPageStream .= "BT\n/F2 10 Tf\n0 0 0 rg\n$x " . ($this->y - 12) . " Td (" . $this->cleanText($title) . ") Tj\nET\n";
+        $this->y -= $titleHeight;
+
+        // Header background
+        $headerY = $this->y - $headerHeight;
+        $this->currentPageStream .= "0.94 0.95 0.96 rg\n$x $headerY $tableW $headerHeight re f\n";
+        $this->currentPageStream .= "0 0 0 RG\n0.6 w\n$x $headerY $tableW $headerHeight re S\n";
+
+        // Header dividers & text
+        $currX = $x;
+        foreach ($columns as $idx => $colName) {
+            $w = $colWidths[$idx];
+            $this->currentPageStream .= "0 0 0 RG\n0.6 w\n$currX $headerY 0 $headerHeight re S\n";
+            $this->currentPageStream .= "BT\n/F2 7.5 Tf\n0.1 0.1 0.1 rg\n" . ($currX + 4) . " " . ($headerY + 6) . " Td (" . $this->cleanText($colName) . ") Tj\nET\n";
+            $currX += $w;
+        }
+        $this->y = $headerY;
+
+        // Table Rows
+        if (empty($rows)) {
+            $this->checkPageSpace($rowHeight);
+            $rowY = $this->y - $rowHeight;
+            $this->currentPageStream .= "1 1 1 rg\n$x $rowY $tableW $rowHeight re f\n";
+            $this->currentPageStream .= "0 0 0 RG\n0.4 w\n$x $rowY $tableW $rowHeight re S\n";
+            $this->currentPageStream .= "BT\n/F1 7.5 Tf\n0.5 0.5 0.5 rg\n" . ($x + 190) . " " . ($rowY + 5) . " Td (No approved transactions recorded for today.) Tj\nET\n";
+            $this->y = $rowY;
+        } else {
+            foreach ($rows as $row) {
+                $this->checkPageSpace($rowHeight);
+                $rowY = $this->y - $rowHeight;
+
+                $this->currentPageStream .= "1 1 1 rg\n$x $rowY $tableW $rowHeight re f\n";
+                $this->currentPageStream .= "0 0 0 RG\n0.4 w\n$x $rowY $tableW $rowHeight re S\n";
+
+                $currX = $x;
+                foreach ($row as $idx => $cellVal) {
+                    $w = $colWidths[$idx];
+                    $this->currentPageStream .= "0 0 0 RG\n0.4 w\n$currX $rowY 0 $rowHeight re S\n";
+                    $maxChars = max(6, intval($w / 4.8));
+                    $cleanVal = substr($this->cleanText($cellVal), 0, $maxChars);
+                    $this->currentPageStream .= "BT\n/F1 7.5 Tf\n0.15 0.15 0.15 rg\n" . ($currX + 4) . " " . ($rowY + 5) . " Td (" . $cleanVal . ") Tj\nET\n";
+                    $currX += $w;
+                }
+                $this->y = $rowY;
+            }
+        }
+
+        // Total Row
+        if ($totalAmount !== null) {
+            $this->checkPageSpace($rowHeight);
+            $rowY = $this->y - $rowHeight;
+            $this->currentPageStream .= "0.96 0.96 0.98 rg\n$x $rowY $tableW $rowHeight re f\n";
+            $this->currentPageStream .= "0 0 0 RG\n0.6 w\n$x $rowY $tableW $rowHeight re S\n";
+
+            $this->currentPageStream .= "BT\n/F2 8 Tf\n0 0 0 rg\n" . ($x + 10) . " " . ($rowY + 5) . " Td (" . $this->cleanText($totalLabel) . ":) Tj\nET\n";
+            
+            $cr = $totalColor[0];
+            $cg = $totalColor[1];
+            $cb = $totalColor[2];
+            $this->currentPageStream .= "BT\n/F2 8.5 Tf\n$cr $cg $cb rg\n" . ($x + $tableW - 120) . " " . ($rowY + 5) . " Td (BDT " . number_format((float)$totalAmount, 2) . ") Tj\nET\n";
+            $this->y = $rowY;
+        }
+
+        $this->y -= 16; // spacing after table
+    }
+
+    private function drawSignatures() {
+        $needed = 60;
+        $this->checkPageSpace($needed);
+
+        $this->y -= 25;
+        $sigY = $this->y;
+
+        // Line 1: Prepared By
+        $this->currentPageStream .= "0.4 0.4 0.4 RG\n0.5 w\n40 $sigY m 160 $sigY l S\n";
+        $this->currentPageStream .= "BT\n/F1 8 Tf\n0.2 0.2 0.2 rg\n65 " . ($sigY - 12) . " Td (Prepared By) Tj\nET\n";
+
+        // Line 2: Checked By
+        $this->currentPageStream .= "0.4 0.4 0.4 RG\n0.5 w\n230 $sigY m 350 $sigY l S\n";
+        $this->currentPageStream .= "BT\n/F1 8 Tf\n0.2 0.2 0.2 rg\n255 " . ($sigY - 12) . " Td (Checked By) Tj\nET\n";
+
+        // Line 3: Approved By (Manager / Director)
+        $this->currentPageStream .= "0.4 0.4 0.4 RG\n0.5 w\n420 $sigY m 540 $sigY l S\n";
+        $this->currentPageStream .= "BT\n/F1 8 Tf\n0.2 0.2 0.2 rg\n445 " . ($sigY - 12) . " Td (Approved By) Tj\nET\n";
+
+        $this->y -= 30;
+    }
+
+    private function buildPdfBinary() {
+        if (!empty($this->currentPageStream)) {
+            $this->drawFooter();
+            $this->pages[] = $this->currentPageStream;
+            $this->currentPageStream = "";
+        }
+
+        $pageCount = max(1, count($this->pages));
         $out = "%PDF-1.4\n";
         $offsets = [];
 
@@ -211,36 +256,48 @@ class DailyReportPdf {
         $out .= "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
 
         // 2: Pages
+        $kids = [];
+        for ($i = 0; $i < $pageCount; $i++) {
+            $pageObjNum = 3 + ($i * 2);
+            $kids[] = "$pageObjNum 0 R";
+        }
         $offsets[2] = strlen($out);
-        $out .= "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
+        $out .= "2 0 obj\n<< /Type /Pages /Kids [" . implode(" ", $kids) . "] /Count $pageCount >>\nendobj\n";
 
-        // 3: Page
-        $offsets[3] = strlen($out);
-        $out .= "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n";
+        // Fonts
+        $f1Obj = 3 + ($pageCount * 2);
+        $f2Obj = $f1Obj + 1;
 
-        // 4: Content Stream
-        $offsets[4] = strlen($out);
-        $out .= "4 0 obj\n<< /Length $streamLen >>\nstream\n" . $contentStream . "\nendstream\nendobj\n";
+        // Output Pages and Content streams
+        for ($i = 0; $i < $pageCount; $i++) {
+            $pageObj = 3 + ($i * 2);
+            $contentObj = $pageObj + 1;
+            $streamData = $this->pages[$i];
+            $streamLen = strlen($streamData);
 
-        // 5: Font F1 (Helvetica)
-        $offsets[5] = strlen($out);
-        $out .= "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+            $offsets[$pageObj] = strlen($out);
+            $out .= "$pageObj 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents $contentObj 0 R /Resources << /Font << /F1 $f1Obj 0 R /F2 $f2Obj 0 R >> >> >>\nendobj\n";
 
-        // 6: Font F2 (Helvetica-Bold)
-        $offsets[6] = strlen($out);
-        $out .= "6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n";
-
-        // xref table
-        $xrefOffset = strlen($out);
-        $out .= "xref\n";
-        $out .= "0 7\n";
-        $out .= "0000000000 65535 f \n";
-        for ($i = 1; $i <= 6; $i++) {
-            $out .= sprintf("%010d 00000 n \n", $offsets[$i]);
+            $offsets[$contentObj] = strlen($out);
+            $out .= "$contentObj 0 obj\n<< /Length $streamLen >>\nstream\n" . $streamData . "\nendstream\nendobj\n";
         }
 
-        // trailer
-        $out .= "trailer\n<< /Size 7 /Root 1 0 R >>\n";
+        // Font F1 (Helvetica)
+        $offsets[$f1Obj] = strlen($out);
+        $out .= "$f1Obj 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+
+        // Font F2 (Helvetica-Bold)
+        $offsets[$f2Obj] = strlen($out);
+        $out .= "$f2Obj 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n";
+
+        $totalObjs = $f2Obj;
+        $xrefOffset = strlen($out);
+        $out .= "xref\n0 " . ($totalObjs + 1) . "\n";
+        $out .= "0000000000 65535 f \n";
+        for ($i = 1; $i <= $totalObjs; $i++) {
+            $out .= sprintf("%010d 00000 n \n", $offsets[$i]);
+        }
+        $out .= "trailer\n<< /Size " . ($totalObjs + 1) . " /Root 1 0 R >>\n";
         $out .= "startxref\n$xrefOffset\n%%EOF\n";
 
         return $out;

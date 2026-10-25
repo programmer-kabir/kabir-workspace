@@ -72,29 +72,41 @@ if (!$stmt->execute()) {
 $insertId = $stmt->insert_id;
 $stmt->close();
 
-// 🔥 FETCH CUSTOMER & RECEIVER NAMES FOR INFORMATIVE NOTIFICATION & CASH LOG
+// 🔥 FETCH CUSTOMER, RECEIVER & CARD DETAILS FOR NOTIFICATION & AUDIT
+$customerData = null;
 $customerName = "User #$userId";
-$stmtCust = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+$stmtCust = $mysqli->prepare("SELECT id, name, mobile, email, id_number FROM users WHERE id = ? LIMIT 1");
 if ($stmtCust) {
     $stmtCust->bind_param("i", $userId);
     $stmtCust->execute();
-    $rCust = $stmtCust->get_result()->fetch_assoc();
-    if ($rCust && !empty($rCust['name'])) {
-        $customerName = $rCust['name'];
+    $customerData = $stmtCust->get_result()->fetch_assoc();
+    if ($customerData && !empty($customerData['name'])) {
+        $customerName = $customerData['name'];
     }
     $stmtCust->close();
 }
 
+$receiverData = null;
 $receiverName = "Staff #$receiver";
-$stmtRecv = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+$stmtRecv = $mysqli->prepare("SELECT id, name, mobile, email FROM users WHERE id = ? LIMIT 1");
 if ($stmtRecv) {
     $stmtRecv->bind_param("i", $receiver);
     $stmtRecv->execute();
-    $rRecv = $stmtRecv->get_result()->fetch_assoc();
-    if ($rRecv && !empty($rRecv['name'])) {
-        $receiverName = $rRecv['name'];
+    $receiverData = $stmtRecv->get_result()->fetch_assoc();
+    if ($receiverData && !empty($receiverData['name'])) {
+        $receiverName = $receiverData['name'];
     }
     $stmtRecv->close();
+}
+
+// 💳 Fetch Installment Card Info
+$cardData = null;
+$stmtCard = $mysqli->prepare("SELECT id, card_number, product_name, sale_price FROM installment_cards WHERE id = ? OR card_number = ? LIMIT 1");
+if ($stmtCard) {
+    $stmtCard->bind_param("is", $cardId, $cardId);
+    $stmtCard->execute();
+    $cardData = $stmtCard->get_result()->fetch_assoc();
+    $stmtCard->close();
 }
 
 // 🔥 AUTOMATIC CASH IN SYNC (Directly into cash table)
@@ -147,6 +159,24 @@ if ($stmtNotif) {
     $stmtNotif->bind_param("issssss", $receiver, $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $now);
     $stmtNotif->execute();
     $stmtNotif->close();
+}
+
+// 📧 SEND EMAIL TO CUSTOMER (IF EMAIL PRESENT) & TO ADMIN (AUDIT ALERT)
+try {
+    require_once __DIR__ . '/../helpers/mailer.php';
+    $installmentPayload = [
+        'id'        => $insertId,
+        'amount'    => $amount,
+        'date'      => $date,
+        'time'      => date('h:i:s A'),
+        'ref_id'    => $cashRefId,
+        'card_id'   => $cardId,
+        'user_id'   => $userId,
+        'receiver'  => $receiver,
+    ];
+    sendDailyInstallmentNotification($installmentPayload, $customerData, $cardData, $receiverData);
+} catch (Throwable $e) {
+    error_log("Daily installment email notification error: " . $e->getMessage());
 }
 
 // 🔥 FETCH COMPLETE RECORD

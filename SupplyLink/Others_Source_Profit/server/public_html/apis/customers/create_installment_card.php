@@ -82,9 +82,8 @@ if ($reference_user_id === null || $reference_user_id <= 0) {
     // cost price
     $cost_price = $purchase_price + $additional_cost;
 
-    // profit (as per your rule)
-    // profit = (purchase + additional) - sale
-    $profit = $cost_price - $sale_price;
+    // profit = sale - (purchase + additional)
+    $profit = $sale_price - $cost_price;
 
     $remarks  = isset($_POST['remarks']) ? trim($_POST['remarks']) : null;
     $is_daily = isset($_POST['is_daily']) ? (int)$_POST['is_daily'] : (strtolower(trim($remarks ?? '')) === 'daily' ? 1 : 0);

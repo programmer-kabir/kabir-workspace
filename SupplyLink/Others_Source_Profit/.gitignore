@@ -33,3 +33,7 @@ Thumbs.db
 
 # Scratch & Temporary
 scratch/
+
+# Uploads
+uploads/
+*/uploads/

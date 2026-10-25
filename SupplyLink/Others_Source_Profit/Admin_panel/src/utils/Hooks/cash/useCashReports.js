@@ -11,14 +11,14 @@ export default function useCashReports( ) {
   } = useSelector((state) => state.CashReports);
 
   const fetchData = useCallback(() => {
- 
-      dispatch(fetchCashReports());
-
+    dispatch(fetchCashReports());
   }, [dispatch]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!CashReports || CashReports.length === 0) {
+      fetchData();
+    }
+  }, [CashReports, fetchData]);
 
   return {
     isCashReportsLoading,

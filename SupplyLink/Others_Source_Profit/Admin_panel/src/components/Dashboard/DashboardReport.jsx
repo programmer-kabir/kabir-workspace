@@ -1,171 +1,72 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import useDashboardData from "../../utils/Hooks/dashboard/useDashboardData";
 import { useReactToPrint } from "react-to-print";
 import { MONTHS } from "../../../public/month";
 import ReportTable from "../ReportTable/ReportTable";
-import { FaGoogleDrive } from "react-icons/fa";
+import { FaCloudUploadAlt, FaPrint, FaSyncAlt } from "react-icons/fa";
 import LuxuryToast from "../Modal/LuxuryToast";
 
 const DashboardReport = () => {
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }).format(new Date());
+  });
+
+  const [reportData, setReportData] = useState({
+    openingCash: 0,
+    totalIn: 0,
+    totalOut: 0,
+    net: 0,
+    closingBalance: 0,
+    cashInList: [],
+    cashOutList: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [isDriveSaving, setIsDriveSaving] = useState(false);
   const [luxuryToast, setLuxuryToast] = useState(null);
-  const {
-    customerInstallmentCards,
-    customerInstallmentPayments,
-    investInstallments,
-    companyExpenses,
-    dailyInstallments,
-    isLoading,
-    isError,
-    investorWithdrawApplications,
-    withdrawApplicationsRefetch,
-    users,
-    roleStats,
-    investorProfitHistory,
-    openingCash,
-  } = useDashboardData();
-  const today = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Dhaka",
-}).format(new Date());
 
-
-
-  const monthlyInstallments = customerInstallmentPayments?.filter((item) => {
-    const card = customerInstallmentCards?.find(
-      (c) => Number(c.card_number) === Number(item.card_id),
-    );
-
-    return (
-      item.status === "Paid" &&
-      item.paid_date?.split(" ")[0] === today &&
-      card?.remarks !== "Daily"
-    );
-  });
-  const cardUserMap = {};
-
-  customerInstallmentCards?.forEach((card) => {
-    const user = users?.find((u) => Number(u.id) === Number(card.user_id));
-
-    cardUserMap[card.card_number] = user?.name || "-";
-  });
-
-  const todayInvestments = investInstallments?.filter(
-    (item) =>
-      item.investment_date?.split(" ")[0] === today &&
-      Number(item.investment_card_no) !== 1 &&
-      Number(item.investment_card_no) !== 2,
-  );
-  const investmentUserMap = {};
-
-  investInstallments?.forEach((investment) => {
-    const user = users?.find(
-      (u) => Number(u.id) === Number(investment.investor_id),
-    );
-
-    investmentUserMap[investment.investment_card_no] = user?.name || "-";
-  });
-  const todayDailyInstallments = dailyInstallments?.filter(
-    (item) => item.date?.split(" ")[0] === today,
-  );
-  const todayExpenses = companyExpenses?.filter(
-    (item) => item.date?.split(" ")[0] === today,
-  );
-  const todayProductPurchase = customerInstallmentCards?.filter(
-    (item) => item.delivery_date?.split(" ")[0] === today,
-  );
-  const todayCompleteInvestorReturnAmount =
-    investorWithdrawApplications?.filter(
-      (item) => item.reviewed_at?.split(" ")[0] === today,
-    );
-  const todayCompleteInvestorReturnProfit = investorProfitHistory?.filter(
-    (item) => item.decision_at?.split(" ")[0] === today,
-  );
-  const totalInstallmentCollection =
-    monthlyInstallments?.reduce(
-      (sum, item) => sum + Number(item.due_amount || 0),
-      0,
-    ) || 0;
-
-  const totalInvestment =
-    todayInvestments?.reduce(
-      (sum, item) => sum + Number(item.amount || 0),
-      0,
-    ) || 0;
-
-  const totalDailyCollection =
-    todayDailyInstallments?.reduce(
-      (sum, item) => sum + Number(item.amount || 0),
-      0,
-    ) || 0;
-
-  const totalExpense =
-    todayExpenses?.reduce((sum, item) => sum + Number(item.amount || 0), 0) ||
-    0;
-
-  const totalProductPurchase =
-    todayProductPurchase?.reduce(
-      (sum, item) => sum + Number(item.cost_price || 0),
-      0,
-    ) || 0;
-
-  const totalInvestorWithdraw =
-    todayCompleteInvestorReturnAmount?.reduce(
-      (sum, item) => sum + Number(item.amount || 0),
-      0,
-    ) || 0;
-
-  const totalProfitWithdraw =
-    todayCompleteInvestorReturnProfit?.reduce(
-      (sum, item) => sum + Math.floor(Number(item.amount || 0)),
-      0,
-    ) || 0;
-
-  const dailyMonthlyInstallments = customerInstallmentPayments?.filter(
-    (item) => {
-      const card = customerInstallmentCards?.find(
-        (c) => Number(c.card_number) === Number(item.card_id),
-      );
-
-      return (
-        item.status === "Paid" &&
-        item.paid_date?.split(" ")[0] === today &&
-        card?.remarks === "Daily"
-      );
-    },
-  );
-  const totalDailyMonthlyInstallmentCollection =
-    dailyMonthlyInstallments?.reduce(
-      (sum, item) => sum + Number(item.due_amount || 0),
-      0,
-    ) || 0;
-
-  // Cash In
-  const cashIn =
-    totalInstallmentCollection + totalInvestment + totalDailyCollection;
-
-  // Cash Out
-  const cashOut =
-    totalExpense +
-    totalProductPurchase +
-    totalInvestorWithdraw +
-    totalProfitWithdraw;
-
-  // Net Cash
-  const totalCash = openingCash + cashIn - cashOut;
   const printRef = useRef(null);
-  const [year, month, day] = today.split("-");
 
-  const formattedDate = `${
-    MONTHS.find((m) => m.value === Number(month))?.label
-  } ${Number(day)}, ${year}`;
+  // Fetch Cash Data based on selected date
+  const fetchDailyCashData = async (dateStr) => {
+    try {
+      setIsLoading(true);
+      const res = await axios.get(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/cash/report_daily.php?date=${dateStr}`
+      );
+      if (res.data?.success) {
+        setReportData({
+          openingCash: Number(res.data.openingCash || 0),
+          totalIn: Number(res.data.totalIn || 0),
+          totalOut: Number(res.data.totalOut || 0),
+          net: Number(res.data.net || 0),
+          closingBalance: Number(res.data.closingBalance || 0),
+          cashInList: res.data.cashInList || [],
+          cashOutList: res.data.cashOutList || [],
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching daily cash report:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDailyCashData(selectedDate);
+  }, [selectedDate]);
+
+  const [year, month, day] = (selectedDate || "").split("-");
+  const monthObj = MONTHS.find((m) => m.value === Number(month));
+  const formattedDate = `${monthObj?.label || month} ${Number(day)}, ${year}`;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Dashboard_Report_${new Date().toISOString().split("T")[0]}`,
+    documentTitle: `Daily_Cash_Report_${selectedDate}`,
   });
 
-  const handleSaveToDrive = async () => {
+  const handleSaveToServer = async () => {
     try {
       setIsDriveSaving(true);
       const res = await axios.post(
@@ -174,30 +75,30 @@ const DashboardReport = () => {
 
       if (res.data?.success) {
         setLuxuryToast({
-          title: "গুগল ড্রাইভে সংরক্ষিত! 📁",
-          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে Google Drive-এ সেভ হয়েছে (${res.data.file_name})।`,
-          tag: "Google Drive Sync",
-          amount: totalCash,
+          title: "সার্ভারে সংরক্ষিত! 📁",
+          message: `আজকের দৈনিক রিপোর্টটি সফলভাবে সার্ভারে সেভ হয়েছে (${res.data.file_path || res.data.file_name})।`,
+          tag: "Server Saved",
+          amount: reportData.net,
           type: "success",
         });
       } else {
         setLuxuryToast({
-          title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+          title: "সংরক্ষণ ব্যর্থ! ⚠",
           message:
             res.data?.error ||
-            "ড্রাইভে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
-          tag: "Drive Error",
+            "সার্ভারে সেভ করা যায়নি। অনুগ্রহ করে ফোল্ডার পারমিশন চেক করুন।",
+          tag: "Save Error",
           type: "error",
         });
       }
     } catch (err) {
       setLuxuryToast({
-        title: "ড্রাইভ আপলোড ব্যর্থ! ⚠",
+        title: "সংরক্ষণ ব্যর্থ! ⚠",
         message:
           err.response?.data?.error ||
           err.message ||
-          "ড্রাইভে ফাইল সেভ করতে সমস্যা হয়েছে।",
-        tag: "Drive Error",
+          "সার্ভারে ফাইল সেভ করতে সমস্যা হয়েছে।",
+        tag: "Save Error",
         type: "error",
       });
     } finally {
@@ -207,444 +108,249 @@ const DashboardReport = () => {
 
   return (
     <>
-      <div className="bg-white text-black p-6 print:p-2">
-        <p className="text-center mb-5">Date: {today}</p>
-        <div className="flex items-center justify-end gap-3 mb-4 print:hidden">
-          <button
-            type="button"
-            onClick={handleSaveToDrive}
-            disabled={isDriveSaving}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-md transition disabled:opacity-50 cursor-pointer"
-          >
-            {isDriveSaving ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>ড্রাইভে সেভ হচ্ছে...</span>
-              </>
-            ) : (
-              <>
-                <FaGoogleDrive className="text-base" />
-                <span>Save to Google Drive</span>
-              </>
-            )}
-          </button>
+      <div className="bg-white text-black p-6 print:p-2 min-h-screen">
+        {/* Top Header & Actions Bar (Hidden in Print) */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 print:hidden">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-gray-700">তারিখ নির্বাচন:</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={() => fetchDailyCashData(selectedDate)}
+              title="রিফ্রেশ করুন"
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              <FaSyncAlt className={`text-base ${isLoading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
 
-          <button
-            onClick={handlePrint}
-            className="btn bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold"
-          >
-            Print Report
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSaveToServer}
+              disabled={isDriveSaving || isLoading}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-md transition disabled:opacity-50 cursor-pointer"
+            >
+              {isDriveSaving ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>সার্ভারে সেভ হচ্ছে...</span>
+                </>
+              ) : (
+                <>
+                  <FaCloudUploadAlt className="text-base" />
+                  <span>Save Daily Report</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handlePrint}
+              disabled={isLoading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-md transition cursor-pointer"
+            >
+              <FaPrint className="text-sm" />
+              <span>Print Report</span>
+            </button>
+          </div>
         </div>
-        <div ref={printRef} className="dashboard-report-print ">
-          <div className="px-10 pt-5 report-page">
-            <div className="border border-black rounded-lg p-5 mb-8 cash-summary">
-              <h2 className="text-2xl font-bold text-center mb-6">
+
+        {/* Printable Audit Document Container */}
+        <div ref={printRef} className="dashboard-report-print">
+          <div className="px-8 pt-4">
+            {/* Report Header */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                SupplyLink Operational System
+              </h1>
+              <p className="text-base font-semibold text-gray-600 mt-1">
+                Daily Cash Ledger & Audit Report
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">তারিখ: {formattedDate}</p>
+            </div>
+
+            {/* Executive Cash Summary Box */}
+            <div className="border-2 border-black rounded-lg p-6 mb-8 bg-gray-50/50">
+              <h2 className="text-xl font-bold text-center mb-5 pb-2 border-b border-gray-300">
                 {formattedDate} Cash Summary
               </h2>
 
-              <div className="space-y-4 text-lg">
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-semibold">💰 Opening Cash</span>
-                  <span className="font-bold text-green-600">
-                    ৳ {openingCash.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-semibold">💰 Cash In</span>
-                  <span className="font-bold text-green-600">
-                    ৳ {cashIn.toLocaleString()}
+              <div className="space-y-3.5 text-base">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                  <span className="font-semibold text-gray-700">💰 1. Opening Cash Balance</span>
+                  <span className="font-bold text-gray-900">
+                    ৳ {reportData.openingCash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-semibold">💸 Cash Out</span>
-                  <span className="font-bold text-red-600">
-                    ৳ {cashOut.toLocaleString()}
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                  <span className="font-semibold text-gray-700">🟢 2. Today Approved Cash In</span>
+                  <span className="font-bold text-emerald-600">
+                    ৳ {reportData.totalIn.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
-                <div className="flex justify-between pt-2 text-xl">
-                  <span className="font-bold">💵 Net Cash</span>
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                  <span className="font-semibold text-gray-700">🔴 3. Today Approved Cash Out</span>
+                  <span className="font-bold text-rose-600">
+                    ৳ {reportData.totalOut.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 text-lg">
+                  <span className="font-bold text-gray-900">💵 4. Closing Hand Cash Balance</span>
                   <span
                     className={`font-bold ${
-                      totalCash >= 0 ? "text-blue-600" : "text-red-600"
+                      reportData.closingBalance >= 0 ? "text-blue-700" : "text-rose-600"
                     }`}
                   >
-                    ৳ {totalCash.toLocaleString()}
+                    ৳ {reportData.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
             </div>
-         
-            <div className="page-break" />
-          </div>
 
-            {/* Daily Investment */}
-          <div className="report-page">
-            <ReportTable
-              title="Today's Investment Report"
-              columns={[
-                "#",
-                "Investor",
-                "Investor Id",
-                "Card No",
-                "Investment No",
-                "Amount",
-              ]}
-              data={todayInvestments}
-              total={totalInvestment}
-              totalColSpan={5}
-              renderRow={(item, index) => {
-                const user = users.find(
-                  (u) => Number(u.id) === Number(item.investor_id),
-                );
-
-                return [
+            {/* Table 1: Approved Cash In Transactions */}
+            <div className="mb-10">
+              <ReportTable
+                title="1. Approved Cash In Transactions (আজকের মোট জমা)"
+                columns={[
+                  "#",
+                  "Voucher",
+                  "Source / Depositor",
+                  "Purpose / Particulars",
+                  "Category",
+                  "Amount (৳)",
+                ]}
+                data={reportData.cashInList}
+                total={reportData.totalIn}
+                totalColSpan={5}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.id || "-",
-                  item.investment_card_no,
-                  item.investment_no,
-                  Number(item.amount).toLocaleString(),
-                ];
-              }}
-            />
-     
-          </div>
+                  `V-${item.id}`,
+                  item.source || "Cash In",
+                  item.purpose || item.remarks || "-",
+                  item.category || "Regular",
+                  Number(item.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+                ]}
+              />
 
-          <div className="page-break" />
-          <div className="report-page">
-            {/* Daily Installment */}
-            <ReportTable
-              title="Today's Daily Installment Report"
-              columns={["#", "Customer", "Customer Id", "Card No", "Amount"]}
-              data={todayDailyInstallments}
-              total={totalDailyCollection}
-              totalColSpan={4}
-              renderRow={(item, index) => {
-                const user = users.find(
-                  (u) => Number(u.id) === Number(item.userId),
-                );
+              {!reportData.cashInList?.length && !isLoading && (
+                <div className="px-10 -mt-6 mb-8 text-center py-4 border border-gray-300 rounded-b text-gray-500 text-sm italic">
+                  আজকের জন্য কোনো অনুমোদিত জমা (Cash In) পাওয়া যায়নি।
+                </div>
+              )}
+            </div>
 
-                return [
+            {/* Table 2: Approved Cash Out Transactions */}
+            <div className="mb-10">
+              <ReportTable
+                title="2. Approved Cash Out Transactions (আজকের মোট খরচ ও প্রদান)"
+                columns={[
+                  "#",
+                  "Voucher",
+                  "Expense Head / Source",
+                  "Purpose / Particulars",
+                  "Category",
+                  "Amount (৳)",
+                ]}
+                data={reportData.cashOutList}
+                total={reportData.totalOut}
+                totalColSpan={5}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.id || "-",
-                  item.cardId,
-                  Number(item.amount).toLocaleString(),
-                ];
-              }}
-            />
+                  `V-${item.id}`,
+                  item.source || "Expense",
+                  item.purpose || item.remarks || "-",
+                  item.category || "Expense",
+                  Number(item.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+                ]}
+              />
 
-            {/* Daily Installment Complete Monthly  */}
+              {!reportData.cashOutList?.length && !isLoading && (
+                <div className="px-10 -mt-6 mb-8 text-center py-4 border border-gray-300 rounded-b text-gray-500 text-sm italic">
+                  আজকের জন্য কোনো অনুমোদিত খরচ (Cash Out) পাওয়া যায়নি।
+                </div>
+              )}
+            </div>
 
-            <ReportTable
-              title="  Today's Daily Card Installment Collection Report"
-              columns={[
-                "#",
-                "Customer",
-                "Customer Id",
-                "Card No",
-                "Installment",
-                "Amount",
-              ]}
-              data={dailyMonthlyInstallments}
-              total={totalDailyMonthlyInstallmentCollection}
-              totalColSpan={5}
-              renderRow={(item, index) => {
-                const card = customerInstallmentCards.find(
-                  (c) => Number(c.card_number) === Number(item.card_id),
-                );
-
-                const user = users.find(
-                  (u) => Number(u.id) === Number(card?.user_id),
-                );
-                return [
-                  index + 1,
-                  user?.name || "-",
-                  user?.id || "-",
-                  item.card_id,
-                  item?.tag,
-                  Number(item.due_amount).toLocaleString(),
-                ];
-              }}
-            />
-           
+            {/* Signature Block for Official Print */}
+            <div className="mt-16 pt-8 border-t border-gray-300 grid grid-cols-3 gap-8 text-center text-sm font-semibold text-gray-700">
+              <div>
+                <div className="border-t border-gray-400 w-3/4 mx-auto mb-2" />
+                Prepared By
+              </div>
+              <div>
+                <div className="border-t border-gray-400 w-3/4 mx-auto mb-2" />
+                Checked By
+              </div>
+              <div>
+                <div className="border-t border-gray-400 w-3/4 mx-auto mb-2" />
+                Approved By (Manager / Director)
+              </div>
+            </div>
           </div>
-          <div className="page-break" />
-          {/* Monthly Installment Report */}
-
-          <ReportTable
-            title="Today's Monthly Installment Collection Report"
-            columns={[
-              "#",
-              "Customer",
-              "Customer Id",
-              "Card No",
-              "Installment",
-              "Method",
-              "Amount",
-            ]}
-            data={monthlyInstallments}
-            total={totalInstallmentCollection}
-            totalColSpan={6}
-            renderRow={(item, index) => {
-              const card = customerInstallmentCards.find(
-                (c) => Number(c.card_number) === Number(item.card_id),
-              );
-
-              const user = users.find(
-                (u) => Number(u.id) === Number(card?.user_id),
-              );
-              
-              return [
-                index + 1,
-                user?.name || "-",
-                user?.id || "-",
-                item.card_id,
-                item?.tag,
-                item?.payment_method,
-                Number(item.due_amount).toLocaleString(),
-
-              ];
-            }}
-          />
-
-          <ReportTable
-            title="Today's Expenses Report"
-            columns={["#", "Date", "purpose", "Remarks", "Amount"]}
-            data={todayExpenses}
-            total={totalExpense}
-            totalColSpan={4}
-            renderRow={(item, index) => {
-              return [
-                index + 1,
-                item?.date || "-",
-                item?.purpose || "-",
-                item?.remarks,
-                Number(item.amount).toLocaleString(),
-              ];
-            }}
-          />
-          {/* product Purchase */}
-          <ReportTable
-            title="Today's Product Purchase Report"
-            columns={["#", "Date", "Product Name", "Amount"]}
-            data={todayProductPurchase}
-            total={totalProductPurchase}
-            totalColSpan={3}
-            renderRow={(item, index) => {
-              return [
-                index + 1,
-                item?.delivery_date || "-",
-                item?.product_name || "-",
-                Number(item.cost_price).toLocaleString(),
-              ];
-            }}
-          />
-          {/* Investor amount withdraw */}
-
-          <ReportTable
-            title=" Today's Investor Amount Withdraw Report"
-            columns={[
-              "#",
-              "Name",
-              "User Id",
-              "Card Id",
-              "Request Date",
-              "Approved Date",
-              "reason",
-              "Amount",
-            ]}
-            data={todayCompleteInvestorReturnAmount}
-            total={totalInvestorWithdraw}
-            totalColSpan={7}
-            renderRow={(item, index) => {
-              return [
-                index + 1,
-                item?.investor_name || "-",
-                item?.investor_id || "-",
-                item?.card_id || "-",
-                item?.requested_at?.split(" ")[0],
-                item?.reviewed_at?.split(" ")[0],
-                item.reason,
-                Number(item.amount).toLocaleString(),
-              ];
-            }}
-          />
-          {/* Investor Profit withdraw */}
-          <ReportTable
-            title="   Today's Investor Profit Amount Withdraw Report"
-            columns={[
-              "#",
-              "Name",
-              "User Id",
-              "Card Id",
-              "Approved Date",
-              "Amount",
-            ]}
-            data={todayCompleteInvestorReturnProfit}
-            total={totalProfitWithdraw}
-            totalColSpan={5}
-            renderRow={(item, index) => {
-              const user = users?.find(
-                (u) => Number(u.id) === Number(item.investor_id),
-              );
-
-              return [
-                index + 1,
-                user?.name || "-",
-                item?.investor_id || "-",
-                item?.card_id || "-",
-                item?.decision_at?.split(" ")[0],
-                Number(item.amount).toLocaleString(),
-              ];
-            }}
-          />
-
         </div>
       </div>
-      
+
       <style>{`
-      
-.dashboard-report-print{
-  background:#fff;
-  color:#000;
-  width:100%;
-}
-.report-section{
-  page-break-before: always;
-  padding-top: 15mm;
-}
-      .dashboard-report-print table{
-        width:100%;
-        border-collapse:collapse;
-      }
-
-      .dashboard-report-print th,
-      .dashboard-report-print td{
-        border:1px solid #000;
-        padding:8px;
-        font-size:13px;
-      }
-
-      .dashboard-report-print thead{
-        background:#f3f4f6;
-      }
-
-      @media print{
-
-        @page{
-          size:A4 portrait;
-          margin:10mm;
+        .dashboard-report-print {
+          background: #fff;
+          color: #000;
+          width: 100%;
         }
 
-        .dashboard-report-print{
-          padding:0 !important;
-        }
-
-        .dashboard-report-print table{
-          page-break-inside:auto;
-        }
-
-        .dashboard-report-print thead{
-          display:table-header-group;
-        }
-
-        .dashboard-report-print tfoot{
-          display:table-footer-group;
-        }
-
-        .dashboard-report-print tr{
-          page-break-inside:avoid;
-          page-break-after:auto;
+        .dashboard-report-print table {
+          width: 100%;
+          border-collapse: collapse;
         }
 
         .dashboard-report-print th,
-        .dashboard-report-print td{
-          font-size:11px;
-          padding:6px;
+        .dashboard-report-print td {
+          border: 1px solid #000;
+          padding: 8px;
+          font-size: 13px;
         }
- .page-break {
-    page-break-after: always;
-    break-after: page;
-  }
 
-  .cash-summary,
-  .daily-section {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-.cash-summary{
-  border: 1px solid #000 !important;
-  border-radius: 8px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: stretch;   /* center না */
-  min-height: calc(100vh - 20mm);
-  box-sizing: border-box;
-}
-    html,
-  body,
-  #root,
-  #app-scroll-container {
-    display: block !important;
-    position: static !important;
-    height: auto !important;
-    min-height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    align-items: flex-start !important;
-    justify-content: flex-start !important;
-  }
+        .dashboard-report-print thead {
+          background: #f3f4f6;
+        }
 
-  .dashboard-report-print {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
 
+          .dashboard-report-print {
+            padding: 0 !important;
+          }
 
+          .dashboard-report-print table {
+            page-break-inside: auto;
+          }
 
-  signature-section {
-    position: fixed;
-    bottom: 8mm;
-    left: 10mm;
-    right: 10mm;
+          .dashboard-report-print tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+        }
+      `}</style>
 
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-
-    background: white;
-  }
-
-  .signature-box {
-    width: 22%;
-    text-align: center;
-  }
-
-  .signature-box .line {
-    border-top: 1px solid #000;
-    margin-bottom: 6px;
-  }
-
-  .signature-box p {
-    margin: 0;
-    font-size: 11px;
-    font-weight: bold;
-  }
-      }
-    `}</style>
-
-      <LuxuryToast
-        toast={luxuryToast}
-        onClose={() => setLuxuryToast(null)}
-        duration={5000}
-      />
+      {luxuryToast && (
+        <LuxuryToast
+          title={luxuryToast.title}
+          message={luxuryToast.message}
+          tag={luxuryToast.tag}
+          amount={luxuryToast.amount}
+          type={luxuryToast.type}
+          onClose={() => setLuxuryToast(null)}
+        />
+      )}
     </>
   );
 };

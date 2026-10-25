@@ -38,7 +38,7 @@ $status = ($status === "" ? null : $status);
 // 1. Fetch current installment and card details
 $instQuery = $mysqli->prepare("
   SELECT p.id, p.card_id, p.installment_no, p.tag, p.due_amount, p.status AS current_status, p.paid_date AS current_paid_date,
-         c.user_id, u.name AS customer_name, c.product_name, c.is_daily, c.remarks AS card_remarks
+         c.user_id, u.name AS customer_name, u.email AS customer_email, c.product_name, c.is_daily, c.remarks AS card_remarks
   FROM installment_payments p
   LEFT JOIN installment_cards c ON p.card_id = c.id
   LEFT JOIN users u ON c.user_id = u.id
@@ -243,6 +243,46 @@ if ($status === 'Paid') {
         $insNotif->bind_param("sssss", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink);
         $insNotif->execute();
         $insNotif->close();
+    }
+
+    // 📧 Automated Email Notification (Customer + Admin Copy) in isolated try-catch
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $customerEmail = !empty($inst['customer_email']) ? trim($inst['customer_email']) : null;
+        $collectorUser = "স্টাফ (ID: {$collected_by})";
+        if ($collected_by > 0) {
+            $colStmt = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+            if ($colStmt) {
+                $colStmt->bind_param("i", $collected_by);
+                $colStmt->execute();
+                $cRow = $colStmt->get_result()->fetch_assoc();
+                if ($cRow && !empty($cRow['name'])) $collectorUser = $cRow['name'];
+                $colStmt->close();
+            }
+        }
+
+        $emailData = [
+            'title'      => 'কাস্টমার কিস্তি পরিশোধ রশিদ',
+            'party_name' => "{$customer_name} (কার্ড #{$card_id})",
+            'category'   => $purpose . ($product_name ? " - " . $product_name : ""),
+            'amount'     => $amount,
+            'date'       => $eff_paid_date,
+            'slip_no'    => $receipt_number ?: $tag,
+            'card_id'    => $card_id,
+            'collector'  => $collectorUser,
+            'notes'      => 'কাস্টমার কিস্তির টাকা সফলভাবে পরিশোধিত ও ক্যাশ লেজারে যুক্ত হয়েছে।'
+        ];
+        $emailHtml = renderSupplyLinkEmailTemplate($emailData);
+        $emailSubject = "কিস্তি পরিশোধ রশিদ - কার্ড #{$card_id} ({$tag})";
+        sendSupplyLinkNotification($customerEmail, $emailSubject, $emailHtml, [
+            'type'    => 'installment_paid',
+            'title'   => $notifTitle,
+            'message' => $notifMsg,
+            'link'    => $notifLink,
+            'user_id' => $inst['user_id'] ?? null
+        ]);
+    } catch (Throwable $mailErr) {
+        error_log("Customer installment email non-fatal error: " . $mailErr->getMessage());
     }
 
     echo json_encode([

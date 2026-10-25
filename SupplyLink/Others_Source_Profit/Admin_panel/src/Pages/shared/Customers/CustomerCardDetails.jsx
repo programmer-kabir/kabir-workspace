@@ -127,17 +127,31 @@ const CustomerCardDetails = () => {
   }
 };
   // 🔥 Payments for this card
-  const payments = customerInstallmentPayments?.filter(
-    (p) => String(p.card_id) === String(card.id),
+  const payments = (customerInstallmentPayments || []).filter(
+    (p) => String(p.card_id) === String(card?.id),
   );
-    if (
+
+  const isPageLoading =
     isCustomerInstallmentsCardsLoading ||
-    isCustomerInstallmentsPaymentsLoading
-  ) {
-    return <Loader />;
+    isCustomerInstallmentsPaymentsLoading ||
+    (!isCustomerInstallmentsCardsError && (!customerInstallmentCards?.length || (cardId && !card)));
+
+  if (isPageLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader />
+        <p className="text-xs text-slate-400 font-medium">গ্রাহক কার্ড লোড হচ্ছে...</p>
+      </div>
+    );
   }
+
   if (!card) {
-    return <p className="text-red-500">Card not found</p>;
+    return (
+      <div className="p-6">
+        <BackButton />
+        <p className="text-rose-400 font-semibold mt-4">Card not found (#{cardId})</p>
+      </div>
+    );
   }
 
 

@@ -16,14 +16,22 @@ function sendJson($data, $status = 200) {
     exit;
 }
 
+// Enable gzip compression if supported to drastically reduce transfer time
+if (!ob_start("ob_gzhandler")) {
+    ob_start();
+}
+
 // ==========================
-// ✅ Get All Cash Data
+// ✅ Get All Cash Data (Fast LEFT JOIN instead of correlated subqueries)
 // ==========================
 $stmt = $mysqli->prepare("
-    SELECT c.*,
-        (SELECT ce.id FROM cash_edits ce WHERE ce.cash_id = c.id AND ce.status = 'pending' LIMIT 1) AS pending_edit_id,
-        (SELECT ce.new_amount FROM cash_edits ce WHERE ce.cash_id = c.id AND ce.status = 'pending' LIMIT 1) AS pending_new_amount
+    SELECT 
+        c.id, c.type, c.source, c.purpose, c.amount, c.category, c.refId, c.remarks, 
+        c.date, c.createdAt, c.approval_status, c.approved_by, c.approved_at, c.reject_reason,
+        ce.id AS pending_edit_id,
+        ce.new_amount AS pending_new_amount
     FROM cash c
+    LEFT JOIN cash_edits ce ON ce.cash_id = c.id AND ce.status = 'pending'
     ORDER BY c.date DESC, c.id DESC
 ");
 

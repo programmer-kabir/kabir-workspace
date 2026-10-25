@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import useCashReports from "../../../utils/Hooks/cash/useCashReports";
 import Loader from "../../../components/Loader/Loader";
 import CashStateCard from "../../../components/cash/CashStateCard";
@@ -18,6 +18,8 @@ import {
   Banknote,
   X,
   Edit3,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const CashIn = () => {
@@ -37,11 +39,20 @@ const CashIn = () => {
     max: "",
   });
 
-  const AllCashIn = Array.isArray(CashReports)
-    ? CashReports.filter(
-      (cash) => cash.type === "in" && cash.approval_status === "approved"
-    )
-    : [];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, selectedMonth, selectedYear, startDate, endDate, selectedCategory, priceRange]);
+
+  const AllCashIn = useMemo(() => {
+    return Array.isArray(CashReports)
+      ? CashReports.filter(
+          (cash) => cash.type === "in" && cash.approval_status === "approved"
+        )
+      : [];
+  }, [CashReports]);
 
   // category bangla
   const categoryName = (category) => {
@@ -107,36 +118,148 @@ const CashIn = () => {
     years.push(year);
   }
 
-  const DateFilteredCashIn = AllCashIn.filter((cash) => {
-    const cashDate = new Date(cash.date);
-    const cashYear = cashDate.getFullYear().toString();
-    const cashMonth = `${cashDate.getFullYear()}-${String(
-      cashDate.getMonth() + 1
-    ).padStart(2, "0")}`;
+  const DateFilteredCashIn = useMemo(() => {
+    return AllCashIn.filter((cash) => {
+      const cashDate = new Date(cash.date);
+      const cashYear = cashDate.getFullYear().toString();
+      const cashMonth = `${cashDate.getFullYear()}-${String(
+        cashDate.getMonth() + 1
+      ).padStart(2, "0")}`;
 
-    if (selectedDate && cash.date !== selectedDate) return false;
-    if (selectedMonth && cashMonth !== selectedMonth) return false;
-    if (selectedYear && cashYear !== selectedYear) return false;
+      if (selectedDate && cash.date !== selectedDate) return false;
+      if (selectedMonth && cashMonth !== selectedMonth) return false;
+      if (selectedYear && cashYear !== selectedYear) return false;
 
-    if (startDate) {
-      const current = new Date(cash.date).getTime();
-      const start = new Date(startDate).getTime();
-      if (current < start) return false;
-    }
-    if (endDate) {
-      const current = new Date(cash.date).getTime();
-      const end = new Date(endDate).getTime();
-      if (current > end) return false;
-    }
+      if (startDate) {
+        const current = new Date(cash.date).getTime();
+        const start = new Date(startDate).getTime();
+        if (current < start) return false;
+      }
+      if (endDate) {
+        const current = new Date(cash.date).getTime();
+        const end = new Date(endDate).getTime();
+        if (current > end) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [AllCashIn, selectedDate, selectedMonth, selectedYear, startDate, endDate]);
 
-  const FilteredCashIn = DateFilteredCashIn.filter((cash) => {
-    if (selectedCategory) {
-      const cat = cash.category?.toLowerCase().trim();
-      if (selectedCategory === "others") {
-        const knownCategories = [
+  const FilteredCashIn = useMemo(() => {
+    return DateFilteredCashIn.filter((cash) => {
+      if (selectedCategory) {
+        const cat = cash.category?.toLowerCase().trim();
+        if (selectedCategory === "others") {
+          const knownCategories = [
+            "invest",
+            "investment",
+            "installment",
+            "downpayment",
+            "loan",
+            "daily-installment",
+            "loan-return",
+            "rental_income",
+            "share_dividend",
+            "asset_sale",
+            "security_deposit",
+          ];
+          if (knownCategories.includes(cat)) {
+            return false;
+          }
+        } else if (selectedCategory === "invest") {
+          if (!["invest", "investment"].includes(cat)) {
+            return false;
+          }
+        } else if (cat !== selectedCategory) {
+          return false;
+        }
+      }
+      const amount = Number(cash.amount);
+      if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
+        return false;
+      }
+      if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
+        return false;
+      }
+      return true;
+    });
+  }, [DateFilteredCashIn, selectedCategory, priceRange]);
+
+  const SummaryCashIn = useMemo(() => {
+    return DateFilteredCashIn.filter((cash) => {
+      const amount = Number(cash.amount);
+      if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
+        return false;
+      }
+      if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
+        return false;
+      }
+      return true;
+    });
+  }, [DateFilteredCashIn, priceRange]);
+
+  const totalCashIn = useMemo(() => {
+    return SummaryCashIn.reduce((total, item) => total + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const investTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => ["invest", "investment"].includes(item.category?.toLowerCase().trim())
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const installmentTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "installment"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const downpaymentTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "downpayment"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const loanTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "loan"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const dailyInstallmentsTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "daily-installment"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const loanReturnTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "loan-return"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const rentalIncomeTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "rental_income"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const shareDividendTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "share_dividend"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const assetSaleTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) => item.category?.toLowerCase().trim() === "asset_sale"
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
+
+  const otherTotal = useMemo(() => {
+    return SummaryCashIn.filter(
+      (item) =>
+        ![
           "invest",
           "investment",
           "installment",
@@ -148,96 +271,15 @@ const CashIn = () => {
           "share_dividend",
           "asset_sale",
           "security_deposit",
-        ];
-        if (knownCategories.includes(cat)) {
-          return false;
-        }
-      } else if (selectedCategory === "invest") {
-        if (!["invest", "investment"].includes(cat)) {
-          return false;
-        }
-      } else if (cat !== selectedCategory) {
-        return false;
-      }
-    }
-    const amount = Number(cash.amount);
-    if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
-      return false;
-    }
-    if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
-      return false;
-    }
-    return true;
-  });
+        ].includes(item.category?.toLowerCase().trim())
+    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [SummaryCashIn]);
 
-  const SummaryCashIn = DateFilteredCashIn.filter((cash) => {
-    const amount = Number(cash.amount);
-    if (priceRange.min !== "" && !isNaN(priceRange.min) && amount < Number(priceRange.min)) {
-      return false;
-    }
-    if (priceRange.max !== "" && !isNaN(priceRange.max) && amount > Number(priceRange.max)) {
-      return false;
-    }
-    return true;
-  });
-
-  const totalCashIn = SummaryCashIn.reduce(
-    (total, item) => total + Number(item.amount),
-    0
-  );
-
-  const investTotal = SummaryCashIn.filter(
-    (item) => ["invest", "investment"].includes(item.category?.toLowerCase().trim())
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const installmentTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "installment"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const downpaymentTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "downpayment"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const loanTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "loan"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const dailyInstallmentsTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "daily-installment"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const loanReturnTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "loan-return"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const rentalIncomeTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "rental_income"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const shareDividendTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "share_dividend"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const assetSaleTotal = SummaryCashIn.filter(
-    (item) => item.category?.toLowerCase().trim() === "asset_sale"
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
-
-  const otherTotal = SummaryCashIn.filter(
-    (item) =>
-      ![
-        "invest",
-        "investment",
-        "installment",
-        "downpayment",
-        "loan",
-        "daily-installment",
-        "loan-return",
-        "rental_income",
-        "share_dividend",
-        "asset_sale",
-        "security_deposit",
-      ].includes(item.category?.toLowerCase().trim())
-  ).reduce((sum, item) => sum + Number(item.amount), 0);
+  const totalPages = Math.ceil(FilteredCashIn.length / pageSize) || 1;
+  const paginatedCashIn = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return FilteredCashIn.slice(start, start + pageSize);
+  }, [FilteredCashIn, currentPage, pageSize]);
 
   if (isCashReportsLoading || isCashReportsError) {
     return (
@@ -628,8 +670,9 @@ const CashIn = () => {
                   </td>
                 </tr>
               ) : (
-                FilteredCashIn.map((cash, index) => {
+                paginatedCashIn.map((cash, index) => {
                   const hasPendingEdit = !!cash.pending_edit_id;
+                  const itemIndex = FilteredCashIn.length - ((currentPage - 1) * pageSize + index);
 
                   return (
                     <tr
@@ -637,7 +680,7 @@ const CashIn = () => {
                       className="transition-colors hover:bg-white/[0.03]"
                     >
                       <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
-                        {FilteredCashIn.length - index}
+                        {itemIndex}
                       </td>
 
                       <td className="px-5 py-3.5 font-medium text-white">
@@ -688,6 +731,45 @@ const CashIn = () => {
             </tbody>
           </table>
         </div>
+
+        {/* 🔹 Pagination Controls */}
+        {FilteredCashIn.length > pageSize && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-white/[0.08] bg-slate-900/40">
+            <div className="text-xs text-slate-400">
+              মোট <span className="font-bold text-white">{FilteredCashIn.length}</span> টির মধ্যে{" "}
+              <span className="font-bold text-white">
+                {(currentPage - 1) * pageSize + 1}
+              </span>{" "}
+              থেকে{" "}
+              <span className="font-bold text-white">
+                {Math.min(currentPage * pageSize, FilteredCashIn.length)}
+              </span>{" "}
+              দেখাচ্ছে
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs font-semibold text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" /> আগের পেজ
+              </button>
+
+              <span className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                পেজ {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs font-semibold text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer flex items-center gap-1"
+              >
+                পরের পেজ <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <CashInModal

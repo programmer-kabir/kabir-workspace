@@ -111,7 +111,12 @@ export default function InvestmentCards() {
   const activeCount = mergedInvestmentCards.filter((card) => card.status !== "closed").length;
   const closedCount = mergedInvestmentCards.filter((card) => card.status === "closed").length;
 
-  if (isInvestmentCardsLoading || isUsersLoading) {
+  const isPageLoading =
+    isInvestmentCardsLoading ||
+    isUsersLoading ||
+    (!isInvestmentCardsError && !investmentCards?.length);
+
+  if (isPageLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader />

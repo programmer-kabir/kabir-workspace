@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import CustomerOrderInfo from "../../../components/Chart/CustomerOrderInfo";
 import { InstallmentRow } from "../../../components/Chart/InstallmentRow";
 import { useSearchParams, Link } from "react-router-dom";
-import { FaPlus, FaCheck, FaTimes } from "react-icons/fa";
+import { FaPlus, FaCheck, FaTimes, FaFire } from "react-icons/fa";
 import { HiDocumentText, HiChevronRight } from "react-icons/hi2";
 import useCustomerInstallmentPayments from "../../../utils/Hooks/Customers/useCustomerInstallmentPayments";
 import useCustomerInstallmentCards from "../../../utils/Hooks/useCustomerInstallmentCards";
@@ -11,6 +11,7 @@ import NoDataFound from "../../../components/NoData/NoDataFound";
 import BackButton from "../../../components/BackButton/BackButton";
 import useUsers from "../../../utils/Hooks/useUsers";
 import { useAuth } from "../../../Provider/AuthProvider";
+import { EarlySettlementModal } from "../../../components/Modal/EarlySettlementModal";
 
 const InstallmentChart = () => {
   const { user } = useAuth();
@@ -54,6 +55,7 @@ const InstallmentChart = () => {
   }, [customerInstallmentPayments, cardId]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [installmentType, setInstallmentType] = useState("");
   const [hasDownPayment, setHasDownPayment] = useState(false);
 
@@ -69,8 +71,9 @@ const InstallmentChart = () => {
   }, [users, userId]);
 
   const isInitialLoading =
-    (!currentCard && isCustomerInstallmentsCardsLoading) ||
-    (!customerInstallmentPayments?.length && isCustomerInstallmentsPaymentsLoading);
+    isCustomerInstallmentsCardsLoading ||
+    isCustomerInstallmentsPaymentsLoading ||
+    (!isCustomerInstallmentsCardsError && !currentCard);
   const isError =
     isCustomerInstallmentsCardsError || isCustomerInstallmentsPaymentsError;
 
@@ -83,6 +86,9 @@ const InstallmentChart = () => {
   }
 
   const hasExistingPayments = InstallmentPayments?.length > 0;
+  const hasUnpaidPayments = InstallmentPayments?.some(
+    (p) => p.status !== "Paid" && p.status !== "Waived"
+  );
 
   return (
     <div className="mx-auto space-y-7 pb-10">
@@ -104,8 +110,8 @@ const InstallmentChart = () => {
           </div>
         </div>
 
-        {/* Status Pill Badge */}
-        <div className="flex items-center gap-2">
+        {/* Status Pill Badge & Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
           {currentCard?.status === "Fully Paid" ? (
             <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               সম্পূর্ণ পরিশোধিত (Fully Paid)
@@ -114,6 +120,17 @@ const InstallmentChart = () => {
             <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
               চলমান কিস্তি (Running)
             </span>
+          )}
+
+          {/* Quick Early Settlement Button in Header */}
+          {hasExistingPayments && hasUnpaidPayments && currentCard?.status !== "Fully Paid" && (
+            <button
+              onClick={() => setIsSettlementModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-xs font-bold text-white shadow-lg shadow-orange-950/30 hover:brightness-110 hover:scale-[1.02] transition-all cursor-pointer"
+            >
+              <FaFire className="text-amber-200 text-xs" />
+              <span>অগ্রিম নিষ্পত্তি ও ছাড়</span>
+            </button>
           )}
 
           {!hasExistingPayments && (
@@ -321,6 +338,22 @@ const InstallmentChart = () => {
           </div>
         </div>
       )}
+
+      {/* ================= EARLY SETTLEMENT MODAL ================= */}
+      <EarlySettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setIsSettlementModalOpen(false)}
+        card={currentCard}
+        customerName={
+          users.find((u) => Number(u.id) === Number(currentCard?.user_id))?.name ||
+          "গ্রাহক"
+        }
+        payments={InstallmentPayments}
+        user={user}
+        onSettlementSuccess={() => {
+          refetch?.();
+        }}
+      />
     </div>
   );
 };
