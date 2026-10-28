@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   FaPlus,
@@ -31,11 +30,13 @@ import {
   FaBriefcase,
   FaFileContract,
   FaEdit,
+  FaChevronDown 
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
 import AssetEditModal from "../../../components/OtherSources/AssetEditModal";
 import LuxuryToast from "../../../components/Modal/LuxuryToast";
+import { useAuth } from "../../../Provider/AuthProvider";
 
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
@@ -59,8 +60,71 @@ const categoryLabels = {
   other: "অন্যান্য",
 };
 
+const categorySubtitles = {
+  bike: "মোটরসাইকেল বা স্কুটার লিজ ও নিয়মিত কিস্তি",
+  shop: "দোকান ও বাণিজ্যিক স্পেস ভাড়া",
+  house: "আবাসিক ফ্ল্যাট, মেস বা ঘর ভাড়া",
+  equipment: "ভারী ও হালকা যন্ত্রপাতি বা টুলস",
+  project: "নির্দিষ্ট প্রজেক্ট বা লাভজনক অংশীদারিত্ব",
+  company_share: "অন্যান্য কোম্পানিতে ইকুইটি/শেয়ার মূলধন",
+  other: "সাধারণ বা অন্যান্য যে কোনো স্থায়ী সম্পদ",
+};
+
+const categoryThemes = {
+  bike: {
+    bg: "from-orange-500/20 to-amber-500/10",
+    border: "border-orange-500/30",
+    text: "text-orange-400",
+    badge: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+    tag: "বাইক / যানবাহন",
+  },
+  shop: {
+    bg: "from-blue-500/20 to-cyan-500/10",
+    border: "border-blue-500/30",
+    text: "text-blue-400",
+    badge: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+    tag: "বাণিজ্যিক স্পেস",
+  },
+  house: {
+    bg: "from-emerald-500/20 to-teal-500/10",
+    border: "border-emerald-500/30",
+    text: "text-emerald-400",
+    badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    tag: "রিয়েল এস্টেট",
+  },
+  equipment: {
+    bg: "from-amber-500/20 to-yellow-500/10",
+    border: "border-amber-500/30",
+    text: "text-amber-400",
+    badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    tag: "মেশিনারি / টুলস",
+  },
+  project: {
+    bg: "from-purple-500/20 to-pink-500/10",
+    border: "border-purple-500/30",
+    text: "text-purple-400",
+    badge: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+    tag: "প্রজেক্ট পার্টনারশিপ",
+  },
+  company_share: {
+    bg: "from-cyan-500/20 to-blue-500/10",
+    border: "border-cyan-500/30",
+    text: "text-cyan-400",
+    badge: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+    tag: "ইকুইটি শেয়ার",
+  },
+  other: {
+    bg: "from-slate-500/20 to-gray-500/10",
+    border: "border-slate-500/30",
+    text: "text-slate-400",
+    badge: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+    tag: "সাধারণ সম্পদ",
+  },
+};
+
 const OtherSourcesAssets = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [assets, setAssets] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -139,6 +203,7 @@ const OtherSourcesAssets = () => {
     create_cash_out: true,
   });
   const [submittingAsset, setSubmittingAsset] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
   // Agreement Form
   const [newAgreement, setNewAgreement] = useState({
@@ -165,10 +230,18 @@ const OtherSourcesAssets = () => {
         setAssets(data.data || []);
         setSummary(data.summary || null);
       } else {
-        toast.error(data.message || "অ্যাসেট লোড করা যায়নি");
+        setLuxuryToast({
+          title: "লোড ব্যর্থ ❌",
+          message: data.message || "অ্যাসেট লোড করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর, পরে চেষ্টা করুন");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভার এরর, পরে চেষ্টা করুন।",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -200,19 +273,35 @@ const OtherSourcesAssets = () => {
   const handleAddAsset = async (e) => {
     e.preventDefault();
     if (!newAsset.asset_name.trim() || Number(newAsset.purchase_price) <= 0) {
-      return toast.error("অ্যাসেটের নাম এবং সঠিক ক্রয়/বিনিয়োগ মূল্য দিন");
+      return setLuxuryToast({
+        title: "তথ্য অসম্পূর্ণ ⚠️",
+        message: "অ্যাসেটের নাম এবং সঠিক ক্রয়/বিনিয়োগ মূল্য দিন।",
+        type: "warning",
+      });
     }
 
     try {
       setSubmittingAsset(true);
+      const payload = {
+        ...newAsset,
+        create_cash_out: true,
+        user_id: user?.id || null,
+        approved_by: user?.id || null,
+      };
       const res = await fetch(`${API}/other_sources/create_asset.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAsset),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "অ্যাসেট সফলভাবে যুক্ত হয়েছে 🎉");
+        setLuxuryToast({
+          title: "অ্যাসেট যুক্ত সম্পন্ন 🎉",
+          message: `${newAsset.asset_name} সফলভাবে সিস্টেমে যুক্ত হয়েছে এবং ক্যাশ আউট অটো-অনুমোদিত হয়েছে।`,
+          tag: categoryLabels[newAsset.category] || newAsset.category,
+          amount: Number(newAsset.purchase_price),
+          type: "success",
+        });
         setShowAddModal(false);
         setNewAsset({
           asset_name: "",
@@ -231,10 +320,18 @@ const OtherSourcesAssets = () => {
         });
         fetchAssets();
       } else {
-        toast.error(data.message || "সংরক্ষণ করা যায়নি");
+        setLuxuryToast({
+          title: "সংরক্ষণ ব্যর্থ ❌",
+          message: data.message || "অ্যাসেট সংরক্ষণ করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingAsset(false);
     }
@@ -274,6 +371,9 @@ const OtherSourcesAssets = () => {
           ...dividendForm,
           asset_id: selectedAssetForDividend.id,
           amount: Number(dividendForm.amount),
+          create_cash_in: true,
+          user_id: user?.id || null,
+          approved_by: user?.id || null,
         }),
       });
       const data = await res.json();
@@ -318,10 +418,18 @@ const OtherSourcesAssets = () => {
       if (data.success) {
         setHistoryData(data);
       } else {
-        toast.error(data.message || "হিস্টোরি লোড করা যায়নি");
+        setLuxuryToast({
+          title: "লোড ব্যর্থ ❌",
+          message: data.message || "হিস্টোরি লোড করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভার এরর, পরে চেষ্টা করুন।",
+        type: "error",
+      });
     } finally {
       setLoadingHistory(false);
     }
@@ -353,7 +461,11 @@ const OtherSourcesAssets = () => {
       !newAgreement.lessee_name.trim() ||
       Number(newAgreement.monthly_rent) <= 0
     ) {
-      return toast.error("গ্রহীতার নাম এবং মাসিক ভাড়ার পরিমাণ দিন");
+      return setLuxuryToast({
+        title: "তথ্য অসম্পূর্ণ ⚠️",
+        message: "গ্রহীতার নাম এবং মাসিক ভাড়ার পরিমাণ দিন।",
+        type: "warning",
+      });
     }
 
     try {
@@ -361,6 +473,9 @@ const OtherSourcesAssets = () => {
       const payload = {
         ...newAgreement,
         asset_id: selectedAssetForAgreement.id,
+        record_deposit_cash: Number(newAgreement.security_deposit) > 0,
+        user_id: user?.id || null,
+        approved_by: user?.id || null,
       };
 
       const res = await fetch(`${API}/other_sources/create_agreement.php`, {
@@ -370,14 +485,28 @@ const OtherSourcesAssets = () => {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "চুক্তি সফলভাবে সম্পন্ন হয়েছে 🎉");
+        setLuxuryToast({
+          title: "চুক্তি সফলভাবে সম্পন্ন 🎉",
+          message: `${selectedAssetForAgreement?.asset_name || "অ্যাসেট"} এর জন্য ${newAgreement.lessee_name} এর চুক্তি নথিভুক্ত হয়েছে।`,
+          tag: `গ্রহীতা: ${newAgreement.lessee_name}`,
+          amount: Number(newAgreement.monthly_rent),
+          type: "success",
+        });
         setShowAgreementModal(false);
         fetchAssets();
       } else {
-        toast.error(data.message || "চুক্তি সংরক্ষণ ব্যর্থ");
+        setLuxuryToast({
+          title: "চুক্তি সংরক্ষণ ব্যর্থ ❌",
+          message: data.message || "চুক্তি সংরক্ষণ করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingAgreement(false);
     }
@@ -402,7 +531,11 @@ const OtherSourcesAssets = () => {
   const handleSellSubmit = async (e) => {
     e.preventDefault();
     if (Number(sellForm.selling_price) <= 0) {
-      return toast.error("সঠিক বিক্রয়মূল্য প্রদান করুন");
+      return setLuxuryToast({
+        title: "তথ্য অসম্পূর্ণ ⚠️",
+        message: "সঠিক বিক্রয়মূল্য প্রদান করুন।",
+        type: "warning",
+      });
     }
 
     try {
@@ -413,18 +546,34 @@ const OtherSourcesAssets = () => {
         body: JSON.stringify({
           ...sellForm,
           asset_id: selectedAssetForSell.id,
+          user_id: user?.id || null,
+          approved_by: user?.id || null,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "অ্যাসেট সফলভাবে বিক্রয় সম্পন্ন হয়েছে!");
+        setLuxuryToast({
+          title: "অ্যাসেট বিক্রয় সম্পন্ন 🎉",
+          message: `${selectedAssetForSell?.asset_name || "অ্যাসেট"} সফলভাবে বিক্রয় সম্পন্ন ও ক্যাশ ইন যুক্ত হয়েছে।`,
+          tag: sellForm.buyer_name ? `ক্রেতা: ${sellForm.buyer_name}` : "অ্যাসেট বিক্রয়",
+          amount: Number(sellForm.selling_price),
+          type: "success",
+        });
         setShowSellModal(false);
         fetchAssets();
       } else {
-        toast.error(data.message || "বিক্রয় ব্যর্থ হয়েছে");
+        setLuxuryToast({
+          title: "বিক্রয় ব্যর্থ ❌",
+          message: data.message || "বিক্রয় সম্পন্ন করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর, পরে চেষ্টা করুন");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingSell(false);
     }
@@ -458,14 +607,27 @@ const OtherSourcesAssets = () => {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "চুক্তি বাতিল ও সম্পদ ফেরত নেওয়া হয়েছে 🎉");
+        setLuxuryToast({
+          title: "চুক্তি বাতিল সম্পন্ন 🛑",
+          message: `${selectedAssetForTerminate?.asset_name || "অ্যাসেট"} এর চুক্তি বাতিল ও সম্পদ ফেরত নেওয়া হয়েছে।`,
+          tag: selectedAssetForTerminate?.asset_name,
+          type: "warning",
+        });
         setShowTerminateModal(false);
         fetchAssets();
       } else {
-        toast.error(data.message || "ব্যর্থ হয়েছে");
+        setLuxuryToast({
+          title: "বাতিলকরণ ব্যর্থ ❌",
+          message: data.message || "ব্যর্থ হয়েছে।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
     } finally {
       setSubmittingTerminate(false);
     }
@@ -1108,23 +1270,43 @@ const OtherSourcesAssets = () => {
       )}
 
       {/* ======================================================================= */}
-      {/* ➕ ADD ASSET MODAL (Cash Out Entry)                                      */}
+      {/* ➕ ADD ASSET MODAL (Ultra-Luxury Cash Out Entry)                           */}
       {/* ======================================================================= */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#0f1b2d] border border-white/15 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
-                  <FaPlus size={14} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Glassmorphic Backdrop */}
+          <div
+            onClick={() => {
+              setShowAddModal(false);
+              setIsCategoryDropdownOpen(false);
+            }}
+            className="fixed inset-0 bg-[#02050f]/85 backdrop-blur-xl transition-opacity"
+          />
+
+          {/* Modal Container */}
+          <div className="relative w-full max-w-xl rounded-3xl bg-gradient-to-b from-[#0b1426] via-[#070d1c] to-[#040814] border border-amber-500/35 p-5 sm:p-6 shadow-[0_30px_90px_rgba(0,0,0,0.95)] text-white space-y-4 my-auto z-10 max-h-[92vh] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700/50">
+            {/* Ambient Glow Orbs (Contained inside overflow-hidden to prevent horizontal scrollbar) */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+              <div className="absolute -top-24 -right-24 w-56 h-56 bg-amber-500/15 rounded-full blur-3xl" />
+              <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-orange-500/15 rounded-full blur-3xl" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-white/[0.08] relative">
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <span className="absolute -inset-1 rounded-2xl bg-amber-500/30 blur-sm animate-pulse" />
+                  <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/25 via-orange-500/15 to-transparent border border-amber-500/40 flex items-center justify-center text-amber-400 text-base shadow-lg">
+                    <FaPlus />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
                     {newAsset.category === "company_share"
                       ? "কোম্পানি শেয়ার / ইকুইটি বিনিয়োগ এন্ট্রি"
                       : "নতুন অ্যাসেট ক্রয় এন্ট্রি"}
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-[11px] text-slate-400 mt-0.5">
                     {newAsset.category === "company_share"
                       ? "অন্যান্য কোম্পানিতে শেয়ার ক্রয় বাবদ মূলধন বিনিয়োগ (ক্যাশ আউট) ও রেকর্ড"
                       : "প্রোডাক্ট কেনা বাবদ খরচ (ক্যাশ আউট) ও রেকর্ড"}
@@ -1133,32 +1315,139 @@ const OtherSourcesAssets = () => {
               </div>
 
               <button
-                onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setIsCategoryDropdownOpen(false);
+                }}
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 flex items-center justify-center transition-all hover:rotate-90 shrink-0 cursor-pointer"
               >
-                <FaTimes size={14} />
+                <FaTimes size={13} />
               </button>
             </div>
 
-            <form onSubmit={handleAddAsset} className="space-y-4 text-xs">
-              {/* Category Selector */}
+            <form onSubmit={handleAddAsset} className="space-y-3.5 text-xs relative">
+              {/* Category Selector with Ultra-Sleek Custom Dropdown */}
               <div>
-                <label className="text-slate-300 font-semibold mb-1 block">
-                  অ্যাসেট / বিনিয়োগের ধরন (ক্যাটাগরি) *
+                <label className="text-slate-200 font-semibold mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FaTag className="text-amber-400" size={11} />
+                    অ্যাসেট / বিনিয়োগের ধরন (ক্যাটাগরি) <span className="text-amber-400">*</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    ক্লিক করে ক্যাটাগরি পরিবর্তন করুন
+                  </span>
                 </label>
-                <select
-                  value={newAsset.category}
-                  onChange={(e) =>
-                    setNewAsset({ ...newAsset, category: e.target.value })
-                  }
-                  className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500 font-medium"
-                >
-                  {Object.keys(categoryLabels).map((cat) => (
-                    <option key={cat} value={cat}>
-                      {categoryLabels[cat]}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-[#070e1c] via-[#091326] to-[#0a162b] border border-amber-500/40 hover:border-amber-400 text-white transition-all shadow-lg hover:shadow-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-500/30 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${categoryThemes[newAsset.category]?.bg || "from-amber-500/20 to-orange-500/10"} border ${categoryThemes[newAsset.category]?.border || "border-amber-500/30"} flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform`}>
+                        {categoryIcons[newAsset.category] || <FaBox className="text-amber-400" size={18} />}
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white tracking-wide">
+                            {categoryLabels[newAsset.category] || "ক্যাটাগরি নির্বাচন করুন"}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${categoryThemes[newAsset.category]?.badge || "bg-amber-500/15 text-amber-300 border-amber-500/30"}`}>
+                            {categoryThemes[newAsset.category]?.tag || "অ্যাসেট"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                          {categorySubtitles[newAsset.category] || "ক্যাটাগরি নির্বাচন করতে ক্লিক করুন"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-amber-400 font-medium hidden sm:inline-block bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20">
+                        বদলান
+                      </span>
+                      <div className={`w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 group-hover:text-amber-400 transition-all ${
+                        isCategoryDropdownOpen ? "rotate-180 bg-amber-500/20 text-amber-400 border-amber-500/30" : ""
+                      }`}>
+                        <FaChevronDown size={11} />
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu Popover */}
+                  {isCategoryDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsCategoryDropdownOpen(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl bg-[#081124]/98 backdrop-blur-2xl border border-amber-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95)] p-2 space-y-1.5 max-h-72 overflow-y-auto ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-150 scrollbar-thin">
+                        <div className="px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-400 border-b border-white/[0.06] mb-1 font-medium">
+                          <span className="text-amber-400 font-semibold flex items-center gap-1.5">
+                            <FaTag size={10} /> উপলব্ধ ক্যাটাগরি সমূহ
+                          </span>
+                          <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                            {Object.keys(categoryLabels).length} টি বিকল্প
+                          </span>
+                        </div>
+
+                        {Object.keys(categoryLabels).map((cat) => {
+                          const isSelected = newAsset.category === cat;
+                          const theme = categoryThemes[cat];
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setNewAsset({ ...newAsset, category: cat });
+                                setIsCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-all cursor-pointer group ${
+                                isSelected
+                                  ? "bg-gradient-to-r from-amber-500/25 via-orange-500/15 to-transparent border border-amber-500/50 shadow-md text-amber-300 font-bold"
+                                  : "text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 text-left">
+                                <div
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105 ${
+                                    isSelected
+                                      ? "bg-amber-500/25 border-amber-500/40 text-amber-300"
+                                      : "bg-white/5 border-white/10"
+                                  }`}
+                                >
+                                  {categoryIcons[cat]}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
+                                      {categoryLabels[cat]}
+                                    </span>
+                                    <span className={`text-[9px] px-1.5 py-0.2 rounded border ${theme?.badge || "bg-white/5 border-white/10 text-slate-400"}`}>
+                                      {theme?.tag || "ক্যাটাগরি"}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1 font-normal">
+                                    {categorySubtitles[cat]}
+                                  </p>
+                                </div>
+                              </div>
+                              {isSelected ? (
+                                <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center shrink-0 text-amber-400">
+                                  <FaCheckCircle size={11} />
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors opacity-0 group-hover:opacity-100">
+                                  নির্বাচন করুন →
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {newAsset.category === "company_share" ? (
@@ -1167,7 +1456,7 @@ const OtherSourcesAssets = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="text-slate-300 font-semibold mb-1 block">
-                        কোম্পানি / ব্যবসার নাম *
+                        কোম্পানি / ব্যবসার নাম <span className="text-amber-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1177,7 +1466,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, asset_name: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-cyan-500/30 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+                        className="w-full bg-[#050b17] border border-cyan-500/30 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all font-medium"
                       />
                     </div>
 
@@ -1192,7 +1481,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, business_type: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all font-medium"
                       />
                     </div>
 
@@ -1207,7 +1496,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, reg_no: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 font-mono"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 font-mono transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -1215,7 +1504,7 @@ const OtherSourcesAssets = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-slate-300 font-semibold mb-1 block">
-                        মোট বিনিয়োগকৃত টাকা *
+                        মোট বিনিয়োগকৃত টাকা <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -1226,13 +1515,13 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, purchase_price: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-red-500/30 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-red-400 font-mono font-bold"
+                        className="w-full bg-[#050b17] border border-rose-500/30 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 font-mono font-bold transition-all"
                       />
                     </div>
 
                     <div>
                       <label className="text-slate-300 font-semibold mb-1 block">
-                        বিনিয়োগের তারিখ *
+                        বিনিয়োগের তারিখ <span className="text-amber-400">*</span>
                       </label>
                       <input
                         type="date"
@@ -1241,7 +1530,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, purchase_date: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-cyan-400 font-mono"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 font-mono transition-all"
                       />
                     </div>
                   </div>
@@ -1259,7 +1548,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, share_percentage: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 font-mono"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 font-mono transition-all"
                       />
                     </div>
 
@@ -1274,7 +1563,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, share_units: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 font-mono"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 font-mono transition-all"
                       />
                     </div>
 
@@ -1287,12 +1576,12 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, dividend_frequency: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-cyan-400"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 cursor-pointer"
                       >
-                        <option value="on_demand">অন-ডিমান্ড (লাভ হলে)</option>
-                        <option value="monthly">মাসিক (Monthly)</option>
-                        <option value="quarterly">ত্রৈমাসিক (Quarterly)</option>
-                        <option value="yearly">বাৎসরিক (Yearly)</option>
+                        <option value="on_demand" className="bg-[#091224]">অন-ডিমান্ড (লাভ হলে)</option>
+                        <option value="monthly" className="bg-[#091224]">মাসিক (Monthly)</option>
+                        <option value="quarterly" className="bg-[#091224]">ত্রৈমাসিক (Quarterly)</option>
+                        <option value="yearly" className="bg-[#091224]">বাৎসরিক (Yearly)</option>
                       </select>
                     </div>
                   </div>
@@ -1309,7 +1598,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, contact_person: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all font-medium"
                       />
                     </div>
 
@@ -1324,7 +1613,7 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, vendor_info: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -1340,7 +1629,7 @@ const OtherSourcesAssets = () => {
                       onChange={(e) =>
                         setNewAsset({ ...newAsset, remarks: e.target.value })
                       }
-                      className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 resize-none"
+                      className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 resize-none transition-all font-medium"
                     />
                   </div>
                 </>
@@ -1348,8 +1637,9 @@ const OtherSourcesAssets = () => {
                 /* 📦 REGULAR ASSET FIELDS */
                 <>
                   <div>
-                    <label className="text-slate-300 font-semibold mb-1 block">
-                      অ্যাসেটের নাম *
+                    <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                      <FaTag className="text-amber-400" size={11} />
+                      অ্যাসেটের নাম <span className="text-amber-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -1359,31 +1649,38 @@ const OtherSourcesAssets = () => {
                       onChange={(e) =>
                         setNewAsset({ ...newAsset, asset_name: e.target.value })
                       }
-                      className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-orange-500"
+                      className="w-full bg-[#050b17] border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-slate-300 font-semibold mb-1 block">
-                        ক্রয়মূল্য (টাকা) *
+                      <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                        <FaMoneyBillWave className="text-emerald-400" size={12} />
+                        ক্রয়মূল্য (টাকা) <span className="text-amber-400">*</span>
                       </label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="১,২০,০০০"
-                        value={newAsset.purchase_price}
-                        onChange={(e) =>
-                          setNewAsset({ ...newAsset, purchase_price: e.target.value })
-                        }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-orange-500 font-mono"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
+                          ৳
+                        </span>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="১,২০,০০০"
+                          value={newAsset.purchase_price}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, purchase_price: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-slate-700/80 rounded-xl pl-7 pr-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 font-mono font-bold transition-all"
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <label className="text-slate-300 font-semibold mb-1 block">
-                        কেনার তারিখ
+                      <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                        <FaCalendarAlt className="text-cyan-400" size={11} />
+                        কেনার তারিখ <span className="text-amber-400">*</span>
                       </label>
                       <input
                         type="date"
@@ -1392,84 +1689,93 @@ const OtherSourcesAssets = () => {
                         onChange={(e) =>
                           setNewAsset({ ...newAsset, purchase_date: e.target.value })
                         }
-                        className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500 font-mono"
+                        className="w-full bg-[#050b17] border border-slate-700/80 rounded-xl px-3 py-2 text-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 font-mono transition-all"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-slate-300 font-semibold mb-1 block">
+                    <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                      <FaStore className="text-purple-400" size={11} />
                       সেলার / শোরুমের নাম ও ঠিকানা
                     </label>
                     <input
                       type="text"
-                      placeholder="উত্তরা মোটরস / বিক্রেতার নাম"
+                      placeholder="যেমন: উত্তরা মোটরস বা বিক্রেতার নাম ও মোবাইল"
                       value={newAsset.vendor_info}
                       onChange={(e) =>
                         setNewAsset({ ...newAsset, vendor_info: e.target.value })
                       }
-                      className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-orange-500"
+                      className="w-full bg-[#050b17] border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="text-slate-300 font-semibold mb-1 block">
+                    <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                      <FaEdit className="text-blue-400" size={11} />
                       মন্তব্য / বিবরণ
                     </label>
                     <textarea
                       rows="2"
-                      placeholder="রেজিস্ট্রেশন নম্বর, শর্ত বা অন্যান্য বিবরণ..."
+                      placeholder="রেজিস্ট্রেশন নম্বর, ওয়ারেন্টি, শর্ত বা অন্যান্য বিবরণ..."
                       value={newAsset.remarks}
                       onChange={(e) =>
                         setNewAsset({ ...newAsset, remarks: e.target.value })
                       }
-                      className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-orange-500 resize-none"
+                      className="w-full bg-[#050b17] border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 resize-none transition-all font-medium"
                     />
                   </div>
                 </>
               )}
 
-              {/* Automatic Cash Out Checkbox */}
-              <div className="bg-[#071025] border border-red-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  id="create_cash_out"
-                  checked={newAsset.create_cash_out}
-                  onChange={(e) =>
-                    setNewAsset({
-                      ...newAsset,
-                      create_cash_out: e.target.checked,
-                    })
-                  }
-                  className="mt-0.5 rounded text-orange-500 focus:ring-0 cursor-pointer"
-                />
-                <label
-                  htmlFor="create_cash_out"
-                  className="text-xs text-slate-300 cursor-pointer"
-                >
-                  <span className="font-bold text-red-400 block">
-                    স্বয়ংক্রিয় Cash Out রেকর্ড করুন
-                  </span>
-                  {newAsset.category === "company_share"
-                    ? 'ক্যাশ ম্যানেজমেন্টে এটি সরাসরি "কোম্পানি শেয়ারে বিনিয়োগ" হিসেবে টাকা আউট হয়ে যাবে।'
-                    : 'ক্যাশ ম্যানেজমেন্টে এটি সরাসরি "অ্যাসেট ক্রয়" হিসেবে টাকা আউট হয়ে যাবে।'}
-                </label>
+              {/* Automatic Cash Out Info Card (Directly Approved) */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                  <FaCoins size={13} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      স্বয়ংক্রিয় Cash Out (সরাসরি Approved)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                      <FaCheckCircle size={10} className="text-emerald-400" />
+                      অটো অনুমোদিত
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                    {newAsset.category === "company_share"
+                      ? 'অ্যাসেট যুক্ত করার সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "কোম্পানি শেয়ারে বিনিয়োগ" হিসেবে Approved ক্যাশ আউট রেকর্ড হবে (ম্যানুয়াল অনুমোদনের প্রয়োজন নেই)।'
+                      : 'অ্যাসেট যুক্ত করার সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "অ্যাসেট ক্রয়" হিসেবে Approved ক্যাশ আউট রেকর্ড হবে (ম্যানুয়াল অনুমোদনের প্রয়োজন নেই)।'}
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Footer Actions */}
+              <div className="pt-2.5 flex items-center justify-end gap-3 border-t border-white/[0.08]">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-medium cursor-pointer"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setIsCategoryDropdownOpen(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 text-xs font-semibold border border-slate-700/60 transition active:scale-95 cursor-pointer"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={submittingAsset}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-950/60 hover:shadow-amber-500/30 transition active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-2 min-w-[140px]"
                 >
-                  {submittingAsset ? "সংরক্ষণ হচ্ছে..." : "অ্যাসেট সেভ করুন"}
+                  {submittingAsset ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>সংরক্ষণ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>অ্যাসেট সেভ করুন</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1486,10 +1792,17 @@ const OtherSourcesAssets = () => {
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">
-                  লিজ / ভাড়া চুক্তি তৈরি
+                  {selectedAssetForAgreement.lessee_name
+                    ? "চুক্তি পরিবর্তন ও নবায়ন"
+                    : "লিজ / ভাড়া চুক্তি তৈরি"}
                 </h3>
                 <p className="text-xs text-orange-400">
-                  অ্যাসেট: {selectedAssetForAgreement.asset_name}
+                  অ্যাসেট: {selectedAssetForAgreement.asset_name}{" "}
+                  {selectedAssetForAgreement.lessee_name && (
+                    <span className="text-slate-400">
+                      (বর্তমান গ্রহীতা: {selectedAssetForAgreement.lessee_name})
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -1659,6 +1972,29 @@ const OtherSourcesAssets = () => {
                 />
               </div>
 
+              {/* Security Deposit Auto Cash In Card */}
+              {Number(newAgreement.security_deposit) > 0 && (
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                    <FaCoins size={13} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                        জামানত ক্যাশ ইন (সরাসরি Approved)
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                        <FaCheckCircle size={10} className="text-emerald-400" />
+                        অটো অনুমোদিত
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                      চুক্তি সম্পন্ন হওয়ার সাথে সাথে জামানত বাবদ ৳ {Number(newAgreement.security_deposit).toLocaleString()} টাকা অফিসে সরাসরি Approved ক্যাশ ইন হিসেবে জমা হবে।
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -1672,7 +2008,11 @@ const OtherSourcesAssets = () => {
                   disabled={submittingAgreement}
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold cursor-pointer disabled:opacity-50"
                 >
-                  {submittingAgreement ? "সংরক্ষণ হচ্ছে..." : "চুক্তি সম্পন্ন করুন"}
+                  {submittingAgreement
+                    ? "সংরক্ষণ হচ্ছে..."
+                    : selectedAssetForAgreement.lessee_name
+                    ? "চুক্তি আপডেট/নবায়ন করুন"
+                    : "চুক্তি সম্পন্ন করুন"}
                 </button>
               </div>
             </form>
@@ -1811,18 +2151,26 @@ const OtherSourcesAssets = () => {
                 </div>
               </div>
 
-              {/* Cash In Checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer bg-[#071025] p-2.5 rounded-xl border border-white/5">
-                <input
-                  type="checkbox"
-                  checked={sellForm.create_cash_in}
-                  onChange={(e) => setSellForm({ ...sellForm, create_cash_in: e.target.checked })}
-                  className="rounded text-purple-500 focus:ring-purple-400"
-                />
-                <span className="text-slate-300 text-xs">
-                  সম্পূর্ণ বিক্রয়মূল্য অফিসে Cash In হিসেবে জমা করুন
-                </span>
-              </label>
+              {/* Automatic Cash In Status Card (Directly Approved) */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                  <FaCoins size={13} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      স্বয়ংক্রিয় Cash In (সরাসরি Approved)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                      <FaCheckCircle size={10} className="text-emerald-400" />
+                      অটো অনুমোদিত
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                    অ্যাসেট বিক্রয়ের সাথে সাথে সম্পূর্ণ বিক্রয়মূল্য অফিসে সরাসরি Approved ক্যাশ ইন হিসেবে যুক্ত হবে। আলাদা কোনো স্টাফ বা ম্যানেজারের অনুমোদনের প্রয়োজন নেই।
+                  </p>
+                </div>
+              </div>
 
               {/* Remarks */}
               <div>
@@ -2094,22 +2442,26 @@ const OtherSourcesAssets = () => {
                 />
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer bg-[#071025] p-2.5 rounded-xl border border-white/5">
-                <input
-                  type="checkbox"
-                  checked={dividendForm.create_cash_in}
-                  onChange={(e) =>
-                    setDividendForm({
-                      ...dividendForm,
-                      create_cash_in: e.target.checked,
-                    })
-                  }
-                  className="rounded text-emerald-500 focus:ring-emerald-400"
-                />
-                <span className="text-slate-300 text-xs">
-                  স্বয়ংক্রিয় Cash In হিসেবে ক্যাশ ম্যানেজমেন্টে যুক্ত করুন
-                </span>
-              </label>
+              {/* Automatic Cash In Status Card (Directly Approved) */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                  <FaCoins size={13} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      স্বয়ংক্রিয় Cash In (সরাসরি Approved)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                      <FaCheckCircle size={10} className="text-emerald-400" />
+                      অটো অনুমোদিত
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                    লভ্যাংশ গ্রহণের সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি Approved ক্যাশ ইন রেকর্ড হবে (আলাদা কোনো স্টাফ বা ম্যানেজারের অনুমোদনের প্রয়োজন নেই)।
+                  </p>
+                </div>
+              </div>
 
               <div className="pt-2 flex justify-end gap-2">
                 <button

@@ -60,6 +60,15 @@ export default function ApprovalCenter() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
+  // Module totals for tab badges
+  const [moduleTotals, setModuleTotals] = useState({
+    installment: 0,
+    investment: 0,
+    daily: 0,
+    cash: 0,
+    asset: 0,
+  });
+
   // Filters state
   const [scopeFilter, setScopeFilter] = useState("all"); // 'all' | 'my_requests'
   const [activeModule, setActiveModule] = useState("installment"); // 'installment' | 'investment' | 'cash'
@@ -97,6 +106,51 @@ export default function ApprovalCenter() {
     onClose: () => setFeedbackModal((prev) => ({ ...prev, isOpen: false })),
   });
 
+  const fetchAllModuleCounts = useCallback(async () => {
+    try {
+      const base = import.meta.env.VITE_LOCALHOST_KEY;
+      const [instRes, invRes, dailyRes, cashRes, assetRes] = await Promise.allSettled([
+        axios.get(`${base}/customers/get_installment_edits.php`),
+        axios.get(`${base}/investors/get_investment_edits.php`),
+        axios.get(`${base}/DailyInstallments/get_daily_installment_edits.php`),
+        axios.get(`${base}/cash/get_cash_edits.php`),
+        axios.get(`${base}/other_sources/get_asset_edits.php`),
+      ]);
+
+      const getCount = (r) => {
+        if (r.status !== "fulfilled" || !r.value?.data?.success) return 0;
+        const d = r.value.data;
+        if (d.stats && typeof d.stats.total_count === "number") return d.stats.total_count;
+        if (typeof d.count === "number") return d.count;
+        if (Array.isArray(d.data)) return d.data.length;
+        return 0;
+      };
+
+      setModuleTotals({
+        installment: getCount(instRes),
+        investment: getCount(invRes),
+        daily: getCount(dailyRes),
+        cash: getCount(cashRes),
+        asset: getCount(assetRes),
+      });
+    } catch (e) {
+      // silent
+    }
+  }, []);
+
+  const handleModuleChange = (newModule) => {
+    if (newModule === activeModule) return;
+    setActiveModule(newModule);
+    setData([]);
+    setStats({
+      pending_count: 0,
+      approved_count: 0,
+      rejected_count: 0,
+      total_count: 0,
+      pending_amount: 0,
+    });
+  };
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -128,9 +182,13 @@ export default function ApprovalCenter() {
         setData(res.data.data);
         if (res.data.stats) {
           setStats(res.data.stats);
+          setModuleTotals((prev) => ({
+            ...prev,
+            [activeModule]: res.data.stats.total_count ?? res.data.data.length,
+          }));
         } else {
           const list = res.data.data;
-          setStats({
+          const calculatedStats = {
             pending_count: list.filter((x) => x.status === "pending").length,
             approved_count: list.filter((x) => x.status === "approved").length,
             rejected_count: list.filter((x) => x.status === "rejected").length,
@@ -138,14 +196,33 @@ export default function ApprovalCenter() {
             pending_amount: list
               .filter((x) => x.status === "pending")
               .reduce((sum, x) => sum + Number(x.new_purchase_price || x.new_amount || x.amount || 0), 0),
-          });
+          };
+          setStats(calculatedStats);
+          setModuleTotals((prev) => ({
+            ...prev,
+            [activeModule]: list.length,
+          }));
         }
       } else {
         setData([]);
+        setStats({
+          pending_count: 0,
+          approved_count: 0,
+          rejected_count: 0,
+          total_count: 0,
+          pending_amount: 0,
+        });
       }
     } catch (err) {
       console.error("Failed to fetch approval requests:", err);
       setData([]);
+      setStats({
+        pending_count: 0,
+        approved_count: 0,
+        rejected_count: 0,
+        total_count: 0,
+        pending_amount: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -154,6 +231,10 @@ export default function ApprovalCenter() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    fetchAllModuleCounts();
+  }, [fetchAllModuleCounts]);
 
   // Date Presets Handler
   const applyDatePreset = (preset) => {
@@ -234,6 +315,7 @@ export default function ApprovalCenter() {
       onConfirm: async (rejectNote) => {
         try {
           setProcessingId(item.id);
+          setFeedbackModal((prev) => ({ ...prev, isSubmitting: true }));
           const actionEndpoint = isAsset
             ? `${import.meta.env.VITE_LOCALHOST_KEY}/other_sources/action_asset_edit.php`
             : isCash
@@ -251,7 +333,7 @@ export default function ApprovalCenter() {
             review_note: rejectNote || "",
           });
 
-          setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
+          setFeedbackModal((prev) => ({ ...prev, isOpen: false, isSubmitting: false }));
 
           if (res.data?.success) {
             setLuxuryToast({
@@ -265,6 +347,7 @@ export default function ApprovalCenter() {
             window.dispatchEvent(new CustomEvent("cash_updated"));
             window.dispatchEvent(new CustomEvent("asset_updated"));
             fetchData();
+            fetchAllModuleCounts();
           } else {
             setLuxuryToast({
               title: "ব্যর্থ হয়েছে ❌",
@@ -273,7 +356,7 @@ export default function ApprovalCenter() {
             });
           }
         } catch (err) {
-          setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
+          setFeedbackModal((prev) => ({ ...prev, isOpen: false, isSubmitting: false }));
           setLuxuryToast({
             title: "সার্ভার এরর ❌",
             message: err.response?.data?.message || err.response?.data?.error || "সার্ভারে ত্রুটি হয়েছে।",
@@ -381,7 +464,7 @@ export default function ApprovalCenter() {
         {/* Module Switcher */}
         <div className="flex flex-wrap items-center gap-1.5">
           <button
-            onClick={() => setActiveModule("installment")}
+            onClick={() => handleModuleChange("installment")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
               activeModule === "installment"
                 ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-950/50"
@@ -390,15 +473,17 @@ export default function ApprovalCenter() {
           >
             <FaListAlt className="h-3.5 w-3.5" />
             <span>গ্রাহক কিস্তি (Customer)</span>
-            {activeModule === "installment" && (
-              <span className="ml-1 rounded-full bg-black/30 px-1.5 py-0.2 text-[10px] font-mono">
-                {stats.total_count}
+            {moduleTotals.installment > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                activeModule === "installment" ? "bg-black/40 text-white" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+              }`}>
+                {moduleTotals.installment}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveModule("investment")}
+            onClick={() => handleModuleChange("investment")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
               activeModule === "investment"
                 ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-950/50"
@@ -407,15 +492,17 @@ export default function ApprovalCenter() {
           >
             <FaPiggyBank className="h-3.5 w-3.5 text-indigo-300" />
             <span>বিনিয়োগ কিস্তি সংশোধন (Investment)</span>
-            {activeModule === "investment" && (
-              <span className="ml-1 rounded-full bg-black/30 px-1.5 py-0.2 text-[10px] font-mono">
-                {stats.total_count}
+            {moduleTotals.investment > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                activeModule === "investment" ? "bg-black/40 text-white" : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+              }`}>
+                {moduleTotals.investment}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveModule("daily")}
+            onClick={() => handleModuleChange("daily")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
               activeModule === "daily"
                 ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg shadow-teal-950/50"
@@ -424,15 +511,17 @@ export default function ApprovalCenter() {
           >
             <FiCreditCard className="h-3.5 w-3.5 text-emerald-300" />
             <span>দৈনিক কিস্তি সংশোধন (Daily)</span>
-            {activeModule === "daily" && (
-              <span className="ml-1 rounded-full bg-black/30 px-1.5 py-0.2 text-[10px] font-mono">
-                {stats.total_count}
+            {moduleTotals.daily > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                activeModule === "daily" ? "bg-black/40 text-white" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+              }`}>
+                {moduleTotals.daily}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveModule("cash")}
+            onClick={() => handleModuleChange("cash")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
               activeModule === "cash"
                 ? "bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 text-white shadow-lg shadow-orange-950/50"
@@ -441,15 +530,17 @@ export default function ApprovalCenter() {
           >
             <FaMoneyBillWave className="h-3.5 w-3.5 text-amber-300" />
             <span>ক্যাশ সংশোধন (Cash In/Out)</span>
-            {activeModule === "cash" && (
-              <span className="ml-1 rounded-full bg-black/30 px-1.5 py-0.2 text-[10px] font-mono">
-                {stats.total_count}
+            {moduleTotals.cash > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                activeModule === "cash" ? "bg-black/40 text-white" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+              }`}>
+                {moduleTotals.cash}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveModule("asset")}
+            onClick={() => handleModuleChange("asset")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
               activeModule === "asset"
                 ? "bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white shadow-lg shadow-teal-950/50"
@@ -458,9 +549,11 @@ export default function ApprovalCenter() {
           >
             <FaBuilding className="h-3.5 w-3.5 text-teal-300" />
             <span>অ্যাসেট সংশোধন (Assets)</span>
-            {activeModule === "asset" && (
-              <span className="ml-1 rounded-full bg-black/30 px-1.5 py-0.2 text-[10px] font-mono">
-                {stats.total_count}
+            {moduleTotals.asset > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                activeModule === "asset" ? "bg-black/40 text-white" : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+              }`}>
+                {moduleTotals.asset}
               </span>
             )}
           </button>

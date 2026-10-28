@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   FaCalendarAlt,
@@ -21,10 +20,12 @@ import {
   FaBox,
   FaHandHoldingUsd,
   FaBuilding,
+  FaCoins,
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
 import LuxuryToast from "../../../components/Modal/LuxuryToast";
+import { useAuth } from "../../../Provider/AuthProvider";
 
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
@@ -40,6 +41,7 @@ const categoryIcons = {
 
 const OtherSourcesCollections = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7)
   );
@@ -71,10 +73,18 @@ const OtherSourcesCollections = () => {
         setCollections(data.data || []);
         setSummary(data.summary || null);
       } else {
-        toast.error(data.message || "কালেকশন লোড করা যায়নি");
+        setLuxuryToast({
+          title: "লোড ব্যর্থ ❌",
+          message: data.message || "কালেকশন লোড করা যায়নি।",
+          type: "error",
+        });
       }
     } catch (err) {
-      toast.error("সার্ভার এরর, পরে চেষ্টা করুন");
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভার এরর, পরে চেষ্টা করুন।",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -135,7 +145,9 @@ const OtherSourcesCollections = () => {
         collection_date: collectForm.collection_date,
         payment_method: collectForm.payment_method,
         remarks: collectForm.remarks,
-        create_cash_in: collectForm.create_cash_in,
+        create_cash_in: true,
+        user_id: user?.id || null,
+        approved_by: user?.id || null,
       };
 
       const res = await fetch(`${API}/other_sources/collect_payment.php`, {
@@ -295,12 +307,21 @@ const OtherSourcesCollections = () => {
             </span>
           </h2>
 
-          <button
-            onClick={() => navigate("/other-sources/assets")}
-            className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition"
-          >
-            অ্যাসেট ম্যানেজমেন্ট ➔
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/email-logs")}
+              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5"
+            >
+              <span>✉️ ইমেইল হিস্ট্রি</span>
+            </button>
+            <span className="text-slate-600">•</span>
+            <button
+              onClick={() => navigate("/other-sources/assets")}
+              className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition"
+            >
+              অ্যাসেট ম্যানেজমেন্ট ➔
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -528,29 +549,25 @@ const OtherSourcesCollections = () => {
                 />
               </div>
 
-              {/* Automatic Cash In Notice */}
-              <div className="bg-[#071025] border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  id="create_cash_in"
-                  checked={collectForm.create_cash_in}
-                  onChange={(e) =>
-                    setCollectForm({
-                      ...collectForm,
-                      create_cash_in: e.target.checked,
-                    })
-                  }
-                  className="mt-0.5 rounded text-orange-500 focus:ring-0 cursor-pointer"
-                />
-                <label
-                  htmlFor="create_cash_in"
-                  className="text-xs text-slate-300 cursor-pointer"
-                >
-                  <span className="font-bold text-emerald-400 block">
-                    স্বয়ংক্রিয় Cash In রেকর্ড করুন
-                  </span>
-                  ক্যাশ ম্যানেজমেন্টে সরাসরি টাকা ইন হবে এবং ক্যাশ ব্যালেন্স বৃদ্ধি পাবে।
-                </label>
+              {/* Automatic Cash In Status Card (Directly Approved) */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                  <FaCoins size={13} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      স্বয়ংক্রিয় Cash In (সরাসরি Approved)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                      <FaCheckCircle size={10} className="text-emerald-400" />
+                      অটো অনুমোদিত
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                    ভাড়া আদায়ের সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি Approved ক্যাশ ইন রেকর্ড হবে (আলাদা কোনো অনুমোদনের প্রয়োজন নেই)।
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

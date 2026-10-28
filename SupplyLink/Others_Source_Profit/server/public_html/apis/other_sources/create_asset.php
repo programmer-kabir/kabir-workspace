@@ -37,20 +37,29 @@ if (!in_array($category, $validCategories)) {
 
 $cash_id = null;
 
-// 💸 ১. স্বয়ংক্রিয় Cash Out এন্ট্রি (যদি ইউজার চান)
+// 💸 ১. স্বয়ংক্রিয় Cash Out এন্ট্রি (সরাসরি Approved হিসেবে ক্যাশে যুক্ত হবে)
 if ($create_cash_out) {
     $purpose = ($category === 'company_share')
         ? ("কোম্পানি শেয়ারে বিনিয়োগ: " . $asset_name . ($share_percentage ? " (" . $share_percentage . "%)" : ""))
         : ("অ্যাসেট ক্রয়: " . $asset_name . ($vendor_info ? " (" . $vendor_info . ")" : ""));
 
     $cashCategory = ($category === 'company_share') ? 'share_investment' : 'asset_purchase';
+    $cashSource   = $vendor_info !== '' ? $vendor_info : ($category === 'company_share' ? 'কোম্পানি শেয়ার ক্রয়' : 'অ্যাসেট ক্রয়');
+    $cashRefId    = 'asset_out_' . time();
+    $cashRemarks  = $remarks !== '' ? $remarks : 'স্বয়ংক্রিয় অ্যাসেট ক্রয় ক্যাশ আউট (সরাসরি অনুমোদিত)';
+    $approvedBy   = isset($data['approved_by']) && intval($data['approved_by']) > 0 
+        ? intval($data['approved_by']) 
+        : (isset($data['user_id']) && intval($data['user_id']) > 0 ? intval($data['user_id']) : 290);
 
     $cashStmt = $mysqli->prepare("
-        INSERT INTO cash (type, category, purpose, amount, date, source, createdAt)
-        VALUES ('out', ?, ?, ?, ?, NULL, NOW())
+        INSERT INTO cash (
+            type, category, purpose, amount, date, source, refId, remarks, createdAt, 
+            approval_status, approved_by, approved_at
+        )
+        VALUES ('out', ?, ?, ?, ?, ?, ?, ?, NOW(), 'approved', ?, NOW())
     ");
     if ($cashStmt) {
-        $cashStmt->bind_param("ssds", $cashCategory, $purpose, $purchase_price, $purchase_date);
+        $cashStmt->bind_param("ssdssssi", $cashCategory, $purpose, $purchase_price, $purchase_date, $cashSource, $cashRefId, $cashRemarks, $approvedBy);
         if ($cashStmt->execute()) {
             $cash_id = $cashStmt->insert_id;
         }
@@ -94,10 +103,47 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
+    $assetId = $stmt->insert_id;
+
+    // 🚀 Send Automated Email to Admin
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $eventType = ($category === 'company_share') ? 'share_investment' : 'asset_purchase';
+        $categoryLabels = [
+            'bike' => 'বাইক লিজ',
+            'shop' => 'দোকান ভাড়া',
+            'house' => 'বাসা/ঘর ভাড়া',
+            'equipment' => 'যন্ত্রপাতি',
+            'project' => 'প্রজেক্ট ইনভেস্টমেন্ট',
+            'company_share' => 'কোম্পানি শেয়ার (Equity)',
+            'other' => 'অন্যান্য'
+        ];
+        $mailData = [
+            'asset_id'           => $assetId,
+            'asset_name'         => $asset_name,
+            'category'           => $category,
+            'category_label'     => $categoryLabels[$category] ?? $category,
+            'purchase_price'     => $purchase_price,
+            'purchase_date'      => $purchase_date,
+            'vendor_info'        => $vendor_info,
+            'reg_no'             => $reg_no,
+            'contact_person'     => $contact_person,
+            'share_percentage'   => $share_percentage,
+            'share_units'        => $share_units,
+            'business_type'      => $business_type,
+            'dividend_frequency' => $dividend_frequency,
+            'cash_id'            => $cash_id,
+            'remarks'            => $remarks,
+        ];
+        sendAssetEventNotification($eventType, $mailData);
+    } catch (Throwable $e) {
+        error_log("Asset purchase email notification error: " . $e->getMessage());
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "অ্যাসেট সফলভাবে যুক্ত হয়েছে এবং ক্যাশ আউট সম্পন্ন হয়েছে",
-        "asset_id" => $stmt->insert_id,
+        "asset_id" => $assetId,
         "cash_id" => $cash_id
     ]);
 } else {

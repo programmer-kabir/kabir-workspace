@@ -69,6 +69,12 @@ export default function InvestorDetails() {
     );
   }, [currentCardProfit]);
 
+  // 1) investorCard (safe)
+  const investorCard = useMemo(() => {
+    if (!cardId || Number.isNaN(cardId)) return null;
+    return investmentCards.find((c) => Number(c?.id) === Number(cardId)) || null;
+  }, [investmentCards, cardId]);
+
   const isLoading =
     isUsersLoading ||
     inInvestInstallmentsLoading ||
@@ -78,12 +84,6 @@ export default function InvestorDetails() {
 
   const isError =
     isUsersError || isInvestInstallmentsError || isInvestmentCardsError || isUProfitAnalyticsError;
-
-  // 1) investorCard (safe)
-  const investorCard = useMemo(() => {
-    if (!cardId || Number.isNaN(cardId)) return null;
-    return investmentCards.find((c) => Number(c?.id) === Number(cardId)) || null;
-  }, [investmentCards, cardId]);
 
   // 2) investor (safe)
   const investor = useMemo(() => {

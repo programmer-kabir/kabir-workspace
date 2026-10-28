@@ -29,7 +29,7 @@ import {
   TbFileUpload,
 } from "react-icons/tb";
 
-import { RiBankCardLine, RiBankCard2Line } from "react-icons/ri";
+import { RiBankCardLine, RiBankCard2Line, RiMailSendLine } from "react-icons/ri";
 import { MdDeveloperMode, MdInventory, MdOutlineDashboard, MdOutlineInventory2, MdPayments, MdProductionQuantityLimits, MdShowChart } from "react-icons/md";
 import { GiReceiveMoney, GiPayMoney } from "react-icons/gi";
 import { IoStatsChart } from "react-icons/io5";
@@ -87,6 +87,12 @@ export const sidebarMenu = [
       label: "অনুদান অনুমোদন",
       path: "/cash/cash-report-approval",
       icon: TbCashBanknote,
+      roles: ["admin", "developer", "manager", "staff"],
+    },
+    {
+      label: "ব্যাংক জমা ও রিকনসিলিয়েশন",
+      path: "/cash/bank-reconciliation",
+      icon: BsBank,
       roles: ["admin", "developer", "manager", "staff"],
     },
   ],
@@ -301,6 +307,12 @@ export const sidebarMenu = [
         label: "Monthly Collections",
         path: "/other-sources/collections",
         icon: TbCashBanknote,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "Email History (Logs)",
+        path: "/email-logs",
+        icon: RiMailSendLine,
         roles: ["admin", "developer", "manager"],
       },
     ],

@@ -61,6 +61,7 @@ import CashReport from "../Pages/shared/CashMenage/CashReport";
 import CashOut from "../Pages/shared/CashMenage/CashOut";
 import CompanyProfit from "../Pages/shared/CompanyProfit/CompanyProfit";
 import CashReportApproved from "../Pages/shared/CashMenage/CashReportApproved";
+import BankReconciliation from "../Pages/shared/CashMenage/BankReconciliation";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
@@ -73,6 +74,7 @@ import Account from "../Pages/shared/Account/Account";
 import MonthlyOverviewsTest from "../Pages/shared/Customers/MonthlyOverviewsTest";
 import OtherSourcesAssets from "../Pages/shared/OtherSourcesProfit/OtherSourcesAssets";
 import OtherSourcesCollections from "../Pages/shared/OtherSourcesProfit/OtherSourcesCollections";
+import EmailLogs from "../Pages/shared/EmailLogs/EmailLogs";
 import ApprovalCenter from "../Pages/shared/ApprovalCenter/ApprovalCenter";
 
 const routes = createBrowserRouter([
@@ -97,11 +99,6 @@ const routes = createBrowserRouter([
             path: "/customers/customer_guarantor_assign",
             element: <CustomerGuarantorAssignForm />,
           },
-          // {
-          //   path: "/applications/product-purchase_request",
-          //   element: <ProductPurchaseApplicationFrom />,
-          // },
-
           {
             path: "/applications/invest_withdraw_request",
             element: <InvestmentWithdrawFrom />,
@@ -230,6 +227,10 @@ const routes = createBrowserRouter([
             path: "/cash/cash-report-approval",
             element: <CashReportApproved />,
           },
+          {
+            path: "/cash/bank-reconciliation",
+            element: <BankReconciliation />,
+          },
 
           {
             path: "/cash/cash_reports",
@@ -274,6 +275,14 @@ const routes = createBrowserRouter([
           {
             path: "/other-sources/collections",
             element: <OtherSourcesCollections />,
+          },
+          {
+            path: "/other-sources/email-logs",
+            element: <EmailLogs />,
+          },
+          {
+            path: "/email-logs",
+            element: <EmailLogs />,
           },
           {
             element: (

@@ -67,13 +67,10 @@ const CashReportPrint = () => {
 
   // filter function
   const filterData = (cash) => {
-    const cashDate = new Date(cash.date);
-
-    const cashYear = cashDate.getFullYear().toString();
-
-    const cashMonth = `${cashDate.getFullYear()}-${String(
-      cashDate.getMonth() + 1,
-    ).padStart(2, "0")}`;
+    const rawDate = String(cash.date || "").trim();
+    const cashDateOnly = rawDate.split(" ")[0];
+    const cashYear = cashDateOnly.split("-")[0];
+    const cashMonth = cashDateOnly.slice(0, 7);
 
     // custom filters
     if (filterType === "expenses") {
@@ -94,7 +91,7 @@ const CashReportPrint = () => {
     }
 
     // single date
-    if (selectedDate && cash.date !== selectedDate) {
+    if (selectedDate && cashDateOnly !== selectedDate) {
       return false;
     }
 
@@ -109,17 +106,8 @@ const CashReportPrint = () => {
     }
 
     // range
-    if (startDate) {
-      const current = new Date(cash.date).getTime();
-      const start = new Date(startDate).getTime();
-      if (current < start) return false;
-    }
-
-    if (endDate) {
-      const current = new Date(cash.date).getTime();
-      const end = new Date(endDate).getTime();
-      if (current > end) return false;
-    }
+    if (startDate && cashDateOnly < startDate) return false;
+    if (endDate && cashDateOnly > endDate) return false;
 
     return true;
   };

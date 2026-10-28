@@ -24,7 +24,7 @@ export default function LuxuryToast({ toast, onClose, duration = 3800 }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 450, damping: 30 }}
-          className={`fixed top-6 right-6 z-[999999] pointer-events-auto w-full max-w-sm rounded-2xl bg-[#080e1e]/95 p-4 backdrop-blur-2xl text-white overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.85)] ${
+          className={`fixed top-4 left-3 right-3 sm:left-auto sm:right-6 sm:top-6 sm:w-full sm:max-w-sm z-[999999] pointer-events-auto rounded-2xl bg-[#080e1e]/95 p-3.5 sm:p-4 backdrop-blur-2xl text-white overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.85)] ${
             type === "success"
               ? "border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.25)]"
               : type === "warning"

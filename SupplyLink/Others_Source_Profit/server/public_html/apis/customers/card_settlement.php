@@ -66,6 +66,22 @@ CREATE TABLE IF NOT EXISTS `card_settlements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
 
+// 1.0 Auto-heal tables: Fix any row with id=0 and guarantee AUTO_INCREMENT
+$tablesToAutoHeal = ['card_settlements', 'cash', 'notifications', 'installment_payments', 'installment_payment_edits'];
+foreach ($tablesToAutoHeal as $t) {
+    try {
+        $chkZero = $mysqli->query("SELECT id FROM `$t` WHERE id = 0 LIMIT 1");
+        if ($chkZero && $chkZero->num_rows > 0) {
+            $maxRes = $mysqli->query("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM `$t`");
+            $nextId = (int)($maxRes->fetch_assoc()['next_id'] ?? 1);
+            $mysqli->query("UPDATE `$t` SET id = $nextId WHERE id = 0 LIMIT 1");
+        }
+        @$mysqli->query("ALTER TABLE `$t` MODIFY COLUMN `id` INT NOT NULL AUTO_INCREMENT");
+    } catch (Throwable $e) {
+        // Non-fatal if table doesn't exist yet
+    }
+}
+
 // 1.1 Ensure installment_payments status column allows 'Waived'
 @$mysqli->query("ALTER TABLE `installment_payments` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'Unpaid'");
 
@@ -418,21 +434,25 @@ try {
         }
     }
 
-    // 8. Create Notification for Admin and Developer
-    $notifTitle = "কার্ড অগ্রিম নিষ্পত্তি সম্পন্ন";
-    $notifMsg = "গ্রাহক {$customerName} এর কার্ড #{$cardNumber} বাবদ ৳" . number_format($final_settled_amount) . " আদায়ে (ছাড়: ৳" . number_format($discount_amount) . ") নিষ্পত্তি সম্পন্ন হয়েছে।";
-    $notifLink = "/customers/installment_chart?cardId={$actualCardId}";
-    $targetRoles = "admin,developer";
-    $notifType = "card_settled";
+    // 8. Create Notification for Admin and Developer (Safe try-catch)
+    try {
+        $notifTitle = "কার্ড অগ্রিম নিষ্পত্তি সম্পন্ন";
+        $notifMsg = "গ্রাহক {$customerName} এর কার্ড #{$cardNumber} বাবদ ৳" . number_format($final_settled_amount) . " আদায়ে (ছাড়: ৳" . number_format($discount_amount) . ") নিষ্পত্তি সম্পন্ন হয়েছে।";
+        $notifLink = "/customers/installment_chart?cardId={$actualCardId}";
+        $targetRoles = "admin,developer";
+        $notifType = "card_settled";
 
-    $insNotif = $mysqli->prepare("
-        INSERT INTO notifications (target_roles, type, title, message, link, created_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
-    ");
-    if ($insNotif) {
-        $insNotif->bind_param("sssss", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink);
-        $insNotif->execute();
-        $insNotif->close();
+        $insNotif = $mysqli->prepare("
+            INSERT INTO notifications (target_roles, type, title, message, link, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+        if ($insNotif) {
+            $insNotif->bind_param("sssss", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink);
+            $insNotif->execute();
+            $insNotif->close();
+        }
+    } catch (Throwable $notifErr) {
+        error_log("Settlement notification non-fatal error: " . $notifErr->getMessage());
     }
 
     // Commit Transaction

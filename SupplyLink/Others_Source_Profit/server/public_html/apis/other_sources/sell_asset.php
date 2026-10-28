@@ -17,7 +17,7 @@ $buyer_name      = trim($data['buyer_name'] ?? '');
 $buyer_mobile    = trim($data['buyer_mobile'] ?? '');
 $payment_method  = trim($data['payment_method'] ?? 'Cash');
 $remarks         = trim($data['remarks'] ?? '');
-$create_cash_in  = isset($data['create_cash_in']) ? (bool)$data['create_cash_in'] : true;
+$create_cash_in  = true; // সর্বদা অফিসে সরাসরি ক্যাশ ইন রেকর্ড হবে
 
 if ($asset_id <= 0 || $selling_price <= 0) {
     echo json_encode([
@@ -35,7 +35,7 @@ $mysqli->begin_transaction();
 
 try {
     // 1. Fetch asset
-    $checkStmt = $mysqli->prepare("SELECT id, asset_name, purchase_price, status FROM other_assets WHERE id = ? FOR UPDATE");
+    $checkStmt = $mysqli->prepare("SELECT id, asset_name, category, purchase_price, status FROM other_assets WHERE id = ? FOR UPDATE");
     $checkStmt->bind_param("i", $asset_id);
     $checkStmt->execute();
     $asset = $checkStmt->get_result()->fetch_assoc();
@@ -84,12 +84,20 @@ try {
     // 4. Record Cash In for full selling price (Return of capital + profit)
     if ($create_cash_in) {
         $cashSource = "অ্যাসেট বিক্রয় বাবদ ক্যাশ গ্রহণ: " . $asset['asset_name'] . ($buyer_name ? " (ক্রেতা: " . $buyer_name . ")" : "");
+        $cashRefId  = "asset_sale_" . time();
+        $approvedBy = isset($data['approved_by']) && intval($data['approved_by']) > 0 
+            ? intval($data['approved_by']) 
+            : (isset($data['user_id']) && intval($data['user_id']) > 0 ? intval($data['user_id']) : 290);
+
         $cashStmt = $mysqli->prepare("
-            INSERT INTO cash (type, category, purpose, amount, date, source, createdAt)
-            VALUES ('in', 'asset_sale', NULL, ?, ?, ?, NOW())
+            INSERT INTO cash (
+                type, category, purpose, amount, date, source, refId, createdAt, 
+                approval_status, approved_by, approved_at
+            )
+            VALUES ('in', 'asset_sale', 'অ্যাসেট বিক্রয়', ?, ?, ?, ?, NOW(), 'approved', ?, NOW())
         ");
         if ($cashStmt) {
-            $cashStmt->bind_param("dss", $selling_price, $sale_date, $cashSource);
+            $cashStmt->bind_param("dsssi", $selling_price, $sale_date, $cashSource, $cashRefId, $approvedBy);
             $cashStmt->execute();
             $cash_id = $cashStmt->insert_id;
             $cashStmt->close();
@@ -112,6 +120,29 @@ try {
     }
 
     $mysqli->commit();
+
+    // 🚀 Send Automated Email to Admin
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $eventType = ($asset['category'] === 'company_share') ? 'share_exit' : 'asset_sale';
+        $mailData = [
+            'asset_id'       => $asset_id,
+            'asset_name'     => $asset['asset_name'] ?? 'Asset',
+            'category'       => $asset['category'] ?? 'other',
+            'purchase_price' => $purchase_price,
+            'selling_price'  => $selling_price,
+            'sale_profit'    => $sale_profit,
+            'sale_date'      => $sale_date,
+            'buyer_name'     => $buyer_name,
+            'buyer_mobile'   => $buyer_mobile,
+            'payment_method' => $payment_method,
+            'billing_month'  => $billing_month,
+            'cash_id'        => $cash_id,
+        ];
+        sendAssetEventNotification($eventType, $mailData);
+    } catch (Throwable $e) {
+        error_log("Asset sale email error: " . $e->getMessage());
+    }
 
     echo json_encode([
         "success"        => true,

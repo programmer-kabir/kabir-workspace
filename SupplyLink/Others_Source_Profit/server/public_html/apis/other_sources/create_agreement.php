@@ -18,7 +18,7 @@ $due_day         = intval($data['due_day'] ?? 5);
 $start_date      = trim($data['start_date'] ?? date('Y-m-d'));
 $end_date        = !empty($data['end_date']) ? trim($data['end_date']) : null;
 $security_deposit= floatval($data['security_deposit'] ?? 0);
-$record_deposit_cash = isset($data['record_deposit_cash']) ? (bool)$data['record_deposit_cash'] : false;
+$record_deposit_cash = true; // জামানতের টাকা থাকলে সর্বদাই সরাসরি অফিসে অনুমোদিত ক্যাশ ইন হবে
 
 if ($asset_id <= 0 || $lessee_name === '' || $monthly_rent <= 0) {
     echo json_encode([
@@ -39,12 +39,20 @@ if ($deactivate) {
 // 2. জামানতের টাকা থাকলে ক্যাশ ইন রেকর্ড করা
 if ($security_deposit > 0 && $record_deposit_cash) {
     $depositSource = "জামানত গ্রহণ: " . $lessee_name . " (অ্যাসেট #" . $asset_id . ")";
+    $depositRefId  = "security_dep_" . time();
+    $approvedBy    = isset($data['approved_by']) && intval($data['approved_by']) > 0 
+        ? intval($data['approved_by']) 
+        : (isset($data['user_id']) && intval($data['user_id']) > 0 ? intval($data['user_id']) : 290);
+
     $depStmt = $mysqli->prepare("
-        INSERT INTO cash (type, category, purpose, amount, date, source, createdAt)
-        VALUES ('in', 'security_deposit', NULL, ?, ?, ?, NOW())
+        INSERT INTO cash (
+            type, category, purpose, amount, date, source, refId, createdAt, 
+            approval_status, approved_by, approved_at
+        )
+        VALUES ('in', 'security_deposit', 'জামানত গ্রহণ', ?, ?, ?, ?, NOW(), 'approved', ?, NOW())
     ");
     if ($depStmt) {
-        $depStmt->bind_param("dss", $security_deposit, $start_date, $depositSource);
+        $depStmt->bind_param("dsssi", $security_deposit, $start_date, $depositSource, $depositRefId, $approvedBy);
         $depStmt->execute();
         $depStmt->close();
     }
@@ -78,10 +86,45 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
+    $agreementId = $stmt->insert_id;
+
+    // 🚀 Send Automated Email to Admin
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $astStmt = $mysqli->prepare("SELECT asset_name, category FROM other_assets WHERE id = ? LIMIT 1");
+        $astName = "Asset #" . $asset_id;
+        if ($astStmt) {
+            $astStmt->bind_param("i", $asset_id);
+            $astStmt->execute();
+            $astRow = $astStmt->get_result()->fetch_assoc();
+            if ($astRow) $astName = $astRow['asset_name'];
+            $astStmt->close();
+        }
+
+        $mailData = [
+            'agreement_id'     => $agreementId,
+            'asset_id'         => $asset_id,
+            'asset_name'       => $astName,
+            'lessee_name'      => $lessee_name,
+            'lessee_mobile'    => $lessee_mobile,
+            'lessee_nid'       => $lessee_nid,
+            'lessee_address'   => $lessee_address,
+            'agreement_type'   => $agreement_type,
+            'monthly_rent'     => $monthly_rent,
+            'due_day'          => $due_day,
+            'start_date'       => $start_date,
+            'end_date'         => $end_date,
+            'security_deposit' => $security_deposit,
+        ];
+        sendAssetEventNotification('rental_agreement', $mailData);
+    } catch (Throwable $e) {
+        error_log("Rental agreement email error: " . $e->getMessage());
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "লিজ/ভাড়া চুক্তি সফলভাবে সম্পন্ন হয়েছে",
-        "agreement_id" => $stmt->insert_id
+        "agreement_id" => $agreementId
     ]);
 } else {
     echo json_encode([

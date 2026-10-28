@@ -5,11 +5,23 @@ import {
   FaUser,
   FaMoneyBillWave,
   FaHashtag,
+  FaBuilding,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { MdCategory, MdNotes } from "react-icons/md";
 import { toast } from "react-toastify";
+import useUserRole from "../../utils/Hooks/useUserRole";
+import useCashCategories from "../../utils/Hooks/cash/useCashCategories";
+
+const getTodayDate = () => {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+  }).format(new Date());
+};
 
 const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
+  const { isAdminOrDev } = useUserRole();
+  const { cashOutCategories } = useCashCategories();
   const [loading, setLoading] = useState(false);
   const [isCompanyExpense, setIsCompanyExpense] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,13 +32,25 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
     purpose: "",
   });
 
-  // auto date
+  const selectableCategories = React.useMemo(() => {
+    if (!isAdminOrDev) {
+      return cashOutCategories.filter((c) => c.is_company_expense);
+    }
+    return cashOutCategories;
+  }, [cashOutCategories, isAdminOrDev]);
+
+  // auto date & role enforcement
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayDate(),
+      category: !isAdminOrDev ? "office-expense" : prev.category || "purchase",
     }));
-  }, []);
+
+    if (!isAdminOrDev) {
+      setIsCompanyExpense(true);
+    }
+  }, [isAdminOrDev]);
 
   const isModalOpen = openCashOutModal || isOpen;
   if (!isModalOpen) return null;
@@ -43,15 +67,32 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
     e.preventDefault();
 
     if (!formData.amount || !formData.purpose) {
-      toast.error("Amount এবং Purpose লাগবে!");
+      toast.error("পরিমাণ (Amount) এবং খরচের বিবরণ (Purpose) পূরণ করুন!");
       return;
+    }
+
+    if (Number(formData.amount) <= 0) {
+      toast.error("সঠিক টাকার পরিমাণ দিন!");
+      return;
+    }
+
+    // Role-based validation
+    if (!isAdminOrDev) {
+      const allowedCategories = cashOutCategories
+        .filter((c) => c.is_company_expense)
+        .map((c) => c.slug);
+
+      if (allowedCategories.length > 0 && !allowedCategories.includes(formData.category)) {
+        toast.error("আপনার শুধুমাত্র কোম্পানি খরচ (Company Expense) এন্ট্রি করার অনুমতি রয়েছে!");
+        return;
+      }
     }
 
     try {
       setLoading(true);
 
-      // 🆕 যদি ইউজার টিকমার্ক দেয়, তবে source কলামে 'company-expense' যাবে, অন্যথায় খালি যাবে।
-      const finalSource = isCompanyExpense ? "company-expense" : "";
+      // Non-admin/dev is strictly forced to 'company-expense'
+      const finalSource = (!isAdminOrDev || isCompanyExpense) ? "company-expense" : "";
       const payload = {
         ...formData,
         amount: Number(formData.amount),
@@ -76,15 +117,15 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
         type: "success",
       };
 
-      // 🆕 ফর্ম রিসেটের সাথে চেকবক্সটিও রিসেট (false) করে দেওয়া হচ্ছে
+      // Reset form
       setFormData({
-        date: new Date().toISOString().split("T")[0],
-        source: "",
+        date: getTodayDate(),
+        source: !isAdminOrDev ? "company-expense" : "",
         amount: "",
-        category: "purchase",
+        category: !isAdminOrDev ? "office-expense" : "purchase",
         purpose: "",
       });
-      setIsCompanyExpense(false);
+      setIsCompanyExpense(!isAdminOrDev);
 
       onClose();
       if (onSuccess) {
@@ -107,7 +148,21 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-white/10">
-          <h2 className="text-white text-lg font-semibold">ক্যাশ আউট</h2>
+          <div>
+            <h2 className="text-white text-lg font-semibold flex items-center gap-2">
+              <span>ক্যাশ আউট (Cash Out)</span>
+              {!isAdminOrDev && (
+                <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-normal">
+                  কোম্পানি খরচ মোড
+                </span>
+              )}
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {!isAdminOrDev
+                ? "আপনার রোলের জন্য শুধুমাত্র কোম্পানির ব্যয় এন্ট্রি সীমাবদ্ধ"
+                : "সকল ধরনের ক্যাশ আউট ও কোম্পানি ব্যয় এন্ট্রি"}
+            </p>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             ✕
           </button>
@@ -142,26 +197,46 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
                 className="input-dark"
               />
             </FormGroup>
-            <div className="bg-[#111827] border border-gray-700 rounded-xl p-4">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isCompanyExpense}
-                  onChange={(e) => setIsCompanyExpense(e.target.checked)}
-                  className="w-5 h-5 accent-red-500"
-                />
 
+            {/* Company Expense Checkbox or Enforced Banner */}
+            {!isAdminOrDev ? (
+              <div className="bg-[#111827] border border-amber-500/30 rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-white">
-                    Company Expense
+                  <p className="text-sm font-semibold text-amber-400 flex items-center gap-2">
+                    <FaBuilding className="text-amber-400" />
+                    <span>কোম্পানি খরচ (Company Expense)</span>
                   </p>
-
-                  <p className="text-xs text-gray-400">
-                    এটি কোম্পানির খরচ হলে টিক দিন
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    স্টাফ ও সাধারণ অ্যাকাউন্টের জন্য শুধুমাত্র কোম্পানির ব্যয় এন্ট্রি প্রযোজ্য।
                   </p>
                 </div>
-              </label>
-            </div>
+                <span className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  <FaShieldAlt className="text-[10px]" />
+                  বাধ্যতামূলক
+                </span>
+              </div>
+            ) : (
+              <div className="bg-[#111827] border border-gray-700 rounded-xl p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isCompanyExpense}
+                    onChange={(e) => setIsCompanyExpense(e.target.checked)}
+                    className="w-5 h-5 accent-red-500"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-white flex items-center gap-1.5">
+                      <FaBuilding className="text-slate-400 text-xs" />
+                      Company Expense
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      এটি কোম্পানির প্রাতিষ্ঠানিক খরচ হলে টিক দিন
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <FormGroup
               label="ক্যাটাগরি"
               icon={<MdCategory className="text-orange-400" />}
@@ -172,46 +247,11 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
                 onChange={handleChange}
                 className="input-dark"
               >
-                {/* normal */}
-                <option className="bg-[#0F172A]" value="purchase">
-                  কেনাকাটা
-                </option>
-                <option className="bg-[#0F172A]" value="loan-repayment">
-                  লোন পরিশোধ
-                </option>
-                <option className="bg-[#0F172A]" value="loan-given">
-                  লোন প্রদান
-                </option>
-                <option className="bg-[#0F172A]" value="investor-payout">
-                  ইনভেস্টর পেআউট
-                </option>
-
-                <option className="bg-[#0F172A]" value="profit-payout">
-                  প্রফিট পেআউট
-                </option>
-                <option className="bg-[#0F172A]" value="others">
-                  অন্যান্য
-                </option>
-                {/* company expense */}
-                {isCompanyExpense && (
-                  <>
-                    <option className="bg-[#0F172A]" value="salary">
-                      বেতন
-                    </option>
-
-                    <option className="bg-[#0F172A]" value="rent">
-                      ভাড়া
-                    </option>
-
-                    <option className="bg-[#0F172A]" value="bill">
-                      বিল
-                    </option>
-
-                    <option className="bg-[#0F172A]" value="office-expense">
-                      অফিস খরচ
-                    </option>
-                  </>
-                )}
+                {selectableCategories.map((cat) => (
+                  <option key={cat.slug} className="bg-[#0F172A]" value={cat.slug}>
+                    {cat.name_bn} ({cat.name_en})
+                  </option>
+                ))}
               </select>
             </FormGroup>
 

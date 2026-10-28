@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import useCashReports from "../../../utils/Hooks/cash/useCashReports";
+import useCashCategories from "../../../utils/Hooks/cash/useCashCategories";
+import useUserRole from "../../../utils/Hooks/useUserRole";
+import AdminOrDevOnly from "../../../components/common/AdminOrDevOnly";
 import Loader from "../../../components/Loader/Loader";
 import CashStateCard from "../../../components/cash/CashStateCard";
 import CashInModal from "../../../components/cash/CashInModal";
@@ -23,6 +26,8 @@ import {
 } from "lucide-react";
 
 const CashIn = () => {
+  const { isAdminOrDev } = useUserRole();
+
   const { CashReports, isCashReportsError, isCashReportsLoading, refetch } =
     useCashReports();
   const [editingCash, setEditingCash] = useState(null);
@@ -54,63 +59,10 @@ const CashIn = () => {
       : [];
   }, [CashReports]);
 
-  // category bangla
-  const categoryName = (category) => {
-    switch (category?.toLowerCase().trim()) {
-      case "invest":
-      case "investment":
-        return "বিনিয়োগ";
-      case "installment":
-        return "কিস্তি";
-      case "downpayment":
-        return "ডাউন পেমেন্ট";
-      case "loan":
-        return "লোন";
-      case "daily-installment":
-        return "দৈনিক কিস্তি";
-      case "loan-return":
-        return "লোন ফেরত";
-      case "rental_income":
-        return "রেন্টাল আয়";
-      case "share_dividend":
-        return "শেয়ার লভ্যাংশ";
-      case "asset_sale":
-        return "অ্যাসেট বিক্রয়";
-      case "security_deposit":
-        return "জামানত গ্রহণ";
-      default:
-        return "অন্যান্য";
-    }
-  };
+  const { cashInCategories, getCategoryName, getCategoryStyle } = useCashCategories();
 
-  // category style
-  const categoryStyle = (category) => {
-    switch (category?.toLowerCase().trim()) {
-      case "invest":
-      case "investment":
-        return "bg-blue-500/15 text-blue-400 border border-blue-500/30";
-      case "installment":
-        return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
-      case "downpayment":
-        return "bg-amber-500/15 text-amber-400 border border-amber-500/30";
-      case "loan":
-        return "bg-rose-500/15 text-rose-400 border border-rose-500/30";
-      case "daily-installment":
-        return "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30";
-      case "loan-return":
-        return "bg-pink-500/15 text-pink-400 border border-pink-500/30";
-      case "rental_income":
-        return "bg-purple-500/15 text-purple-400 border border-purple-500/30";
-      case "share_dividend":
-        return "bg-teal-500/15 text-teal-400 border border-teal-500/30";
-      case "asset_sale":
-        return "bg-sky-500/15 text-sky-400 border border-sky-500/30";
-      case "security_deposit":
-        return "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30";
-      default:
-        return "bg-slate-500/15 text-slate-300 border border-slate-500/30";
-    }
-  };
+  const categoryName = getCategoryName;
+  const categoryStyle = getCategoryStyle;
 
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -120,26 +72,17 @@ const CashIn = () => {
 
   const DateFilteredCashIn = useMemo(() => {
     return AllCashIn.filter((cash) => {
-      const cashDate = new Date(cash.date);
-      const cashYear = cashDate.getFullYear().toString();
-      const cashMonth = `${cashDate.getFullYear()}-${String(
-        cashDate.getMonth() + 1
-      ).padStart(2, "0")}`;
+      const rawDate = String(cash.date || "").trim();
+      const cashDateOnly = rawDate.split(" ")[0];
+      const cashYear = cashDateOnly.split("-")[0];
+      const cashMonth = cashDateOnly.slice(0, 7);
 
-      if (selectedDate && cash.date !== selectedDate) return false;
+      if (selectedDate && cashDateOnly !== selectedDate) return false;
       if (selectedMonth && cashMonth !== selectedMonth) return false;
       if (selectedYear && cashYear !== selectedYear) return false;
 
-      if (startDate) {
-        const current = new Date(cash.date).getTime();
-        const start = new Date(startDate).getTime();
-        if (current < start) return false;
-      }
-      if (endDate) {
-        const current = new Date(cash.date).getTime();
-        const end = new Date(endDate).getTime();
-        if (current > end) return false;
-      }
+      if (startDate && cashDateOnly < startDate) return false;
+      if (endDate && cashDateOnly > endDate) return false;
 
       return true;
     });
@@ -148,29 +91,15 @@ const CashIn = () => {
   const FilteredCashIn = useMemo(() => {
     return DateFilteredCashIn.filter((cash) => {
       if (selectedCategory) {
-        const cat = cash.category?.toLowerCase().trim();
-        if (selectedCategory === "others") {
-          const knownCategories = [
-            "invest",
-            "investment",
-            "installment",
-            "downpayment",
-            "loan",
-            "daily-installment",
-            "loan-return",
-            "rental_income",
-            "share_dividend",
-            "asset_sale",
-            "security_deposit",
-          ];
-          if (knownCategories.includes(cat)) {
+        const cat = String(cash.category || "").toLowerCase().trim();
+        const normCat = cat === "investment" ? "invest" : cat;
+        const normSelected = selectedCategory === "investment" ? "invest" : selectedCategory;
+        if (normSelected === "others") {
+          const knownSlugs = cashInCategories.map((c) => c.slug).filter((s) => s !== "others");
+          if (knownSlugs.includes(normCat)) {
             return false;
           }
-        } else if (selectedCategory === "invest") {
-          if (!["invest", "investment"].includes(cat)) {
-            return false;
-          }
-        } else if (cat !== selectedCategory) {
+        } else if (normCat !== normSelected) {
           return false;
         }
       }
@@ -202,78 +131,24 @@ const CashIn = () => {
     return SummaryCashIn.reduce((total, item) => total + Number(item.amount), 0);
   }, [SummaryCashIn]);
 
-  const investTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => ["invest", "investment"].includes(item.category?.toLowerCase().trim())
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const installmentTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "installment"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const downpaymentTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "downpayment"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const loanTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "loan"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const dailyInstallmentsTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "daily-installment"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const loanReturnTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "loan-return"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const rentalIncomeTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "rental_income"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const shareDividendTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "share_dividend"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
-
-  const assetSaleTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) => item.category?.toLowerCase().trim() === "asset_sale"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  const categoryTotals = useMemo(() => {
+    const map = {};
+    SummaryCashIn.forEach((item) => {
+      const cat = String(item.category || "").toLowerCase().trim();
+      const normCat = cat === "investment" ? "invest" : cat;
+      map[normCat] = (map[normCat] || 0) + Number(item.amount || 0);
+    });
+    return map;
   }, [SummaryCashIn]);
 
   const otherTotal = useMemo(() => {
-    return SummaryCashIn.filter(
-      (item) =>
-        ![
-          "invest",
-          "investment",
-          "installment",
-          "downpayment",
-          "loan",
-          "daily-installment",
-          "loan-return",
-          "rental_income",
-          "share_dividend",
-          "asset_sale",
-          "security_deposit",
-        ].includes(item.category?.toLowerCase().trim())
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashIn]);
+    const known = new Set(cashInCategories.map((c) => c.slug).filter((s) => s !== "others"));
+    return SummaryCashIn.filter((item) => {
+      const cat = String(item.category || "").toLowerCase().trim();
+      const normCat = cat === "investment" ? "invest" : cat;
+      return !known.has(normCat);
+    }).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  }, [SummaryCashIn, cashInCategories]);
 
   const totalPages = Math.ceil(FilteredCashIn.length / pageSize) || 1;
   const paginatedCashIn = useMemo(() => {
@@ -307,14 +182,16 @@ const CashIn = () => {
           </div>
         </div>
 
-        {/* Add Cash In button */}
-        <button
-          onClick={() => setOpenCashInModal(true)}
-          className="btn-success self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>নতুন ক্যাশ ইন (Add Cash In)</span>
-        </button>
+        {/* Add Cash In button - Admin & Developer only */}
+        <AdminOrDevOnly>
+          <button
+            onClick={() => setOpenCashInModal(true)}
+            className="btn-success self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            <span>নতুন ক্যাশ ইন (Add Cash In)</span>
+          </button>
+        </AdminOrDevOnly>
       </div>
 
       {/* 🔹 Filter Section Card (Crystal Clear & Intuitive) */}
@@ -557,76 +434,23 @@ const CashIn = () => {
           text="text-cyan-400"
           onClick={() => setSelectedCategory("")}
         />
-        <CashStateCard
-          title="Investment"
-          amount={investTotal}
-          icon="💵"
-          text="text-blue-400"
-          onClick={() => setSelectedCategory("invest")}
-        />
-        <CashStateCard
-          title="Installment"
-          amount={installmentTotal}
-          icon="📈"
-          text="text-emerald-400"
-          onClick={() => setSelectedCategory("installment")}
-        />
-        <CashStateCard
-          title="Down Payment"
-          amount={downpaymentTotal}
-          icon="🏦"
-          text="text-amber-400"
-          onClick={() => setSelectedCategory("downpayment")}
-        />
-        <CashStateCard
-          title="Daily Installment"
-          amount={dailyInstallmentsTotal}
-          icon="📆"
-          text="text-cyan-400"
-          onClick={() => setSelectedCategory("daily-installment")}
-        />
-        <CashStateCard
-          title="Loan"
-          amount={loanTotal}
-          icon="💳"
-          text="text-rose-400"
-          onClick={() => setSelectedCategory("loan")}
-        />
-        <CashStateCard
-          title="Loan Return"
-          amount={loanReturnTotal}
-          icon="🔄"
-          text="text-pink-400"
-          onClick={() => setSelectedCategory("loan-return")}
-        />
-        <CashStateCard
-          title="Rental Income"
-          amount={rentalIncomeTotal}
-          icon="🏢"
-          text="text-purple-400"
-          onClick={() => setSelectedCategory("rental_income")}
-        />
-        <CashStateCard
-          title="Share Dividend"
-          amount={shareDividendTotal}
-          icon="💎"
-          text="text-teal-400"
-          onClick={() => setSelectedCategory("share_dividend")}
-        />
-        <CashStateCard
-          title="Asset Sale"
-          amount={assetSaleTotal}
-          icon="🚜"
-          text="text-sky-400"
-          onClick={() => setSelectedCategory("asset_sale")}
-        />
-        <CashStateCard
-          title="Others"
-          amount={otherTotal}
-          icon="📦"
-          text="text-slate-400"
-          onClick={() => setSelectedCategory("others")}
-        />
+        {cashInCategories.map((cat) => {
+          const amt =
+            cat.slug === "others"
+              ? otherTotal
+              : categoryTotals[cat.slug] || 0;
+
+          return (
+            <CashStateCard
+              key={cat.slug}
+              title={cat.name_en || cat.name_bn}
+              amount={amt}
+              icon="💳"
+              text={cat.color_text || "text-slate-300"}
+              onClick={() => setSelectedCategory(cat.slug)}
+            />
+          );
+        })}
       </div>
 
       {/* 🔹 Table Section */}
@@ -772,16 +596,18 @@ const CashIn = () => {
         )}
       </div>
 
-      <CashInModal
-        openCashInModal={openCashInModal}
-        onClose={() => setOpenCashInModal(false)}
-        onSuccess={(toastPayload) => {
-          refetch();
-          if (toastPayload) {
-            setLuxuryToast(toastPayload);
-          }
-        }}
-      />
+      <AdminOrDevOnly>
+        <CashInModal
+          openCashInModal={openCashInModal}
+          onClose={() => setOpenCashInModal(false)}
+          onSuccess={(toastPayload) => {
+            refetch();
+            if (toastPayload) {
+              setLuxuryToast(toastPayload);
+            }
+          }}
+        />
+      </AdminOrDevOnly>
 
       <CashEditModal
         isOpen={!!editingCash}

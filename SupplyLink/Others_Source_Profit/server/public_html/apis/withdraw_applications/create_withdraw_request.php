@@ -170,10 +170,92 @@ $stmt->bind_param(
     jsonFail("DB insert failed: " . $stmt->error, 500);
   }
 
+  $requestId = $stmt->insert_id;
+  $stmt->close();
+
+  // 🚀 Send Automated Email Notification (Admin Alert + Investor copy if email exists)
+  try {
+    require_once __DIR__ . '/../helpers/mailer.php';
+
+    // 1. Fetch Investor details (name, email, mobile, etc.)
+    $investorData = null;
+    $stmtInv = $mysqli->prepare("SELECT id, name, mobile, email, address, id_number FROM users WHERE id = ? LIMIT 1");
+    if ($stmtInv) {
+      $stmtInv->bind_param("i", $investor_id);
+      $stmtInv->execute();
+      $investorData = $stmtInv->get_result()->fetch_assoc();
+      $stmtInv->close();
+    }
+    if (empty($investorData)) {
+      $investorData = [
+        'id'     => $investor_id,
+        'name'   => 'Investor #' . $investor_id,
+        'mobile' => $mobile,
+        'email'  => null
+      ];
+    }
+
+    // 2. Fetch Card details (card_name, investment_amount, payment_type, maturity_date, etc.)
+    $cardData = null;
+    $stmtCard = $mysqli->prepare("SELECT id, card_name, investment_amount, payment_type, start_date, maturity_date, status FROM investment_cards WHERE id = ? LIMIT 1");
+    if ($stmtCard) {
+      $stmtCard->bind_param("i", $card_id);
+      $stmtCard->execute();
+      $cardData = $stmtCard->get_result()->fetch_assoc();
+      $stmtCard->close();
+    }
+    if (empty($cardData)) {
+      $cardData = [
+        'id'                => $card_id,
+        'card_name'         => 'Card #' . $card_id,
+        'investment_amount' => $amount,
+        'payment_type'      => 'standard',
+        'maturity_date'     => $maturity_date,
+        'status'            => 'active'
+      ];
+    }
+
+    // 3. Fetch Requester details (name, mobile, email)
+    $requestedByData = null;
+    $stmtReq = $mysqli->prepare("SELECT id, name, mobile, email FROM users WHERE id = ? LIMIT 1");
+    if ($stmtReq) {
+      $stmtReq->bind_param("i", $requested_by);
+      $stmtReq->execute();
+      $requestedByData = $stmtReq->get_result()->fetch_assoc();
+      $stmtReq->close();
+    }
+    if (empty($requestedByData)) {
+      $requestedByData = [
+        'id'   => $requested_by,
+        'name' => 'Staff #' . $requested_by
+      ];
+    }
+
+    $withdrawData = [
+      'id'             => $requestId,
+      'investor_id'    => $investor_id,
+      'card_id'        => $card_id,
+      'withdraw_date'  => $withdraw_date,
+      'maturity_date'  => $maturity_date,
+      'amount'         => $amount > 0 ? $amount : ($cardData['investment_amount'] ?? 0),
+      'total_profit'   => $total_profit,
+      'payable_amount' => $payable_amount,
+      'reason'         => $reason,
+      'requested_by'   => $requested_by,
+      'mobile'         => !empty($investorData['mobile']) ? $investorData['mobile'] : $mobile,
+      'email'          => $investorData['email'] ?? null,
+    ];
+
+    sendWithdrawRequestNotification($withdrawData, $investorData, $cardData, $requestedByData);
+
+  } catch (Throwable $mailErr) {
+    error_log("Withdraw request email notification non-fatal error: " . $mailErr->getMessage());
+  }
+
   echo json_encode([
-    "success" => true,
-    "message" => "Withdraw request created",
-    "request_id" => $stmt->insert_id
+    "success"    => true,
+    "message"    => "Withdraw request created",
+    "request_id" => $requestId
   ], JSON_UNESCAPED_UNICODE);
   exit;
 

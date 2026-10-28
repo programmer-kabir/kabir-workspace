@@ -54,7 +54,9 @@ const DailyInstallmentsUsers = () => {
   );
 
   const todayDate = useMemo(() => {
-    return new Date().toISOString().split("T")[0];
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }).format(new Date());
   }, []);
 
   const currentStaff = useMemo(() => {

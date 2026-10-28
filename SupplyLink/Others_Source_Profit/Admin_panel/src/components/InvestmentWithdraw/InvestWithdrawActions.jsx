@@ -2,7 +2,7 @@ import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import useProfitAnalytics from "../../utils/Hooks/useProfitAnalytics";
 // import ''
-export const createWithdrawActions = ({ user, refetch, baseUrl }) => {
+export const createWithdrawActions = ({ user, refetch, baseUrl, showToast }) => {
   const updateWithdraw = async (payload) => {
     const res = await fetch(
       `${baseUrl}/withdraw_applications/update_withdraw_request.php`,
@@ -19,7 +19,7 @@ export const createWithdrawActions = ({ user, refetch, baseUrl }) => {
   };
 
   const handleReject = async (row) => {
-    if (!row?.id) return;
+    if (row?.id === undefined || row?.id === null || row?.id === "") return;
 
     const { value: note, isConfirmed } = await Swal.fire({
       title: `Reject request #${row.id}?`,
@@ -49,14 +49,26 @@ export const createWithdrawActions = ({ user, refetch, baseUrl }) => {
         reviewed_by: user?.id,
       });
       await refetch?.();
-      toast.success(`Request #${row.id} rejected`);
+      if (showToast) {
+        showToast(
+          "error",
+          "আবেদনটি বাতিল করা হয়েছে",
+          `Request #${row.id} বাতিল করা হয়েছে। এডমিন ও ইনভেস্টরের ইমেইলে নোটিফিকেশন পাঠানো হয়েছে।`,
+        );
+      } else {
+        toast.success(`Request #${row.id} rejected`);
+      }
     } catch (e) {
-      toast.error(e.message);
+      if (showToast) {
+        showToast("error", "ব্যর্থ হয়েছে", e.message || "Reject failed");
+      } else {
+        toast.error(e.message);
+      }
     }
   };
 
   const handlePaid = async (row) => {
-    if (!row?.id) return;
+    if (row?.id === undefined || row?.id === null || row?.id === "") return;
 
     const { value: pm, isConfirmed } = await Swal.fire({
       title: `Mark as paid #${row.id}?`,
@@ -79,9 +91,21 @@ export const createWithdrawActions = ({ user, refetch, baseUrl }) => {
         reviewed_by: user?.id,
       });
       await refetch?.();
-      toast.success(`Request #${row.id} marked as paid`);
+      if (showToast) {
+        showToast(
+          "success",
+          "উইথড্র পরিশোধিত ও কার্ড ক্লোজড",
+          `Request #${row.id} সফলভাবে পেইড করা হয়েছে। এডমিন ও ইনভেস্টরের ইমেইলে ভাউচার পাঠানো হয়েছে।`,
+        );
+      } else {
+        toast.success(`Request #${row.id} marked as paid`);
+      }
     } catch (e) {
-      toast.error(e.message);
+      if (showToast) {
+        showToast("error", "ব্যর্থ হয়েছে", e.message || "Payment update failed");
+      } else {
+        toast.error(e.message);
+      }
     }
   };
 

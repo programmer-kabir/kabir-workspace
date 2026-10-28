@@ -1,0 +1,16 @@
+{
+  "short_name": "TopUp BD",
+  "name": "TopUp BD - Fast & Secure Game Top-Up",
+  "icons": [
+    {
+      "src": "/images/ff_diamond.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#00f0ff",
+  "display": "standalone",
+  "orientation": "portrait"
+}

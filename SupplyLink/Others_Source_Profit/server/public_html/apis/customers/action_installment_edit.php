@@ -115,20 +115,25 @@ if ($action === 'approved') {
         $tagQ->close();
     }
 
-    $notifTitle = "কিস্তি আনপেইড অনুমোদন সম্পন্ন";
-    $notifMsg = "{$revName} কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধ অনুমোদন করেছেন।";
-    $notifLink = "/customer/update_installment_chart?cardcardId={$card_id}";
-    $targetRoles = "manager,staff";
-    $notifType = "installment_unpaid_approved";
+    // 5. Send feedback notification back to Manager & Staff (Safe try-catch)
+    try {
+        $notifTitle = "কিস্তি আনপেইড অনুমোদন সম্পন্ন";
+        $notifMsg = "{$revName} কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধ অনুমোদন করেছেন।";
+        $notifLink = "/customer/update_installment_chart?cardId={$card_id}";
+        $targetRoles = "manager,staff";
+        $notifType = "installment_unpaid_approved";
 
-    $insNotif = $mysqli->prepare("
-        INSERT INTO notifications (user_id, target_roles, type, title, message, link, edit_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-    ");
-    if ($insNotif) {
-        $insNotif->bind_param("isssssi", $requested_by, $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $edit_id);
-        $insNotif->execute();
-        $insNotif->close();
+        $insNotif = $mysqli->prepare("
+            INSERT INTO notifications (user_id, target_roles, type, title, message, link, edit_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        if ($insNotif) {
+            $insNotif->bind_param("isssssi", $requested_by, $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $edit_id);
+            $insNotif->execute();
+            $insNotif->close();
+        }
+    } catch (Throwable $notifErr) {
+        error_log("Approved notification insert non-fatal error: " . $notifErr->getMessage());
     }
 
     echo json_encode([
@@ -178,20 +183,25 @@ if ($action === 'approved') {
         $tagQ->close();
     }
 
-    $notifTitle = "কিস্তি আনপেইড অনুরোধ বাতিল";
-    $notifMsg = "{$revName} কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধটি বাতিল করেছেন। কিস্তিটি পেইড অবস্থায় বহাল রয়েছে।";
-    $notifLink = "/customer/update_installment_chart?cardId={$card_id}";
-    $targetRoles = "manager,staff";
-    $notifType = "installment_unpaid_rejected";
+    // Safe try-catch for notification
+    try {
+        $notifTitle = "কিস্তি আনপেইড অনুরোধ বাতিল";
+        $notifMsg = "{$revName} কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধটি বাতিল করেছেন। কিস্তিটি পেইড অবস্থায় বহাল রয়েছে।";
+        $notifLink = "/customer/update_installment_chart?cardId={$card_id}";
+        $targetRoles = "manager,staff";
+        $notifType = "installment_unpaid_rejected";
 
-    $insNotif = $mysqli->prepare("
-        INSERT INTO notifications (user_id, target_roles, type, title, message, link, edit_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-    ");
-    if ($insNotif) {
-        $insNotif->bind_param("isssssi", $requested_by, $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $edit_id);
-        $insNotif->execute();
-        $insNotif->close();
+        $insNotif = $mysqli->prepare("
+            INSERT INTO notifications (user_id, target_roles, type, title, message, link, edit_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        if ($insNotif) {
+            $insNotif->bind_param("isssssi", $requested_by, $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $edit_id);
+            $insNotif->execute();
+            $insNotif->close();
+        }
+    } catch (Throwable $notifErr) {
+        error_log("Rejected notification insert non-fatal error: " . $notifErr->getMessage());
     }
 
     echo json_encode([

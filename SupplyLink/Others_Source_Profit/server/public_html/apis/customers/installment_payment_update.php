@@ -96,27 +96,31 @@ if ($current_status === 'Paid' && $status === 'Unpaid') {
     $customer_name = $inst['customer_name'] ?: "গ্রাহক";
     $tag = $inst['tag'] ?: ($inst['installment_no'] == 0 ? "ডাউন পেমেন্ট" : "{$inst['installment_no']} কিস্তি");
 
-    // 4. Create Notification for Admin and Developer with direct link to chart
-    $notifTitle = "কিস্তি আনপেইড করার অনুমোদন অনুরোধ";
-    $notifMsg = "{$reqName} গ্রাহক {$customer_name} এর কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধ পাঠিয়েছেন।";
-    $notifLink = "/customer/update_installment_chart?id={$card_id}";
-    $targetRoles = "admin,developer";
-    $notifType = "installment_unpaid_request";
+    // 4. Create Notification for Admin and Developer with direct link to chart (Safe try-catch)
+    try {
+        $notifTitle = "কিস্তি আনপেইড করার অনুমোদন অনুরোধ";
+        $notifMsg = "{$reqName} গ্রাহক {$customer_name} এর কার্ড #{$card_id} ({$tag}) আনপেইড করার অনুরোধ পাঠিয়েছেন।";
+        $notifLink = "/customer/update_installment_chart?id={$card_id}";
+        $targetRoles = "admin,developer";
+        $notifType = "installment_unpaid_request";
 
-    $insNotif = $mysqli->prepare("
-        INSERT INTO notifications (target_roles, type, title, message, link, edit_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
-    ");
-    if ($insNotif) {
-        $insNotif->bind_param("sssssi", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $new_edit_id);
-        $insNotif->execute();
-        $insNotif->close();
+        $insNotif = $mysqli->prepare("
+            INSERT INTO notifications (target_roles, type, title, message, link, edit_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
+        ");
+        if ($insNotif) {
+            $insNotif->bind_param("sssssi", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink, $new_edit_id);
+            $insNotif->execute();
+            $insNotif->close();
+        }
+    } catch (Throwable $notifErr) {
+        error_log("Notification insert non-fatal error: " . $notifErr->getMessage());
     }
 
     echo json_encode([
         "success" => true,
         "pending_approval" => true,
-        "message" => "অনুরোধটি পেন্ডিং রয়েছে এবং অ্যাডমিন/ডেভেলপার অনুমোদনের জন্য পাঠানো হয়েছে।",
+        "message" => "পেইড কিস্তি আনপেইড করার অনুরোধটি সফলভাবে জমা হয়েছে এবং অ্যাডমিন/ডেভেলপার অনুমোদনের জন্য পাঠানো হয়েছে।",
         "updated_id" => $id,
         "status" => "pending"
     ], JSON_UNESCAPED_UNICODE);
@@ -228,21 +232,25 @@ if ($status === 'Paid') {
         $insEdit->close();
     }
 
-    // Insert Notification for Admin and Developer with direct chart link
-    $notifTitle = "কিস্তি আদায় সম্পন্ন";
-    $notifMsg = "গ্রাহক {$customer_name} - কার্ড #{$card_id} ({$tag}) বাবদ ৳" . number_format($amount) . " আদায় হয়েছে।";
-    $notifLink = "/customer/update_installment_chart?id={$card_id}";
-    $targetRoles = "admin,developer";
-    $notifType = "installment_paid";
+    // Insert Notification for Admin and Developer with direct chart link (Safe try-catch)
+    try {
+        $notifTitle = "কিস্তি আদায় সম্পন্ন";
+        $notifMsg = "গ্রাহক {$customer_name} - কার্ড #{$card_id} ({$tag}) বাবদ ৳" . number_format($amount) . " আদায় হয়েছে।";
+        $notifLink = "/customer/update_installment_chart?id={$card_id}";
+        $targetRoles = "admin,developer";
+        $notifType = "installment_paid";
 
-    $insNotif = $mysqli->prepare("
-        INSERT INTO notifications (target_roles, type, title, message, link, created_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
-    ");
-    if ($insNotif) {
-        $insNotif->bind_param("sssss", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink);
-        $insNotif->execute();
-        $insNotif->close();
+        $insNotif = $mysqli->prepare("
+            INSERT INTO notifications (target_roles, type, title, message, link, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+        if ($insNotif) {
+            $insNotif->bind_param("sssss", $targetRoles, $notifType, $notifTitle, $notifMsg, $notifLink);
+            $insNotif->execute();
+            $insNotif->close();
+        }
+    } catch (Throwable $notifErr) {
+        error_log("Case B Notification insert non-fatal error: " . $notifErr->getMessage());
     }
 
     // 📧 Automated Email Notification (Customer + Admin Copy) in isolated try-catch

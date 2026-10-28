@@ -8,8 +8,16 @@ import {
 } from "react-icons/fa";
 import { MdCategory, MdNotes } from "react-icons/md";
 import { toast } from "react-toastify";
+import useCashCategories from "../../utils/Hooks/cash/useCashCategories";
+
+const getTodayDate = () => {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+  }).format(new Date());
+};
 
 const CashInModal = ({ openCashInModal, isOpen, onClose, onSuccess }) => {
+  const { cashInCategories } = useCashCategories();
   const [formData, setFormData] = useState({
     date: "",
     source: "",
@@ -23,7 +31,7 @@ const CashInModal = ({ openCashInModal, isOpen, onClose, onSuccess }) => {
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayDate(),
     }));
   }, []);
 
@@ -156,27 +164,11 @@ const CashInModal = ({ openCashInModal, isOpen, onClose, onSuccess }) => {
                 onChange={handleChange}
                 className="input-dark"
               >
-                <option className="bg-[#0F172A]" value="invest">
-                  বিনিয়োগ
-                </option>
-                <option className="bg-[#0F172A]" value="installment">
-                  কিস্তি
-                </option>
-                <option className="bg-[#0F172A]" value="downpayment">
-                  ডাউন পেমেন্ট
-                </option>
-                <option className="bg-[#0F172A]" value="loan">
-                 লোন
-                </option>
-                <option className="bg-[#0F172A]" value="loan-return">
-                 লোন ফেরত
-                </option>
-                <option className="bg-[#0F172A]" value="daily-installment">
-                  দৈনিক কিস্তি
-                </option>
-                <option className="bg-[#0F172A]" value="others">
-                  অন্যান্য
-                </option>
+                {cashInCategories.map((cat) => (
+                  <option key={cat.slug} className="bg-[#0F172A]" value={cat.slug}>
+                    {cat.name_bn} ({cat.name_en})
+                  </option>
+                ))}
               </select>
             </FormGroup>
 

@@ -21,7 +21,12 @@ if ($agreement_id <= 0) {
 
 $mysqli->begin_transaction();
 try {
-    $stmt = $mysqli->prepare("SELECT id, asset_id, lessee_name, status FROM other_asset_agreements WHERE id = ? FOR UPDATE");
+    $stmt = $mysqli->prepare("
+        SELECT ag.id, ag.asset_id, ag.lessee_name, ag.status, a.asset_name 
+        FROM other_asset_agreements ag
+        LEFT JOIN other_assets a ON a.id = ag.asset_id
+        WHERE ag.id = ? FOR UPDATE
+    ");
     $stmt->bind_param("i", $agreement_id);
     $stmt->execute();
     $ag = $stmt->get_result()->fetch_assoc();
@@ -49,6 +54,22 @@ try {
     $upAst->close();
 
     $mysqli->commit();
+
+    // 🚀 Send Automated Email to Admin
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $mailData = [
+            'agreement_id' => $agreement_id,
+            'asset_id'     => $ag['asset_id'],
+            'asset_name'   => $ag['asset_name'] ?? ('Asset #' . $ag['asset_id']),
+            'lessee_name'  => $ag['lessee_name'] ?? 'Payer',
+            'end_date'     => $end_date,
+            'reason'       => $reason,
+        ];
+        sendAssetEventNotification('agreement_terminated', $mailData);
+    } catch (Throwable $e) {
+        error_log("Agreement termination email error: " . $e->getMessage());
+    }
 
     echo json_encode([
         "success" => true,

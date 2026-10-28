@@ -70,10 +70,17 @@ const InstallmentChart = () => {
     return u.roles.some((r) => allowed.includes(r));
   }, [users, userId]);
 
+  const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
+
+  React.useEffect(() => {
+    if (currentCard) {
+      setHasInitialLoaded(true);
+    }
+  }, [currentCard]);
+
   const isInitialLoading =
-    isCustomerInstallmentsCardsLoading ||
-    isCustomerInstallmentsPaymentsLoading ||
-    (!isCustomerInstallmentsCardsError && !currentCard);
+    !hasInitialLoaded &&
+    (isCustomerInstallmentsCardsLoading || isCustomerInstallmentsPaymentsLoading);
   const isError =
     isCustomerInstallmentsCardsError || isCustomerInstallmentsPaymentsError;
 

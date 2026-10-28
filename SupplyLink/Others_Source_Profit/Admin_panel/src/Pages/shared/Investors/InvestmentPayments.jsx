@@ -89,6 +89,7 @@ export default function InvestmentPayments() {
   const [isInstallmentsLoading, setIsInstallmentsLoading] = useState(true);
   const [isInstallmentsError, setIsInstallmentsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const fetchCardInstallments = useCallback(async (silent = false) => {
     if (!cardId) return;
@@ -376,13 +377,14 @@ export default function InvestmentPayments() {
   };
 
   const closeEditModal = () => {
+    if (isEditSubmitting) return;
     setIsEditOpen(false);
     setEditingRow(null);
     setUpdate_reason("");
   };
 
   const handleUpdate = async () => {
-    if (!editingRow?.id) return;
+    if (!editingRow?.id || isEditSubmitting) return;
     if (!editDate) {
       setLuxuryToast({
         title: "তারিখ প্রয়োজন ⚠️",
@@ -417,6 +419,7 @@ export default function InvestmentPayments() {
     };
 
     try {
+      setIsEditSubmitting(true);
       const res = await fetch(
         `${import.meta.env.VITE_LOCALHOST_KEY}/investors/request_investment_edit.php`,
         {
@@ -451,6 +454,8 @@ export default function InvestmentPayments() {
         message: "সার্ভারে যোগাযোগ করা যায়নি।",
         type: "error",
       });
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -1078,7 +1083,7 @@ export default function InvestmentPayments() {
       {/* Edit Installment Request Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={closeEditModal} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div onClick={isEditSubmitting ? undefined : closeEditModal} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
           <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-gradient-to-b from-[#0d162b] to-[#070d19] p-6 shadow-2xl z-10 space-y-4">
             <div className="flex items-start justify-between">
@@ -1090,7 +1095,11 @@ export default function InvestmentPayments() {
                   কিস্তি নং #{editingRow?.investment_no}
                 </p>
               </div>
-              <button onClick={closeEditModal} className="h-8 w-8 rounded-lg bg-white/[0.05] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">
+              <button 
+                onClick={closeEditModal} 
+                disabled={isEditSubmitting}
+                className="h-8 w-8 rounded-lg bg-white/[0.05] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              >
                 <FiX className="h-4 w-4" />
               </button>
             </div>
@@ -1108,9 +1117,10 @@ export default function InvestmentPayments() {
                 <label className="text-xs font-semibold text-slate-300 mb-1 block">কালেকশন তারিখ</label>
                 <input
                   type="date"
+                  disabled={isEditSubmitting}
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-cyan-400/50"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-cyan-400/50 disabled:opacity-50"
                 />
               </div>
 
@@ -1120,8 +1130,9 @@ export default function InvestmentPayments() {
                   {editAmount && (
                     <button
                       type="button"
+                      disabled={isEditSubmitting}
                       onClick={() => setEditAmount("")}
-                      className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer"
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer disabled:opacity-40"
                     >
                       ক্লিয়ার ✕
                     </button>
@@ -1129,9 +1140,10 @@ export default function InvestmentPayments() {
                 </div>
                 <input
                   type="number"
+                  disabled={isEditSubmitting}
                   value={editAmount}
                   onChange={(e) => setEditAmount(e.target.value)}
-                  className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono font-bold outline-none focus:border-cyan-400/50"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono font-bold outline-none focus:border-cyan-400/50 disabled:opacity-50"
                 />
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <span className="text-[10px] text-slate-400">সাজেস্ট:</span>
@@ -1141,8 +1153,9 @@ export default function InvestmentPayments() {
                       <button
                         key={amt}
                         type="button"
+                        disabled={isEditSubmitting}
                         onClick={() => setEditAmount(String(amt))}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer border ${
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer border disabled:opacity-40 ${
                           isSelected
                             ? "bg-amber-500/25 border-amber-400 text-amber-300 ring-1 ring-amber-400/40"
                             : "bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white"
@@ -1161,25 +1174,37 @@ export default function InvestmentPayments() {
                 </label>
                 <textarea
                   rows={3}
+                  disabled={isEditSubmitting}
                   value={update_reason}
                   onChange={(e) => setUpdate_reason(e.target.value)}
                   placeholder="কিস্তি পরিবর্তনের সঠিক কারণ লিখুন (অ্যাডমিন পর্যালোচনার জন্য প্রয়োজন)..."
-                  className="w-full rounded-xl bg-black/40 border border-white/10 p-3 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400/50 resize-none"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 p-3 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400/50 resize-none disabled:opacity-50"
                 />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
+                  type="button"
+                  disabled={isEditSubmitting}
                   onClick={closeEditModal}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   বাতিল
                 </button>
                 <button
+                  type="button"
+                  disabled={isEditSubmitting}
                   onClick={handleUpdate}
-                  className="rounded-xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 hover:to-orange-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-amber-950/50 transition cursor-pointer"
+                  className="rounded-xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 hover:to-orange-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-amber-950/50 transition cursor-pointer disabled:opacity-80 disabled:cursor-wait flex items-center justify-center gap-2 min-w-[150px]"
                 >
-                  অনুরোধ পাঠান (Submit)
+                  {isEditSubmitting ? (
+                    <>
+                      <FiLoader className="h-4 w-4 animate-spin text-white" />
+                      <span>অনুরোধ পাঠানো হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>অনুরোধ পাঠান (Submit)</span>
+                  )}
                 </button>
               </div>
             </div>

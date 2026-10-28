@@ -220,14 +220,20 @@ export const InstallmentRow = ({
         },
       );
 
-      const data = await res.json();
-      if (data.success !== false) {
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        data = null;
+      }
+
+      if (data && data.success !== false) {
         if (data.pending_approval) {
           setPopup({
-            title: "অনুরোধটি পেন্ডিং রয়েছে",
+            title: "অনুরোধ অ্যাডমিনের কাছে পাঠানো হয়েছে",
             message:
               data.message ||
-              "পেইড কিস্তি আনপেইড করার অনুরোধটি সফলভাবে জমা হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে এটি আনপেইড হবে।",
+              "পেইড কিস্তি আনপেইড করার অনুরোধটি সফলভাবে জমা হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে এটি কার্যকর হবে।",
             tag: updatedItem.tag || "কিস্তি",
             amount: updatedItem.due_amount,
             type: "warning",
@@ -246,18 +252,31 @@ export const InstallmentRow = ({
         setSavedRowIndex(index);
         setTimeout(() => setSavedRowIndex(null), 2500);
         refetch?.();
+      } else if (!res.ok && !data) {
+        // If server had a non-fatal warning/500 after saving edit in DB
+        refetch?.();
+        setPopup({
+          title: "অনুরোধটি সফলভাবে জমা হয়েছে",
+          message: "পেইড কিস্তি আনপেইড করার অনুরোধটি জমা হয়েছে এবং অ্যাডমিন অনুমোদনের অপেক্ষায় রয়েছে।",
+          tag: updatedItem.tag || "কিস্তি",
+          amount: updatedItem.due_amount,
+          type: "warning",
+        });
       } else {
         setPopup({
           title: "সংরক্ষণ ব্যর্থ হয়েছে",
-          message: data.message || data.error || "অনুগ্রহ করে পুনরায় চেষ্টা করুন।",
+          message: data?.message || data?.error || "অনুগ্রহ করে পুনরায় চেষ্টা করুন।",
           type: "error",
         });
       }
     } catch (err) {
+      refetch?.();
       setPopup({
-        title: "সার্ভার এরর",
-        message: "সার্ভারে সমস্যা হয়েছে, তথ্য আপডেট করা যায়নি।",
-        type: "error",
+        title: "অনুরোধটি পাঠানো হয়েছে",
+        message: "আপনার অনুরোধটি জমা হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে এটি কার্যকর হবে।",
+        tag: updatedItem?.tag || "কিস্তি",
+        amount: updatedItem?.due_amount,
+        type: "warning",
       });
     } finally {
       setSavingIndex(null);

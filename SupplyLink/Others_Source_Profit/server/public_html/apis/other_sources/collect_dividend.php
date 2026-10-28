@@ -13,7 +13,7 @@ $amount          = floatval($data['amount'] ?? 0);
 $collection_date = trim($data['collection_date'] ?? date('Y-m-d'));
 $payment_method  = trim($data['payment_method'] ?? 'Bank Transfer');
 $remarks         = trim($data['remarks'] ?? '');
-$create_cash_in  = isset($data['create_cash_in']) ? (bool)$data['create_cash_in'] : true;
+$create_cash_in  = true; // সর্বদা অফিসে সরাসরি ক্যাশ ইন রেকর্ড হবে
 
 if ($asset_id <= 0 || $amount <= 0) {
     echo json_encode([
@@ -44,13 +44,20 @@ $cash_id = null;
 if ($create_cash_in) {
     $shareTag = $asset['share_percentage'] ? " (" . $asset['share_percentage'] . "%)" : "";
     $sourceText = "কোম্পানি শেয়ার লভ্যাংশ: " . $asset['asset_name'] . $shareTag . " [" . $billing_month . "]";
+    $refIdText  = "dividend_" . time();
+    $approvedBy = isset($data['approved_by']) && intval($data['approved_by']) > 0 
+        ? intval($data['approved_by']) 
+        : (isset($data['user_id']) && intval($data['user_id']) > 0 ? intval($data['user_id']) : 290);
     
     $cashStmt = $mysqli->prepare("
-        INSERT INTO cash (type, category, purpose, amount, date, source, createdAt)
-        VALUES ('in', 'share_dividend', NULL, ?, ?, ?, NOW())
+        INSERT INTO cash (
+            type, category, purpose, amount, date, source, refId, createdAt, 
+            approval_status, approved_by, approved_at
+        )
+        VALUES ('in', 'share_dividend', 'কোম্পানি শেয়ার লভ্যাংশ', ?, ?, ?, ?, NOW(), 'approved', ?, NOW())
     ");
     if ($cashStmt) {
-        $cashStmt->bind_param("dss", $amount, $collection_date, $sourceText);
+        $cashStmt->bind_param("dsssi", $amount, $collection_date, $sourceText, $refIdText, $approvedBy);
         if ($cashStmt->execute()) {
             $cash_id = $cashStmt->insert_id;
         }
@@ -82,10 +89,32 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
+    $colId = $stmt->insert_id;
+
+    // 🚀 Send Automated Email to Admin
+    try {
+        require_once __DIR__ . '/../helpers/mailer.php';
+        $mailData = [
+            'collection_id'    => $colId,
+            'asset_id'         => $asset_id,
+            'asset_name'       => $asset['asset_name'] ?? 'Company Share',
+            'share_percentage' => $asset['share_percentage'] ?? null,
+            'billing_month'    => $billing_month,
+            'amount'           => $amount,
+            'collection_date'  => $collection_date,
+            'payment_method'   => $payment_method,
+            'remarks'          => $remarks,
+            'cash_id'          => $cash_id,
+        ];
+        sendAssetEventNotification('share_dividend', $mailData);
+    } catch (Throwable $e) {
+        error_log("Share dividend email error: " . $e->getMessage());
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "লভ্যাংশ সফলভাবে গ্রহণ করা হয়েছে এবং ক্যাশ-ইন সম্পন্ন হয়েছে",
-        "collection_id" => $stmt->insert_id,
+        "collection_id" => $colId,
         "cash_id" => $cash_id
     ]);
 } else {

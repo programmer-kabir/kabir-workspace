@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import useCashReports from "../../../utils/Hooks/cash/useCashReports";
+import useCashCategories from "../../../utils/Hooks/cash/useCashCategories";
 import Loader from "../../../components/Loader/Loader";
 import CashStateCard from "../../../components/cash/CashStateCard";
 import CashOutModal from "../../../components/cash/CashOutModal";
@@ -24,6 +25,11 @@ import {
 } from "lucide-react";
 
 const CashOut = () => {
+  const { cashOutCategories, getCategoryName, getCategoryStyle } = useCashCategories();
+
+  const categoryName = getCategoryName;
+  const categoryStyle = getCategoryStyle;
+
   const { CashReports, isCashReportsError, isCashReportsLoading, refetch } =
     useCashReports();
   const [editingCash, setEditingCash] = useState(null);
@@ -65,26 +71,17 @@ const CashOut = () => {
 
   const DateFilteredCashOut = useMemo(() => {
     return AllCashOut.filter((cash) => {
-      const cashDate = new Date(cash.date);
-      const cashYear = cashDate.getFullYear().toString();
-      const cashMonth = `${cashDate.getFullYear()}-${String(
-        cashDate.getMonth() + 1
-      ).padStart(2, "0")}`;
+      const rawDate = String(cash.date || "").trim();
+      const cashDateOnly = rawDate.split(" ")[0];
+      const cashYear = cashDateOnly.split("-")[0];
+      const cashMonth = cashDateOnly.slice(0, 7);
 
-      if (selectedDate && cash.date !== selectedDate) return false;
+      if (selectedDate && cashDateOnly !== selectedDate) return false;
       if (selectedMonth && cashMonth !== selectedMonth) return false;
       if (selectedYear && cashYear !== selectedYear) return false;
 
-      if (startDate) {
-        const current = new Date(cash.date).getTime();
-        const start = new Date(startDate).getTime();
-        if (current < start) return false;
-      }
-      if (endDate) {
-        const current = new Date(cash.date).getTime();
-        const end = new Date(endDate).getTime();
-        if (current > end) return false;
-      }
+      if (startDate && cashDateOnly < startDate) return false;
+      if (endDate && cashDateOnly > endDate) return false;
 
       return true;
     });
@@ -93,24 +90,13 @@ const CashOut = () => {
   const FilteredCashOut = useMemo(() => {
     return DateFilteredCashOut.filter((cash) => {
       if (selectedCategory) {
+        const cat = String(cash.category || "").toLowerCase().trim();
         if (selectedCategory === "others") {
-          const knownCategories = [
-            "salary",
-            "purchase",
-            "rent",
-            "bill",
-            "office-expense",
-            "loan-repayment",
-            "loan-given",
-            "investor-payout",
-            "profit-payout",
-            "asset_purchase",
-            "share_investment",
-          ];
-          if (knownCategories.includes(cash.category?.toLowerCase().trim())) {
+          const knownSlugs = cashOutCategories.map((c) => c.slug).filter((s) => s !== "others");
+          if (knownSlugs.includes(cat)) {
             return false;
           }
-        } else if (cash.category?.toLowerCase().trim() !== selectedCategory) {
+        } else if (cat !== selectedCategory) {
           return false;
         }
       }
@@ -142,154 +128,28 @@ const CashOut = () => {
     return SummaryCashOut.reduce((total, item) => total + Number(item.amount), 0);
   }, [SummaryCashOut]);
 
-  const salaryTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "salary"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const purchaseTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "purchase"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const rentTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "rent"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const billTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "bill"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const officeExpenseTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "office-expense"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const loanRepaymentTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "loan-repayment"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const investorPayoutTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "investor-payout"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const profitPayoutTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "profit-payout"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const loanGivenTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.trim() === "loan-given"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const assetPurchaseTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "asset_purchase"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
-
-  const shareInvestmentTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) => item.category?.toLowerCase().trim() === "share_investment"
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
+  const categoryTotals = useMemo(() => {
+    const map = {};
+    SummaryCashOut.forEach((item) => {
+      const cat = String(item.category || "").toLowerCase().trim();
+      map[cat] = (map[cat] || 0) + Number(item.amount || 0);
+    });
+    return map;
   }, [SummaryCashOut]);
 
   const otherTotal = useMemo(() => {
-    return SummaryCashOut.filter(
-      (item) =>
-        ![
-          "salary",
-          "purchase",
-          "rent",
-          "bill",
-          "office-expense",
-          "loan-repayment",
-          "loan-given",
-          "investor-payout",
-          "profit-payout",
-          "asset_purchase",
-          "share_investment",
-        ].includes(item.category?.toLowerCase().trim())
-    ).reduce((sum, item) => sum + Number(item.amount), 0);
-  }, [SummaryCashOut]);
+    const known = new Set(cashOutCategories.map((c) => c.slug).filter((s) => s !== "others"));
+    return SummaryCashOut.filter((item) => {
+      const cat = String(item.category || "").toLowerCase().trim();
+      return !known.has(cat);
+    }).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  }, [SummaryCashOut, cashOutCategories]);
 
   const totalPages = Math.ceil(FilteredCashOut.length / pageSize) || 1;
   const paginatedCashOut = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return FilteredCashOut.slice(start, start + pageSize);
   }, [FilteredCashOut, currentPage, pageSize]);
-
-  const categoryName = (category) => {
-    switch (category?.toLowerCase().trim()) {
-      case "salary":
-        return "বেতন";
-      case "purchase":
-        return "কেনাকাটা";
-      case "rent":
-        return "ভাড়া";
-      case "bill":
-        return "বিল";
-      case "office-expense":
-        return "অফিস খরচ";
-      case "loan-repayment":
-        return "লোন পরিশোধ";
-      case "investor-payout":
-        return "ইনভেস্টর পেআউট";
-      case "profit-payout":
-        return "প্রফিট পেআউট";
-      case "loan-given":
-        return "লোন প্রদান";
-      case "asset_purchase":
-        return "অ্যাসেট ক্রয়";
-      case "share_investment":
-        return "শেয়ার বিনিয়োগ";
-      default:
-        return "অন্যান্য";
-    }
-  };
-
-  const categoryStyle = (category) => {
-    switch (category?.toLowerCase().trim()) {
-      case "salary":
-        return "bg-blue-500/15 text-blue-400 border border-blue-500/30";
-      case "purchase":
-        return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
-      case "rent":
-        return "bg-amber-500/15 text-amber-400 border border-amber-500/30";
-      case "bill":
-        return "bg-rose-500/15 text-rose-400 border border-rose-500/30";
-      case "office-expense":
-        return "bg-purple-500/15 text-purple-400 border border-purple-500/30";
-      case "loan-repayment":
-        return "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30";
-      case "investor-payout":
-        return "bg-orange-500/15 text-orange-400 border border-orange-500/30";
-      case "profit-payout":
-        return "bg-teal-500/15 text-teal-400 border border-teal-500/30";
-      case "loan-given":
-        return "bg-pink-500/15 text-pink-400 border border-pink-500/30";
-      case "asset_purchase":
-        return "bg-sky-500/15 text-sky-400 border border-sky-500/30";
-      case "share_investment":
-        return "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30";
-      default:
-        return "bg-slate-500/15 text-slate-300 border border-slate-500/30";
-    }
-  };
 
   if (isCashReportsLoading || isCashReportsError) {
     return (
@@ -567,90 +427,23 @@ const CashOut = () => {
           text="text-cyan-400"
           onClick={() => setSelectedCategory("")}
         />
-        <CashStateCard
-          title="Salary"
-          amount={salaryTotal}
-          icon="👨‍💼"
-          text="text-blue-400"
-          onClick={() => setSelectedCategory("salary")}
-        />
-        <CashStateCard
-          title="Purchase"
-          amount={purchaseTotal}
-          icon="🛒"
-          text="text-emerald-400"
-          onClick={() => setSelectedCategory("purchase")}
-        />
-        <CashStateCard
-          title="Rent"
-          amount={rentTotal}
-          icon="🏠"
-          text="text-amber-400"
-          onClick={() => setSelectedCategory("rent")}
-        />
-        <CashStateCard
-          title="Bill"
-          amount={billTotal}
-          icon="⚡"
-          text="text-rose-400"
-          onClick={() => setSelectedCategory("bill")}
-        />
-        <CashStateCard
-          title="Office Expenses"
-          amount={officeExpenseTotal}
-          icon="🏢"
-          text="text-purple-400"
-          onClick={() => setSelectedCategory("office-expense")}
-        />
-        <CashStateCard
-          title="Loan Given"
-          amount={loanGivenTotal}
-          icon="🤝"
-          text="text-pink-400"
-          onClick={() => setSelectedCategory("loan-given")}
-        />
-        <CashStateCard
-          title="Loan Repayment"
-          amount={loanRepaymentTotal}
-          icon="💳"
-          text="text-cyan-400"
-          onClick={() => setSelectedCategory("loan-repayment")}
-        />
-        <CashStateCard
-          title="Investor Payout"
-          amount={investorPayoutTotal}
-          icon="💼"
-          text="text-orange-400"
-          onClick={() => setSelectedCategory("investor-payout")}
-        />
-        <CashStateCard
-          title="Profit Payout"
-          amount={profitPayoutTotal}
-          icon="📈"
-          text="text-teal-400"
-          onClick={() => setSelectedCategory("profit-payout")}
-        />
-        <CashStateCard
-          title="Asset Purchase"
-          amount={assetPurchaseTotal}
-          icon="🚜"
-          text="text-sky-400"
-          onClick={() => setSelectedCategory("asset_purchase")}
-        />
-        <CashStateCard
-          title="Share Investment"
-          amount={shareInvestmentTotal}
-          icon="💎"
-          text="text-indigo-400"
-          onClick={() => setSelectedCategory("share_investment")}
-        />
-        <CashStateCard
-          title="Others"
-          amount={otherTotal}
-          icon="📦"
-          text="text-slate-400"
-          onClick={() => setSelectedCategory("others")}
-        />
+        {cashOutCategories.map((cat) => {
+          const amt =
+            cat.slug === "others"
+              ? otherTotal
+              : categoryTotals[cat.slug] || 0;
+
+          return (
+            <CashStateCard
+              key={cat.slug}
+              title={cat.name_en || cat.name_bn}
+              amount={amt}
+              icon="💸"
+              text={cat.color_text || "text-slate-300"}
+              onClick={() => setSelectedCategory(cat.slug)}
+            />
+          );
+        })}
       </div>
 
       {/* 🔹 Table Section */}
