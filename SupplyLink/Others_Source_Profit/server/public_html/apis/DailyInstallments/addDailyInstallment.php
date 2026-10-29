@@ -19,15 +19,16 @@ if (!$amount || !$date || !$receiver || !$userId || !$cardId) {
     echo json_encode([
         "success" => false,
         "message" => "All fields are required!"
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if (!is_numeric($amount) || (float)$amount <= 0) {
+    http_response_code(400);
     echo json_encode([
         "success" => false,
         "message" => "Amount must be a positive number"
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -45,31 +46,14 @@ $stmt->execute();
 $res = $stmt->get_result();
 
 if ($res->num_rows > 0) {
+    $stmt->close();
+    http_response_code(400);
     echo json_encode([
         "success" => false,
         "message" => "Already added for this date ❌"
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
-$stmt->close();
-
-// 🔥 INSERT INTO daily_installments
-$stmt = $mysqli->prepare("
-    INSERT INTO daily_installments 
-    (userId, cardId, amount, date, receiver) 
-    VALUES (?, ?, ?, ?, ?)
-");
-
-$stmt->bind_param("iidss", $userId, $cardId, $amount, $date, $receiver);
-if (!$stmt->execute()) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to insert installment: " . $stmt->error
-    ]);
-    exit;
-}
-
-$insertId = $stmt->insert_id;
 $stmt->close();
 
 // 🔥 FETCH CUSTOMER, RECEIVER & CARD DETAILS FOR NOTIFICATION & AUDIT
@@ -109,21 +93,51 @@ if ($stmtCard) {
     $stmtCard->close();
 }
 
-// 🔥 AUTOMATIC CASH IN SYNC (Directly into cash table)
-$cashRefId    = "daily_installment_" . $insertId;
-$cashSource   = "{$customerName} - কার্ড #{$cardId} (দৈনিক কিস্তি)";
-$cashPurpose  = "দৈনিক কিস্তি আদায়";
-$cashCategory = "daily-installment";
-$cashRemarks  = "দৈনিক কিস্তি আদায়: গ্রাহক {$customerName} (ID: {$userId}), কার্ড #{$cardId}, সংগ্রাহক: {$receiverName}";
-$cashType     = "in";
-$cashApproval = "approved";
+// 🔒 DATABASE TRANSACTION: Atomic Installment + Cash In Sync
+$mysqli->begin_transaction();
 
-$stmtCash = $mysqli->prepare("
-    INSERT INTO cash 
-    (type, source, purpose, amount, category, refId, remarks, date, createdAt, approval_status, approved_by, approved_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-");
-if ($stmtCash) {
+$insertId = 0;
+$cashRefId = "";
+
+try {
+    // 1. INSERT INTO daily_installments
+    $stmt = $mysqli->prepare("
+        INSERT INTO daily_installments 
+        (userId, cardId, amount, date, receiver) 
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    if (!$stmt) {
+        throw new Exception("Prepare failed on daily_installments: " . $mysqli->error);
+    }
+
+    $stmt->bind_param("iidss", $userId, $cardId, $amount, $date, $receiver);
+    if (!$stmt->execute()) {
+        $err = $stmt->error;
+        $stmt->close();
+        throw new Exception("Failed to insert installment: " . $err);
+    }
+
+    $insertId = $stmt->insert_id;
+    $stmt->close();
+
+    // 2. AUTOMATIC CASH IN SYNC (Directly into cash table)
+    $cashRefId    = "daily_installment_" . $insertId;
+    $cashSource   = "{$customerName} - কার্ড #{$cardId} (দৈনিক কিস্তি)";
+    $cashPurpose  = "দৈনিক কিস্তি আদায়";
+    $cashCategory = "daily-installment";
+    $cashRemarks  = "দৈনিক কিস্তি আদায়: গ্রাহক {$customerName} (ID: {$userId}), কার্ড #{$cardId}, সংগ্রাহক: {$receiverName}";
+    $cashType     = "in";
+    $cashApproval = "approved";
+
+    $stmtCash = $mysqli->prepare("
+        INSERT INTO cash 
+        (type, source, purpose, amount, category, refId, remarks, date, createdAt, approval_status, approved_by, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    if (!$stmtCash) {
+        throw new Exception("Prepare failed on cash: " . $mysqli->error);
+    }
+
     $stmtCash->bind_param(
         "sssdssssssis",
         $cashType,
@@ -139,8 +153,24 @@ if ($stmtCash) {
         $receiver,
         $now
     );
-    $stmtCash->execute();
+    if (!$stmtCash->execute()) {
+        $err = $stmtCash->error;
+        $stmtCash->close();
+        throw new Exception("Failed to insert cash: " . $err);
+    }
     $stmtCash->close();
+
+    // Commit transaction
+    $mysqli->commit();
+
+} catch (Throwable $e) {
+    $mysqli->rollback();
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "কিস্তি জমা ও ক্যাশ সিংক ব্যর্থ হয়েছে: " . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 // 🔥 DISPATCH NOTIFICATION TO ADMIN & DEVELOPER
@@ -174,14 +204,19 @@ try {
         'user_id'   => $userId,
         'receiver'  => $receiver,
     ];
-    sendDailyInstallmentNotification($installmentPayload, $customerData, $cardData, $receiverData);
+    if (function_exists('sendDailyInstallmentNotification')) {
+        sendDailyInstallmentNotification($installmentPayload, $customerData, $cardData, $receiverData);
+    }
 } catch (Throwable $e) {
     error_log("Daily installment email notification error: " . $e->getMessage());
 }
 
 // 🔥 FETCH COMPLETE RECORD
-$result = $mysqli->query("SELECT * FROM daily_installments WHERE id = $insertId");
-$row = $result->fetch_assoc();
+$stmtFetch = $mysqli->prepare("SELECT * FROM daily_installments WHERE id = ?");
+$stmtFetch->bind_param("i", $insertId);
+$stmtFetch->execute();
+$row = $stmtFetch->get_result()->fetch_assoc();
+$stmtFetch->close();
 
 echo json_encode([
     "success" => true,
@@ -200,4 +235,4 @@ echo json_encode([
         "refId" => $cashRefId,
         "createdAt" => $now
     ]
-]);
+], JSON_UNESCAPED_UNICODE);

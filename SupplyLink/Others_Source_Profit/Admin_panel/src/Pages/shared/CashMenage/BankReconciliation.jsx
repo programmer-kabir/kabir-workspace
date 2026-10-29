@@ -48,7 +48,8 @@ const popularBanks = [
 
 export default function BankReconciliation() {
   const { user } = useAuth();
-  const { isAdmin, isDev, isAdminOrDev, isManager, isStaff } = useUserRole();
+  const { userRoles, isAdmin, isDev, isAdminOrDev, isManager, isStaff } = useUserRole();
+  const userRole = isAdminOrDev ? "admin" : (userRoles?.[0] || user?.role || "staff");
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -395,6 +396,13 @@ export default function BankReconciliation() {
   // Submit Deposit Form
   const handleSubmitDeposit = async (e) => {
     e.preventDefault();
+    if (isAiScanning) {
+      return setLuxuryToast({
+        title: "অপেক্ষা করুন ⚠️",
+        message: "AI স্লিপ স্ক্যান করছে। স্ক্যান সম্পন্ন হওয়া পর্যন্ত অপেক্ষা করুন।",
+        type: "warning",
+      });
+    }
     if (isAdminOrDev) {
       return setLuxuryToast({
         title: "অননুমোদিত অ্যাকশন ⚠️",
@@ -415,10 +423,19 @@ export default function BankReconciliation() {
       });
     }
 
-    if (shortage > 0 && !depositForm.discrepancy_reason.trim()) {
+    if (Math.abs(deposited - expected) >= 0.01) {
       return setLuxuryToast({
-        title: "কৈফিয়ত আবশ্যক ⚠️",
-        message: `আদায়ের চেয়ে ৳ ${shortage.toLocaleString()} টাকা কম জমা হচ্ছে! ক্যাশ কম জমার কারণ উল্লেখ করুন।`,
+        title: "টাকার গরমিল ⚠️",
+        message: `সংগৃহীত মোট ক্যাশ ৳ ${expected.toLocaleString()} এর সম্পূর্ণ টাকা ব্যাংকে জমা হতে হবে। টাকা সম্পূর্ণ না মিললে জমা নিশ্চিত করা যাবে না।`,
+        type: "warning",
+      });
+    }
+
+    const hasSlip = Boolean(depositForm.slip_file || selectedRecord?.slip_image);
+    if (!hasSlip) {
+      return setLuxuryToast({
+        title: "স্লিপ আবশ্যক ⚠️",
+        message: "ব্যাংক জমার সিলযুক্ত স্লিপ বা রসিদের ছবি আপলোড করা বাধ্যতামূলক।",
         type: "warning",
       });
     }
@@ -758,6 +775,7 @@ export default function BankReconciliation() {
           </p>
         </div>
       </div>
+
 
       {/* Filter Tabs & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2">
@@ -1254,50 +1272,52 @@ export default function BankReconciliation() {
                 </div>
               </div>
 
-              {/* Live Shortage Warning & Discrepancy Reason (Only when money doesn't match) */}
-              {Number(depositForm.deposited_amount || 0) > 0 &&
-                selectedRecord.expected_amount - Number(depositForm.deposited_amount || 0) > 0 ? (
-                <>
-                  <div className="p-3 rounded-2xl bg-rose-950/30 border border-rose-500/40 text-rose-300 space-y-1.5 animate-fadeIn">
-                    <div className="flex items-center gap-2 font-bold text-xs">
-                      <FaExclamationTriangle className="text-rose-400" size={13} />
+              {/* Live Match / Shortage Alert */}
+              {(() => {
+                const exp = Number(selectedRecord?.expected_amount || 0);
+                const dep = Number(depositForm.deposited_amount || 0);
+                const diff = exp - dep;
+                const isMatched = dep > 0 && Math.abs(diff) < 0.01;
+
+                if (dep <= 0) return null;
+
+                if (isMatched) {
+                  return (
+                    <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 flex items-center gap-2.5 animate-fadeIn">
+                      <FaCheckCircle size={16} className="text-emerald-400 shrink-0" />
+                      <div>
+                        <span className="font-bold text-xs text-white block">টাকা সম্পূর্ণ মিলেছে 🎉</span>
+                        <span className="text-[11px] text-emerald-300">
+                          সংগৃহীত ক্যাশ (৳ {exp.toLocaleString()}) এবং ব্যাংকে জমা (৳ {dep.toLocaleString()}) ১০০% মিলেছে।
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/50 text-rose-300 space-y-1.5 animate-fadeIn">
+                    <div className="flex items-center gap-2 font-bold text-xs text-rose-200">
+                      <FaExclamationTriangle className="text-rose-400 shrink-0" size={14} />
                       <span>
-                        ঘাটতি: ৳ {(selectedRecord.expected_amount - Number(depositForm.deposited_amount)).toLocaleString()} টাকা কম জমা হচ্ছে!
+                        {diff > 0
+                          ? `টাকার গরমিল: ৳ ${diff.toLocaleString()} টাকা কম জমা হচ্ছে!`
+                          : `টাকার গরমিল: ৳ ${Math.abs(diff).toLocaleString()} টাকা বেশি জমা হচ্ছে!`}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-300">
-                      আদায়কৃত ক্যাশের সম্পূর্ণ টাকা জমা না দিলে ঘাটতির কারণ বা কৈফিয়ত উল্লেখ করা বাধ্যতামূলক।
+                      সংগৃহীত মোট ক্যাশ <strong className="text-white font-bold">৳ {exp.toLocaleString()}</strong> এর সম্পূর্ণ টাকা ব্যাংকে জমা হতে হবে। টাকা সম্পূর্ণ না মিললে বাটন নিষ্ক্রিয় (Disabled) থাকবে।
                     </p>
                   </div>
-
-                  <div>
-                    <label className="text-slate-300 font-semibold mb-1 flex items-center justify-between">
-                      <span>ক্যাশ না মেলার কারণ / কৈফিয়ত</span>
-                      <span className="text-[10px] text-rose-400 font-bold">* বাধ্যতামূলক (ঘাটতি থাকায়)</span>
-                    </label>
-                    <textarea
-                      rows="2"
-                      placeholder="যেমন: একজন গ্রাহক বিকেলে কিস্তির টাকা ফেরত চেয়েছেন বা নোটের গরমিল..."
-                      value={depositForm.discrepancy_reason}
-                      onChange={(e) => setDepositForm({ ...depositForm, discrepancy_reason: e.target.value })}
-                      className="w-full bg-[#050b17] border border-rose-500/40 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-rose-400 resize-none font-medium"
-                    />
-                  </div>
-                </>
-              ) : Number(depositForm.deposited_amount || 0) > 0 ? (
-                <div className="p-2.5 rounded-xl bg-emerald-950/25 border border-emerald-500/30 text-emerald-300 flex items-center gap-2">
-                  <FaCheckCircle size={14} className="text-emerald-400 shrink-0" />
-                  <span className="font-semibold text-[11px]">
-                    টাকা সম্পূর্ণ মিলেছে (কোনো ঘাটতি নেই)
-                  </span>
-                </div>
-              ) : null}
+                );
+              })()}
 
               {/* Slip Image Upload & AI Auto-Scan */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-slate-300 font-semibold block">
-                    ব্যাংক জমার সিলযুক্ত স্লিপ বা রসিদের ছবি
+                  <label className="text-slate-300 font-semibold flex items-center gap-1">
+                    <span>ব্যাংক জমার সিলযুক্ত স্লিপ বা রসিদের ছবি</span>
+                    <span className="text-rose-400 font-bold">*</span>
                   </label>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                     aiEnabled ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30" : "bg-slate-800 text-slate-400"
@@ -1347,7 +1367,9 @@ export default function BankReconciliation() {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <label className="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-2xl p-3 flex items-center justify-center gap-2 cursor-pointer transition bg-[#050b17] group">
+                  <label className={`flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-2xl p-3 flex items-center justify-center gap-2 transition bg-[#050b17] group ${
+                    isAiScanning ? "opacity-60 cursor-not-allowed pointer-events-none" : "cursor-pointer"
+                  }`}>
                     <FaCamera size={14} className="text-slate-400 group-hover:text-emerald-400 transition" />
                     <span className="text-slate-300 text-xs font-medium group-hover:text-emerald-300">
                       {depositForm.slip_file ? depositForm.slip_file.name : "স্লিপের ছবি আপলোড করুন"}
@@ -1356,6 +1378,7 @@ export default function BankReconciliation() {
                       type="file"
                       accept="image/*,.pdf"
                       onChange={handleFileChange}
+                      disabled={isAiScanning}
                       className="hidden"
                     />
                   </label>
@@ -1384,29 +1407,66 @@ export default function BankReconciliation() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => setShowSubmitModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium cursor-pointer"
-                >
-                  বাতিল
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingDeposit}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-950/50"
-                >
-                  {submittingDeposit ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>সংরক্ষণ হচ্ছে...</span>
-                    </>
-                  ) : (
-                    <span>জমা ও স্লিপ নিশ্চিত করুন</span>
-                  )}
-                </button>
-              </div>
+              {(() => {
+                const exp = Number(selectedRecord?.expected_amount || 0);
+                const dep = Number(depositForm.deposited_amount || 0);
+                const isAmountMatched = dep > 0 && Math.abs(exp - dep) < 0.01;
+                const hasSlip = Boolean(depositForm.slip_file || (selectedRecord?.slip_image && String(selectedRecord.slip_image).trim().length > 0));
+                const canSubmit = isAmountMatched && hasSlip && !submittingDeposit && !isAiScanning;
+
+                return (
+                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setShowSubmitModal(false)}
+                      disabled={submittingDeposit || isAiScanning}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      বাতিল
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!canSubmit}
+                      className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all ${
+                        !canSubmit
+                          ? "bg-slate-800/90 text-slate-500 border border-slate-700 opacity-60 cursor-not-allowed shadow-none"
+                          : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white cursor-pointer shadow-emerald-950/50"
+                      }`}
+                      title={
+                        !isAmountMatched
+                          ? `সংগৃহীত ক্যাশ (৳ ${exp.toLocaleString()}) সম্পূর্ণ না মিললে বাটন সক্রিয় হবে না`
+                          : !hasSlip
+                          ? "ব্যাংক স্লিপের ছবি আপলোড করা আবশ্যক"
+                          : "জমা ও স্লিপ নিশ্চিত করুন"
+                      }
+                    >
+                      {submittingDeposit ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>সংরক্ষণ হচ্ছে...</span>
+                        </>
+                      ) : isAiScanning ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          <span>AI স্ক্যান হচ্ছে, অপেক্ষা করুন...</span>
+                        </>
+                      ) : !isAmountMatched ? (
+                        <>
+                          <FaExclamationTriangle size={13} className="text-amber-400" />
+                          <span>টাকা সম্পূর্ণ মিললে সক্রিয় হবে</span>
+                        </>
+                      ) : !hasSlip ? (
+                        <>
+                          <FaCamera size={13} className="text-amber-400" />
+                          <span>স্লিপের ছবি আপলোড করুন</span>
+                        </>
+                      ) : (
+                        <span>জমা ও স্লিপ নিশ্চিত করুন</span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
             </form>
           </div>
         </div>

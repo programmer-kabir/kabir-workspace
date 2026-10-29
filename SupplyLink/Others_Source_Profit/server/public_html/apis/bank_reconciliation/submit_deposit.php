@@ -41,10 +41,10 @@ if ($bank_name === '') {
 
 // 1. Locate the record
 if ($deposit_id > 0) {
-    $stmt = $mysqli->prepare("SELECT id, collection_date, total_in, deducted_expense_amount, adjustment_mode, expected_amount, status, slip_image FROM daily_bank_deposits WHERE id = ?");
+    $stmt = $mysqli->prepare("SELECT id, collection_date, total_cash_in, deducted_expense_amount, adjustment_mode, expected_amount, status, slip_image FROM daily_bank_deposits WHERE id = ?");
     $stmt->bind_param("i", $deposit_id);
 } else {
-    $stmt = $mysqli->prepare("SELECT id, collection_date, total_in, deducted_expense_amount, adjustment_mode, expected_amount, status, slip_image FROM daily_bank_deposits WHERE collection_date = ?");
+    $stmt = $mysqli->prepare("SELECT id, collection_date, total_cash_in, deducted_expense_amount, adjustment_mode, expected_amount, status, slip_image FROM daily_bank_deposits WHERE collection_date = ?");
     $stmt->bind_param("s", $collection_date);
 }
 $stmt->execute();
@@ -56,6 +56,8 @@ if (!$record) {
         "success" => false,
         "message" => "ডিপোজিট রেকর্ড পাওয়া যায়নি"
     ], JSON_UNESCAPED_UNICODE);
+
+    
     exit;
 }
 
@@ -105,6 +107,14 @@ if (isset($_FILES['slip_image']) && $_FILES['slip_image']['error'] === UPLOAD_ER
     }
 }
 
+if (empty($slipPath)) {
+    echo json_encode([
+        "success" => false,
+        "message" => "ব্যাংক জমার সিলযুক্ত স্লিপ বা রসিদের ছবি আপলোড করা বাধ্যতামূলক।"
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // 3. Update Record in Database
 $updateStmt = $mysqli->prepare("
     UPDATE daily_bank_deposits 
@@ -151,23 +161,27 @@ if ($updateStmt->execute()) {
         'email' => '',
         'phone' => ''
     ];
-    $uStmt = $mysqli->prepare("SELECT name, email, phone FROM users WHERE id = ?");
-    if ($uStmt) {
-        $uStmt->bind_param("i", $submitted_by);
-        $uStmt->execute();
-        $uRes = $uStmt->get_result()->fetch_assoc();
-        if ($uRes) {
-            $staffData['name']  = $uRes['name'] ?? 'ফিল্ড কর্মী';
-            $staffData['email'] = $uRes['email'] ?? '';
-            $staffData['phone'] = $uRes['phone'] ?? '';
+    try {
+        $uStmt = $mysqli->prepare("SELECT name, email, mobile FROM users WHERE id = ?");
+        if ($uStmt) {
+            $uStmt->bind_param("i", $submitted_by);
+            $uStmt->execute();
+            $uRes = $uStmt->get_result()->fetch_assoc();
+            if ($uRes) {
+                $staffData['name']  = $uRes['name'] ?? 'ফিল্ড কর্মী';
+                $staffData['email'] = $uRes['email'] ?? '';
+                $staffData['phone'] = $uRes['mobile'] ?? '';
+            }
+            $uStmt->close();
         }
-        $uStmt->close();
+    } catch (\Throwable $uErr) {
+        error_log("Submitter info fetch error: " . $uErr->getMessage());
     }
 
     $depositData = [
         'id'                      => $id,
         'collection_date'         => $cDate,
-        'total_in'                => floatval($record['total_in'] ?? 0),
+        'total_in'                => floatval($record['total_cash_in'] ?? 0),
         'deducted_expense_amount' => floatval($record['deducted_expense_amount'] ?? 0),
         'adjustment_mode'         => $record['adjustment_mode'] ?? 'net',
         'expected_amount'         => $expected_amount,

@@ -34,7 +34,7 @@ try {
         SELECT id, source, purpose, category, amount, refId, remarks, date, createdAt
         FROM cash 
         WHERE type='in' AND approval_status='approved' AND date=?
-        ORDER BY id ASC
+        ORDER BY category ASC, id ASC
     ");
     $stmtIn->bind_param("s", $today);
     $stmtIn->execute();
@@ -66,7 +66,7 @@ try {
         SELECT id, source, purpose, category, amount, refId, remarks, date, createdAt
         FROM cash 
         WHERE type='out' AND approval_status='approved' AND date=?
-        ORDER BY id ASC
+        ORDER BY category ASC, id ASC
     ");
     $stmtOut->bind_param("s", $today);
     $stmtOut->execute();

@@ -7,8 +7,10 @@ import useCashDailyReports from "../../utils/Hooks/cash/useCashDailyReports";
 import { FaEdit } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import { useUserRole } from "../../utils/Hooks/useUserRole";
 
 const DailyReport = () => {
+  const { user, isAdminOrDev } = useUserRole();
   const [date, setDate] = useState("");
   const [editData, setEditData] = useState(null);
   const [openEditModal, setOpenEditModal] = useState(false);
@@ -54,6 +56,10 @@ const DailyReport = () => {
     }
   };
 const handleDelete = async (id) => {
+  if (!isAdminOrDev) {
+    toast.error("শুধুমাত্র অ্যাডমিন এবং ডেভেলপার ক্যাশ রেকর্ড মুছতে পারেন ❌");
+    return;
+  }
   const result = await Swal.fire({
     title: "Are you sure?",
     text: "You won't be able to revert this!",
@@ -70,7 +76,7 @@ const handleDelete = async (id) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, user_id: user?.id }),
     });
 
     const data = await res.json();
@@ -166,7 +172,7 @@ const handleDelete = async (id) => {
                         <FaEdit />{" "}
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item.id)} title="মুছে ফেলুন"
                         className="border border-gray-300 p-1 rounded cursor-pointer"
                       >
                         <FaTrash />
@@ -219,7 +225,7 @@ const handleDelete = async (id) => {
                         <FaEdit />{" "}
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item.id)} title="মুছে ফেলুন"
                         className="border border-gray-300 p-1 rounded cursor-pointer"
                       >
                         <FaTrash />

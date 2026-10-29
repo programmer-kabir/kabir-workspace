@@ -17,8 +17,6 @@ import profitAutoReinvestInstallmentsSlice from "../Redux/AutoReinvest/profitAut
 import CashDailyReportSlice from "../Redux/Cash/CashDailyReportSlice";
 import CashMonthlyReportSlice from "../Redux/Cash/CashMonthlyReportSlice";
 import CashYearlyReportSlice from "../Redux/Cash/CashYearlyReportSlice";
-import MobileAnalyticsSlice from '../Redux/MobileInventory/MobileAnalyticsSlice'
-import SupplierPaymentAnalyticsSlice from '../Redux/SupplierPayment/SupplierPaymentAnalyticsSlice'
 import CashReportSlice from '../Redux/Cash/CashReporSlice'
 import InstallmentFileSlice from '../Redux/InstallmentFiles/InstallmentFilesSlice'
 const store = configureStore({
@@ -41,8 +39,6 @@ const store = configureStore({
     DailyCashReports: CashDailyReportSlice,
     CashMonthlyReports: CashMonthlyReportSlice,
     CashYearlyReports: CashYearlyReportSlice,
-    stockMobiles:MobileAnalyticsSlice,
-    supplierPayments:SupplierPaymentAnalyticsSlice,
     CashReports:CashReportSlice,
     installmentFiles:InstallmentFileSlice
   },

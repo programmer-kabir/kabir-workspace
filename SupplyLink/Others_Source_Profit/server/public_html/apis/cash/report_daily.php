@@ -61,16 +61,36 @@ $stmt->execute();
 $cashOutList = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// 5. Calculate Totals
+// 5. Calculate Totals & Category Summaries
 $totalIn = 0;
+$categoryInMap = [];
 foreach ($cashInList as $cin) {
-    $totalIn += (float)$cin['amount'];
+    $amt = (float)$cin['amount'];
+    $totalIn += $amt;
+    $cat = trim($cin['category'] ?? 'others');
+    if ($cat === '') $cat = 'others';
+    if (!isset($categoryInMap[$cat])) {
+        $categoryInMap[$cat] = ['category' => $cat, 'count' => 0, 'total' => 0.0];
+    }
+    $categoryInMap[$cat]['count']++;
+    $categoryInMap[$cat]['total'] += $amt;
 }
+$categoryInSummary = array_values($categoryInMap);
 
 $totalOut = 0;
+$categoryOutMap = [];
 foreach ($cashOutList as $cout) {
-    $totalOut += (float)$cout['amount'];
+    $amt = (float)$cout['amount'];
+    $totalOut += $amt;
+    $cat = trim($cout['category'] ?? 'others');
+    if ($cat === '') $cat = 'others';
+    if (!isset($categoryOutMap[$cat])) {
+        $categoryOutMap[$cat] = ['category' => $cat, 'count' => 0, 'total' => 0.0];
+    }
+    $categoryOutMap[$cat]['count']++;
+    $categoryOutMap[$cat]['total'] += $amt;
 }
+$categoryOutSummary = array_values($categoryOutMap);
 
 $net = $totalIn - $totalOut;
 $closingBalance = $openingCash + $net;
@@ -85,5 +105,7 @@ sendJson([
     "net" => (float)$net,
     "closingBalance" => (float)$closingBalance,
     "cashInList" => $cashInList,
-    "cashOutList" => $cashOutList
+    "cashOutList" => $cashOutList,
+    "categoryInSummary" => $categoryInSummary,
+    "categoryOutSummary" => $categoryOutSummary
 ]);

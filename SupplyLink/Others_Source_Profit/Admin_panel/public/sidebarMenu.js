@@ -377,33 +377,14 @@ export const sidebarMenu = [
       // },
     ],
   },
-  {
-    type: "collapse",
-    label: "Stock Inventory",
-    icon: MdInventory,
-    roles: ["admin", "developer", "manager", "staff"],
-    children: [
-      {
-        label: "Inventory List",
-        path: "/inventory/inventory_list",
-        icon: MdOutlineInventory2,
-        roles: ["admin", "developer", "manager", "staff"],
-      },
-      {
-        label: "Supplier Payments",
-        path: "/inventory/supplier_payments",
-        icon: MdPayments,
-        roles: ["admin", "developer", "manager", "staff"],
-      }
-    ],
-  },
+
 
   // COMPANY
 
 {
   type: "collapse",
   label: "Finance",
-  icon: IoStatsChart,
+icon: IoStatsChart,
   roles: ["admin", "developer", "manager"],
   children: [
     {

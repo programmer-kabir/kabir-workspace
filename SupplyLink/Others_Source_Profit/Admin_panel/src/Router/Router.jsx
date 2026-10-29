@@ -54,8 +54,6 @@ import DailyInstallmentsUsersDetails from "../Pages/shared/DailyInstallments/Dai
 import DailyReport from "../components/cash/DailyReport";
 import MonthlyReport from "../components/cash/MonthlyReport";
 import YearlyReport from "../components/cash/YearlyReport";
-import InventoryList from "../Pages/shared/MobileInventory/InventoryList";
-import SupplierPayments from "../Pages/shared/MobileInventory/SupplierPayments";
 import CashIn from "../Pages/shared/CashMenage/CashIn";
 import CashReport from "../Pages/shared/CashMenage/CashReport";
 import CashOut from "../Pages/shared/CashMenage/CashOut";
@@ -251,14 +249,6 @@ const routes = createBrowserRouter([
           {
             path: "/cash/yearly_reports",
             element: <YearlyReport />,
-          },
-          {
-            path: "/inventory/inventory_list",
-            element: <InventoryList />,
-          },
-          {
-            path: "/inventory/supplier_payments",
-            element: <SupplierPayments />,
           },
           {
             path: "/today-report",
