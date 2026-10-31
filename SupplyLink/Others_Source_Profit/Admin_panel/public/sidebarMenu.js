@@ -12,7 +12,7 @@ import {
   FaCartShopping,
   FaCashRegister,
 } from "react-icons/fa6";
-import { FaTasks } from "react-icons/fa";
+import { FaTasks, FaHistory } from "react-icons/fa";
 
 import {
   TbUsers,
@@ -27,6 +27,11 @@ import {
   TbClock,
   TbFiles,
   TbFileUpload,
+  TbShieldCheck,
+  TbClipboardCheck,
+  TbReceipt,
+  TbCalendarTime,
+  TbCoins,
 } from "react-icons/tb";
 
 import { RiBankCardLine, RiBankCard2Line, RiMailSendLine } from "react-icons/ri";
@@ -44,6 +49,13 @@ export const sidebarMenu = [
     path: "/",
     icon: MdOutlineDashboard,
     roles: ["admin", "developer", "manager", "staff"],
+  },
+  // SUPPLYLINK REPORTS (PDF ARCHIVE)
+  {
+    label: "SupplyLink Reports",
+    path: "/supplylink-reports",
+    icon: TbReport,
+    roles: ["admin", "developer", "manager", "staff", "audit"],
   },
   // REQUESTS & APPROVALS
   {
@@ -93,6 +105,12 @@ export const sidebarMenu = [
       label: "ব্যাংক জমা ও রিকনসিলিয়েশন",
       path: "/cash/bank-reconciliation",
       icon: BsBank,
+      roles: ["admin", "developer", "manager", "staff"],
+    },
+    {
+      label: "ক্যাশ ঘাটতি ও রিকভারি",
+      path: "/cash/gap-tracker",
+      icon: FaHistory,
       roles: ["admin", "developer", "manager", "staff"],
     },
   ],
@@ -413,6 +431,40 @@ icon: IoStatsChart,
     icon: FaBuilding,
     roles: ["admin", "developer", "manager", "staff"],
   },
+  // AUDIT PANEL (Admin & Developer Only)
+  {
+    type: "collapse",
+    label: "Audit Panel",
+    icon: TbShieldCheck,
+    roles: ["admin", "developer"],
+    children: [
+      {
+        label: "মাসিক কিস্তি ও ক্যাশ অডিট",
+        path: "/audit/monthly-installments",
+        icon: TbClipboardCheck,
+        roles: ["admin", "developer"],
+      },
+      {
+        label: "ডাউন পেমেন্ট ও ক্যাশ অডিট",
+        path: "/audit/downpayments",
+        icon: TbReceipt,
+        roles: ["admin", "developer"],
+      },
+      {
+        label: "দৈনিক কিস্তি ও ক্যাশ অডিট",
+        path: "/audit/daily-installments",
+        icon: TbCalendarTime,
+        roles: ["admin", "developer"],
+      },
+      {
+        label: "ইনভেস্টমেন্ট ও ক্যাশ অডিট",
+        path: "/audit/investments",
+        icon: TbCoins,
+        roles: ["admin", "developer"],
+      },
+    ],
+  },
+
   // DEVELOPER
   {
     type: "collapse",

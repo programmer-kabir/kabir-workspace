@@ -42,6 +42,7 @@ $pdo = new PDO($dsn, $DB_USER, $DB_PASS, [
   PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
   PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
+$pdo->exec("SET time_zone = '+06:00'");
 
 // ✅ আজ mature হওয়া cards
 $cards = $pdo->query("

@@ -7,6 +7,7 @@ export const ROLES = [
   "customer",
   "developer",
   "granter",
+  "audit",
 ];
 export const ID_TYPES = [
   "smart_nid",

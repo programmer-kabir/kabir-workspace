@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import useCashReports from "../../../utils/Hooks/cash/useCashReports";
 import useCashCategories from "../../../utils/Hooks/cash/useCashCategories";
 import Loader from "../../../components/Loader/Loader";
@@ -22,6 +23,7 @@ import {
   Edit3,
   ChevronLeft,
   ChevronRight,
+  History,
 } from "lucide-react";
 
 const CashOut = () => {
@@ -177,14 +179,23 @@ const CashOut = () => {
           </div>
         </div>
 
-        {/* Add Cash Out button */}
-        <button
-          onClick={() => setOpenCashOutModal(true)}
-          className="btn-danger self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>নতুন ক্যাশ আউট (Add Cash Out)</span>
-        </button>
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <Link
+            to="/cash/gap-tracker"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition shadow-sm"
+          >
+            <History className="h-4 w-4" />
+            <span>অতীত ঘাটতি ট্র্যাকার</span>
+          </Link>
+          <button
+            onClick={() => setOpenCashOutModal(true)}
+            className="btn-danger"
+          >
+            <Plus className="h-4 w-4" />
+            <span>নতুন ক্যাশ আউট (Add Cash Out)</span>
+          </button>
+        </div>
       </div>
 
       {/* 🔹 Filter Section Card (Crystal Clear & Intuitive) */}
@@ -412,7 +423,7 @@ const CashOut = () => {
       </div>
 
       {/* 🔹 Category KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-3.5">
         <CashStateCard
           title="Total Cash Out"
           amount={totalCashOut}

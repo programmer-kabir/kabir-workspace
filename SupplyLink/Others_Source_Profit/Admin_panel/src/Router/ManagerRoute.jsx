@@ -11,7 +11,8 @@ const ManagerRoute = ({ children }) => {
     return <Navigate to="/sign_in" replace />;
   }
 
-  if (user.role !== "manager") {
+  const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+  if (!userRoles.includes("manager") && !userRoles.includes("audit")) {
     return <Navigate to="/sign_in" replace />;
   }
 

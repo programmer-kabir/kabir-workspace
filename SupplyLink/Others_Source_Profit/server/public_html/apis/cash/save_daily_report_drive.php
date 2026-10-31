@@ -93,7 +93,53 @@ try {
     }
     $stmtOut->close();
 
-    // 4. Ledger Calculations
+    // 4. Category Breakdown Queries (Matching Dashboard Report UI)
+    $stmtCatIn = $mysqli->prepare("
+        SELECT category, COUNT(*) as voucher_count, SUM(amount) as total_amount
+        FROM cash 
+        WHERE type='in' AND approval_status='approved' AND date=?
+        GROUP BY category
+        ORDER BY total_amount DESC
+    ");
+    $stmtCatIn->bind_param("s", $today);
+    $stmtCatIn->execute();
+    $resCatIn = $stmtCatIn->get_result();
+    $cashInCategories = [];
+    while ($row = $resCatIn->fetch_assoc()) {
+        $cashInCategories[] = [
+            'category' => $row['category'] ?? 'others',
+            'count' => (int)$row['voucher_count'],
+            'total' => (float)$row['total_amount']
+        ];
+    }
+    $stmtCatIn->close();
+
+    $stmtCatOut = $mysqli->prepare("
+        SELECT category, COUNT(*) as voucher_count, SUM(amount) as total_amount
+        FROM cash 
+        WHERE type='out' AND approval_status='approved' AND date=?
+        GROUP BY category
+        ORDER BY total_amount DESC
+    ");
+    $stmtCatOut->bind_param("s", $today);
+    $stmtCatOut->execute();
+    $resCatOut = $stmtCatOut->get_result();
+    $cashOutCategories = [];
+    while ($row = $resCatOut->fetch_assoc()) {
+        $cashOutCategories[] = [
+            'category' => $row['category'] ?? 'others',
+            'count' => (int)$row['voucher_count'],
+            'total' => (float)$row['total_amount']
+        ];
+    }
+    $stmtCatOut->close();
+
+    $categoryBreakdown = [
+        'in' => $cashInCategories,
+        'out' => $cashOutCategories
+    ];
+
+    // 5. Ledger Calculations
     $netToday = $totalCashIn - $totalCashOut;
     $closingBalance = $openingCash + $netToday;
 
@@ -108,9 +154,9 @@ try {
         'outCount' => count($cashOutRows)
     ];
 
-    // 5. Generate Multi-Page PDF
+    // 6. Generate Multi-Page PDF
     $pdfGen = new DailyReportPdf();
-    $pdfBinary = $pdfGen->generateReport($summary, $cashInRows, $cashOutRows);
+    $pdfBinary = $pdfGen->generateReport($summary, $cashInRows, $cashOutRows, $categoryBreakdown);
 
     // 6. Save PDF to Hostinger uploads/daily_report/[date].pdf
     $baseUploadDir = dirname(__DIR__, 2) . '/uploads';

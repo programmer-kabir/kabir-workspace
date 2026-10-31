@@ -11,11 +11,11 @@ const AdminRoute = ({ children }) => {
     return <Navigate to="/sign_in" replace />;
   }
 
-  if (user.role !== "admin") {
+  const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+  if (!userRoles.includes("admin") && !userRoles.includes("audit")) {
     return <Navigate to="/sign_in" replace />;
   }
 
-  // ✅ Admin হলে
   return children;
 };
 

@@ -33,6 +33,7 @@ try {
     $pdo = new PDO("mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",$dbUser,$dbPass,[
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
+    $pdo->exec("SET time_zone = '+06:00'");
     echo "[".nowStr()."] Connected DB: " . $pdo->query("select database()")->fetchColumn() . "\n";
 } catch (Exception $e) {
     echo "[".nowStr()."] DB connect error: " . $e->getMessage() . "\n";

@@ -70,11 +70,16 @@ export const AuthProvider = ({ children }) => {
 
   // 🔹 logout
   const logout = async () => {
-    await fetch(
-      `${import.meta.env.VITE_LOCALHOST_KEY}/internal-auth/logout.php`,
-      { credentials: "include" },
-    );
-    setUser(null);
+    try {
+      await fetch(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/internal-auth/logout.php`,
+        { credentials: "include" },
+      );
+    } catch (e) {
+      console.error("Logout request error:", e);
+    } finally {
+      setUser(null);
+    }
   };
 
   return (
@@ -84,10 +89,12 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
- isAdmin: user?.role?.includes("admin"),       // ✅ admin check
-        isStaff: user?.role?.includes("staff"),       // ✅ staff check
-        isManager: user?.role?.includes("manager"),   // ✅ manager check
-        isDeveloper: user?.role?.includes("developer"), 
+        isAdmin: user?.role?.includes("admin"),
+        isStaff: user?.role?.includes("staff"),
+        isManager: user?.role?.includes("manager"),
+        isDeveloper: user?.role?.includes("developer"),
+        isAudit: user?.role?.includes("audit"),
+        isReadOnly: user?.role?.includes("audit"),
       }}
     >
       {children}

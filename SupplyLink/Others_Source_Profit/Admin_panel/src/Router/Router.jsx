@@ -60,6 +60,11 @@ import CashOut from "../Pages/shared/CashMenage/CashOut";
 import CompanyProfit from "../Pages/shared/CompanyProfit/CompanyProfit";
 import CashReportApproved from "../Pages/shared/CashMenage/CashReportApproved";
 import BankReconciliation from "../Pages/shared/CashMenage/BankReconciliation";
+import CashGapTracker from "../Pages/shared/CashMenage/CashGapTracker";
+import MonthlyInstallmentCashAudit from "../Pages/shared/Audit/MonthlyInstallmentCashAudit";
+import DownpaymentCashAudit from "../Pages/shared/Audit/DownpaymentCashAudit";
+import DailyInstallmentCashAudit from "../Pages/shared/Audit/DailyInstallmentCashAudit";
+import InvestmentCashAudit from "../Pages/shared/Audit/InvestmentCashAudit";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
@@ -74,6 +79,7 @@ import OtherSourcesAssets from "../Pages/shared/OtherSourcesProfit/OtherSourcesA
 import OtherSourcesCollections from "../Pages/shared/OtherSourcesProfit/OtherSourcesCollections";
 import EmailLogs from "../Pages/shared/EmailLogs/EmailLogs";
 import ApprovalCenter from "../Pages/shared/ApprovalCenter/ApprovalCenter";
+import SupplyLinkReports from "../Pages/shared/Reports/SupplyLinkReports";
 
 const routes = createBrowserRouter([
   {
@@ -229,6 +235,10 @@ const routes = createBrowserRouter([
             path: "/cash/bank-reconciliation",
             element: <BankReconciliation />,
           },
+          {
+            path: "/cash/gap-tracker",
+            element: <CashGapTracker />,
+          },
 
           {
             path: "/cash/cash_reports",
@@ -273,6 +283,14 @@ const routes = createBrowserRouter([
           {
             path: "/email-logs",
             element: <EmailLogs />,
+          },
+          {
+            path: "/reports/supplylink-reports",
+            element: <SupplyLinkReports />,
+          },
+          {
+            path: "/supplylink-reports",
+            element: <SupplyLinkReports />,
           },
           {
             element: (
@@ -363,6 +381,28 @@ const routes = createBrowserRouter([
               {
                 path: "/manager/staff_reports/view_reports",
                 element: <StaffViewReports />,
+              },
+            ],
+          },
+          // Audit Panel (Admin & Developer)
+          {
+            element: <RoleProtectedRoute allow={["admin", "developer"]} />,
+            children: [
+              {
+                path: "/audit/monthly-installments",
+                element: <MonthlyInstallmentCashAudit />,
+              },
+              {
+                path: "/audit/downpayments",
+                element: <DownpaymentCashAudit />,
+              },
+              {
+                path: "/audit/daily-installments",
+                element: <DailyInstallmentCashAudit />,
+              },
+              {
+                path: "/audit/investments",
+                element: <InvestmentCashAudit />,
               },
             ],
           },

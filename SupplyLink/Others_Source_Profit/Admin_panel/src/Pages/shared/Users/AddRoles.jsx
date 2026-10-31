@@ -15,6 +15,7 @@ const ROLE_COLORS = {
   customer: "from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30",
   supplier: "from-sky-500/20 to-blue-500/20 text-sky-300 border-sky-500/30",
   granter: "from-slate-500/20 to-gray-500/20 text-slate-300 border-slate-500/30",
+  audit: "from-teal-500/20 to-emerald-500/20 text-teal-300 border-teal-500/30",
 };
 
 const AddRoles = () => {

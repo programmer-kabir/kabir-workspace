@@ -26,18 +26,38 @@ const Sidebar = ({ onLinkClick, closeDrawer }) => {
 
   if (!user) return null;
 
-  const targetRoles = ["developer", "staff", "manager", "admin"];
+  const targetRoles = ["developer", "admin", "audit", "manager", "staff"];
   const userRole =
     targetRoles?.find((role) => user?.role?.includes(role)) || "Staff";
 
   const runningUser = users?.find((u) => u?.id === user?.id);
-  const hasAccess = (item) =>
-    !item.roles ||
-    (Array.isArray(user?.role) &&
-      user?.role.some((role) => item.roles.includes(role)));
+  const hasAccess = (item) => {
+    if (!item.roles) return true;
+    if (!Array.isArray(user?.role)) return false;
 
-  const handleLoutOut = () => {
-    logout();
+    if (user.role.some((role) => item.roles.includes(role))) {
+      return true;
+    }
+
+    // Audit role: Has full read-only visibility for any menu item available to admin, developer, manager, or staff
+    if (user.role.includes("audit")) {
+      return (
+        item.roles.includes("admin") ||
+        item.roles.includes("developer") ||
+        item.roles.includes("manager") ||
+        item.roles.includes("staff")
+      );
+    }
+
+    return false;
+  };
+
+  const handleLoutOut = async () => {
+    try {
+      await logout();
+    } finally {
+      window.location.href = "/sign_in";
+    }
   };
 
   const handleLinkClick = () => {
@@ -134,8 +154,10 @@ const Sidebar = ({ onLinkClick, closeDrawer }) => {
       {/* Logout Footer */}
       <div className="mt-auto p-3 border-t border-white/[0.08]">
         <button
+          type="button"
+          data-logout="true"
           onClick={handleLoutOut}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] py-2.5 text-xs font-semibold text-slate-400 transition-all duration-200 hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] py-2.5 text-xs font-semibold text-slate-400 transition-all duration-200 hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400 cursor-pointer"
         >
           <FiLogOut className="h-4 w-4" />
           <span>লগআউট (Logout)</span>

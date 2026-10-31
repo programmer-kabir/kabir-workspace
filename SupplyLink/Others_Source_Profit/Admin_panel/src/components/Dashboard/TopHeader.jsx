@@ -9,7 +9,7 @@ const TopHeader = ({ onMenuClick }) => {
   const { user } = useAuth() || {};
   const { users = [] } = useUsers();
   const currentUser = users.find((u) => u?.id === user?.id);
-  const targetRoles = ["developer", "staff", "manager", "admin"];
+  const targetRoles = ["developer", "admin", "audit", "manager", "staff"];
   const userRole =
     targetRoles?.find((role) => user?.role?.includes(role)) || "Staff";
 

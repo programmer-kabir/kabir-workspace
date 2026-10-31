@@ -27,6 +27,7 @@ import {
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
 import LuxuryToast from "../../../components/Modal/LuxuryToast";
+import HistoricalGapCard from "../../../components/cash/HistoricalGapCard";
 import { useAuth } from "../../../Provider/AuthProvider";
 import useUserRole from "../../../utils/Hooks/useUserRole";
 
@@ -776,6 +777,15 @@ export default function BankReconciliation() {
         </div>
       </div>
 
+
+      {/* Historical Cash Gap & Recovery Manager */}
+      <HistoricalGapCard
+        user={user}
+        userRole={userRole}
+        isAdminOrDev={isAdminOrDev}
+        setLuxuryToast={setLuxuryToast}
+        onRecoverySuccess={fetchReconciliationList}
+      />
 
       {/* Filter Tabs & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2">
