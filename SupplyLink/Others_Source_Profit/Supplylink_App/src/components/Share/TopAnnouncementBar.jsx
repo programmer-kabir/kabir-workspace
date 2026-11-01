@@ -5,7 +5,7 @@ import { getWhatsAppUrl } from "../../constants/links";
 export default function TopAnnouncementBar({ onClose }) {
   return (
     <div className="w-full bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 text-slate-800 px-4 py-2 text-xs border-b border-indigo-200/80 select-none">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-3">
         <div className="flex-1 flex items-center justify-center gap-2 text-center flex-wrap">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="font-bold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full text-[11px]">🔥 স্পেশাল অফার</span>

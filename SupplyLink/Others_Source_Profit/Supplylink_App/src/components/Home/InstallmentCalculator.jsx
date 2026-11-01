@@ -62,7 +62,7 @@ export default function InstallmentCalculator() {
 
   return (
     <section id="calculator" className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200/60 relative">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-6xl mx-auto mb-10">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -100,7 +100,7 @@ export default function InstallmentCalculator() {
 
         {/* ================= TAB 1: CUSTOMER EMI CALCULATOR ================= */}
         {activeTab === "customer" && (
-          <div className="max-w-7xl mx-auto rounded-3xl border border-slate-200 bg-white p-6 sm:p-10 shadow-xl animate-fade-in">
+          <div className="max-w-[1600px] mx-auto rounded-3xl border border-slate-200 bg-white p-6 sm:p-10 shadow-xl animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
               {/* Left Controls */}
               <div className="lg:col-span-7 space-y-6">
@@ -299,7 +299,7 @@ export default function InstallmentCalculator() {
 
         {/* ================= TAB 2: INVESTOR PROFIT CALCULATOR ================= */}
         {activeTab === "investor" && (
-          <div className="max-w-7xl mx-auto rounded-3xl border border-indigo-200/90 bg-white p-6 sm:p-10 shadow-xl animate-fade-in">
+          <div className="max-w-[1600px] mx-auto rounded-3xl border border-indigo-200/90 bg-white p-6 sm:p-10 shadow-xl animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
               {/* Left Controls */}
               <div className="lg:col-span-7 space-y-6">

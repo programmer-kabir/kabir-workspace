@@ -50,7 +50,7 @@ export default function Contact() {
 
   return (
     <section id="contact" className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200/60">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         {/* Title */}
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -64,7 +64,7 @@ export default function Contact() {
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 rounded-3xl overflow-hidden shadow-2xl bg-white border border-slate-200">
+        <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-5 rounded-3xl overflow-hidden shadow-2xl bg-white border border-slate-200">
           {/* LEFT INFO PANEL */}
           <div className="lg:col-span-2 bg-gradient-to-br from-indigo-50/90 via-indigo-100/30 to-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-8 sm:p-10 relative flex flex-col justify-between">
             <div>

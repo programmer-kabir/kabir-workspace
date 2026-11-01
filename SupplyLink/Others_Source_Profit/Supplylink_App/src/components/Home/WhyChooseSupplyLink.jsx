@@ -1,7 +1,7 @@
 import React from 'react'
 
  <section className="py-20 px-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[1600px] mx-auto">
             <div className="text-center mb-14 anim-fade-up delay-100">
               <span className="text-accent-500 text-sm font-semibold tracking-widest uppercase">
                 Why Us
@@ -33,7 +33,7 @@ import React from 'react'
         </section> = () => {
   return (
     <div><section className="py-20 px-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[1600px] mx-auto">
             <div className="text-center mb-14 anim-fade-up delay-100">
               <span className="text-accent-500 text-sm font-semibold tracking-widest uppercase">
                 Why Us
@@ -67,7 +67,7 @@ import React from 'react'
 }
 
 export default <section className="py-20 px-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[1600px] mx-auto">
             <div className="text-center mb-14 anim-fade-up delay-100">
               <span className="text-accent-500 text-sm font-semibold tracking-widest uppercase">
                 Why Us

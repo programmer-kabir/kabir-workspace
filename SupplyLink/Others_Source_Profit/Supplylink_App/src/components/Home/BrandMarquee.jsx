@@ -23,7 +23,7 @@ export default function BrandMarquee() {
 
   return (
     <section className="py-7 bg-slate-100/80 border-y border-slate-200/80 overflow-hidden relative">
-      <div className="max-width mx-auto px-4 mb-3.5 flex items-center justify-center gap-2 text-center">
+      <div className="max-w-[1600px] mx-auto px-4 mb-3.5 flex items-center justify-center gap-2 text-center">
         <FiCheckCircle className="text-emerald-500 h-4 w-4" />
         <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">
           ১০০% অফিশিয়াল ব্র্যান্ডের পণ্য ও শোরুম ওয়ারেন্টি সহ কিস্তি সুবিধা

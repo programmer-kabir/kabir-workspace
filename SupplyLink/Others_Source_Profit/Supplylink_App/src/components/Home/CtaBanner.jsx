@@ -6,7 +6,7 @@ import { CONTACT_INFO, getWhatsAppUrl } from "../../constants/links";
 export default function CtaBanner() {
   return (
     <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-200/60">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         <div className="relative rounded-3xl overflow-hidden px-6 py-12 sm:p-16 text-center bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/70 text-slate-900 shadow-xl border-2 border-indigo-200/90">
           <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-60 h-60 bg-purple-400/10 rounded-full blur-3xl pointer-events-none" />

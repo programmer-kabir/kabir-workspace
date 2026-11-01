@@ -28,7 +28,7 @@ export default function HeroSection() {
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-indigo-400/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="absolute top-40 right-10 w-[300px] h-[300px] bg-purple-400/10 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-[1600px] mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Core Value Proposition */}
           <div className="lg:col-span-7 text-center lg:text-left">
@@ -51,7 +51,7 @@ export default function HeroSection() {
             </h1>
 
             {/* Subheading */}
-            <p className="mt-5 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            <p className="mt-5 text-base sm:text-lg text-slate-600 max-w-3xl mx-auto lg:mx-0 leading-relaxed font-normal">
               SupplyLink-এর মাধ্যমে কোনো জটিলতা ছাড়া স্মার্টফোন, বাইক, ল্যাপটপ বা হোম অ্যাপ্লায়েন্স কিনুন আকর্ষণীয় কিস্তিতে অথবা যাচাইকৃত ব্যবসায়িক অংশীদারিত্বে নিয়মিত হালাল লাভ অর্জন করুন।
             </p>
 
