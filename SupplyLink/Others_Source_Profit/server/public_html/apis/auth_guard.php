@@ -1,4 +1,9 @@
 <?php
+// =========================================================================
+// Central Auth Guard & Security Firewall for SupplyLink APIs
+// =========================================================================
+
+// 1. Get current authenticated user session
 function getAuthenticatedUser() {
     if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
         $host = $_SERVER['HTTP_HOST'] ?? '';
@@ -41,27 +46,27 @@ function hasRole($requiredRoles) {
     return count(array_intersect($userRoles, $required)) > 0;
 }
 
-// 4. Require authentication (Kills request with 401 if not logged in)
-function requireAuth($customMessage = "অননুমোদিত অ্যাক্সেস: এই তথ্য দেখতে হলে প্রথমে লগইন করতে হবে।") {
+// 4. Require authentication (Cloaks as 404 Not Found if unauthenticated)
+function requireAuth($customMessage = "The requested URL was not found on this server.") {
     if (isCronOrCli()) {
         return true;
     }
 
     if (!isAuthenticated()) {
-        // If someone directly pasted URL in browser address bar (Navigate mode), redirect to sign in
+        // If someone directly pasted URL in browser address bar (Navigate mode), redirect to v1.supplylinkbd.com 404 page
         if (isDirectBrowserNavigation()) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
-            $redirectUrl = $isLocal ? 'http://localhost:5175/sign_in' : 'https://admin.supplylinkbd.com/sign_in';
+            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://v1.supplylinkbd.com/404';
             header("Location: " . $redirectUrl);
             exit;
         }
 
-        http_response_code(401);
+        http_response_code(404);
         header("Content-Type: application/json; charset=UTF-8");
         echo json_encode([
             "success" => false,
-            "error" => "Unauthorized",
+            "error" => "Not Found",
             "message" => $customMessage
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -71,15 +76,23 @@ function requireAuth($customMessage = "অননুমোদিত অ্যা�
 }
 
 // 5. Require specific role (e.g. admin, manager, staff)
-function requireRole($roles, $customMessage = "প্রবেশাধিকার নিষিদ্ধ: এই সেকশনে প্রবেশের অনুমতি আপনার একাউন্টের নেই।") {
+function requireRole($roles, $customMessage = "The requested URL was not found on this server.") {
     requireAuth();
 
     if (!hasRole($roles)) {
-        http_response_code(403);
+        if (isDirectBrowserNavigation()) {
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
+            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://v1.supplylinkbd.com/404';
+            header("Location: " . $redirectUrl);
+            exit;
+        }
+
+        http_response_code(404);
         header("Content-Type: application/json; charset=UTF-8");
         echo json_encode([
             "success" => false,
-            "error" => "Forbidden",
+            "error" => "Not Found",
             "message" => $customMessage
         ], JSON_UNESCAPED_UNICODE);
         exit;
