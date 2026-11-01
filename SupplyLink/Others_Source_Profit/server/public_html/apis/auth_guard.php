@@ -57,7 +57,7 @@ function requireAuth($customMessage = "The requested URL was not found on this s
         if (isDirectBrowserNavigation()) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
-            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://v1.supplylinkbd.com/404';
+            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://supplylinkbd.com/404';
             header("Location: " . $redirectUrl);
             exit;
         }
@@ -83,7 +83,7 @@ function requireRole($roles, $customMessage = "The requested URL was not found o
         if (isDirectBrowserNavigation()) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
-            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://v1.supplylinkbd.com/404';
+            $redirectUrl = $isLocal ? 'http://localhost:5173/404' : 'https://supplylinkbd.com/404';
             header("Location: " . $redirectUrl);
             exit;
         }

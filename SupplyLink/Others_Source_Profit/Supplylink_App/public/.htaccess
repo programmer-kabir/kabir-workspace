@@ -1,0 +1,13 @@
+# Supplylink_App SPA Apache Rewrite Configuration
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve existing files and directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route all other URLs to index.html for React Router
+  RewriteRule ^ index.html [L,QSA]
+</IfModule>
