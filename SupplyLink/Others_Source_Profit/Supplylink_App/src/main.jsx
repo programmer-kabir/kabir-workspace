@@ -26,17 +26,18 @@ const router = createBrowserRouter([
       {
         path: "/investors",
         element: <InvestorsGuide />
-      },
-      {
-        path: "/404",
-        element: <NotFound />
-      },
-      {
-        path: "*",
-        element: <NotFound />
       }
     ]
   },
+  // Standalone full-screen 404 page (No Header, No Footer, No Floating WhatsApp)
+  {
+    path: "/404",
+    element: <NotFound />
+  },
+  {
+    path: "*",
+    element: <NotFound />
+  }
 ]);
 
 createRoot(document.getElementById('root')).render(
