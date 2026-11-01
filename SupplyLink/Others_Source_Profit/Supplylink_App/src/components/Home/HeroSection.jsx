@@ -28,7 +28,7 @@ export default function HeroSection() {
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-indigo-400/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="absolute top-40 right-10 w-[300px] h-[300px] bg-purple-400/10 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Core Value Proposition */}
           <div className="lg:col-span-7 text-center lg:text-left">

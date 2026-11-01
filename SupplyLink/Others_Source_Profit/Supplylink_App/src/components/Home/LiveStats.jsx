@@ -43,7 +43,7 @@ export default function LiveStats() {
 
   return (
     <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-100 relative overflow-hidden">
-      <div className=" mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {statItems.map((item, idx) => (
             <div

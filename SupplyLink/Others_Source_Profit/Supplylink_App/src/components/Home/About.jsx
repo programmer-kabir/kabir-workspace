@@ -145,7 +145,7 @@ export default function About() {
 
   return (
     <section id="about" className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200/60 relative">
-      <div className=" mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -170,7 +170,7 @@ export default function About() {
               }}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeFilter === cat.id
-                  ? "bg-slate-900 text-white shadow-md scale-105"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-105"
                   : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
               }`}
             >

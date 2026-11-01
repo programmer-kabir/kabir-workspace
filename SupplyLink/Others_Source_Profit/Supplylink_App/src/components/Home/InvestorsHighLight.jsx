@@ -53,7 +53,7 @@ export default function InvestorsHighLight() {
       id="invest"
       className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-indigo-50/40 to-slate-50 border-t border-indigo-100/60 relative overflow-hidden"
     >
-      <div className=" mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
           {/* Left Text & Simulator */}
           <div className="lg:col-span-6">

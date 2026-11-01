@@ -359,7 +359,7 @@ export default function ProductsShowcase() {
 
   return (
     <section id="products" className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/70 border-t border-slate-200/60">
-      <div className=" mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -403,7 +403,7 @@ export default function ProductsShowcase() {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                   isActive
-                    ? "bg-slate-900 text-white shadow-md scale-105"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-105"
                     : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                 }`}
               >

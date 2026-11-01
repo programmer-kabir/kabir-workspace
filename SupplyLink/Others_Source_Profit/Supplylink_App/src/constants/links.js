@@ -1,7 +1,7 @@
 export const CONTACT_INFO = {
   whatsappNumber: "8801339631586",
   callNumber: "01339631586",
-  email: "support@supplylinkbd.com",
+  email: "supplylinkbdltd@gmail.com",
   address: "সুনামগঞ্জ সদর, সুনামগঞ্জ, সিলেট, বাংলাদেশ",
   userPortalUrl: "https://app.supplylinkbd.com",
   adminPortalUrl: "https://admin.supplylinkbd.com",

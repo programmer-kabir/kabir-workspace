@@ -62,7 +62,7 @@ export default function InstallmentCalculator() {
 
   return (
     <section id="calculator" className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200/60 relative">
-      <div className=" mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-6xl mx-auto mb-10">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -81,7 +81,7 @@ export default function InstallmentCalculator() {
           <button
             onClick={() => setActiveTab("customer")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === "customer"
-                ? "bg-slate-900 text-white shadow-md"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                 : "text-slate-600 hover:text-slate-900"
               }`}
           >
@@ -90,7 +90,7 @@ export default function InstallmentCalculator() {
           <button
             onClick={() => setActiveTab("investor")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === "investor"
-                ? "bg-indigo-600 text-white shadow-md"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
                 : "text-slate-600 hover:text-slate-900"
               }`}
           >
@@ -133,8 +133,8 @@ export default function InstallmentCalculator() {
                         key={preset}
                         onClick={() => setMrp(preset)}
                         className={`px-3 py-1 rounded-lg text-xs font-mono font-semibold transition cursor-pointer ${mrp === preset
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                            ? "bg-indigo-600 text-white shadow-sm"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                           }`}
                       >
                         ৳ {(preset / 1000).toFixed(0)}k
@@ -182,7 +182,7 @@ export default function InstallmentCalculator() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm text-slate-900">১২ মাসের কিস্তি</span>
-                        <span className="rounded-md bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5">
+                        <span className="rounded-md bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5">
                           ১৫% ফি
                         </span>
                       </div>
@@ -210,7 +210,7 @@ export default function InstallmentCalculator() {
                         key={dp}
                         onClick={() => setDownPercent(dp)}
                         className={`py-2 rounded-xl font-bold text-xs transition cursor-pointer ${downPercent === dp
-                            ? "bg-slate-900 text-white"
+                            ? "bg-indigo-600 text-white shadow-sm"
                             : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                           }`}
                       >

@@ -20,7 +20,7 @@ export default function InstallmentRules() {
 
   return (
     <div className="pt-8 pb-16 sm:pt-12 sm:pb-24 px-4 sm:px-6 lg:px-8 bg-slate-50 min-h-screen">
-      <div className=" mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Back Link */}
         <Link
           to="/"

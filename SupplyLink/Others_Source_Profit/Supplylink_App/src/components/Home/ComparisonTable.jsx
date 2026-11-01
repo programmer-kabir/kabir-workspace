@@ -50,7 +50,7 @@ const COMPARISONS = [
 export default function ComparisonTable() {
   return (
     <section className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/70 border-t border-slate-200/60 relative">
-      <div className=" mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full mb-3">
@@ -65,7 +65,7 @@ export default function ComparisonTable() {
         </div>
 
         {/* Comparison Cards Grid */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-stretch">
           {/* Left: Traditional (Other options) */}
           <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-6 sm:p-8 flex flex-col justify-between">
             <div>
