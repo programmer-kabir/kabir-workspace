@@ -1,15 +1,35 @@
 <?php
-// db.php - DB connection (edit credentials)
-define('DEBUG', true); // ডেবাগিং: লোকাল/টেস্ট এ true রাখো। প্রোডাকশনে false করে দিবো.
+// db.php - Smart Hybrid DB Connection (Local XAMPP & Hostinger Live)
+define('DEBUG', true);
 date_default_timezone_set('Asia/Dhaka');
 
-$DB_HOST = "localhost";       
-$DB_USER = "root";
-$DB_PASS = "";
-$DB_NAME = "u647959341_sl_app_db";
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$isLocal = (strpos($host, 'localhost') !== false) 
+        || (strpos($host, '127.0.0.1') !== false) 
+        || (php_sapi_name() === 'cli');
 
-$mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
-$mysqli->query("SET time_zone = '+06:00'");
+if ($isLocal) {
+    // 💻 Local XAMPP Environment
+    $DB_HOST = "localhost";       
+    $DB_USER = 'root';
+    $DB_PASS = '';
+    $DB_NAME = 'u647959341_sl_app_db';
+} else {
+    // 🌐 Hostinger Live Production
+    $DB_HOST = "localhost";       
+    $DB_USER = 'u647959341_sl_user';
+    $DB_PASS = '122333$upplyL';
+    $DB_NAME = 'u647959341_sl_db';
+}
+
+mysqli_report(MYSQLI_REPORT_OFF);
+$mysqli = @new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+
+// Fallback attempt for local environments
+if ($mysqli->connect_errno && $isLocal) {
+    $mysqli = @new mysqli("localhost", "root", "", "u647959341_sl_db");
+}
+
 if ($mysqli->connect_errno) {
     if (DEBUG) {
         header('Content-Type: application/json; charset=utf-8');
@@ -18,8 +38,5 @@ if ($mysqli->connect_errno) {
     exit;
 }
 
+$mysqli->query("SET time_zone = '+06:00'");
 $mysqli->set_charset("utf8mb4");
-
-if (DEBUG) {
-    // show nothing by default, only used by tests
-}

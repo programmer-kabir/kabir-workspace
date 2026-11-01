@@ -8,8 +8,10 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # don't rewrite API folder (so /api/* still goes to your PHP endpoints)
+  # don't rewrite API or uploads folders (so PHP endpoints and uploaded files work directly)
+  RewriteRule ^apis/ - [L]
   RewriteRule ^api/ - [L]
+  RewriteRule ^uploads/ - [L]
 
   # everything else -> serve index.html (React Router will handle path)
   RewriteRule ^ index.html [L,QSA]

@@ -1,21 +1,7 @@
 <?php
-
-$host = $_SERVER['HTTP_HOST'] ?? '';
-$isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
-
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => $isLocal ? '' : '.supplylinkbd.com',
-    'secure' => $isLocal ? false : true,
-    'httponly' => true,
-    'samesite' => $isLocal ? 'Lax' : 'None',
-]);
-
-session_start();
-
-require_once "../cors.php";
-require_once "../db.php";
+// CORS must always be loaded first to handle OPTIONS preflight immediately
+require_once __DIR__ . "/../cors.php";
+require_once __DIR__ . "/../db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -70,7 +56,7 @@ $_SESSION['user'] = [
     "name" => $userData['name'] ?? null,
     "photo" => $userData['photo'] ?? null,
     "mobile" => $userData['mobile'] ?? null,
-    "role" => $roles 
+    "role" => $roles
 ];
 
 /* 🔥 ACTIVITY LOG */
