@@ -70,7 +70,7 @@ $_SESSION['user'] = [
     "name" => $userData['name'] ?? null,
     "photo" => $userData['photo'] ?? null,
     "mobile" => $userData['mobile'] ?? null,
-    "role" => $roles // ✅ multiple role array
+    "role" => $roles 
 ];
 
 /* 🔥 ACTIVITY LOG */

@@ -7,6 +7,7 @@ $allowedOrigins = [
     'http://localhost:5176',
     'https://admin.supplylinkbd.com',
     'https://api.supplylinkbd.com',
+    'https://app.supplylinkbd.com',
     'https://supplylinkbd.com',
     'https://www.supplylinkbd.com',
     'https://v1.supplylinkbd.com',
@@ -31,10 +32,23 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     exit;
 }
 
-// 🛡️ Audit Role Read-Only Enforcement (Prevents any data mutation via API)
+// 🛡️ Cross-Subdomain Session Cookie Configuration
 if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => $isLocal ? '' : '.supplylinkbd.com',
+        'secure' => $isLocal ? false : true,
+        'httponly' => true,
+        'samesite' => $isLocal ? 'Lax' : 'None',
+    ]);
     session_start();
 }
+
+// 🛡️ Central Authentication & Role Guard System
+require_once __DIR__ . '/auth_guard.php';
 
 if (!empty($_SESSION['user']['role'])) {
     $sessionRoles = is_array($_SESSION['user']['role']) ? $_SESSION['user']['role'] : [$_SESSION['user']['role']];

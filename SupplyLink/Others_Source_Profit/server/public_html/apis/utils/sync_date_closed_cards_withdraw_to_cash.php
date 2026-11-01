@@ -16,6 +16,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 require_once __DIR__ . '/../db.php';
 
 date_default_timezone_set('Asia/Dhaka');

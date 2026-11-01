@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 if (php_sapi_name() !== 'cli') {
     require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 }
 require_once __DIR__ . '/../db.php';
 

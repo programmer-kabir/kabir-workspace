@@ -1,6 +1,7 @@
 <?php
 header("Content-Type: application/json; charset=UTF-8");
 require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 
 try {
     $baseUploadDir = dirname(__DIR__, 2) . '/uploads/daily_report';

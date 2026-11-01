@@ -3,7 +3,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 // CORS
-header("Access-Control-Allow-Origin: *");
+require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 header("Content-Type: application/json");
 
 // DB

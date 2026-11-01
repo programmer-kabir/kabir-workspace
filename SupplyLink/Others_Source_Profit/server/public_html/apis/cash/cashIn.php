@@ -2,13 +2,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// CORS (basic)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
+require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 
 // DB
 require_once __DIR__ . '/../db.php'; // এখানে $mysqli আসবে

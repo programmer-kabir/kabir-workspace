@@ -15,6 +15,7 @@ session_set_cookie_params([
 session_start();
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 
 header("Content-Type: application/json");
 

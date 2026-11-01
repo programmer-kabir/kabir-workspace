@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
+guardManagerAdminOnly();
 
 header("Content-Type: application/json; charset=UTF-8");
 ini_set('display_errors', 0);

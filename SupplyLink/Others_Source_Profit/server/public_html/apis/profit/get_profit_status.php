@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../cors.php';
+guardManagerAdminOnly();
 require_once __DIR__ . '/../db.php';
 
 $card_id     = $_GET['card_id'] ?? null;

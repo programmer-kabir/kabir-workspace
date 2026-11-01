@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // DB
 require_once __DIR__ . '/../db.php'; // এখানে $mysqli আসবে
 require_once __DIR__ . '/../cors.php';
+guardAdminOnly();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode([
