@@ -1,4 +1,3 @@
-// admin-frontend/src/pages/LiveScreenMonitor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Pusher from 'pusher-js';
@@ -11,7 +10,8 @@ import {
 import { toast } from 'sonner';
 import { soundFx } from '../utils/soundFx';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputer.academy';
+const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputeracademy.com/';
+const API_BASE = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 
 const RTC_CONFIG = {
   iceServers: [

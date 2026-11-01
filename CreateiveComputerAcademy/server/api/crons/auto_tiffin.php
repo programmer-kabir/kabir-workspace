@@ -60,8 +60,7 @@ try {
                   LEFT JOIN students st ON a.user_id = st.user_id
                   WHERE a.date = :date 
                     AND a.check_in IS NOT NULL 
-                    AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)
-                    AND a.user_id != 2";
+                    AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)";
         $stmt = $db->prepare($query);
         $stmt->execute([':date' => $date]);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -141,7 +140,9 @@ try {
                   LEFT JOIN students st ON eb.user_id = st.user_id
                   WHERE eb.date = :date 
                     AND eb.break_type = 'Tiffin' 
-                    AND eb.status = 'Active'";
+                    AND eb.status = 'Active'
+                    AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)
+                    AND (eb.reason = 'Scheduled Daily Tiffin Break' OR eb.purpose = 'Auto_Tiffin')";
         $stmt = $db->prepare($query);
         $stmt->execute([':date' => $date]);
         $active_breaks = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -214,8 +215,7 @@ try {
                         LEFT JOIN students st ON a.user_id = st.user_id
                         WHERE a.date = :date 
                           AND a.check_in IS NOT NULL 
-                          AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)
-                          AND a.user_id != 2";
+                          AND (COALESCE(e.has_tiffin_break, 0) = 1 OR COALESCE(st.has_tiffin_break, 0) = 1)";
         $mStmt = $db->prepare($missedQuery);
         $mStmt->execute([':date' => $date]);
         $all_eligible = $mStmt->fetchAll(PDO::FETCH_ASSOC);

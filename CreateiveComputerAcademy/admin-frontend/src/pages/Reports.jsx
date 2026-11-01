@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FiClock,
   FiFileText,
-  FiAlertCircle
+  FiAlertCircle,
+  FiShuffle
 } from 'react-icons/fi';
 import { ImageLightbox } from '../components/TaskOversight/ImageLightbox';
 import { useReportsData } from '../hooks/useReportsData';
@@ -10,6 +11,7 @@ import ReportHeader from '../components/Reports/ReportHeader';
 import AttendanceReportTab from '../components/Reports/AttendanceReportTab';
 import TaskDeliverablesTab from '../components/Reports/TaskDeliverablesTab';
 import TaskDetailModal from '../components/Reports/TaskDetailModal';
+import StaffCompareModal from '../components/Reports/StaffCompareModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/';
 
@@ -25,6 +27,8 @@ const Reports = () => {
     setLightboxImage,
     selectedStaffInfo
   } = reportsData;
+
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
   return (
     <div className="pb-10 animate-in fade-in zoom-in-95 duration-300">
@@ -61,8 +65,16 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto mt-2 sm:mt-0">
-            <span className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500">
+          <div className="flex items-center gap-2.5 self-start sm:self-auto mt-2 sm:mt-0">
+            <button
+              onClick={() => setIsCompareModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer active:scale-95"
+              title="Compare with another staff member"
+            >
+              <FiShuffle size={14} />
+              <span>Compare Staff</span>
+            </button>
+            <span className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500">
               ID: #{selectedStaffInfo.id}
             </span>
           </div>
@@ -117,6 +129,20 @@ const Reports = () => {
           )}
         </>
       )}
+
+      {/* ──────── Full-Page Staff Comparison Modal ──────── */}
+      <StaffCompareModal
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
+        staffA={selectedStaffInfo}
+        staffList={reportsData.staffList}
+        startDate={reportsData.startDate}
+        endDate={reportsData.endDate}
+        filterLabel={reportsData.filterType === 'this_month' ? 'This Month' : (reportsData.filterType === 'last_month' ? 'Last Month' : `${reportsData.startDate} to ${reportsData.endDate}`)}
+        staffAAttReport={reportsData.attReport}
+        staffATaskReport={reportsData.taskReport}
+        API_BASE={API_BASE}
+      />
 
       {/* Lightbox for Target Visual and Reference Images */}
       <ImageLightbox
