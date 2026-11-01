@@ -66,7 +66,7 @@ try {
 
   // 🔥 card_id সহ data lock
   $stmtL = $mysqli->prepare("
-    SELECT id, status, card_id
+    SELECT id, status, card_id, investor_id, amount, payable_amount, total_profit, withdraw_date
     FROM investment_withdraw_requests
     WHERE id = ?
     FOR UPDATE
@@ -120,6 +120,91 @@ try {
       $stmtC->bind_param("i", $card_id);
       if (!$stmtC->execute()) {
         throw new Exception("Card close failed");
+      }
+    }
+
+    // 💰 AUTOMATIC CASH OUT INSERTION
+    $investorId = (int)($row['investor_id'] ?? 0);
+    $investorName = "ইনভেস্টর";
+    if ($investorId > 0) {
+      $stmtInvName = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+      if ($stmtInvName) {
+        $stmtInvName->bind_param("i", $investorId);
+        $stmtInvName->execute();
+        $rInv = $stmtInvName->get_result()->fetch_assoc();
+        if (!empty($rInv['name'])) {
+          $investorName = $rInv['name'];
+        }
+        $stmtInvName->close();
+      }
+    }
+
+    $cardName = "কার্ড #" . $card_id;
+    $cardAmt = 0;
+    if ($card_id > 0) {
+      $stmtCardInfo = $mysqli->prepare("SELECT card_name, investment_amount FROM investment_cards WHERE id = ? LIMIT 1");
+      if ($stmtCardInfo) {
+        $stmtCardInfo->bind_param("i", $card_id);
+        $stmtCardInfo->execute();
+        $rCard = $stmtCardInfo->get_result()->fetch_assoc();
+        if (!empty($rCard['card_name'])) {
+          $cardName = $rCard['card_name'];
+        }
+        if (!empty($rCard['investment_amount'])) {
+          $cardAmt = (float)$rCard['investment_amount'];
+        }
+        $stmtCardInfo->close();
+      }
+    }
+
+    $payAmount = ((float)($row['payable_amount'] ?? 0) > 0)
+      ? (float)$row['payable_amount']
+      : (((float)($row['amount'] ?? 0) > 0) ? (float)$row['amount'] : $cardAmt);
+
+    if ($payAmount > 0) {
+      $cashSource = "গ্রাহক: {$investorName} - কার্ড #{$card_id} ({$cardName})";
+      $cashPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত";
+      $cashCategory = "invest_withdraw";
+      $cashRefId = ($card_id > 0) ? "inv_wth_card_" . $card_id : "inv_wth_req_" . $request_id;
+      $cashRemarks = "উইথড্র আবেদন #{$request_id} অনুমোদন ও মূলধন পরিশোধ (পদ্ধতি: " . ($payment_method ?: "Cash") . ")";
+      $cashDate = date('Y-m-d');
+
+      // Check if cash record already exists for this refId (prevent duplicate)
+      $stmtChkCash = $mysqli->prepare("SELECT id FROM cash WHERE refId = ? LIMIT 1");
+      $stmtChkCash->bind_param("s", $cashRefId);
+      $stmtChkCash->execute();
+      $existingCash = $stmtChkCash->get_result()->fetch_assoc();
+      $stmtChkCash->close();
+
+      if (!$existingCash) {
+        $stmtCash = $mysqli->prepare("
+          INSERT INTO cash (
+            type, source, purpose, amount, category,
+            refId, remarks, date, createdAt,
+            approval_status, approved_by, approved_at
+          ) VALUES (
+            'out', ?, ?, ?, ?,
+            ?, ?, ?, NOW(),
+            'approved', ?, NOW()
+          )
+        ");
+        if ($stmtCash) {
+          $stmtCash->bind_param(
+            "ssdssssi",
+            $cashSource,
+            $cashPurpose,
+            $payAmount,
+            $cashCategory,
+            $cashRefId,
+            $cashRemarks,
+            $cashDate,
+            $actor_id
+          );
+          if (!$stmtCash->execute()) {
+            throw new Exception("Cash out insert failed: " . $stmtCash->error);
+          }
+          $stmtCash->close();
+        }
       }
     }
 

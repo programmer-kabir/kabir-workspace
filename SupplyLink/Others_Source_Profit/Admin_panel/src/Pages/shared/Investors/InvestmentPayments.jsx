@@ -96,7 +96,8 @@ export default function InvestmentPayments() {
     if (!silent) setIsInstallmentsLoading(true);
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getAllInstallments.php?investment_card_no=${cardId}`
+        `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getAllInstallments.php?investment_card_no=${cardId}`,
+        { credentials: "include" }
       );
       const json = await res.json();
       if (json && json.success && Array.isArray(json.data)) {
@@ -258,6 +259,7 @@ export default function InvestmentPayments() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(data),
         },
       );
@@ -339,7 +341,8 @@ export default function InvestmentPayments() {
     if (!cardId) return;
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_LOCALHOST_KEY}/investors/get_investment_edits.php?card_id=${cardId}&status=pending`
+        `${import.meta.env.VITE_LOCALHOST_KEY}/investors/get_investment_edits.php?card_id=${cardId}&status=pending`,
+        { credentials: "include" }
       );
       const resData = await res.json();
       if (resData.success && Array.isArray(resData.data)) {
@@ -425,6 +428,7 @@ export default function InvestmentPayments() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(payload),
         },
       );
@@ -483,6 +487,7 @@ export default function InvestmentPayments() {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify({
                 edit_id: editItem.id,
                 action: action,
@@ -546,6 +551,7 @@ export default function InvestmentPayments() {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify({ id: Number(row.id) }),
             }
           );
@@ -614,7 +620,7 @@ export default function InvestmentPayments() {
     );
   }
 
-  if (isInstallmentsError || isUsersError || isInvestmentCardsError) {
+  if ((isInstallmentsError && !cardInvestInstallments?.length) || (isInvestmentCardsError && !investmentCards?.length)) {
     return (
       <NoDataFound
         message="ডাটা লোড করা যায়নি"

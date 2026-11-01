@@ -6,5 +6,20 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5175,
+    proxy: {
+      "/apis": {
+        target: "https://api.supplylinkbd.com",
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: {
+          "*": "",
+        },
+      },
+      "/uploads": {
+        target: "https://api.supplylinkbd.com",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
