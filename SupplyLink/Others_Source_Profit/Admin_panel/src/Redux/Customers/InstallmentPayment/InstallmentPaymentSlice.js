@@ -10,11 +10,7 @@ export const fetchInstallmentsPayments = createAsyncThunk(
         }/customers/get_installment_payments.php`
       );
       const list = Array.isArray(response?.data?.data) ? response.data.data : [];
-      const filteredData = list.filter(
-        item => !(item.card_id === 241 && item.installment_no === 2)
-      );
-     
-      return filteredData;
+      return list;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }

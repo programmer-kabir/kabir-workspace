@@ -43,11 +43,6 @@ $sql = "
     FROM installment_payments ip
     LEFT JOIN installment_cards ic ON ic.id = ip.card_id
     
-    WHERE NOT (
-        ip.card_id = 241
-        AND ip.installment_no = 2
-    )
-    
     ORDER BY ip.id ASC
 
 ";
