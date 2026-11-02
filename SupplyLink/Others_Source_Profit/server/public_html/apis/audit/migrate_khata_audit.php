@@ -25,3 +25,4 @@ if ($mysqli->query($sql)) {
 } else {
     echo json_encode(["success" => false, "error" => $mysqli->error]);
 }
+
