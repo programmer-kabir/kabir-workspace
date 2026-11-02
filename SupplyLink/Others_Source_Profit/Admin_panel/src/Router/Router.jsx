@@ -65,6 +65,7 @@ import MonthlyInstallmentCashAudit from "../Pages/shared/Audit/MonthlyInstallmen
 import DownpaymentCashAudit from "../Pages/shared/Audit/DownpaymentCashAudit";
 import DailyInstallmentCashAudit from "../Pages/shared/Audit/DailyInstallmentCashAudit";
 import InvestmentCashAudit from "../Pages/shared/Audit/InvestmentCashAudit";
+import CustomerKhataReconciliation from "../Pages/shared/Audit/CustomerKhataReconciliation";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
@@ -384,9 +385,9 @@ const routes = createBrowserRouter([
               },
             ],
           },
-          // Audit Panel (Admin & Developer)
+          // Audit Panel (Admin & Developer & Manager & Audit)
           {
-            element: <RoleProtectedRoute allow={["admin", "developer"]} />,
+            element: <RoleProtectedRoute allow={["admin", "developer", "manager", "audit"]} />,
             children: [
               {
                 path: "/audit/monthly-installments",
@@ -403,6 +404,10 @@ const routes = createBrowserRouter([
               {
                 path: "/audit/investments",
                 element: <InvestmentCashAudit />,
+              },
+              {
+                path: "/audit/customer-khata-reconciliation",
+                element: <CustomerKhataReconciliation />,
               },
             ],
           },

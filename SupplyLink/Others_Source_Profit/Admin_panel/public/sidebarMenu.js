@@ -32,6 +32,7 @@ import {
   TbReceipt,
   TbCalendarTime,
   TbCoins,
+  TbBook2,
 } from "react-icons/tb";
 
 import { RiBankCardLine, RiBankCard2Line, RiMailSendLine } from "react-icons/ri";
@@ -461,6 +462,12 @@ icon: IoStatsChart,
         path: "/audit/investments",
         icon: TbCoins,
         roles: ["admin", "developer"],
+      },
+      {
+        label: "কাস্টমার খাতা রিকনসিলিয়েশন",
+        path: "/audit/customer-khata-reconciliation",
+        icon: TbBook2,
+        roles: ["admin", "developer", "manager", "audit"],
       },
     ],
   },
