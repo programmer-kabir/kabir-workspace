@@ -84,7 +84,7 @@ const CashEditModal = ({ isOpen, onClose, cashItem, onSuccess }) => {
               res.data.message ||
               `ক্যাশ ${isCashIn ? 'ইন' : 'আউট'} সংশোধনের অনুরোধ সফলভাবে পাঠানো হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে লেজার ও ব্যালেন্স আপডেট হবে।`,
             tag: `ক্যাশ #${cashItem.id} সংশোধন`,
-            amount: Number(formData.amount) || 0,
+            amount: Number(newAmount) || 0,
             type: "warning",
           });
         }

@@ -54,7 +54,6 @@ export const StaffCard = ({
   const name = pickName(staff);
 
   const allowed = getAllowedRoles(staff);
-  if (allowed.length === 0) return null;
 
   const roleText = allowed.join(", ");
   const staffId = Number(staff?.id);
@@ -105,6 +104,8 @@ export const StaffCard = ({
       }),
     };
   }, [installmentCard, investmentCards, staffId]);
+
+  if (allowed.length === 0) return null;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.07] transition shadow-[0_10px_30px_rgba(0,0,0,0.25)]">

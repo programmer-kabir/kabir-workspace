@@ -18,100 +18,37 @@
 
 ---
 
-## ২. সক্রিয় ঝুঁকিপূর্ণ ফাইলসমূহ (Active Critical Bugs & Crash Points)
+## ২. অডিট ও ফিক্সকৃত ফাইলসমূহ (Audited & Resolved Critical Bugs)
 
-কোডবেজের সম্পূর্ণ স্ট্যাটিক অ্যানালাইসিস ও ইএসলিন্ট (ESLint) অডিটে পাওয়া গেছে যে আরও **৪টি সক্রিয় ফাইল রয়েছে** যেগুলোতে অনুরূপ ভ্যারিয়েবল মিসিং বা রিঅ্যাক্ট হুক রুল ভঙ্গের কারণে **ক্লিক করলেই ক্র্যাশ বা ৪০৪ পেজ আসবে**:
+কোডবেজের সম্পূর্ণ স্ট্যাটিক অ্যানালাইসিস ও ইএসলিন্ট (ESLint) অডিটে পাওয়া ৪টি মারাত্মক ফাইল যেখানে রানটাইম ক্র্যাশ হতে পারত, সবগুলোই সফলভাবে ফিক্স করা হয়েছে:
 
 ---
 
-### 🔴 বাগ ১: `DailyInstallmentsUsersDetails.jsx` (লাইন ১১৭)
+### ✅ বাগ ১: `DailyInstallmentsUsersDetails.jsx` (লাইন ১১৭) — [ফিক্সড]
 - **ফাইলের অবস্থান:** `Admin_panel/src/Pages/shared/DailyInstallments/DailyInstallmentsUsersDetails.jsx`
-- **লাইনের নম্বর:** ১১৭
-- **ত্রুটিযুক্ত কোড:**
-  ```javascript
-  const getUserInfo = (userId) => {
-    const found = users.find((u) => Number(u.id) === Number(userId));
-    if (!found) {
-      if (Number(user?.id) === Number(userId) && user?.name) {
-        return {
-          name: user.name,
-          cleanName: cleanName(user.name), // ❌ cleanName কোথাও ডিফাইন বা ইমপোর্ট করা নেই!
-          photo: user.photo ? `https://api.supplylinkbd.com/${user.photo}` : null,
-  ```
-- **কেন ক্র্যাশ করে:** এই ফাইলে `cleanName` নামে কোনো ফাংশন ইমপোর্ট বা ঘোষণা করা নেই। লগইন থাকা ইউজার যখন নিজের কিস্তি বিস্তারিত দেখতে যায় (`Number(user?.id) === Number(userId)` সত্য হয়), তখন `cleanName(user.name)` কল হওয়ামাত্রই জাভাস্ক্রিপ্ট রানটাইম ক্র্যাশ করে: `ReferenceError: cleanName is not defined`।
-- **ফলাফল:** রিঅ্যাক্ট রাউটার রুটটি আনমাউন্ট করে ছবি ১-এর মতো **"পৃষ্ঠাটি খুঁজে পাওয়া যায়নি - 404"** এরর পেজ প্রদর্শন করবে।
-- **সমাধান:** 
-  ফাইলে একটি `cleanName` হেল্পার ফাংশন ডিক্লেয়ার করা:
-  ```javascript
-  const cleanName = (str) => (str ? String(str).trim() : "");
-  ```
+- **পূর্বের সমস্যা:** `cleanName` ফাংশন ইমপোর্ট বা ডিফাইন করা ছিল না (`no-undef`)।
+- **প্রয়োগকৃত সমাধান:** ফাইলে সঠিক `cleanName` হেল্পার ফাংশন যুক্ত করা হয়েছে।
 
 ---
 
-### 🔴 বাগ ২: `InvestmentPayments.jsx` (লাইন ৫০১)
+### ✅ বাগ ২: `InvestmentPayments.jsx` (লাইন ৫০১) — [ফিক্সড]
 - **ফাইলের অবস্থান:** `Admin_panel/src/Pages/shared/Investors/InvestmentPayments.jsx`
-- **লাইনের নম্বর:** ৫০১
-- **ত্রুটিযুক্ত কোড:**
-  ```javascript
-  const resJson = await res.json();
-  setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
-  setReviewModalEdit(null);
-  refetch(); // ❌ 'refetch' ভ্যারিয়েবলটি এই ফাইলে ডিফাইন করা নেই!
-  fetchPendingEdits();
-  ```
-- **কেন ক্র্যাশ করে:** এই কম্পোনেন্টে কিস্তির ডেটা ফেচ করার আসল ফাংশনটির নাম হলো `fetchCardInstallments` (লাইন ৯৪)। কিন্তু রিভিউ মডাল সাবমিট হওয়ার পর লাইন ৫০১-এ ভুলবশত `refetch()` কল করা হয়েছে যা সম্পূর্ণ অস্তিত্বহীন।
-- **ফলাফল:** ইনভেস্টর কিস্তি এডিট অনুমোদন (Approve) বা বাতিল (Reject) করার বাটনে ক্লিক করলেই `ReferenceError: refetch is not defined` থ্রো করে পেজ ক্র্যাশ করবে।
-- **সমাধান:** 
-  লাইন ৫০১-এর `refetch();`-কে পরিবর্তন করে `fetchCardInstallments(true);` করা।
+- **পূর্বের সমস্যা:** রিভিউ মডাল সাবমিটে অস্তিত্বহীন `refetch()` কল করায় ক্র্যাশ হতো।
+- **প্রয়োগকৃত সমাধান:** `refetch()` পরিবর্তন করে সঠিক ফাংশন `fetchCardInstallments(true)` কল করা হয়েছে।
 
 ---
 
-### 🔴 বাগ ৩: `CashEditModal.jsx` (লাইন ৮৭)
+### ✅ বাগ ৩: `CashEditModal.jsx` (লাইন ৮৭) — [ফিক্সড]
 - **ফাইলের অবস্থান:** `Admin_panel/src/components/cash/CashEditModal.jsx`
-- **লাইনের নম্বর:** ৮৭
-- **ত্রুটিযুক্ত কোড:**
-  ```javascript
-  if (res.data?.success) {
-    onClose();
-    if (onSuccess) {
-      onSuccess({
-        title: "অনুরোধ পাঠানো হয়েছে! ⏳",
-        message: res.data.message || `ক্যাশ ${isCashIn ? 'ইন' : 'আউট'} সংশোধনের অনুরোধ...`,
-        tag: `ক্যাশ #${cashItem.id} সংশোধন`,
-        amount: Number(formData.amount) || 0, // ❌ 'formData' নামে কোনো স্টেট এই মডালে নেই!
-        type: "warning",
-      });
-    }
-  }
-  ```
-- **কেন ক্র্যাশ করে:** এই মডালের স্টেটগুলো হলো `newAmount`, `newDate`, `newCategory`, `newPurpose` ইত্যাদি। এখানে কোনো `formData` অবজেক্ট ডিফাইন করা নেই।
-- **ফলাফল:** ক্যাশ ইন বা আউট এডিট করার ফর্ম সাবমিট সফল হওয়ামাত্রই সাকসেস টোস্ট দেখানোর আগে `ReferenceError: formData is not defined` হয়ে অ্যাপ্লিকেশন আটকে যাবে।
-- **সমাধান:** 
-  `formData.amount`-এর জায়গায় মডালের সঠিক স্টেট `newAmount` ব্যবহার করা:
-  ```javascript
-  amount: Number(newAmount) || 0,
-  ```
+- **পূর্বের সমস্যা:** টোস্ট ম্যাসেজে `formData.amount` খোঁজা হয়েছিল যা অনির্ধারিত ছিল।
+- **প্রয়োগকৃত সমাধান:** মডালের সঠিক স্টেট `newAmount` বসানো হয়েছে (`Number(newAmount) || 0`)।
 
 ---
 
-### 🔴 বাগ ৪: `StaffCard.jsx` (লাইন ৫৭ ও ৬৩)
+### ✅ বাগ ৪: `StaffCard.jsx` (লাইন ৫৭ ও ১০৮) — [ফিক্সড]
 - **ফাইলের অবস্থান:** `Admin_panel/src/components/StaffCard/StaffCard.jsx`
-- **লাইনের নম্বর:** ৫৭ ও ৬৩
-- **ত্রুটিযুক্ত কোড:**
-  ```javascript
-  const allowed = getAllowedRoles(staff);
-  if (allowed.length === 0) return null; // ❌ আর্লি রিটার্ন হুকের আগে!
-
-  const roleText = allowed.join(", ");
-  const staffId = Number(staff?.id);
-
-  // ✅ Sales + Investors counts
-  const stats = useMemo(() => { // ❌ রিঅ্যাক্ট হুক আর্লি রিটার্নের নিচে চলে গেছে!
-  ```
-- **কেন ক্র্যাশ করে:** রিঅ্যাক্টের **"Rules of Hooks"** অনুযায়ী কোনো কম্পোনেন্টে হুক (`useMemo`, `useEffect`, `useState`) ডিক্লেয়ারেশনের আগে কোনো শর্তসাপেক্ষ `return` (Early Return) থাকা সম্পূর্ণ নিষিদ্ধ। ডেটা ফিল্টারিংয়ের সময় যদি কোনো স্ট্যাফের রোল না পাওয়া যায়, তবে রেন্ডারে হুকের ক্রম ভেঙে গিয়ে রিঅ্যাক্ট এরর দেয়: `Error: Rendered fewer hooks than expected`।
-- **ফলাফল:** স্টাফ ডিরেক্টরি পেজে যেকোনো মুহূর্তে আনহ্যান্ডেল্ড ক্র্যাশ ঘটবে।
-- **সমাধান:** 
-  `if (allowed.length === 0) return null;` চেকটিকে সব হুক (`useMemo`) এক্সিকিউট হওয়ার পরে রিটার্ন সেকশনে নিয়ে যাওয়া।
+- **পূর্বের সমস্যা:** `useMemo` হুকের আগে `if (allowed.length === 0) return null;` থাকায় রিঅ্যাক্টের Rules of Hooks ভঙ্গ হতো।
+- **প্রয়োগকৃত সমাধান:** আর্লি রিটার্ন চেকটিকে `useMemo` হুকের নিচে নিরাপদ স্থানে সরিয়ে আনা হয়েছে।
 
 ---
 

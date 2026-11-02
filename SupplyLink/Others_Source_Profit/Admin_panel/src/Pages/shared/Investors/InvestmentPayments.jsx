@@ -498,7 +498,7 @@ export default function InvestmentPayments() {
           const resJson = await res.json();
           setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
           setReviewModalEdit(null);
-          refetch();
+          fetchCardInstallments(true);
           fetchPendingEdits();
 
           if (resJson.success) {

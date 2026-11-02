@@ -107,6 +107,13 @@ const DailyInstallmentsUsersDetails = () => {
     fetchData();
   }, [id]);
 
+  const cleanName = (name) => {
+    return (name || "")
+      .replace(/^মোঃ\s*/g, "")
+      .replace(/^Md\.?\s*/gi, "")
+      .trim();
+  };
+
   // Helper to get User Name & Avatar by ID
   const getUserInfo = (userId) => {
     const found = users.find((u) => Number(u.id) === Number(userId));
