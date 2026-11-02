@@ -167,7 +167,7 @@ export default function BankReconciliation() {
         modeToSave = "net_deduct";
       }
 
-      const res = await fetch(`${API}/bank_reconciliation/update_adjustment_mode.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/update_adjustment_mode.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -219,7 +219,7 @@ export default function BankReconciliation() {
   const fetchReconciliationList = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/bank_reconciliation/get_reconciliation_list.php`);
+      const res = await fetch(`${API}/bank_reconciliation/get_reconciliation_list.php`, { credentials: "include" });
       const result = await res.json();
       if (result.success) {
         setData(result.data || []);
@@ -245,7 +245,7 @@ export default function BankReconciliation() {
   // Fetch AI Mode Settings
   const fetchAiSettings = async () => {
     try {
-      const res = await fetch(`${API}/bank_reconciliation/manage_ai_settings.php`);
+      const res = await fetch(`${API}/bank_reconciliation/manage_ai_settings.php`, { credentials: "include" });
       const result = await res.json();
       if (result.success) {
         setAiEnabled(Boolean(result.ai_enabled));
@@ -260,7 +260,7 @@ export default function BankReconciliation() {
     if (!isAdminOrDev) return;
     try {
       setTogglingAi(true);
-      const res = await fetch(`${API}/bank_reconciliation/manage_ai_settings.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/manage_ai_settings.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "toggle", enabled: !aiEnabled }),
@@ -294,7 +294,7 @@ export default function BankReconciliation() {
       const fd = new FormData();
       fd.append("slip_image", file);
 
-      const res = await fetch(`${API}/bank_reconciliation/scan_deposit_slip.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/scan_deposit_slip.php`, { credentials: "include",
         method: "POST",
         body: fd,
       });
@@ -457,7 +457,7 @@ export default function BankReconciliation() {
         formData.append("slip_image", depositForm.slip_file);
       }
 
-      const res = await fetch(`${API}/bank_reconciliation/submit_deposit.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/submit_deposit.php`, { credentials: "include",
         method: "POST",
         body: formData,
       });
@@ -512,7 +512,7 @@ export default function BankReconciliation() {
 
     try {
       setVerifying(true);
-      const res = await fetch(`${API}/bank_reconciliation/verify_deposit.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/verify_deposit.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -555,7 +555,7 @@ export default function BankReconciliation() {
   // Update Policy Mode (Gross vs Net vs Custom) by Admin
   const handleUpdatePolicy = async (item, mode, customTarget = null) => {
     try {
-      const res = await fetch(`${API}/bank_reconciliation/update_adjustment_mode.php`, {
+      const res = await fetch(`${API}/bank_reconciliation/update_adjustment_mode.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

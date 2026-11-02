@@ -22,8 +22,7 @@ const CustomerCardDetails = () => {
   const [searchParams] = useSearchParams();
   const cardId = searchParams.get("cardId");
   const { isUsersLoading, users, isUsersError } = useUsers()
-  const { customerInstallmentCards, isCustomerInstallmentsCardsLoading } =
-    useCustomerInstallmentCards();
+  const { customerInstallmentCards, isCustomerInstallmentsCardsLoading, isCustomerInstallmentsCardsError } = useCustomerInstallmentCards();
 
   const { customerInstallmentPayments, isCustomerInstallmentsPaymentsLoading } =
     useCustomerInstallmentPayments();

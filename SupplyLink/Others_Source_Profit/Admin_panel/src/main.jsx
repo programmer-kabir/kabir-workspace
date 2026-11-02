@@ -13,6 +13,15 @@ import { AuthProvider } from "./Provider/AuthProvider.jsx";
 // Ensure cross-origin cookies (sessions) are sent with every axios request
 axios.defaults.withCredentials = true;
 
+// Ensure cross-origin cookies (sessions) are sent with every fetch request
+const originalFetch = window.fetch;
+window.fetch = (input, init = {}) => {
+  return originalFetch(input, {
+    credentials: "include",
+    ...init,
+  });
+};
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>

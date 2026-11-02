@@ -71,7 +71,7 @@ export default function HistoricalGapCard({
   const fetchGapData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/cash/historical_gap.php`);
+      const res = await fetch(`${API}/cash/historical_gap.php`, { credentials: "include" });
       const result = await res.json();
       if (result.success) {
         setSummary(result.summary);
@@ -106,7 +106,7 @@ export default function HistoricalGapCard({
 
     try {
       setSubmittingAddGap(true);
-      const res = await fetch(`${API}/cash/historical_gap.php`, {
+      const res = await fetch(`${API}/cash/historical_gap.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -187,7 +187,7 @@ export default function HistoricalGapCard({
 
     try {
       setSubmittingEditGap(true);
-      const res = await fetch(`${API}/cash/historical_gap.php`, {
+      const res = await fetch(`${API}/cash/historical_gap.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -263,7 +263,7 @@ export default function HistoricalGapCard({
 
     try {
       setSubmittingRecovery(true);
-      const res = await fetch(`${API}/cash/historical_gap.php`, {
+      const res = await fetch(`${API}/cash/historical_gap.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -327,7 +327,7 @@ export default function HistoricalGapCard({
     try {
       setDeleting(true);
       const actionName = type === "gap" ? "delete_gap" : "delete_recovery";
-      const res = await fetch(`${API}/cash/historical_gap.php`, {
+      const res = await fetch(`${API}/cash/historical_gap.php`, { credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
