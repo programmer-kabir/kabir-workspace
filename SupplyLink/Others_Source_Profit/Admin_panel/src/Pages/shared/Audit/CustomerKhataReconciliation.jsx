@@ -46,6 +46,8 @@ export default function CustomerKhataReconciliation() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [availableMonths, setAvailableMonths] = useState([]);
   const [cardFilter, setCardFilter] = useState("");
   const [luxuryToast, setLuxuryToast] = useState(null);
   const [savingRowId, setSavingRowId] = useState(null);
@@ -67,6 +69,7 @@ export default function CustomerKhataReconciliation() {
       setLoading(true);
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
+      if (selectedMonth && selectedMonth !== "all") params.append("month", selectedMonth);
       if (search.trim()) params.append("search", search.trim());
       if (cardFilter.trim()) params.append("card_id", cardFilter.trim());
       params.append("limit", "250");
@@ -81,6 +84,9 @@ export default function CustomerKhataReconciliation() {
         setData(resJson.data || []);
         if (resJson.summary) {
           setSummary(resJson.summary);
+        }
+        if (resJson.available_months) {
+          setAvailableMonths(resJson.available_months);
         }
       } else {
         setLuxuryToast({
@@ -98,7 +104,7 @@ export default function CustomerKhataReconciliation() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, cardFilter]);
+  }, [statusFilter, selectedMonth, search, cardFilter]);
 
   useEffect(() => {
     fetchData();
@@ -299,7 +305,7 @@ export default function CustomerKhataReconciliation() {
                 </span>
               </h1>
               <p className="text-xs md:text-sm text-slate-400">
-                শারীরিক খাতার কিস্তির সাথে অ্যাপসের ডেটাবেজ মেলানো, গরমিল ও অনুপস্থিত কিস্তি শনাক্তকরণ
+                শারীরিক খাতার কিস্তির সাথে মাসিক গ্রাহকদের পেইড কিস্তির রিকনসিলিয়েশন ও অডিট (দৈনিক কিস্তি ব্যতিরেকে)
               </p>
             </div>
           </div>
@@ -445,6 +451,22 @@ export default function CustomerKhataReconciliation() {
               className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white placeholder-slate-400 text-xs md:text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
+
+          {/* Monthly Paid Date Filter */}
+          <div className="relative min-w-[170px] shrink-0">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs md:text-sm font-semibold focus:outline-none focus:border-indigo-400 cursor-pointer"
+            >
+              <option value="all" className="bg-slate-900 text-white">📅 সকল পেইড মাস (All Months)</option>
+              {availableMonths.map((m) => (
+                <option key={m.month} value={m.month} className="bg-slate-900 text-white">
+                  📅 {m.month} ({m.count} টি পেইড)
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Status Filter Buttons */}
@@ -565,16 +587,15 @@ export default function CustomerKhataReconciliation() {
                         <span className="font-bold text-slate-200">
                           {item.installment_no === 0 ? "ডাউনপেমেন্ট (#০)" : `কিস্তি #${item.installment_no}`}
                         </span>
-                        <div className="mt-0.5">
-                          <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                              item.payment_status === "Paid"
-                                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                                : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                            }`}
-                          >
-                            {item.payment_status === "Paid" ? "পরিশোধিত" : "বকেয়া"}
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            পেইড
                           </span>
+                          {item.paid_date && (
+                            <span className="text-[11px] font-mono text-emerald-300 font-medium bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-500/25">
+                              আদায়: {item.paid_date}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -803,3 +824,4 @@ export default function CustomerKhataReconciliation() {
     </div>
   );
 }
+

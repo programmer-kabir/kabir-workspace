@@ -28,16 +28,31 @@ if ($method === 'GET') {
 function handleGet($mysqli) {
     $cardId = isset($_GET['card_id']) ? intval($_GET['card_id']) : 0;
     $customerId = isset($_GET['customer_id']) ? intval($_GET['customer_id']) : 0;
+    $month = trim($_GET['month'] ?? ''); // e.g. '2026-10' or 'all'
     $statusFilter = $_GET['status'] ?? 'all'; // all, unverified, matched, in_khata_not_app, in_app_not_khata, amount_mismatch, discrepancies
     $search = trim($_GET['search'] ?? '');
-    $limit = isset($_GET['limit']) ? max(1, min(500, intval($_GET['limit']))) : 150;
+    $limit = isset($_GET['limit']) ? max(1, min(500, intval($_GET['limit']))) : 250;
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $offset = ($page - 1) * $limit;
 
-    // Build conditions
-    $where = ["1=1"];
+    // 1. Build conditions:
+    // Only non-daily installment cards (ic.is_daily = 0 or NULL)
+    // Only paid installments (ip.status = 'Paid')
+    $where = [
+        "(ic.is_daily = 0 OR ic.is_daily IS NULL)",
+        "ip.status = 'Paid'",
+        "ip.paid_date IS NOT NULL",
+        "ip.paid_date != ''"
+    ];
     $types = "";
     $params = [];
+
+    // Monthly filter on paid_date
+    if (!empty($month) && $month !== 'all') {
+        $where[] = "LEFT(ip.paid_date, 7) = ?";
+        $types .= "s";
+        $params[] = $month;
+    }
 
     if ($cardId > 0) {
         $where[] = "ic.id = ?";
@@ -113,7 +128,7 @@ function handleGet($mysqli) {
         LEFT JOIN customer_khata_audit_records ar ON (ar.card_id = ic.id AND ar.installment_no = ip.installment_no)
         LEFT JOIN users auditor ON auditor.id = ar.audited_by
         WHERE {$whereClause}
-        ORDER BY ic.id DESC, ip.installment_no ASC
+        ORDER BY ip.paid_date DESC, ic.id DESC, ip.installment_no ASC
         LIMIT ? OFFSET ?
     ";
 
@@ -141,7 +156,7 @@ function handleGet($mysqli) {
     }
     $stmt->close();
 
-    // Summary Totals Query
+    // Summary Totals Query matching active filter
     $summarySql = "
         SELECT
             COUNT(*) AS total_rows,
@@ -158,11 +173,42 @@ function handleGet($mysqli) {
         LEFT JOIN installment_payments ip ON ip.card_id = ic.id
         LEFT JOIN users u ON u.id = ic.user_id
         LEFT JOIN customer_khata_audit_records ar ON (ar.card_id = ic.id AND ar.installment_no = ip.installment_no)
-        WHERE 1=1
+        WHERE {$whereClause}
     ";
 
-    $summaryResult = $mysqli->query($summarySql);
+    $summaryStmt = $mysqli->prepare($summarySql);
+    if (!empty($types)) {
+        $summaryStmt->bind_param($types, ...$params);
+    }
+    $summaryStmt->execute();
+    $summaryResult = $summaryStmt->get_result();
     $summary = $summaryResult ? $summaryResult->fetch_assoc() : [];
+    $summaryStmt->close();
+
+    // Get available months list for filter dropdown
+    $monthsSql = "
+        SELECT DISTINCT LEFT(ip.paid_date, 7) as ym, COUNT(*) as cnt
+        FROM installment_payments ip
+        JOIN installment_cards ic ON ic.id = ip.card_id
+        WHERE (ic.is_daily = 0 OR ic.is_daily IS NULL) 
+          AND ip.status = 'Paid' 
+          AND ip.paid_date IS NOT NULL
+          AND ip.paid_date != ''
+        GROUP BY ym
+        ORDER BY ym DESC
+    ";
+    $monthsResult = $mysqli->query($monthsSql);
+    $availableMonths = [];
+    if ($monthsResult) {
+        while ($mRow = $monthsResult->fetch_assoc()) {
+            if (!empty($mRow['ym'])) {
+                $availableMonths[] = [
+                    "month" => $mRow['ym'],
+                    "count" => intval($mRow['cnt'])
+                ];
+            }
+        }
+    }
 
     $totalGapAmount = floatval($summary['in_khata_not_app_amount'] ?? 0) 
                     + floatval($summary['in_app_not_khata_amount'] ?? 0) 
@@ -173,6 +219,8 @@ function handleGet($mysqli) {
         "data" => $items,
         "page" => $page,
         "limit" => $limit,
+        "selected_month" => $month,
+        "available_months" => $availableMonths,
         "summary" => [
             "total_installments" => intval($summary['total_rows'] ?? 0),
             "total_audited" => intval($summary['total_audited'] ?? 0),
@@ -413,3 +461,4 @@ function resetAudit($mysqli, $input) {
 
     echo json_encode(["success" => true, "message" => "অডিট রেকর্ড সফলভাবে রিসেট করা হয়েছে 🔄"]);
 }
+
