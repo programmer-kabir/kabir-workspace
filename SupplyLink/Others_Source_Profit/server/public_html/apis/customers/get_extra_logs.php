@@ -79,3 +79,4 @@ echo json_encode([
     "total" => count($logs),
     "data" => $logs
 ], JSON_UNESCAPED_UNICODE);
+

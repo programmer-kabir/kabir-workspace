@@ -195,3 +195,4 @@ export const InstallmentExtraHistoryModal = ({ isOpen, onClose, cardId, cardNumb
 };
 
 export default InstallmentExtraHistoryModal;
+
