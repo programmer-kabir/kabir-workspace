@@ -74,10 +74,27 @@ if ($action === 'approved') {
     $updReq->execute();
     $updReq->close();
 
+    // Rollback any extra amount contributed by this installment
+    $payDataQ = $mysqli->prepare("SELECT extra_amount, adjusted_from_extra FROM installment_payments WHERE id = ?");
+    if ($payDataQ) {
+        $payDataQ->bind_param("i", $payment_id);
+        $payDataQ->execute();
+        $payRow = $payDataQ->get_result()->fetch_assoc();
+        $payDataQ->close();
+        if ($payRow) {
+            $eAmt = (float)($payRow['extra_amount'] ?? 0);
+            $adjAmt = (float)($payRow['adjusted_from_extra'] ?? 0);
+            $deltaToRollback = $eAmt - $adjAmt;
+            if ($deltaToRollback != 0) {
+                $mysqli->query("UPDATE installment_cards SET extra_balance = GREATEST(0, extra_balance - {$deltaToRollback}) WHERE id = {$card_id}");
+            }
+        }
+    }
+
     // 2. Update installment payment to Unpaid
     $updPay = $mysqli->prepare("
         UPDATE installment_payments 
-        SET status = 'Unpaid', paid_date = NULL, payment_method = NULL, receipt_number = NULL, has_pending_edit = 0 
+        SET status = 'Unpaid', paid_date = NULL, payment_method = NULL, receipt_number = NULL, extra_amount = 0.00, adjusted_from_extra = 0.00, total_paid_cash = 0.00, has_pending_edit = 0 
         WHERE id = ?
     ");
     $updPay->bind_param("i", $payment_id);

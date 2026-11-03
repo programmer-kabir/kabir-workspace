@@ -6,6 +6,8 @@ import { InstallmentItemRow } from "./InstallmentItemRow";
 import { DownPaymentRow } from "./DownPaymentRow";
 import InstallmentHistoryModal from "./InstallmentHistoryModal";
 import { EarlySettlementModal } from "../Modal/EarlySettlementModal";
+import { RefundExtraModal } from "../Modal/RefundExtraModal";
+import { InstallmentExtraHistoryModal } from "../Modal/InstallmentExtraHistoryModal";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -88,6 +90,8 @@ export const InstallmentRow = ({
   const [popup, setPopup] = useState(null);
   const [isCardHistoryOpen, setIsCardHistoryOpen] = useState(false);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [isExtraHistoryModalOpen, setIsExtraHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     const handleUpdateEvent = () => {
@@ -157,6 +161,8 @@ export const InstallmentRow = ({
     setPayments(
       sorted.map((p) => ({
         ...p,
+        extra_amount: Number(p.extra_amount || 0),
+        adjusted_from_extra: Number(p.adjusted_from_extra || 0),
       })),
     );
   }, [InstallmentPayments]);
@@ -194,6 +200,26 @@ export const InstallmentRow = ({
     setPayments(updated);
   };
 
+  const handleExtraAmountChange = (index, value) => {
+    const updated = [...payments];
+    updated[index].extra_amount = Number(value) || 0;
+    setPayments(updated);
+  };
+
+  const handleAdjustFromExtra = (index) => {
+    const updated = [...payments];
+    const currentCardExtra = Number(card?.extra_balance || 0);
+    const due = Number(updated[index].due_amount || 0);
+    const maxAdjustable = Math.min(due, currentCardExtra);
+    
+    if (Number(updated[index].adjusted_from_extra || 0) > 0) {
+      updated[index].adjusted_from_extra = 0;
+    } else {
+      updated[index].adjusted_from_extra = maxAdjustable;
+    }
+    setPayments(updated);
+  };
+
   /* ================= SINGLE ROW UPDATE ================= */
   const handleUpdateInstallment = async (index) => {
     const updatedItem = payments[index];
@@ -205,6 +231,8 @@ export const InstallmentRow = ({
       receipt_number: updatedItem.receipt_number,
       status: updatedItem.status,
       signature: user?.id,
+      extra_amount: Number(updatedItem.extra_amount || 0),
+      adjusted_from_extra: Number(updatedItem.adjusted_from_extra || 0),
     };
 
     setSavingIndex(index);
@@ -402,21 +430,70 @@ export const InstallmentRow = ({
 
   return (
     <div className="space-y-6">
+      {/* ================= EXTRA BALANCE WALLET BAR ================= */}
+      <div className="rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#0a1120] to-[#060b18] border border-amber-500/30 p-4 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg shadow-sm">
+            💰
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs uppercase tracking-wider text-amber-300 font-bold">
+                গ্রাহকের অতিরিক্ত জমা ওয়ালেট (Extra Balance)
+              </h4>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold">
+                সক্রিয়
+              </span>
+            </div>
+            <p className="text-lg font-mono font-black text-amber-400 mt-0.5 flex items-baseline gap-1.5">
+              <span>৳ {Number(card?.extra_balance || 0).toLocaleString()}</span>
+              <span className="text-xs text-slate-400 font-sans font-normal">
+                (কিস্তির সাথে দেওয়া অতিরিক্ত টাকা)
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {Number(card?.extra_balance || 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsRefundModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-xs font-bold text-white shadow-lg shadow-rose-950/30 hover:scale-[1.02] transition-all cursor-pointer"
+            >
+              <span>💸</span>
+              <span>নগদ ফেরত দিন (Cash Out)</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsExtraHistoryModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold hover:text-white transition-all cursor-pointer shadow-sm"
+          >
+            <span>📜</span>
+            <span>জমা ও ফেরতের হিস্ট্রি</span>
+          </button>
+        </div>
+      </div>
+
       {/* ================= TABLE WRAPPER ================= */}
       <div className="rounded-2xl bg-[#060b18] border border-slate-800/80 shadow-2xl overflow-hidden p-3 sm:p-5">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-left text-xs border-separate border-spacing-y-2.5">
             <thead>
               <tr className="text-slate-400 font-medium text-[11px]">
-                <th className="pb-3 px-3 min-w-[120px]">ট্যাগ / কিস্তি</th>
-                <th className="pb-3 px-2 min-w-[105px] text-center">পরিমাণ (৳)</th>
-                <th className="pb-3 px-2 min-w-[105px] text-center">মূলধন (৳)</th>
-                <th className="pb-3 px-2 min-w-[95px] text-center">লাভ (৳)</th>
-                <th className="pb-3 px-2 min-w-[115px] text-center">নির্ধারিত তারিখ</th>
-                <th className="pb-3 px-2 min-w-[135px] text-center">পরিশোধের তারিখ</th>
-                <th className="pb-3 px-2 min-w-[105px] text-center">পেমেন্ট মেথড</th>
-                <th className="pb-3 px-2 min-w-[105px] text-center">রশিদ নম্বর</th>
-                <th className="pb-3 px-2 min-w-[105px] text-center">স্ট্যাটাস</th>
+                <th className="pb-3 px-3 min-w-[115px]">ট্যাগ / কিস্তি</th>
+                <th className="pb-3 px-2 min-w-[95px] text-center">নির্ধারিত (৳)</th>
+                <th className="pb-3 px-2 min-w-[105px] text-center">অতিরিক্ত জমা (৳)</th>
+                <th className="pb-3 px-2 min-w-[100px] text-center">নগদ আদায় (৳)</th>
+                <th className="pb-3 px-2 min-w-[90px] text-center">মূলধন (৳)</th>
+                <th className="pb-3 px-2 min-w-[85px] text-center">লাভ (৳)</th>
+                <th className="pb-3 px-2 min-w-[105px] text-center">নির্ধারিত তারিখ</th>
+                <th className="pb-3 px-2 min-w-[125px] text-center">পরিশোধের তারিখ</th>
+                <th className="pb-3 px-2 min-w-[95px] text-center">পেমেন্ট মেথড</th>
+                <th className="pb-3 px-2 min-w-[95px] text-center">রশিদ নম্বর</th>
+                <th className="pb-3 px-2 min-w-[95px] text-center">স্ট্যাটাস</th>
                 <th className="pb-3 px-2 min-w-[65px] text-center">অ্যাকশন</th>
               </tr>
             </thead>
@@ -505,7 +582,73 @@ export const InstallmentRow = ({
                       </div>
                     </td>
 
-                    {/* 3. Principal Amount */}
+                    {/* 3. Extra Amount (অতিরিক্ত জমা) */}
+                    <td className="py-1 px-2">
+                      {isWaived ? (
+                        <div className="w-full text-center rounded-full bg-[#0d1627]/50 border border-slate-800 px-3 py-1.5 text-xs text-slate-500 font-mono">
+                          —
+                        </div>
+                      ) : isPaid ? (
+                        <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono font-bold text-amber-300">
+                          {Number(item.extra_amount) > 0 ? `+৳ ${Number(item.extra_amount).toLocaleString()}` : "৳ 0"}
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="+৳ Extra"
+                            value={item.extra_amount || ""}
+                            onChange={(e) => handleExtraAmountChange(index, e.target.value)}
+                            className="w-full text-center rounded-full bg-[#0d1627] border border-amber-500/40 focus:border-amber-400 px-2.5 py-1.5 text-xs font-mono text-amber-300 placeholder-amber-500/40 font-semibold focus:outline-none transition shadow-sm"
+                            title="কাস্টমার এই কিস্তির সাথে বাড়তি টাকা দিলে এখানে লিখুন"
+                          />
+                        </div>
+                      )}
+                    </td>
+
+                    {/* 4. Net Cash Paid & Adjustment */}
+                    <td className="py-1 px-2">
+                      {isWaived ? (
+                        <div className="w-full text-center rounded-full bg-[#0d1627]/50 border border-slate-800 px-3 py-1.5 text-xs text-slate-500 font-mono">
+                          —
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono font-bold ${
+                            isPaid ? "text-emerald-400" : "text-sky-300"
+                          }`}>
+                            ৳ {Math.max(0, Number(item.due_amount || 0) + Number(item.extra_amount || 0) - Number(item.adjusted_from_extra || 0)).toLocaleString()}
+                          </div>
+                          
+                          {/* If previous extra balance is available and row is unpaid, show one-click adjust button */}
+                          {!isPaid && Number(card?.extra_balance || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleAdjustFromExtra(index)}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border transition cursor-pointer flex items-center gap-1 whitespace-nowrap ${
+                                Number(item.adjusted_from_extra || 0) > 0
+                                  ? "bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm"
+                                  : "bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20"
+                              }`}
+                              title="কার্ডের অতিরিক্ত জমা ফান্ড থেকে সমন্বয় করুন"
+                            >
+                              {Number(item.adjusted_from_extra || 0) > 0
+                                ? `✓ ৳${Number(item.adjusted_from_extra).toLocaleString()} সমন্বিত`
+                                : `+ জমা ৳${Number(card?.extra_balance).toLocaleString()} থেকে কাটুন`}
+                            </button>
+                          )}
+
+                          {isPaid && Number(item.adjusted_from_extra || 0) > 0 && (
+                            <span className="text-[10px] text-sky-400 font-mono font-medium">
+                              (সমন্বয়: ৳{Number(item.adjusted_from_extra).toLocaleString()})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* 5. Principal Amount */}
                     <td className="py-1 px-2">
                       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-emerald-400 font-medium">
                         {item.principal_amount}
@@ -685,11 +828,11 @@ export const InstallmentRow = ({
 
       {/* ================= BOTTOM ACTION BAR ================= */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-slate-800 shadow-xl">
-        <div className="flex items-center gap-4 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <FaMoneyBillWave className="text-emerald-400 text-base" />
             <span>
-              মোট আদায়:{" "}
+              মোট কিস্তি আদায়:{" "}
               <b className="text-emerald-400 font-mono text-sm">
                 ৳{" "}
                 {payments
@@ -701,13 +844,22 @@ export const InstallmentRow = ({
           </div>
           <span className="text-slate-700">|</span>
           <div>
-            অবশিষ্ট:{" "}
+            কার্ডে অতিরিক্ত জমা:{" "}
+            <b className="text-amber-400 font-mono text-sm">
+              ৳ {Number(card?.extra_balance || 0).toLocaleString()}
+            </b>
+          </div>
+          <span className="text-slate-700">|</span>
+          <div>
+            নেট অবশিষ্ট বকেয়া:{" "}
             <b className="text-rose-400 font-mono text-sm">
               ৳{" "}
-              {payments
-                .filter((p) => p.status !== "Paid" && p.status !== "Waived")
-                .reduce((sum, p) => sum + Number(p.due_amount || 0), 0)
-                .toLocaleString()}
+              {Math.max(
+                0,
+                payments
+                  .filter((p) => p.status !== "Paid" && p.status !== "Waived")
+                  .reduce((sum, p) => sum + Number(p.due_amount || 0), 0) - Number(card?.extra_balance || 0)
+              ).toLocaleString()}
             </b>
           </div>
         </div>
@@ -873,6 +1025,26 @@ export const InstallmentRow = ({
         onClose={() => setIsCardHistoryOpen(false)}
         cardId={card?.id}
         card={card}
+      />
+
+      {/* ================= REFUND EXTRA MODAL ================= */}
+      <RefundExtraModal
+        isOpen={isRefundModalOpen}
+        onClose={() => setIsRefundModalOpen(false)}
+        card={card}
+        user={user}
+        onSuccess={() => {
+          refetch?.();
+          window.dispatchEvent(new Event("installment_updated"));
+        }}
+      />
+
+      {/* ================= INSTALLMENT EXTRA LEDGER MODAL ================= */}
+      <InstallmentExtraHistoryModal
+        isOpen={isExtraHistoryModalOpen}
+        onClose={() => setIsExtraHistoryModalOpen(false)}
+        cardId={card?.id}
+        cardNumber={card?.card_number || card?.id}
       />
     </div>
   );

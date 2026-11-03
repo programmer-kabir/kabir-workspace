@@ -38,15 +38,16 @@ const CustomerOrderInfo = ({ currentCard, InstallmentPayments = [] }) => {
   const purchasePrice = Number(currentCard?.purchase_price || 0);
   const estimatedProfit = salePrice - purchasePrice;
 
+  const extraBalance = Number(currentCard?.extra_balance || 0);
   const totalPayments = InstallmentPayments.length;
   const paidPayments = InstallmentPayments.filter((p) => p.status === "Paid");
   const paidAmount = paidPayments.reduce(
     (sum, p) => sum + Number(p.due_amount || 0),
     0
   );
-  const remainingDue = Math.max(0, salePrice - paidAmount);
+  const remainingDue = Math.max(0, salePrice - paidAmount - extraBalance);
   const progressPercent =
-    salePrice > 0 ? Math.min(100, Math.round((paidAmount / salePrice) * 100)) : 0;
+    salePrice > 0 ? Math.min(100, Math.round(((paidAmount + extraBalance) / salePrice) * 100)) : 0;
 
   const isFullPaid =
     currentCard?.status === "Fully Paid" ||
@@ -279,6 +280,16 @@ const CustomerOrderInfo = ({ currentCard, InstallmentPayments = [] }) => {
               ৳ {remainingDue.toLocaleString()}
             </p>
           </div>
+          {extraBalance > 0 && (
+            <div className="col-span-2 bg-amber-500/10 border border-amber-500/25 rounded-xl p-2 flex items-center justify-between px-3">
+              <span className="text-[11px] text-amber-300 font-medium flex items-center gap-1.5">
+                <span>💰</span> কার্ডে অতিরিক্ত জমা ফান্ড:
+              </span>
+              <span className="text-xs font-mono font-bold text-amber-400">
+                ৳ {extraBalance.toLocaleString()}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

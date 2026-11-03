@@ -12,67 +12,83 @@ export const DownPaymentRow = ({ card, amount, calc, today }) => (
       </div>
     </td>
 
-    {/* 2. Amount */}
+    {/* 2. Due Amount */}
     <td className="py-1 px-2">
       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-slate-100 font-medium">
         {amount}
       </div>
     </td>
 
-    {/* 3. Principal */}
+    {/* 3. Extra Amount */}
+    <td className="py-1 px-2">
+      <div className="w-full text-center rounded-full bg-[#0d1627]/50 border border-slate-800 px-3 py-1.5 text-xs text-slate-500 font-mono">
+        —
+      </div>
+    </td>
+
+    {/* 4. Net Cash */}
+    <td className="py-1 px-2">
+      <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-emerald-400 font-bold">
+        ৳ {Number(amount || 0).toLocaleString()}
+      </div>
+    </td>
+
+    {/* 5. Principal */}
     <td className="py-1 px-2">
       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-emerald-400 font-medium">
         {calc.principal}
       </div>
     </td>
 
-    {/* 4. Profit */}
+    {/* 6. Profit */}
     <td className="py-1 px-2">
       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-amber-300 font-medium">
         {calc.profit}
       </div>
     </td>
 
-    {/* 5. Due Date */}
+    {/* 7. Due Date */}
     <td className="py-1 px-2">
       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-slate-300">
         {card?.delivery_date || today}
       </div>
     </td>
 
-    {/* 6. Paid Date */}
+    {/* 8. Paid Date */}
     <td className="py-1 px-2">
       <div className="w-full text-center rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs font-mono text-slate-200">
         {card?.delivery_date || today}
       </div>
     </td>
 
-    {/* 7. Payment Method */}
+    {/* 9. Payment Method */}
     <td className="py-1 px-2">
       <div className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-200 text-center font-medium">
         Cash
       </div>
     </td>
 
-    {/* 8. Receipt */}
+    {/* 10. Receipt */}
     <td className="py-1 px-2">
       <div className="w-full rounded-full bg-[#0d1627] border border-slate-700/60 px-3 py-1.5 text-xs text-slate-500 text-center font-mono">
         —
       </div>
     </td>
 
-    {/* 9. Status */}
+    {/* 11. Status */}
     <td className="py-1 px-2">
-      <div className="w-full rounded-full px-3 py-1.5 text-xs font-semibold text-center bg-[#06201b] border border-emerald-500/60 text-emerald-400">
+      <div className="w-full rounded-full bg-[#06201b] border border-emerald-500/60 text-emerald-400 font-semibold px-3 py-1.5 text-xs text-center">
         Paid
       </div>
     </td>
 
-    {/* 10. Action */}
+    {/* 12. Action */}
     <td className="py-1 px-2 text-center">
-      <div className="w-8 h-8 rounded-full border border-teal-500/20 bg-teal-500/5 text-teal-400 flex items-center justify-center mx-auto text-xs opacity-60">
+      <div className="w-8 h-8 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 flex items-center justify-center mx-auto text-xs opacity-60">
         ✓
       </div>
     </td>
   </tr>
 );
+
+export default DownPaymentRow;

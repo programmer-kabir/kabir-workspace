@@ -17,6 +17,13 @@ function apiError($message, $debug = null, $code = 500) {
 }
 // =================================================
 
+// Auto-ensure schema column
+try {
+    $chk = $mysqli->query("SHOW COLUMNS FROM `installment_cards` LIKE 'extra_balance'");
+    if ($chk && $chk->num_rows === 0) {
+        @$mysqli->query("ALTER TABLE `installment_cards` ADD COLUMN `extra_balance` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `per_installment_amount`");
+    }
+} catch (Throwable $e) {}
 
 // ================= QUERY =================
 $sql = "
@@ -36,6 +43,7 @@ $sql = "
         ic.total_due_amount,
         ic.installment_count,
         ic.per_installment_amount,
+        COALESCE(ic.extra_balance, 0.00) AS extra_balance,
         ic.profit,
         ic.delivery_date,
         ic.first_installment_date,
@@ -77,9 +85,10 @@ while ($row = $result->fetch_assoc()) {
     $row["additional_cost"]       = (float)$row["additional_cost"];
     $row["cost_price"]            = (float)$row["cost_price"];
     $row["sale_price"]            = (float)$row["sale_price"];
-    $row["down_payment"]           = (float)$row["down_payment"];
+    $row["down_payment"]          = (float)$row["down_payment"];
     $row["total_due_amount"]      = (float)$row["total_due_amount"];
     $row["per_installment_amount"]= (float)$row["per_installment_amount"];
+    $row["extra_balance"]         = (float)($row["extra_balance"] ?? 0);
     $row["profit"]                = (float)$row["profit"];
 
     $data[] = $row;
