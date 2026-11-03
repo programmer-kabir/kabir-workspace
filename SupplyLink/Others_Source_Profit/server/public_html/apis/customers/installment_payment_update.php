@@ -191,25 +191,7 @@ if ($status === 'Paid') {
         WHERE id = ?
     ");
     if (!$stmt) apiError("Prepare update failed", $mysqli->error);
-    $stmt->bind_param("sssiddiid", $eff_paid_date, $payment_method, $receipt_number, $collected_by, $extra_amount, $adjusted_from_extra, $total_paid_cash, $id);
-    // binding check: s (date), s (method), s (receipt), i (collected_by), d (extra), d (adjusted), d (total_cash), i (id) => "sssiddi" + "i"
-    $stmt->close();
-
-    // Re-bind with correct types string: s, s, s, i, d, d, d, i (8 params)
-    $stmt = $mysqli->prepare("
-        UPDATE installment_payments SET
-            paid_date = ?,
-            payment_method = ?,
-            receipt_number = ?,
-            status = 'Paid',
-            collected_by = ?,
-            extra_amount = ?,
-            adjusted_from_extra = ?,
-            total_paid_cash = ?,
-            has_pending_edit = 0
-        WHERE id = ?
-    ");
-    $stmt->bind_param("sssiddii", $eff_paid_date, $payment_method, $receipt_number, $collected_by, $extra_amount, $adjusted_from_extra, $total_paid_cash, $id);
+    $stmt->bind_param("sssidddi", $eff_paid_date, $payment_method, $receipt_number, $collected_by, $extra_amount, $adjusted_from_extra, $total_paid_cash, $id);
     if (!$stmt->execute()) apiError("Execute failed", $stmt->error, 500);
     $stmt->close();
 
