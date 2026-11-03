@@ -155,6 +155,7 @@ if ($current_status === 'Paid' && $status === 'Unpaid') {
 
 // CASE B: User is marking as Paid (or updating payment details while Paid)
 if ($status === 'Paid') {
+    guardEntryOnly();
     $eff_paid_date = $paid_date ?: date('Y-m-d');
     
     $mysqli->begin_transaction();

@@ -295,7 +295,7 @@ const routes = createBrowserRouter([
           },
           {
             element: (
-              <RoleProtectedRoute allow={["admin", "developer", "manager","staff"]} />
+              <RoleProtectedRoute allow={["admin", "developer", "manager", "staff", "data_entry"]} />
             ),
             children: [
               {
@@ -349,11 +349,6 @@ const routes = createBrowserRouter([
                 path: "/staff/activity",
                 element: <StaffActivity />,
               },
-
-              // {
-              //   path: "/applications/all_product-purchase",
-              //   element: <ProductPurchaseApplication />,
-              // },
               {
                 path: "/applications/all_invest_withdraw",
                 element: <InvestmentWithdraw />,
@@ -368,26 +363,10 @@ const routes = createBrowserRouter([
               },
             ],
           },
-          {
-            element: <RoleProtectedRoute allow={["manager", "developer"]} />,
-            children: [
-              {
-                path: "/manager/staff_reports",
-                element: <StaffReport />,
-              },
-              {
-                path: "/manager/staff_reports/referred-users",
-                element: <ReferencesUsers />,
-              },
-              {
-                path: "/manager/staff_reports/view_reports",
-                element: <StaffViewReports />,
-              },
-            ],
-          },
+
           // Audit Panel (Admin & Developer & Manager & Audit)
           {
-            element: <RoleProtectedRoute allow={["admin", "developer", "manager", "audit"]} />,
+            element: <RoleProtectedRoute allow={["admin", "developer", "audit"]} />,
             children: [
               {
                 path: "/audit/monthly-installments",

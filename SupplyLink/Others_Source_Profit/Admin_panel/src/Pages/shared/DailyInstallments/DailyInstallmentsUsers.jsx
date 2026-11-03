@@ -25,6 +25,7 @@ import { FaMoneyBillWave, FaReceipt } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import LuxuryToast from "../../../components/Modal/LuxuryToast";
+import useUserRole from "../../../utils/Hooks/useUserRole";
 
 const DailyInstallmentsUsers = () => {
   const {
@@ -44,14 +45,8 @@ const DailyInstallmentsUsers = () => {
   const [receiptModal, setReceiptModal] = useState(null);
   const [luxuryToast, setLuxuryToast] = useState(null);
 
-  const userRoles = Array.isArray(user?.role) ? user.role : [user?.role];
-  const allowedRoles = ["staff", "manager", "admin", "developer"];
-  const hasPermission = userRoles.some((r) =>
-    allowedRoles.includes(String(r || "").toLowerCase())
-  );
-  const isAdminOrDev = userRoles.some((r) =>
-    ["admin", "developer"].includes(String(r || "").toLowerCase())
-  );
+  const { canMakeEntry, isAdminOrDev } = useUserRole();
+  const hasPermission = canMakeEntry;
 
   const todayDate = useMemo(() => {
     return new Intl.DateTimeFormat("en-CA", {
@@ -521,7 +516,7 @@ const DailyInstallmentsUsers = () => {
                     onClick={() => {
                       if (isFullyPaid) return;
                       if (!hasPermission) {
-                        toast.error("আপনার কিস্তি আদায় করার অনুমতি নেই ❌");
+                        toast.error("আপনার কিস্তি আদায় করার অনুমতি নেই (data_entry রোল প্রয়োজন) ❌");
                         return;
                       }
                       setSelectedCard(card);
@@ -536,7 +531,7 @@ const DailyInstallmentsUsers = () => {
                     }`}
                   >
                     <FiDollarSign className="text-xs" />
-                    <span>{isFullyPaid ? "পরিশোধিত" : "কিস্তি আদায় (Pay)"}</span>
+                    <span>{isFullyPaid ? "পরিশোধিত" : !hasPermission ? "🔒 আদায় লক" : "কিস্তি আদায় (Pay)"}</span>
                   </button>
                 </div>
               </div>

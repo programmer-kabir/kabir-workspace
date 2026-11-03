@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../cors.php';
-guardAdminOnly();
+guardEntryOnly();
 
 // ✅ DB connection ($mysqli)
 require_once __DIR__ . '/../db.php';

@@ -2,6 +2,7 @@ export const ROLES = [
   "admin",
   "manager",
   "staff",
+  "data_entry",
   "supplier",
   "investor",
   "customer",

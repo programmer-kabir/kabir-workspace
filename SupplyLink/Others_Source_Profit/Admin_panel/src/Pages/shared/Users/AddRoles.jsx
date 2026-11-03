@@ -10,6 +10,7 @@ const ROLE_COLORS = {
   admin: "from-rose-500/20 to-pink-500/20 text-rose-300 border-rose-500/30",
   manager: "from-purple-500/20 to-indigo-500/20 text-purple-300 border-purple-500/30",
   staff: "from-blue-500/20 to-cyan-500/20 text-blue-300 border-blue-500/30",
+  data_entry: "from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30",
   developer: "from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30",
   investor: "from-violet-500/20 to-purple-500/20 text-violet-300 border-violet-500/30",
   customer: "from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30",

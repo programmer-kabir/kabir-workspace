@@ -111,6 +111,10 @@ function guardAdminOnly() {
 }
 
 // 7. Strict Management Only (Admin & Developer)
+function guardEntryOnly() {
+    return requireRole(['admin', 'developer', 'data_entry'], "আপনার ডাটা এন্ট্রি করার অনুমতি নেই (data_entry রোল প্রয়োজন)");
+}
+
 function guardManagerAdminOnly() {
     return requireRole(['admin', 'developer', 'manager']);
 }

@@ -11,6 +11,7 @@ import { InstallmentExtraHistoryModal } from "../Modal/InstallmentExtraHistoryMo
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import useUserRole from "../../utils/Hooks/useUserRole";
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -45,6 +46,7 @@ export const InstallmentRow = ({
 }) => {
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
+  const { canMakeEntry } = useUserRole();
 
   /* ================= BASIC ================= */
   const installmentCount = Number(installmentType || 0);
@@ -506,7 +508,7 @@ export const InstallmentRow = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {Number(liveExtraBalance) > 0 && (
+          {canMakeEntry && Number(liveExtraBalance) > 0 && (
             <button
               type="button"
               onClick={() => setIsRefundModalOpen(true)}
@@ -646,13 +648,18 @@ export const InstallmentRow = ({
                       ) : (
                         <div className="relative">
                           <input
+                            disabled={!canMakeEntry}
                             type="number"
                             min="0"
-                            placeholder="+৳ Extra"
+                            placeholder={canMakeEntry ? "+৳ Extra" : "—"}
                             value={item.extra_amount || ""}
                             onChange={(e) => handleExtraAmountChange(index, e.target.value)}
-                            className="w-full text-center rounded-full bg-[#0d1627] border border-amber-500/40 focus:border-amber-400 px-2.5 py-1.5 text-xs font-mono text-amber-300 placeholder-amber-500/40 font-semibold focus:outline-none transition shadow-sm"
-                            title="কাস্টমার এই কিস্তির সাথে বাড়তি টাকা দিলে এখানে লিখুন"
+                            className={`w-full text-center rounded-full bg-[#0d1627] border ${
+                              canMakeEntry
+                                ? "border-amber-500/40 focus:border-amber-400 text-amber-300 placeholder-amber-500/40"
+                                : "border-slate-800 text-slate-500 cursor-not-allowed"
+                            } px-2.5 py-1.5 text-xs font-mono font-semibold focus:outline-none transition shadow-sm`}
+                            title={canMakeEntry ? "কাস্টমার এই কিস্তির সাথে বাড়তি টাকা দিলে এখানে লিখুন" : "এন্ট্রি করার অনুমতি নেই"}
                           />
                         </div>
                       )}
@@ -672,8 +679,8 @@ export const InstallmentRow = ({
                             ৳ {Math.max(0, Number(item.due_amount || 0) + Number(item.extra_amount || 0) - Number(item.adjusted_from_extra || 0)).toLocaleString()}
                           </div>
                           
-                          {/* If previous extra balance is available and row is unpaid, show one-click adjust button */}
-                          {!isPaid && Number(liveExtraBalance) > 0 && (
+                          {/* If previous extra balance is available, user has entry rights, and row is unpaid, show one-click adjust button */}
+                          {!isPaid && canMakeEntry && Number(liveExtraBalance) > 0 && (
                             <button
                               type="button"
                               onClick={() => handleAdjustFromExtra(index)}
@@ -800,11 +807,14 @@ export const InstallmentRow = ({
                       ) : (
                         <div className="relative">
                           <select
+                            disabled={!canMakeEntry}
                             value={item.status || "Unpaid"}
                             onChange={(e) =>
                               handleStatusChange(index, e.target.value)
                             }
-                            className={`w-full rounded-full px-3 py-1.5 text-xs font-semibold text-center cursor-pointer appearance-none focus:outline-none transition-all pr-6 ${
+                            className={`w-full rounded-full px-3 py-1.5 text-xs font-semibold text-center ${
+                              canMakeEntry ? "cursor-pointer" : "cursor-not-allowed opacity-80"
+                            } appearance-none focus:outline-none transition-all pr-6 ${
                               isPaid
                                 ? "bg-[#06201b] border border-emerald-500/60 text-emerald-400"
                                 : "bg-[#0d1627] border border-slate-700/60 text-slate-300"
@@ -842,32 +852,41 @@ export const InstallmentRow = ({
 
                     {/* 10. Action Button (Save) */}
                     <td className="py-1 px-2 text-center">
-                      <button
-                        title={
-                          Boolean(item.has_pending_edit)
-                            ? "অনুরোধটি বর্তমানে পেন্ডিং রয়েছে"
-                            : "এই কিস্তির তথ্য সেভ করুন"
-                        }
-                        disabled={isSavingThis || Boolean(item.has_pending_edit)}
-                        onClick={() => handleUpdateInstallment(index)}
-                        className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all mx-auto cursor-pointer ${
-                          Boolean(item.has_pending_edit)
-                            ? "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-60"
-                            : isSavedRecently
-                            ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                            : isSavingThis
-                            ? "bg-slate-800 text-slate-400 border-slate-700 cursor-wait"
-                            : "bg-teal-500/10 hover:bg-teal-500 text-teal-400 hover:text-black border-teal-500/40 hover:border-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.2)]"
-                        }`}
-                      >
-                        {isSavingThis ? (
-                          <FiLoader className="animate-spin text-xs" />
-                        ) : isSavedRecently ? (
-                          <FiCheck className="text-xs" />
-                        ) : (
-                          <FiSave className="text-xs" />
-                        )}
-                      </button>
+                      {!canMakeEntry ? (
+                        <div
+                          className="w-8 h-8 rounded-full border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-500 mx-auto cursor-not-allowed"
+                          title="এন্ট্রি করার অনুমতি নেই (শুধুমাত্র data_entry, admin বা developer কিস্তি সেভ করতে পারবেন)"
+                        >
+                          <span className="text-[11px] opacity-60">🔒</span>
+                        </div>
+                      ) : (
+                        <button
+                          title={
+                            Boolean(item.has_pending_edit)
+                              ? "অনুরোধটি বর্তমানে পেন্ডিং রয়েছে"
+                              : "এই কিস্তির তথ্য সেভ করুন"
+                          }
+                          disabled={isSavingThis || Boolean(item.has_pending_edit)}
+                          onClick={() => handleUpdateInstallment(index)}
+                          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all mx-auto cursor-pointer ${
+                            Boolean(item.has_pending_edit)
+                              ? "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-60"
+                              : isSavedRecently
+                              ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                              : isSavingThis
+                              ? "bg-slate-800 text-slate-400 border-slate-700 cursor-wait"
+                              : "bg-teal-500/10 hover:bg-teal-500 text-teal-400 hover:text-black border-teal-500/40 hover:border-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.2)]"
+                          }`}
+                        >
+                          {isSavingThis ? (
+                            <FiLoader className="animate-spin text-xs" />
+                          ) : isSavedRecently ? (
+                            <FiCheck className="text-xs" />
+                          ) : (
+                            <FiSave className="text-xs" />
+                          )}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -917,7 +936,7 @@ export const InstallmentRow = ({
 
         <div className="flex flex-wrap items-center gap-3">
           {/* New Chart Save All */}
-          {installmentType && (
+          {canMakeEntry && installmentType && (
             <button
               onClick={() => {
                 handleSaveAll();
@@ -931,7 +950,7 @@ export const InstallmentRow = ({
           )}
 
           {/* Early Settlement Button */}
-          {payments.length > 0 && payments.some((p) => p.status !== "Paid" && p.status !== "Waived") && (
+          {canMakeEntry && payments.length > 0 && payments.some((p) => p.status !== "Paid" && p.status !== "Waived") && (
             <button
               type="button"
               onClick={handleEarlyClose}
@@ -943,7 +962,7 @@ export const InstallmentRow = ({
           )}
 
           {/* Mark as Full Paid Button */}
-          {payments.length > 0 && (
+          {canMakeEntry && payments.length > 0 && (
             <button
               disabled={!isAllPaid}
               onClick={handleMarkFullPaid}

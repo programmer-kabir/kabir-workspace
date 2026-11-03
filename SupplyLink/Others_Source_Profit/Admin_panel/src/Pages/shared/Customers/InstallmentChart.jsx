@@ -12,9 +12,11 @@ import BackButton from "../../../components/BackButton/BackButton";
 import useUsers from "../../../utils/Hooks/useUsers";
 import { useAuth } from "../../../Provider/AuthProvider";
 import { EarlySettlementModal } from "../../../components/Modal/EarlySettlementModal";
+import useUserRole from "../../../utils/Hooks/useUserRole";
 
 const InstallmentChart = () => {
   const { user } = useAuth();
+  const { canMakeEntry } = useUserRole();
   const [searchParams] = useSearchParams();
   const cardId = searchParams.get("cardId");
   const [, setShowSaveButton] = useState(false);
@@ -146,7 +148,7 @@ const InstallmentChart = () => {
           )}
 
           {/* Quick Early Settlement Button in Header */}
-          {hasExistingPayments && hasUnpaidPayments && currentCard?.status !== "Fully Paid" && (
+          {canMakeEntry && hasExistingPayments && hasUnpaidPayments && currentCard?.status !== "Fully Paid" && (
             <button
               onClick={() => setIsSettlementModalOpen(true)}
               className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-xs font-bold text-white shadow-lg shadow-orange-950/30 hover:brightness-110 hover:scale-[1.02] transition-all cursor-pointer"
@@ -156,7 +158,7 @@ const InstallmentChart = () => {
             </button>
           )}
 
-          {!hasExistingPayments && (
+          {canMakeEntry && !hasExistingPayments && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 rounded-xl px-4 py-2 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 hover:brightness-110 hover:scale-[1.02] transition-all cursor-pointer"
