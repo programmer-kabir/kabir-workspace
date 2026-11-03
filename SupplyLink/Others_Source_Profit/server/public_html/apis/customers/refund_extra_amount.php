@@ -30,34 +30,38 @@ $refund_date    = !empty($input['refund_date']) ? $input['refund_date'] : date('
 if ($card_id <= 0) apiError("অবৈধ কার্ড আইডি");
 if ($refund_amount <= 0) apiError("ফেরতের পরিমাণ অবশ্যই ০ এর বেশি হতে হবে");
 
-// 1. Fetch current card and customer details
-$cardQuery = $mysqli->prepare("
-    SELECT ic.id, ic.card_number, ic.user_id, COALESCE(ic.extra_balance, 0.00) AS extra_balance,
-           u.name AS customer_name, u.mobile AS customer_mobile
-    FROM installment_cards ic
-    LEFT JOIN users u ON u.id = ic.user_id
-    WHERE ic.id = ?
-");
-if (!$cardQuery) apiError("Query prepare failed", $mysqli->error);
-$cardQuery->bind_param("i", $card_id);
-$cardQuery->execute();
-$card = $cardQuery->get_result()->fetch_assoc();
-$cardQuery->close();
-
-if (!$card) apiError("কিস্তি কার্ড পাওয়া যায়নি", null, 404);
-
-$prev_balance = (float)$card['extra_balance'];
-if ($refund_amount > $prev_balance) {
-    apiError("পর্যাপ্ত অতিরিক্ত জমা নেই। বর্তমানে এই কার্ডে অবশিষ্ট জমা আছে ৳ " . number_format($prev_balance, 2));
-}
-
-$new_balance = max(0, $prev_balance - $refund_amount);
-$customer_name = !empty($card['customer_name']) ? $card['customer_name'] : "গ্রাহক";
-$card_number = !empty($card['card_number']) ? $card['card_number'] : $card_id;
-
 $mysqli->begin_transaction();
 
 try {
+    // 1. Fetch current card and customer details with atomic row lock
+    $cardQuery = $mysqli->prepare("
+        SELECT ic.id, ic.card_number, ic.user_id, COALESCE(ic.extra_balance, 0.00) AS extra_balance,
+               u.name AS customer_name, u.mobile AS customer_mobile
+        FROM installment_cards ic
+        LEFT JOIN users u ON u.id = ic.user_id
+        WHERE ic.id = ?
+        FOR UPDATE
+    ");
+    if (!$cardQuery) throw new Exception("Query prepare failed: " . $mysqli->error);
+    $cardQuery->bind_param("i", $card_id);
+    $cardQuery->execute();
+    $card = $cardQuery->get_result()->fetch_assoc();
+    $cardQuery->close();
+
+    if (!$card) {
+        $mysqli->rollback();
+        apiError("কিস্তি কার্ড পাওয়া যায়নি", null, 404);
+    }
+
+    $prev_balance = (float)$card['extra_balance'];
+    if ($refund_amount > ($prev_balance + 0.01)) {
+        $mysqli->rollback();
+        apiError("প্রতারণা রোধ: পর্যাপ্ত অতিরিক্ত জমা ব্যালেন্স নেই! বর্তমানে এই কার্ডে অবশিষ্ট জমা আছে ৳ " . number_format($prev_balance, 2), null, 400);
+    }
+
+    $new_balance = max(0, $prev_balance - $refund_amount);
+    $customer_name = !empty($card['customer_name']) ? $card['customer_name'] : "গ্রাহক";
+    $card_number = !empty($card['card_number']) ? $card['card_number'] : $card_id;
     // 2. Update card extra_balance
     $updCard = $mysqli->prepare("UPDATE installment_cards SET extra_balance = ? WHERE id = ?");
     if (!$updCard) throw new Exception("Prepare card update failed: " . $mysqli->error);

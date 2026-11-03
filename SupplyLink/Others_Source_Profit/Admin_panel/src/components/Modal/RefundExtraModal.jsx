@@ -5,8 +5,8 @@ import { FiLoader } from "react-icons/fi";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
-export const RefundExtraModal = ({ isOpen, onClose, card, user, onSuccess }) => {
-  const currentExtraBalance = Number(card?.extra_balance || 0);
+export const RefundExtraModal = ({ isOpen, onClose, card, extraBalance, user, onSuccess }) => {
+  const currentExtraBalance = extraBalance !== undefined ? Number(extraBalance) : Number(card?.extra_balance || 0);
 
   const [refundAmount, setRefundAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -74,7 +74,7 @@ export const RefundExtraModal = ({ isOpen, onClose, card, user, onSuccess }) => 
           background: "#0f172a",
           color: "#f8fafc",
         });
-        onSuccess?.();
+        onSuccess?.(data.current_balance);
         onClose();
       } else {
         toast.error(data.message || "ফেরত সম্পন্ন করা যায়নি");

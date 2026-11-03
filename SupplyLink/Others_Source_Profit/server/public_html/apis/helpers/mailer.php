@@ -5,7 +5,7 @@ if (!defined('SL_SMTP_HOST')) {
     define('SL_SMTP_PORT', 465);
     define('SL_SMTP_USER', 'supplylinkbdltd@gmail.com');
     define('SL_SMTP_PASS', 'osgpenunfhcprbpp');
-    define('SL_ADMIN_EMAIL', 'supplylinkb@gmail.com');
+    define('SL_ADMIN_EMAIL', 'heykabirr01@gmail.com');
     define('SL_SENDER_NAME', 'SupplyLink Limited');
 }
 

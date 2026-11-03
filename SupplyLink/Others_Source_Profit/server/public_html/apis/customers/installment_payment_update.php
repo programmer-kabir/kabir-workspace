@@ -157,80 +157,97 @@ if ($current_status === 'Paid' && $status === 'Unpaid') {
 if ($status === 'Paid') {
     $eff_paid_date = $paid_date ?: date('Y-m-d');
     
-    // Balance and Extra Calculations
-    $available_extra = $card_extra_balance;
-    if ($current_status === 'Paid') {
-        // Restore prior state for accurate recalculation
-        $available_extra = $card_extra_balance + $prev_adjusted - $prev_extra;
-    }
+    $mysqli->begin_transaction();
 
-    if ($adjusted_from_extra > ($available_extra + 0.01)) {
-        apiError("পর্যাপ্ত অতিরিক্ত জমা নেই। বর্তমানে সর্বোচ্চ সমন্বয় করা যাবে ৳ " . number_format($available_extra, 2));
-    }
+    try {
+        // Anti-fraud: Atomic row lock on installment_cards to get fresh committed balance
+        $cardLock = $mysqli->prepare("SELECT extra_balance FROM installment_cards WHERE id = ? FOR UPDATE");
+        if (!$cardLock) throw new Exception("কার্ড লক কোয়েরি প্রস্তুত ব্যর্থ: " . $mysqli->error);
+        $cardLock->bind_param("i", $card_id);
+        $cardLock->execute();
+        $cardLockRes = $cardLock->get_result()->fetch_assoc();
+        $cardLock->close();
 
-    $delta = ($extra_amount - $adjusted_from_extra);
-    if ($current_status === 'Paid') {
-        $delta -= ($prev_extra - $prev_adjusted);
-    }
+        if (!$cardLockRes) {
+            throw new Exception("কিস্তি কার্ড পাওয়া যায়নি");
+        }
 
-    $new_card_extra_balance = max(0, $card_extra_balance + $delta);
-    $total_paid_cash = max(0, ($due_amount + $extra_amount - $adjusted_from_extra));
+        $fresh_card_extra_balance = (float)($cardLockRes['extra_balance'] ?? 0);
 
-    // Update installment row
-    $stmt = $mysqli->prepare("
-        UPDATE installment_payments SET
-            paid_date = ?,
-            payment_method = ?,
-            receipt_number = ?,
-            status = 'Paid',
-            collected_by = ?,
-            extra_amount = ?,
-            adjusted_from_extra = ?,
-            total_paid_cash = ?,
-            has_pending_edit = 0
-        WHERE id = ?
-    ");
-    if (!$stmt) apiError("Prepare update failed", $mysqli->error);
-    $stmt->bind_param("sssidddi", $eff_paid_date, $payment_method, $receipt_number, $collected_by, $extra_amount, $adjusted_from_extra, $total_paid_cash, $id);
-    if (!$stmt->execute()) apiError("Execute failed", $stmt->error, 500);
-    $stmt->close();
+        // Balance and Extra Calculations
+        $available_extra = $fresh_card_extra_balance;
+        if ($current_status === 'Paid') {
+            // Restore prior state for accurate recalculation if updating an already Paid row
+            $available_extra = $fresh_card_extra_balance + $prev_adjusted - $prev_extra;
+        }
 
-    // Update card extra_balance
-    $updCard = $mysqli->prepare("UPDATE installment_cards SET extra_balance = ? WHERE id = ?");
-    if ($updCard) {
+        if ($adjusted_from_extra > ($available_extra + 0.01)) {
+            $mysqli->rollback();
+            apiError("প্রতারণা রোধ: পর্যাপ্ত অতিরিক্ত জমা ব্যালেন্স নেই! এই টাকা ইতিপূর্বে অন্য কিস্তিতে সমন্বয় বা ফেরত হয়ে গেছে। বর্তমান উপলব্ধ ব্যালেন্স: ৳ " . number_format($available_extra, 2), null, 400);
+        }
+
+        $delta = ($extra_amount - $adjusted_from_extra);
+        if ($current_status === 'Paid') {
+            $delta -= ($prev_extra - $prev_adjusted);
+        }
+
+        $new_card_extra_balance = max(0, $fresh_card_extra_balance + $delta);
+        $total_paid_cash = max(0, ($due_amount + $extra_amount - $adjusted_from_extra));
+
+        // Update installment row
+        $stmt = $mysqli->prepare("
+            UPDATE installment_payments SET
+                paid_date = ?,
+                payment_method = ?,
+                receipt_number = ?,
+                status = 'Paid',
+                collected_by = ?,
+                extra_amount = ?,
+                adjusted_from_extra = ?,
+                total_paid_cash = ?,
+                has_pending_edit = 0
+            WHERE id = ?
+        ");
+        if (!$stmt) throw new Exception("Prepare update failed: " . $mysqli->error);
+        $stmt->bind_param("sssidddi", $eff_paid_date, $payment_method, $receipt_number, $collected_by, $extra_amount, $adjusted_from_extra, $total_paid_cash, $id);
+        if (!$stmt->execute()) throw new Exception("Installment update failed: " . $stmt->error);
+        $stmt->close();
+
+        // Update card extra_balance
+        $updCard = $mysqli->prepare("UPDATE installment_cards SET extra_balance = ? WHERE id = ?");
+        if (!$updCard) throw new Exception("Prepare card balance update failed: " . $mysqli->error);
         $updCard->bind_param("di", $new_card_extra_balance, $card_id);
-        $updCard->execute();
+        if (!$updCard->execute()) throw new Exception("Card balance update failed: " . $updCard->error);
         $updCard->close();
-    }
 
-    // Insert extra logs if deposit or adjustment occurred
-    if ($extra_amount > 0 && ($extra_amount != $prev_extra || $current_status !== 'Paid')) {
-        $logRem = "কিস্তি #{$inst['installment_no']} এর সাথে অতিরিক্ত জমা";
-        $insLog = $mysqli->prepare("
-            INSERT INTO installment_extra_logs
-            (card_id, payment_id, customer_id, type, amount, previous_balance, current_balance, receipt_number, created_by, remarks, created_at)
-            VALUES (?, ?, ?, 'deposit', ?, ?, ?, ?, ?, ?, NOW())
-        ");
-        if ($insLog) {
-            $insLog->bind_param("iiidddsis", $card_id, $id, $customer_id, $extra_amount, $card_extra_balance, $new_card_extra_balance, $receipt_number, $collected_by, $logRem);
-            $insLog->execute();
-            $insLog->close();
+        // Insert extra logs if deposit or adjustment occurred
+        if ($extra_amount > 0 && ($extra_amount != $prev_extra || $current_status !== 'Paid')) {
+            $logRem = "কিস্তি #{$inst['installment_no']} এর সাথে অতিরিক্ত জমা";
+            $insLog = $mysqli->prepare("
+                INSERT INTO installment_extra_logs
+                (card_id, payment_id, customer_id, type, amount, previous_balance, current_balance, receipt_number, created_by, remarks, created_at)
+                VALUES (?, ?, ?, 'deposit', ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            if ($insLog) {
+                $insLog->bind_param("iiidddsis", $card_id, $id, $customer_id, $extra_amount, $fresh_card_extra_balance, $new_card_extra_balance, $receipt_number, $collected_by, $logRem);
+                $insLog->execute();
+                $insLog->close();
+            }
         }
-    }
 
-    if ($adjusted_from_extra > 0 && ($adjusted_from_extra != $prev_adjusted || $current_status !== 'Paid')) {
-        $logRem = "কিস্তি #{$inst['installment_no']} এ আগের জমা ফান্ড থেকে সমন্বয়";
-        $insLog = $mysqli->prepare("
-            INSERT INTO installment_extra_logs
-            (card_id, payment_id, customer_id, type, amount, previous_balance, current_balance, receipt_number, created_by, remarks, created_at)
-            VALUES (?, ?, ?, 'adjustment', ?, ?, ?, ?, ?, ?, NOW())
-        ");
-        if ($insLog) {
-            $insLog->bind_param("iiidddsis", $card_id, $id, $customer_id, $adjusted_from_extra, $card_extra_balance, $new_card_extra_balance, $receipt_number, $collected_by, $logRem);
-            $insLog->execute();
-            $insLog->close();
+        if ($adjusted_from_extra > 0 && ($adjusted_from_extra != $prev_adjusted || $current_status !== 'Paid')) {
+            $logRem = "কিস্তি #{$inst['installment_no']} এ আগের জমা ফান্ড থেকে সমন্বয়";
+            $insLog = $mysqli->prepare("
+                INSERT INTO installment_extra_logs
+                (card_id, payment_id, customer_id, type, amount, previous_balance, current_balance, receipt_number, created_by, remarks, created_at)
+                VALUES (?, ?, ?, 'adjustment', ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            if ($insLog) {
+                $insLog->bind_param("iiidddsis", $card_id, $id, $customer_id, $adjusted_from_extra, $fresh_card_extra_balance, $new_card_extra_balance, $receipt_number, $collected_by, $logRem);
+                $insLog->execute();
+                $insLog->close();
+            }
         }
-    }
 
     // Sync with Cash Management (Cash In -> Approved)
     $refId = "installment_" . $id;
@@ -358,6 +375,13 @@ if ($status === 'Paid') {
         }
     } catch (Throwable $notifErr) {
         error_log("Case B Notification insert non-fatal error: " . $notifErr->getMessage());
+    }
+
+    // Commit atomic database updates
+    $mysqli->commit();
+    } catch (Throwable $dbErr) {
+        $mysqli->rollback();
+        apiError("পেমেন্ট আপডেট ও ব্যালেন্স সমন্বয় ব্যর্থ: " . $dbErr->getMessage(), null, 500);
     }
 
     // Automated Email Notification (Customer + Admin Copy) in isolated try-catch

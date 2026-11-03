@@ -23,14 +23,30 @@ const InstallmentChart = () => {
     isCustomerInstallmentsPaymentsLoading,
     customerInstallmentPayments = [],
     isCustomerInstallmentsPaymentsError,
-    refetch,
+    refetch: refetchPayments,
   } = useCustomerInstallmentPayments();
 
   const {
     isCustomerInstallmentsCardsLoading,
     customerInstallmentCards = [],
     isCustomerInstallmentsCardsError,
+    refetch: refetchCards,
   } = useCustomerInstallmentCards();
+
+  const handleRefetchAll = React.useCallback(() => {
+    refetchPayments?.();
+    refetchCards?.();
+  }, [refetchPayments, refetchCards]);
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      handleRefetchAll();
+    };
+    window.addEventListener("installment_updated", handleSync);
+    return () => {
+      window.removeEventListener("installment_updated", handleSync);
+    };
+  }, [handleRefetchAll]);
 
   const currentCard = customerInstallmentCards?.find(
     (card) => Number(card.id) === Number(cardId),
@@ -211,7 +227,7 @@ const InstallmentChart = () => {
         InstallmentPayments={InstallmentPayments}
         onSaveSuccess={() => setShowSaveButton(false)}
         user={user}
-        refetch={refetch}
+        refetch={handleRefetchAll}
       />
 
       {/* ================= MODAL FOR NEW INSTALLMENT SETUP ================= */}

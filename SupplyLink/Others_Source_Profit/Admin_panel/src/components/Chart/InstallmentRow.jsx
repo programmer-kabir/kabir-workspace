@@ -93,6 +93,26 @@ export const InstallmentRow = ({
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [isExtraHistoryModalOpen, setIsExtraHistoryModalOpen] = useState(false);
 
+  /* ================= REAL-TIME EXTRA BALANCE STATE ================= */
+  const [liveExtraBalance, setLiveExtraBalance] = useState(Number(card?.extra_balance || 0));
+
+  useEffect(() => {
+    setLiveExtraBalance(Number(card?.extra_balance || 0));
+  }, [card?.extra_balance]);
+
+  // When live extra balance hits 0, immediately wipe any pending un-submitted adjustments on unpaid rows to prevent fraud
+  useEffect(() => {
+    if (Number(liveExtraBalance) <= 0) {
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.status !== "Paid" && Number(p.adjusted_from_extra || 0) > 0
+            ? { ...p, adjusted_from_extra: 0 }
+            : p
+        )
+      );
+    }
+  }, [liveExtraBalance]);
+
   useEffect(() => {
     const handleUpdateEvent = () => {
       refetch?.();
@@ -208,13 +228,17 @@ export const InstallmentRow = ({
 
   const handleAdjustFromExtra = (index) => {
     const updated = [...payments];
-    const currentCardExtra = Number(card?.extra_balance || 0);
+    const currentCardExtra = Number(liveExtraBalance || 0);
     const due = Number(updated[index].due_amount || 0);
     const maxAdjustable = Math.min(due, currentCardExtra);
     
     if (Number(updated[index].adjusted_from_extra || 0) > 0) {
       updated[index].adjusted_from_extra = 0;
     } else {
+      if (maxAdjustable <= 0) {
+        toast.warning("কোনো অতিরিক্ত জমা ব্যালেন্স অবশিষ্ট নেই");
+        return;
+      }
       updated[index].adjusted_from_extra = maxAdjustable;
     }
     setPayments(updated);
@@ -256,6 +280,28 @@ export const InstallmentRow = ({
       }
 
       if (data && data.success !== false) {
+        // 1. Instant local wallet balance update (0-second UI reflection)
+        if (data.card_extra_balance !== undefined) {
+          setLiveExtraBalance(Number(data.card_extra_balance));
+        }
+
+        // 2. Instant optimistic update to the payments row in UI
+        setPayments((prev) => {
+          const next = [...prev];
+          next[index] = {
+            ...next[index],
+            status: updatedItem.status,
+            paid_date: updatedItem.status === "Paid" ? (updatedItem.paid_date || today) : null,
+            extra_amount: data.extra_amount !== undefined ? Number(data.extra_amount) : Number(updatedItem.extra_amount || 0),
+            adjusted_from_extra: data.adjusted_from_extra !== undefined ? Number(data.adjusted_from_extra) : Number(updatedItem.adjusted_from_extra || 0),
+            total_paid_cash: data.total_paid_cash !== undefined ? Number(data.total_paid_cash) : Math.max(0, Number(updatedItem.due_amount || 0) + Number(updatedItem.extra_amount || 0) - Number(updatedItem.adjusted_from_extra || 0)),
+            payment_method: updatedItem.payment_method,
+            receipt_number: updatedItem.receipt_number,
+            has_pending_edit: Boolean(data.pending_approval),
+          };
+          return next;
+        });
+
         if (data.pending_approval) {
           setPopup({
             title: "অনুরোধ অ্যাডমিনের কাছে পাঠানো হয়েছে",
@@ -279,10 +325,14 @@ export const InstallmentRow = ({
         }
         setSavedRowIndex(index);
         setTimeout(() => setSavedRowIndex(null), 2500);
+
+        // 3. Dispatch global event to sync all listeners & refetch queries
+        window.dispatchEvent(new Event("installment_updated"));
         refetch?.();
       } else if (!res.ok && !data) {
         // If server had a non-fatal warning/500 after saving edit in DB
         refetch?.();
+        window.dispatchEvent(new Event("installment_updated"));
         setPopup({
           title: "অনুরোধটি সফলভাবে জমা হয়েছে",
           message: "পেইড কিস্তি আনপেইড করার অনুরোধটি জমা হয়েছে এবং অ্যাডমিন অনুমোদনের অপেক্ষায় রয়েছে।",
@@ -299,6 +349,7 @@ export const InstallmentRow = ({
       }
     } catch (err) {
       refetch?.();
+      window.dispatchEvent(new Event("installment_updated"));
       setPopup({
         title: "অনুরোধটি পাঠানো হয়েছে",
         message: "আপনার অনুরোধটি জমা হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে এটি কার্যকর হবে।",
@@ -446,7 +497,7 @@ export const InstallmentRow = ({
               </span>
             </div>
             <p className="text-lg font-mono font-black text-amber-400 mt-0.5 flex items-baseline gap-1.5">
-              <span>৳ {Number(card?.extra_balance || 0).toLocaleString()}</span>
+              <span>৳ {Number(liveExtraBalance).toLocaleString()}</span>
               <span className="text-xs text-slate-400 font-sans font-normal">
                 (কিস্তির সাথে দেওয়া অতিরিক্ত টাকা)
               </span>
@@ -455,7 +506,7 @@ export const InstallmentRow = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {Number(card?.extra_balance || 0) > 0 && (
+          {Number(liveExtraBalance) > 0 && (
             <button
               type="button"
               onClick={() => setIsRefundModalOpen(true)}
@@ -622,7 +673,7 @@ export const InstallmentRow = ({
                           </div>
                           
                           {/* If previous extra balance is available and row is unpaid, show one-click adjust button */}
-                          {!isPaid && Number(card?.extra_balance || 0) > 0 && (
+                          {!isPaid && Number(liveExtraBalance) > 0 && (
                             <button
                               type="button"
                               onClick={() => handleAdjustFromExtra(index)}
@@ -635,7 +686,7 @@ export const InstallmentRow = ({
                             >
                               {Number(item.adjusted_from_extra || 0) > 0
                                 ? `✓ ৳${Number(item.adjusted_from_extra).toLocaleString()} সমন্বিত`
-                                : `+ জমা ৳${Number(card?.extra_balance).toLocaleString()} থেকে কাটুন`}
+                                : `+ জমা ৳${Number(liveExtraBalance).toLocaleString()} থেকে কাটুন`}
                             </button>
                           )}
 
@@ -846,7 +897,7 @@ export const InstallmentRow = ({
           <div>
             কার্ডে অতিরিক্ত জমা:{" "}
             <b className="text-amber-400 font-mono text-sm">
-              ৳ {Number(card?.extra_balance || 0).toLocaleString()}
+              ৳ {Number(liveExtraBalance).toLocaleString()}
             </b>
           </div>
           <span className="text-slate-700">|</span>
@@ -858,7 +909,7 @@ export const InstallmentRow = ({
                 0,
                 payments
                   .filter((p) => p.status !== "Paid" && p.status !== "Waived")
-                  .reduce((sum, p) => sum + Number(p.due_amount || 0), 0) - Number(card?.extra_balance || 0)
+                  .reduce((sum, p) => sum + Number(p.due_amount || 0), 0) - Number(liveExtraBalance)
               ).toLocaleString()}
             </b>
           </div>
@@ -1032,8 +1083,12 @@ export const InstallmentRow = ({
         isOpen={isRefundModalOpen}
         onClose={() => setIsRefundModalOpen(false)}
         card={card}
+        extraBalance={liveExtraBalance}
         user={user}
-        onSuccess={() => {
+        onSuccess={(newBalance) => {
+          if (newBalance !== undefined) {
+            setLiveExtraBalance(Number(newBalance));
+          }
           refetch?.();
           window.dispatchEvent(new Event("installment_updated"));
         }}
