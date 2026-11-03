@@ -11,6 +11,7 @@
   # don't rewrite API or uploads folders (so PHP endpoints and uploaded files work directly)
   RewriteRule ^apis/ - [L]
   RewriteRule ^api/ - [L]
+  RewriteRule ^cron/ - [L]
   RewriteRule ^uploads/ - [L]
 
   # everything else -> serve index.html (React Router will handle path)

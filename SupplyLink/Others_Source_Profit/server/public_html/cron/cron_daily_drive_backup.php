@@ -10,9 +10,6 @@ error_reporting(E_ALL);
 
 date_default_timezone_set('Asia/Dhaka');
 
-require_once __DIR__ . '/../apis/db.php';
-require_once __DIR__ . '/../apis/helpers/DailyReportPdf.php';
-
 $logFile = __DIR__ . '/daily_drive_backup.log';
 $timestamp = date("Y-m-d H:i:s");
 $today = date("Y-m-d");
@@ -24,6 +21,9 @@ function logCron($msg, $file) {
 
 logCron("--------------------------------------------------", $logFile);
 logCron("[$timestamp] Daily Report Backup Started...", $logFile);
+
+require_once __DIR__ . '/../apis/db.php';
+require_once __DIR__ . '/../apis/helpers/DailyReportPdf.php';
 
 try {
     // 1. Fetch Opening Cash Balance (< Today, Approved Only)

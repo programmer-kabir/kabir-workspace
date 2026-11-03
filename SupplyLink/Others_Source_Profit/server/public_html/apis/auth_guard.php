@@ -77,6 +77,10 @@ function requireAuth($customMessage = "The requested URL was not found on this s
 
 // 5. Require specific role (e.g. admin, manager, staff)
 function requireRole($roles, $customMessage = "The requested URL was not found on this server.") {
+    if (isCronOrCli()) {
+        return true;
+    }
+
     requireAuth();
 
     if (!hasRole($roles)) {
@@ -137,6 +141,11 @@ function isCronOrCli() {
     }
     $cronHeader = $_SERVER['HTTP_X_CRON_KEY'] ?? $_GET['cron_key'] ?? '';
     if (!empty($cronHeader) && $cronHeader === 'supplylink_cron_secure_key_2026') {
+        return true;
+    }
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    $server = $_SERVER['SERVER_ADDR'] ?? '';
+    if (!empty($remote) && ($remote === '127.0.0.1' || $remote === '::1' || (!empty($server) && $remote === $server))) {
         return true;
     }
     return false;

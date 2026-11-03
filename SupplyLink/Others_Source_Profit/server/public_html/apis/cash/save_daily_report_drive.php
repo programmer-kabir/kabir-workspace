@@ -4,7 +4,9 @@ error_reporting(E_ALL);
 
 header("Content-Type: application/json; charset=UTF-8");
 require_once __DIR__ . '/../cors.php';
-guardAdminOnly();
+if (!isCronOrCli()) {
+    guardAdminOnly();
+}
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../helpers/DailyReportPdf.php';
 
