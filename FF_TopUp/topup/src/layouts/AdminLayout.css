@@ -1,0 +1,916 @@
+/* ===================================================================
+   TOPUP BD - ULTRA MODERN ADMIN LAYOUT CSS DESIGN SYSTEM
+   =================================================================== */
+
+.admin-layout-root {
+  min-height: 100vh;
+  display: flex;
+  background-color: var(--bg-darker);
+  color: var(--text-main);
+  font-family: var(--font-bangla, 'Hind Siliguri', sans-serif);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ---------------- SIDEBAR ---------------- */
+.admin-sidebar {
+  width: 280px;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 2px 0 12px rgba(15, 23, 42, 0.03);
+}
+
+.admin-sidebar-header {
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.admin-brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), #7928ca);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(2, 132, 199, 0.3);
+}
+
+.admin-brand-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-brand-badge {
+  font-size: 10px;
+  background: linear-gradient(135deg, var(--accent), #e2136e);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.admin-brand-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Sidebar Nav Links */
+.admin-sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-nav-category {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 12px 4px;
+}
+
+.admin-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.admin-nav-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-nav-btn:hover {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.admin-nav-btn.active {
+  background: rgba(2, 132, 199, 0.1);
+  color: var(--primary);
+  border-color: rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.12);
+  font-weight: 700;
+}
+
+.admin-nav-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.admin-nav-badge.pending {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.admin-nav-badge.count {
+  background: var(--bg-main);
+  color: var(--text-muted);
+}
+
+/* Sidebar Footer */
+.admin-sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-view-store-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: var(--primary);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.admin-view-store-btn:hover {
+  background: rgba(2, 132, 199, 0.18);
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.2);
+  color: var(--primary-hover);
+}
+
+.admin-user-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--primary);
+}
+
+.admin-user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-user-role {
+  font-size: 10px;
+  color: var(--gold);
+}
+
+/* ---------------- MAIN CONTENT WRAPPER ---------------- */
+.admin-main-wrap {
+  margin-left: 280px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-darker);
+}
+
+/* Admin Top Header */
+.admin-topbar {
+  height: 68px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.admin-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-mobile-menu-toggle {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-page-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--emerald);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  font-weight: 700;
+}
+
+.admin-live-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--emerald);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--emerald);
+  animation: pulseLive 1.5s infinite;
+}
+
+@keyframes pulseLive {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* Page Body */
+.admin-page-content {
+  padding: 24px 28px 60px;
+  flex: 1;
+}
+
+/* ---------------- METRIC STAT CARDS ---------------- */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.admin-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-border);
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+}
+
+.admin-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin-stat-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.admin-stat-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-stat-value {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.admin-stat-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------------- COMMON CARD CONTAINER ---------------- */
+.admin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-card-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------------- SEARCH & FILTER BARS ---------------- */
+.admin-search-input-wrap {
+  position: relative;
+  min-width: 260px;
+}
+
+.admin-search-input {
+  width: 100%;
+  padding: 9px 14px 9px 36px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.admin-search-input:focus {
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.admin-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.admin-filter-pill-group {
+  display: flex;
+  background: var(--bg-main);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-filter-pill {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-radius: 8px;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.admin-filter-pill.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------------- TABLES ---------------- */
+.admin-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.admin-table th {
+  padding: 12px 14px;
+  background: var(--bg-main);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.admin-table tr:hover td {
+  background: var(--bg-main);
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-badge.completed {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--emerald);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+}
+
+.status-badge.pending {
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--gold);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.status-badge.processing {
+  background: rgba(2, 132, 199, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+.status-badge.cancelled {
+  background: rgba(225, 29, 72, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+}
+
+/* User Role Badges */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.role-badge.admin {
+  background: linear-gradient(135deg, var(--accent), #7928ca);
+  color: #fff;
+}
+
+.role-badge.user {
+  background: var(--bg-main);
+  color: var(--text-muted);
+}
+
+/* Action Buttons */
+.btn-admin-action {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s;
+}
+
+.btn-admin-action:hover {
+  background: #e2e8f0;
+}
+
+.btn-admin-action.primary {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: rgba(2, 132, 199, 0.3);
+  color: var(--primary);
+}
+
+.btn-admin-action.primary:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-admin-action.success {
+  background: rgba(5, 150, 105, 0.1);
+  border-color: rgba(5, 150, 105, 0.3);
+  color: var(--emerald);
+}
+
+.btn-admin-action.success:hover {
+  background: var(--emerald);
+  color: #ffffff;
+}
+
+.btn-admin-action.danger {
+  background: rgba(225, 29, 72, 0.1);
+  border-color: rgba(225, 29, 72, 0.3);
+  color: var(--accent);
+}
+
+.btn-admin-action.danger:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.btn-admin-action.whatsapp {
+  background: rgba(37, 211, 102, 0.12);
+  border-color: rgba(37, 211, 102, 0.35);
+  color: #15803d;
+}
+
+.btn-admin-action.whatsapp:hover {
+  background: #25d366;
+  color: #fff;
+}
+
+/* ---------------- GATEKEEPER / ADMIN LOGIN CARD ---------------- */
+.admin-gatekeeper-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg-darker);
+}
+
+.admin-gatekeeper-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 36px 30px;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.1);
+  text-align: center;
+}
+
+.admin-gatekeeper-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.15), rgba(2, 132, 199, 0.15));
+  border: 1px solid var(--primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: var(--primary);
+  box-shadow: 0 0 30px rgba(2, 132, 199, 0.2);
+}
+
+.admin-gatekeeper-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.admin-gatekeeper-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* ---------------- MODALS IN ADMIN ---------------- */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.admin-modal-dialog {
+  background: var(--bg-modal);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25);
+  padding: 26px;
+  position: relative;
+}
+
+.admin-form-group {
+  margin-bottom: 16px;
+}
+
+.admin-form-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.admin-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 13.5px;
+  transition: all 0.2s;
+}
+
+.admin-form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.admin-form-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 13.5px;
+}
+
+/* ---------------- RESPONSIVENESS ---------------- */
+@media (max-width: 991px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 20px 0 50px rgba(15, 23, 42, 0.2);
+  }
+
+  .admin-main-wrap {
+    margin-left: 0;
+  }
+
+  .admin-mobile-menu-toggle {
+    display: flex;
+  }
+
+  .admin-page-content {
+    padding: 18px 16px 40px;
+  }
+
+  .admin-topbar {
+    padding: 0 16px;
+  }
+}
+
+/* ---------------- GUIDE CARDS & EASY NAVIGATION ---------------- */
+.admin-guide-card {
+  background: rgba(2, 132, 199, 0.06);
+  border: 1px solid var(--primary-border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.admin-guide-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(2, 132, 199, 0.15);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.admin-guide-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.admin-guide-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Horizontal Quick Jump Bar */
+.admin-quick-tabs-container {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 22px;
+}
+
+.admin-quick-tab-card {
+  flex: 1;
+  min-width: 170px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-quick-tab-card:hover {
+  background: var(--bg-main);
+  border-color: var(--primary-border);
+  transform: translateY(-2px);
+}
+
+.admin-quick-tab-card.active {
+  background: #f0f9ff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.15);
+}
+
+.admin-quick-tab-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-quick-tab-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.admin-quick-tab-sub {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Inline Price Editor in Table */
+.admin-inline-price-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-main);
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-inline-price-input {
+  width: 75px;
+  padding: 4px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--emerald);
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+}
+
+.admin-inline-price-input:focus {
+  border-color: var(--primary);
+}
+
+.admin-stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.admin-stock-badge.in-stock {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--emerald);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+}
+
+.admin-stock-badge.out-of-stock {
+  background: rgba(225, 29, 72, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+}

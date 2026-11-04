@@ -100,7 +100,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
   const menuItems = [
     { name: 'Dashboard', transKey: 'dashboard', path: '/', icon: <FiHome size={19} /> },
     { name: 'Community Wall', transKey: 'community_wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" /> },
-
+    { name: 'Team Feasts & Tours', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Desktop App & Updates', transKey: 'desktop_app', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" /> },
@@ -205,8 +205,8 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                     type="button"
                     onClick={toggleDevMenu}
                     className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${isDevRoute
-                        ? 'bg-primary-50/90 dark:bg-primary-500/15 text-primary-700 dark:text-primary-400 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] font-black'
-                        : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1 font-bold text-slate-600 dark:text-slate-400'
+                      ? 'bg-primary-50/90 dark:bg-primary-500/15 text-primary-700 dark:text-primary-400 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] font-black'
+                      : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1 font-bold text-slate-600 dark:text-slate-400'
                       }`}
                   >
                     {/* Subtle active state glow background */}
@@ -223,8 +223,8 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                     <div className="flex items-center gap-3 relative z-10">
                       <div
                         className={`transition-all duration-300 transform group-hover:scale-110 ${isDevRoute
-                            ? 'drop-shadow-md text-primary-600 dark:text-primary-400'
-                            : 'text-cyan-500 dark:text-cyan-400 group-hover:text-cyan-400'
+                          ? 'drop-shadow-md text-primary-600 dark:text-primary-400'
+                          : 'text-cyan-500 dark:text-cyan-400 group-hover:text-cyan-400'
                           }`}
                       >
                         <FiTerminal size={19} />
@@ -267,8 +267,8 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                             <div className="flex items-center gap-2">
                               <div
                                 className={`transition-colors ${isActive
-                                    ? 'text-cyan-600 dark:text-cyan-400'
-                                    : 'text-slate-400 dark:text-slate-500 group-hover:text-cyan-500'
+                                  ? 'text-cyan-600 dark:text-cyan-400'
+                                  : 'text-slate-400 dark:text-slate-500 group-hover:text-cyan-500'
                                   }`}
                               >
                                 {sub.icon}

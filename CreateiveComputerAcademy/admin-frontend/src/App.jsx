@@ -24,6 +24,7 @@ import Profile from './pages/Profile';
 import { Toaster } from 'sonner';
 
 import LeaveManagement from './pages/LeaveManagement';
+import MangoVaultManager from './pages/MangoVaultManager';
 import DatabaseManager from './pages/DatabaseManager';
 import StorageSettings from './pages/StorageSettings';
 import AppReleases from './pages/AppReleases';
@@ -38,7 +39,7 @@ import IdleAlerts from './pages/IdleAlerts';
 import WorkstationVideoLogs from './pages/WorkstationVideoLogs';
 import ServerCodeEditor from './pages/ServerCodeEditor';
 import NotFound from './pages/NotFound';
-
+import TeamEvents from './pages/TeamEvents';
 // Mock empty pages to avoid errors
 const Placeholder = ({ title }) => (
   <div className="flex items-center justify-center h-full bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[400px]">
@@ -85,7 +86,11 @@ function App() {
               <AdminLayout><Messages /></AdminLayout>
             </ProtectedRoute>
           } />
-
+          <Route path="/events" element={
+            <ProtectedRoute>
+              <AdminLayout><TeamEvents /></AdminLayout>
+            </ProtectedRoute>
+          } />
           <Route path="/content-studio" element={
             <ProtectedRoute>
               <AdminLayout><ContentStudioAdmin /></AdminLayout>
@@ -191,6 +196,12 @@ function App() {
           <Route path="/leave" element={
             <ProtectedRoute>
               <AdminLayout><LeaveManagement /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/mango-vault" element={
+            <ProtectedRoute>
+              <AdminLayout><MangoVaultManager /></AdminLayout>
             </ProtectedRoute>
           } />
 

@@ -97,6 +97,27 @@ class BreakDbHelper {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
             } catch (Throwable $t3) {}
 
+            // 5. Ensure mango_vault_ledger table exists
+            try {
+                $db->exec("CREATE TABLE IF NOT EXISTS mango_vault_ledger (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    action_type VARCHAR(30) NOT NULL,
+                    mango_count INT NOT NULL DEFAULT 1,
+                    minutes_amount INT NOT NULL DEFAULT 0,
+                    source_user_id INT NULL,
+                    target_user_id INT NULL,
+                    from_source VARCHAR(20) DEFAULT 'vault',
+                    note VARCHAR(255) NULL,
+                    performed_by INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX (user_id),
+                    INDEX (action_type),
+                    INDEX (performed_by),
+                    INDEX (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            } catch (Throwable $t4) {}
+
         } catch (Throwable $t) {
             error_log("BreakDbHelper error: " . $t->getMessage());
         }
@@ -204,12 +225,179 @@ class BreakDbHelper {
                 $absentMins = (int)round($absentCount * $shift_hours * 60);
             } catch (Throwable $e4) {}
 
-            $availableMins = max(0, ($totalOvertimeMinutes + $boughtMins + $tiffinSavings) - ($usedBreakMins + $cashedMins + $soldMins + $absentMins));
-            return (int)$availableMins;
+            // 10. Vault deductions and transfers
+            $vaultSummary = self::getVaultSummary($db, $user_id, $shift_hours);
+            $vaultHeldMins = $vaultSummary['held_minutes'];
+            $vaultTransOutMins = $vaultSummary['transferred_out_minutes'];
+            $vaultTransInMins = $vaultSummary['transferred_in_minutes'];
+
+            // Total net earned across all attendance and transactions
+            $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
+            $totalDeductedMins = $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            $totalNetAvailableMins = max(0, $totalGrossMins - $totalDeductedMins);
+
+            // Staff only sees and can claim what is NOT held in the admin vault
+            $staffVisibleMins = max(0, $totalNetAvailableMins - $vaultHeldMins);
+            return (int)$staffVisibleMins;
         } catch (Throwable $e) {
             error_log("getAvailableMangoMinutes error: " . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * Calculates the user's real total net earned Mango Overtime balance in minutes (WITHOUT vault hold deduction)
+     * Used by Admins & Developers to see full earned balance
+     */
+    public static function getTotalEarnedMangoMinutes($db, $user_id) {
+        if (!$db || !$user_id) return 0;
+        try {
+            $userStmt = $db->prepare("SELECT COALESCE(e.shift_hours, 8) as shift_hours FROM users u LEFT JOIN employees e ON u.id = e.user_id WHERE u.id = :user_id LIMIT 1");
+            $userStmt->execute([':user_id' => $user_id]);
+            $uRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+            $shift_hours = $uRow ? (float)$uRow['shift_hours'] : 8.0;
+            if ($shift_hours <= 0) $shift_hours = 8.0;
+
+            $holidays = [];
+            $holStmt = $db->query("SELECT date, expected_hours FROM holidays");
+            if ($holStmt) {
+                while ($h = $holStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $holidays[$h['date']] = (float)$h['expected_hours'];
+                }
+            }
+
+            $attStmt = $db->prepare("SELECT date, check_in, check_out FROM attendance WHERE user_id = :user_id AND check_in IS NOT NULL AND check_out IS NOT NULL");
+            $attStmt->execute([':user_id' => $user_id]);
+            $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $dailyWorked = [];
+            foreach ($attRows as $r) {
+                $in_ts = strtotime($r['check_in']);
+                $out_ts = strtotime($r['check_out']);
+                if ($out_ts <= $in_ts) continue;
+                $d = $r['date'];
+                if (!isset($dailyWorked[$d])) $dailyWorked[$d] = 0;
+                $dailyWorked[$d] += ($out_ts - $in_ts);
+            }
+
+            $totalOvertimeSeconds = 0;
+            foreach ($dailyWorked as $d => $workedSec) {
+                $isFriday = (date('N', strtotime($d)) == 5);
+                $expectedSec = $isFriday ? 0 : ($shift_hours * 3600);
+                if (isset($holidays[$d])) {
+                    $expectedSec = $holidays[$d] * 3600;
+                }
+                $diffSec = $workedSec - $expectedSec;
+                if ($diffSec > 0) {
+                    $totalOvertimeSeconds += $diffSec;
+                }
+            }
+            $totalOvertimeMinutes = round($totalOvertimeSeconds / 60);
+
+            $claimStmt = $db->prepare("SELECT SUM(duration_minutes) as used_mins FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') AND status != 'Rejected'");
+            $claimStmt->execute([':user_id' => $user_id]);
+            $claimRow = $claimStmt->fetch(PDO::FETCH_ASSOC);
+            $usedBreakMins = (int)($claimRow['used_mins'] ?? 0);
+
+            $cashStmt = $db->prepare("SELECT SUM(overtime_hours_cashed) as cashed_hrs FROM staff_withdrawals WHERE user_id = :user_id AND overtime_hours_cashed > 0 AND status != 'rejected'");
+            $cashStmt->execute([':user_id' => $user_id]);
+            $cashRow = $cashStmt->fetch(PDO::FETCH_ASSOC);
+            $cashedMins = round(((float)($cashRow['cashed_hrs'] ?? 0)) * 60);
+
+            $soldMins = 0;
+            try {
+                $soldStmt = $db->prepare("SELECT SUM(minutes_traded) as sold_mins FROM staff_overtime_trades WHERE seller_id = :user_id AND status IN ('approved', 'pending_admin', 'pending_seller')");
+                $soldStmt->execute([':user_id' => $user_id]);
+                $soldRow = $soldStmt->fetch(PDO::FETCH_ASSOC);
+                $soldMins = (int)($soldRow['sold_mins'] ?? 0);
+            } catch (Throwable $e1) {}
+
+            $boughtMins = 0;
+            try {
+                $boughtStmt = $db->prepare("SELECT SUM(minutes_traded) as bought_mins FROM staff_overtime_trades WHERE buyer_id = :user_id AND status = 'approved'");
+                $boughtStmt->execute([':user_id' => $user_id]);
+                $boughtRow = $boughtStmt->fetch(PDO::FETCH_ASSOC);
+                $boughtMins = (int)($boughtRow['bought_mins'] ?? 0);
+            } catch (Throwable $e2) {}
+
+            $tiffinSavings = 0;
+            try {
+                $tStmt = $db->prepare("SELECT COALESCE(SUM(tiffin_delta_minutes), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
+                $tStmt->execute([':user_id' => $user_id]);
+                $tRow = $tStmt->fetch(PDO::FETCH_ASSOC);
+                $tiffinSavings = (int)($tRow['t_savings'] ?? 0);
+            } catch (Throwable $e3) {}
+
+            $absentMins = 0;
+            try {
+                $absStmt = $db->prepare("SELECT COUNT(*) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent'");
+                $absStmt->execute([':user_id' => $user_id]);
+                $absRow = $absStmt->fetch(PDO::FETCH_ASSOC);
+                $absentCount = (int)($absRow['absent_count'] ?? 0);
+                $absentMins = (int)round($absentCount * $shift_hours * 60);
+            } catch (Throwable $e4) {}
+
+            $vaultSummary = self::getVaultSummary($db, $user_id, $shift_hours);
+            $vaultTransOutMins = $vaultSummary['transferred_out_minutes'];
+            $vaultTransInMins = $vaultSummary['transferred_in_minutes'];
+
+            $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
+            $totalDeductedMins = $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            // Return raw signed balance (negative if staff has overtime debt/deficit from absences)
+            return (int)($totalGrossMins - $totalDeductedMins);
+        } catch (Throwable $e) {
+            error_log("getTotalEarnedMangoMinutes error: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get vault hold, release, and transfer summary for a user
+     */
+    public static function getVaultSummary($db, $user_id, $shift_hours = 8.0) {
+        $result = [
+            'held_minutes' => 0,
+            'held_mangoes' => 0,
+            'transferred_out_minutes' => 0,
+            'transferred_out_mangoes' => 0,
+            'transferred_in_minutes' => 0,
+            'transferred_in_mangoes' => 0
+        ];
+        if (!$db || !$user_id) return $result;
+
+        try {
+            $shift_mins = max(60, (int)round($shift_hours * 60));
+
+            $stmt = $db->prepare("SELECT 
+                COALESCE(SUM(CASE 
+                    WHEN action_type = 'hold' THEN minutes_amount 
+                    WHEN action_type = 'release' THEN -minutes_amount 
+                    WHEN action_type = 'transfer_out' AND from_source = 'vault' THEN -minutes_amount 
+                    ELSE 0 
+                END), 0) as net_held_mins,
+                COALESCE(SUM(CASE WHEN action_type = 'transfer_out' THEN minutes_amount ELSE 0 END), 0) as total_trans_out,
+                COALESCE(SUM(CASE WHEN action_type = 'transfer_in' THEN minutes_amount ELSE 0 END), 0) as total_trans_in
+            FROM mango_vault_ledger 
+            WHERE user_id = :user_id");
+            $stmt->execute([':user_id' => $user_id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($row) {
+                $held_mins = max(0, (int)$row['net_held_mins']);
+                $trans_out = max(0, (int)$row['total_trans_out']);
+                $trans_in = max(0, (int)$row['total_trans_in']);
+
+                $result['held_minutes'] = $held_mins;
+                $result['held_mangoes'] = (int)floor($held_mins / $shift_mins);
+                $result['transferred_out_minutes'] = $trans_out;
+                $result['transferred_out_mangoes'] = (int)floor($trans_out / $shift_mins);
+                $result['transferred_in_minutes'] = $trans_in;
+                $result['transferred_in_mangoes'] = (int)floor($trans_in / $shift_mins);
+            }
+        } catch (Throwable $e) {
+            error_log("getVaultSummary error: " . $e->getMessage());
+        }
+        return $result;
     }
 
     /**

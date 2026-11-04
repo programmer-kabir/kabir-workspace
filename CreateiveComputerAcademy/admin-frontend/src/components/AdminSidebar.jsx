@@ -101,7 +101,8 @@ const AdminSidebar = ({ isOpen = true }) => {
         { name: 'Inactivity Alerts ⏳', path: '/idle-alerts', badge: idleAlertCount },
         { name: 'Daily Roster', path: '/attendance' },
         { name: 'Leave Approvals', path: '/leave' },
-        { name: 'Attendance Disputes', path: '/attendance-disputes', badge: pendingDisputes }
+        { name: 'Attendance Disputes', path: '/attendance-disputes', badge: pendingDisputes },
+        { name: 'Mango Vault & Leaves 🥭', path: '/mango-vault' }
       ]
     },
     {
@@ -114,6 +115,7 @@ const AdminSidebar = ({ isOpen = true }) => {
       ]
     },
     { name: 'Community Wall', path: '/community', icon: <FiShare2 size={18} className="text-violet-500" /> },
+    { name: 'Team Feasts & Tours 🎉', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { name: 'Academy Feed / Blog', path: '/blogs', icon: <FiBookOpen size={18} className="text-indigo-500" /> },
     { name: 'Message', path: '/messages', icon: <FiMessageSquare size={18} /> },
     { name: 'Brand Kit & Assets', path: '/brand-resources', icon: <HiSparkles size={18} className="text-amber-400" /> },
@@ -197,11 +199,10 @@ const AdminSidebar = ({ isOpen = true }) => {
                             >
                               {/* Hierarchy branch indicator line */}
                               <span
-                                className={`absolute -left-[16px] top-1/2 -translate-y-1/2 w-2.5 h-[2px] rounded-full transition-colors ${
-                                  isSubActive
+                                className={`absolute -left-[16px] top-1/2 -translate-y-1/2 w-2.5 h-[2px] rounded-full transition-colors ${isSubActive
                                     ? 'bg-blue-600 dark:bg-blue-500'
                                     : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
-                                }`}
+                                  }`}
                               />
                               <span className="truncate text-sm">{sub.name}</span>
                               {sub.badge > 0 && (

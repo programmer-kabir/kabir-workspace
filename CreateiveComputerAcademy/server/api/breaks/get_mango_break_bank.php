@@ -481,9 +481,15 @@ try {
         return strcmp($b['claim_date'], $a['claim_date']);
     });
 
-    // Available Net Overtime Balance for this period
-    $total_gross_overtime_hours = round($total_overtime_hours + $total_bought_overtime_hours + $total_tiffin_bonus_hours, 2);
-    $total_deducted_hours = round($total_claimed_hours + $total_in_shift_mango_hours + $total_cashed_out_overtime_hours + $total_sold_overtime_hours + $total_tiffin_penalty_hours + $total_absent_deducted_hours, 2);
+    // 10.5. Vault Deductions (Admin Reserve & Transfers)
+    $vaultSummary = BreakDbHelper::getVaultSummary($db, $user_id, $shift_hours);
+    $vault_held_hours = round($vaultSummary['held_minutes'] / 60.0, 2);
+    $vault_trans_out_hours = round($vaultSummary['transferred_out_minutes'] / 60.0, 2);
+    $vault_trans_in_hours = round($vaultSummary['transferred_in_minutes'] / 60.0, 2);
+
+    // Available Net Overtime Balance for this period (Vault held hours are completely hidden from staff)
+    $total_gross_overtime_hours = round($total_overtime_hours + $total_bought_overtime_hours + $total_tiffin_bonus_hours + $vault_trans_in_hours, 2);
+    $total_deducted_hours = round($total_claimed_hours + $total_in_shift_mango_hours + $total_cashed_out_overtime_hours + $total_sold_overtime_hours + $total_tiffin_penalty_hours + $total_absent_deducted_hours + $vault_trans_out_hours + $vault_held_hours, 2);
     
     $net_balance_hours = round($total_gross_overtime_hours - $total_deducted_hours, 2);
     $has_overtime_debt = ($net_balance_hours < 0);
