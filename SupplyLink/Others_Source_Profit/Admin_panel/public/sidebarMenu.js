@@ -286,7 +286,7 @@ export const sidebarMenu = [
     type: "collapse",
     label: "Profit History",
     icon: BsGraphUpArrow,
-    roles: ["admin", "developer", "manager"],
+    roles: ["admin", "developer", "manager", "data_entry"],
     children: [
       {
         label: "Card Close History",
@@ -304,7 +304,7 @@ export const sidebarMenu = [
         label: "Monthly Profit Distributor",
         path: "/profit/monthly_profit_distributor",
         icon: TbCashBanknote,
-        roles: ["admin", "developer", "manager"],
+        roles: ["admin", "developer", "manager", "data_entry"],
       },
     ],
   },

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { MONTHS } from "../../../../../public/month";
+import useUserRole from "../../../../utils/Hooks/useUserRole";
 import { 
   Coins, 
   Layers, 
@@ -19,6 +20,7 @@ import {
 const round4 = (n) => Math.round((Number(n) + Number.EPSILON) * 10000) / 10000;
 
 const Monthly_Profit_Distributor = () => {
+  const { canMakeEntry } = useUserRole();
   const now = new Date();
   const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
@@ -214,6 +216,10 @@ const Monthly_Profit_Distributor = () => {
 
   const handleSaveMonthly = async () => {
     try {
+      if (!canMakeEntry) {
+        return toast.error("আপনার রোলে মাসিক মুনাফা সংরক্ষণ করার অনুমতি নেই (শুধুমাত্র Admin, Developer ও Data Entry)।");
+      }
+
       if (mode !== "monthly")
         return toast.error("Only Monthly mode can be saved.");
 
@@ -356,6 +362,14 @@ const Monthly_Profit_Distributor = () => {
             <div className="inline-flex items-center gap-2 bg-emerald-950/70 border border-emerald-600/50 text-emerald-300 px-5 py-2.5 rounded-xl font-medium text-sm shadow-inner cursor-not-allowed select-none">
               <Lock className="w-4 h-4 text-emerald-400" />
               <span>ইতিমধ্যে সংরক্ষিত (Saved & Locked)</span>
+            </div>
+          ) : !canMakeEntry ? (
+            <div
+              className="inline-flex items-center gap-2 bg-slate-800/90 border border-red-500/30 text-red-300 px-5 py-2.5 rounded-xl font-medium text-sm cursor-not-allowed select-none shadow-sm"
+              title="শুধুমাত্র Admin, Developer এবং Data Entry সংরক্ষণ করতে পারবেন"
+            >
+              <Lock className="w-4 h-4 text-red-400" />
+              <span>সংরক্ষণ লক্ড (View Only)</span>
             </div>
           ) : (
             <button

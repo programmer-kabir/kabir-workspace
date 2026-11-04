@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // =========================================================================
 // Central Auth Guard & Security Firewall for SupplyLink APIs
 // =========================================================================
@@ -105,9 +105,9 @@ function requireRole($roles, $customMessage = "The requested URL was not found o
     return true;
 }
 
-// 6. Admin & Staff Only Guard
+// 6. Admin & Staff Only Guard (Internal Office Roles)
 function guardAdminOnly() {
-    return requireRole(['admin', 'developer', 'manager', 'staff']);
+    return requireRole(['admin', 'developer', 'manager', 'staff', 'data_entry']);
 }
 
 // 7. Entry Only Guard (admin, developer, data_entry)
