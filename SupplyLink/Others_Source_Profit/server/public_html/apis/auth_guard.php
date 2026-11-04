@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // =========================================================================
 // Central Auth Guard & Security Firewall for SupplyLink APIs
 // =========================================================================
@@ -33,10 +33,10 @@ function hasRole($requiredRoles) {
         return false;
     }
     $user = getAuthenticatedUser();
-    $userRoles = isset($user['role']) 
+    $userRoles = isset($user['role'])
         ? (is_array($user['role']) ? $user['role'] : [$user['role']])
         : [];
-    
+
     // Developer has super-admin role
     if (in_array('developer', $userRoles)) {
         return true;
@@ -53,7 +53,7 @@ function requireAuth($customMessage = "The requested URL was not found on this s
     }
 
     if (!isAuthenticated()) {
-        // If someone directly pasted URL in browser address bar (Navigate mode), redirect to v1.supplylinkbd.com 404 page
+        // If someone directly pasted URL in browser address bar (Navigate mode), redirect to 404 page
         if (isDirectBrowserNavigation()) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
@@ -110,9 +110,9 @@ function guardAdminOnly() {
     return requireRole(['admin', 'developer', 'manager', 'staff']);
 }
 
-// 7. Strict Management Only (Admin & Developer)
+// 7. Entry Only Guard (admin, developer, data_entry)
 function guardEntryOnly() {
-    return requireRole(['admin', 'developer', 'data_entry'], "আপনার ডাটা এন্ট্রি করার অনুমতি নেই (data_entry রোল প্রয়োজন)");
+    return requireRole(['admin', 'developer', 'data_entry'], "আপনার ডাটা এন্ট্রি করার অনুমতি নেই (data_entry রোল প্রয়োজন)");
 }
 
 function guardManagerAdminOnly() {
@@ -129,7 +129,7 @@ function isDirectBrowserNavigation() {
     if ($secFetchMode === 'navigate' || $secFetchDest === 'document') {
         return true;
     }
-    
+
     // Direct address bar hit without origin, asking for HTML
     if (empty($_SERVER['HTTP_ORIGIN']) && strpos($accept, 'text/html') !== false && $secFetchMode !== 'cors') {
         return true;
@@ -138,18 +138,15 @@ function isDirectBrowserNavigation() {
     return false;
 }
 
-// 9. Allow Cron and CLI
+// 9. Allow Cron and CLI only
+// NOTE: IP-based bypass removed — it was allowing ALL localhost browser requests
+// to skip role checks. Only true CLI execution or a valid cron key bypasses guards.
 function isCronOrCli() {
     if (php_sapi_name() === 'cli') {
         return true;
     }
     $cronHeader = $_SERVER['HTTP_X_CRON_KEY'] ?? $_GET['cron_key'] ?? '';
     if (!empty($cronHeader) && $cronHeader === 'supplylink_cron_secure_key_2026') {
-        return true;
-    }
-    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
-    $server = $_SERVER['SERVER_ADDR'] ?? '';
-    if (!empty($remote) && ($remote === '127.0.0.1' || $remote === '::1' || (!empty($server) && $remote === $server))) {
         return true;
     }
     return false;
