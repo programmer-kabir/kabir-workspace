@@ -106,14 +106,19 @@ function syncInstallmentPaymentCash($mysqli, $paymentId, $cardId, $amount, $paid
     $isDailyCard  = ($cardInstType === 'daily' || $cardRemarks === 'daily');
 
     // 🔥 দৈনিক কিস্তির গ্রাহকদের কোনো মাসিক কিস্তিই ক্যাশ ইন হবে না (সম্পূর্ণ ব্লক)
-    if ($isDailyCard) {
+    $installmentLabel = getInstallmentOrdinalLabel($instNo, $tag);
+    $tagDisplay = !empty($tag) ? $tag : $installmentLabel;
+    $isDownPayment = ($instNo === 0 || stripos($tagDisplay, 'ডাউন') !== false || stripos($tagDisplay, 'down') !== false);
+
+    // দৈনিক কিস্তির ক্ষেত্রে শুধুমাত্র ডাউনপেমেন্ট ক্যাশ ইন হবে, অন্য কিস্তি ব্লক থাকবে
+    if ($isDailyCard && !$isDownPayment) {
         $delStmt = $mysqli->prepare("UPDATE cash SET is_deleted = 1 WHERE refId = ?");
         if ($delStmt) {
             $delStmt->bind_param("s", $refId);
             $delStmt->execute();
             $delStmt->close();
         }
-        return true; // নতুন কোনো Cash In এন্ট্রি হবে না
+        return true;
     }
 
     $customerName = !empty($cRes['customer_name']) ? trim($cRes['customer_name']) : "Customer";

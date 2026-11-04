@@ -87,13 +87,18 @@ const DailyInstallmentsUsersDetails = () => {
   }, [id, currentCard]);
 
   // 🔥 CALCULATIONS
+  const salePrice = Number(currentCard?.sale_price || 0);
+  const downPayment = Number(currentCard?.down_payment || 0);
+  // দৈনিক কিস্তির টার্গেট হলো শুধুমাত্র বাকি টাকা (total_due_amount)
+  const expectedPayment = Number(
+    currentCard?.total_due_amount ?? (salePrice - downPayment)
+  );
+
   const totalPaid = useMemo(() => {
     return data.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   }, [data]);
 
   const totalInstallments = data.length;
-
-  const expectedPayment = Number(currentCard?.sale_price || 0);
 
   const totalDue = Math.max(0, expectedPayment - totalPaid);
   const filteredData = useMemo(() => {
@@ -295,10 +300,15 @@ const DailyInstallmentsUsersDetails = () => {
         </div>
 
         <div className="bg-[#0f172a] p-4 rounded-xl border border-gray-800">
-          <p className="text-gray-400 text-xs">Expected Payment</p>
+          <p className="text-gray-400 text-xs">কিস্তির বাকি লক্ষ্য (Target Due)</p>
           <h2 className="text-lg font-bold text-indigo-400">
-            ৳{expectedPayment}
+            ৳{expectedPayment.toLocaleString()}
           </h2>
+          {downPayment > 0 && (
+            <p className="text-[11px] text-emerald-400 mt-0.5">
+              ডাউনপেমেন্ট ৳{downPayment.toLocaleString()} জমা হয়েছে
+            </p>
+          )}
         </div>
 
         <div className="bg-[#0f172a] p-4 rounded-xl border border-gray-800">

@@ -130,15 +130,15 @@ $hasCardIdCol     = tableHasColumn($mysqli, 'installment_cards', 'card_id');
 $cardSelectExpr = "ic.id as card_id";
 $cardJoinExpr   = "ip.card_id = ic.id";
 
-if ($hasCardNumberCol && $hasCardIdCol) {
-    $cardSelectExpr = "COALESCE(ic.card_id, ic.card_number, ic.id) as card_id";
-    $cardJoinExpr   = "(ip.card_id = ic.id OR ip.card_id = ic.card_id OR ip.card_id = ic.card_number)";
+if ($hasCardIdCol) {
+    $cardSelectExpr = "ic.card_id";
+    $cardJoinExpr   = "ip.card_id = ic.card_id";
 } elseif ($hasCardNumberCol) {
-    $cardSelectExpr = "COALESCE(ic.card_number, ic.id) as card_id";
-    $cardJoinExpr   = "(ip.card_id = ic.id OR ip.card_id = ic.card_number)";
-} elseif ($hasCardIdCol) {
-    $cardSelectExpr = "COALESCE(ic.card_id, ic.id) as card_id";
-    $cardJoinExpr   = "(ip.card_id = ic.id OR ip.card_id = ic.card_id)";
+    $cardSelectExpr = "ic.card_number";
+    $cardJoinExpr   = "ip.card_id = ic.card_number";
+} else {
+    $cardSelectExpr = "ic.id as card_id";
+    $cardJoinExpr   = "ip.card_id = ic.id";
 }
 
 // 0. Current Live Cash Balance

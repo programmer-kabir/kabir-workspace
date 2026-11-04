@@ -38,6 +38,9 @@ import CashReport from "../Pages/CashMenage/CashReport";
 import CashOut from "../Pages/CashMenage/CashOut";
 import CashReportApproved from "../Pages/CashMenage/CashReportApproved";
 import CashReportPrint from "../Pages/CashMenage/CashReportPrint";
+import DownpaymentSyncAudit from "../Pages/Audit/DownpaymentSyncAudit";
+import DailyInstallmentSyncAudit from "../Pages/Audit/DailyInstallmentSyncAudit";
+import DuplicateEntryAudit from "../Pages/Audit/DuplicateEntryAudit";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
@@ -88,6 +91,22 @@ const routes = createBrowserRouter([
           {
             path: "/cash/cash-report-approval",
             element: <CashReportApproved />,
+          },
+          {
+            path: "/cash/downpayment_sync",
+            element: <DownpaymentSyncAudit />,
+          },
+          {
+            path: "/audit/downpayment_sync",
+            element: <DownpaymentSyncAudit />,
+          },
+          {
+            path: "/audit/daily_installment_sync",
+            element: <DailyInstallmentSyncAudit />,
+          },
+          {
+            path: "/audit/duplicate_payments",
+            element: <DuplicateEntryAudit />,
           },
           // Users
 

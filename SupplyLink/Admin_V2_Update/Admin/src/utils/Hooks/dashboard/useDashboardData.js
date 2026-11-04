@@ -5,7 +5,7 @@ import useInvestInstallment from "../../Investors/useInvestInstallment";
 import useUsers from "../useUsers";
 import useCashReports from "../cash/useCashReports";
 
-const useDashboardData = () => {
+const useDashboardData = (customDate) => {
   const [dailyInstallments, setDailyInstallments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -48,7 +48,10 @@ const useDashboardData = () => {
         ["salary", "rent", "bill", "office-expense", "maintenance", "utility", "marketing", "transport", "food", "internet", "others"].includes(cash.category?.toLowerCase()?.trim()))
   );
 
-  const today = new Intl.DateTimeFormat("en-CA", {
+  // const today = new Intl.DateTimeFormat("en-CA", {
+  //   timeZone: "Asia/Dhaka",
+  // }).format(new Date());
+  const today = customDate || new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
   }).format(new Date());
 

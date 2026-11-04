@@ -358,7 +358,7 @@ const loanReturnTotal = SummaryCashIn.filter(
         </div>
       </div>
       {/* top cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-9 gap-3 md:gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-3 md:gap-4 mb-5">
         <CashStateCard
           title="Total Cash In"
           amount={totalCashIn}

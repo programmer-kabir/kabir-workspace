@@ -85,6 +85,34 @@ export const sidebarMenu = [
     ],
   },
 
+  // AUDIT & RECONCILIATION
+  {
+    type: "collapse",
+    label: "Audit & Sync",
+    icon: TbClipboardList,
+    roles: ["admin", "developer", "manager"],
+    children: [
+      {
+        label: "Downpayment Audit",
+        path: "/audit/downpayment_sync",
+        icon: TbWallet,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "Daily Installment Audit",
+        path: "/audit/daily_installment_sync",
+        icon: FaTasks,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "Double Entry Audit",
+        path: "/audit/duplicate_payments",
+        icon: TbClipboardList,
+        roles: ["admin", "developer", "manager"],
+      },
+    ],
+  },
+
 
   // USERS
   {
