@@ -56,66 +56,66 @@ export const sidebarMenu = [
     label: "SupplyLink Reports",
     path: "/supplylink-reports",
     icon: TbReport,
-    roles: ["admin", "developer", "manager", "staff", "audit"],
+    roles: ["admin", "developer", "manager", "staff", "audit", "data_entry"],
   },
   // REQUESTS & APPROVALS
   {
     label: "Requests & Approvals",
     path: "/approval-center",
     icon: TbClipboardList,
-    roles: ["admin", "developer", "manager", "staff"],
+    roles: ["admin", "developer", "manager", "staff", "data_entry"],
   },
 
   {
-  type: "collapse",
-  label: "Cash Management",
-  icon: BsCashStack,
-  roles: ["admin", "developer", "manager", "staff", "data_entry"],
-  children: [
-    {
-      label: "Cash In",
-      path: "/cash/cash_in",
-      icon: GiReceiveMoney,
-      roles: ["admin", "developer", "data_entry"],
+    type: "collapse",
+    label: "Cash Management",
+    icon: BsCashStack,
+    roles: ["admin", "developer", "manager", "staff", "data_entry"],
+    children: [
+      {
+        label: "Cash In",
+        path: "/cash/cash_in",
+        icon: GiReceiveMoney,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"]
     },
-    {
-      label: "Cash Out",
-      path: "/cash/cash_out",
-      icon: GiPayMoney,
-      roles: ["admin", "developer", "data_entry"],
-    },
-    {
-      label: "রিপোর্ট",
-      path: "/cash/cash_reports",
-      icon: TbReport,
-      roles: ["admin", "developer", "manager", "staff"],
-    },
-    {
-      label: "রিপোর্ট প্রিন্ট",
-      path: "/cash/cash_reports_print",
-      icon: TbReport,
-      roles: ["admin", "developer", "manager", "staff"],
-    },
-    {
-      label: "অনুদান অনুমোদন",
-      path: "/cash/cash-report-approval",
-      icon: TbCashBanknote,
-      roles: ["admin", "developer", "manager", "staff"],
-    },
-    {
-      label: "ব্যাংক জমা ও রিকনসিলিয়েশন",
-      path: "/cash/bank-reconciliation",
-      icon: BsBank,
-      roles: ["admin", "developer", "manager", "staff"],
-    },
-    {
-      label: "ক্যাশ ঘাটতি ও রিকভারি",
-      path: "/cash/gap-tracker",
-      icon: FaHistory,
-      roles: ["admin", "developer", "manager", "staff"],
-    },
-  ],
-},
+      {
+        label: "Cash Out",
+        path: "/cash/cash_out",
+        icon: GiPayMoney,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "রিপোর্ট",
+        path: "/cash/cash_reports",
+        icon: TbReport,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "রিপোর্ট প্রিন্ট",
+        path: "/cash/cash_reports_print",
+        icon: TbReport,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "অনুদান অনুমোদন",
+        path: "/cash/cash-report-approval",
+        icon: TbCashBanknote,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "ব্যাংক জমা ও রিকনসিলিয়েশন",
+        path: "/cash/bank-reconciliation",
+        icon: BsBank,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "ক্যাশ ঘাটতি ও রিকভারি",
+        path: "/cash/gap-tracker",
+        icon: FaHistory,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+    ],
+  },
 
   {
     type: "collapse",
@@ -181,12 +181,12 @@ export const sidebarMenu = [
         icon: MdShowChart,
         roles: ["admin", "developer", "manager", "staff", "data_entry"],
       },
-{
-  label: "Installment Analytics Test",
-  path: "/customers/monthly_installment_overviews_test",
-  icon: MdShowChart,
-  roles: ["admin", "developer", "manager", "staff", "data_entry"],
-},
+      {
+        label: "Installment Analytics Test",
+        path: "/customers/monthly_installment_overviews_test",
+        icon: MdShowChart,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
 
       {
         label: "Monthly Installment Reports",
@@ -400,32 +400,32 @@ export const sidebarMenu = [
 
   // COMPANY
 
-{
-  type: "collapse",
-  label: "Finance",
-icon: IoStatsChart,
-  roles: ["admin", "developer", "manager"],
-  children: [
-    {
-      label: "Finance Overview",
-      path: "/finance/finance_overview",
-      icon: IoStatsChart,
-      roles: ["admin", "developer", "manager"],
-    },
-    {
-      label: "Company Health",
-      path: "/finance/company-health",
-      icon: BsGraphUpArrow,
-      roles: ["admin", "developer", "manager"],
-    },
-    {
-      label: "ক্লোজিং সিমুলেটর",
-      path: "/finance/company-settlement-simulator",
-      icon: BsClipboardData,
-      roles: ["admin", "developer", "manager"],
-    },
-  ],
-},
+  {
+    type: "collapse",
+    label: "Finance",
+    icon: IoStatsChart,
+    roles: ["admin", "developer", "manager"],
+    children: [
+      {
+        label: "Finance Overview",
+        path: "/finance/finance_overview",
+        icon: IoStatsChart,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "Company Health",
+        path: "/finance/company-health",
+        icon: BsGraphUpArrow,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "ক্লোজিং সিমুলেটর",
+        path: "/finance/company-settlement-simulator",
+        icon: BsClipboardData,
+        roles: ["admin", "developer", "manager"],
+      },
+    ],
+  },
   {
     label: "Company Expenses",
     path: "/company_expenses",
@@ -509,27 +509,27 @@ icon: IoStatsChart,
       },
     ],
   },
-{
-  type: "collapse",
-  label: "Installment Files",
-  icon: TbFiles,
-  roles: ["admin", "developer", "manager", "staff", "data_entry"],
-  children: [
-        {
-      label: "Installment File Records",
-      path: "/installment_file_record",
-      icon: TbFiles,
-      roles: ["admin", "developer", "manager", "staff", "data_entry"],
-    },
-    {
-      label: "Add Installment File",
-      path: "/add_installment_file",
-      icon: TbFileUpload,
-      roles: ["admin", "developer", "manager", "staff", "data_entry"],
-    },
+  {
+    type: "collapse",
+    label: "Installment Files",
+    icon: TbFiles,
+    roles: ["admin", "developer", "manager", "staff", "data_entry"],
+    children: [
+      {
+        label: "Installment File Records",
+        path: "/installment_file_record",
+        icon: TbFiles,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
+      {
+        label: "Add Installment File",
+        path: "/add_installment_file",
+        icon: TbFileUpload,
+        roles: ["admin", "developer", "manager", "staff", "data_entry"],
+      },
 
-  ],
-},
+    ],
+  },
 
   {
     label: "Profile",
