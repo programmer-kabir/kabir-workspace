@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 ob_start();
 
 require_once __DIR__ . '/../cors.php';
-guardAdminOnly();
+guardEntryOnly();
 require_once __DIR__ . '/../db.php';
 
 header("Content-Type: application/json; charset=UTF-8");
@@ -56,7 +56,7 @@ if ($amount <= 0) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
-        "error" => "কিস্তির পরিমাণ অবশ্যই ০ এর বেশি হতে হবে"
+        "error" => "à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦…à¦¬à¦¶à§à¦¯à¦‡ à§¦ à¦à¦° à¦¬à§‡à¦¶à¦¿ à¦¹à¦¤à§‡ à¦¹à¦¬à§‡"
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -65,7 +65,7 @@ try {
     $mysqli->begin_transaction();
 
     // 1. Fetch Investor Name, Email & Card Name
-    $investorName = "ইনভেস্টর";
+    $investorName = "à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦°";
     $investorEmail = null;
     $stmtInv = $mysqli->prepare("SELECT name, email FROM users WHERE id = ? LIMIT 1");
     if ($stmtInv) {
@@ -79,7 +79,7 @@ try {
         $stmtInv->close();
     }
 
-    $cardName = "কার্ড #{$investment_card_no}";
+    $cardName = "à¦•à¦¾à¦°à§à¦¡ #{$investment_card_no}";
     $cardIdInt = (int)$investment_card_no;
     $stmtCard = $mysqli->prepare("SELECT card_name FROM investment_cards WHERE id = ? LIMIT 1");
     if ($stmtCard) {
@@ -93,7 +93,7 @@ try {
     }
 
     // 2. Fetch Collector / Staff Name
-    $collectorName = "কর্মী";
+    $collectorName = "à¦•à¦°à§à¦®à§€";
     if ($signature_by > 0) {
         $stmtCol = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
         if ($stmtCol) {
@@ -141,13 +141,13 @@ try {
     $insertId = $stmt->insert_id;
     $stmt->close();
 
-    // 2.5 💰 ক্যাশ ম্যানেজমেন্টে সরাসরি Cash In রেকর্ড করা (Protected inside sub-catch)
+    // 2.5 ðŸ’° à¦•à§à¦¯à¦¾à¦¶ à¦®à§à¦¯à¦¾à¦¨à§‡à¦œà¦®à§‡à¦¨à§à¦Ÿà§‡ à¦¸à¦°à¦¾à¦¸à¦°à¦¿ Cash In à¦°à§‡à¦•à¦°à§à¦¡ à¦•à¦°à¦¾ (Protected inside sub-catch)
     try {
-        $cashSource = "{$investorName} (কার্ড-{$investment_card_no}, বিনিয়োগ জমা #{$installment_no})";
-        $cashPurpose = "বিনিয়োগ জমা আদায়";
+        $cashSource = "{$investorName} (à¦•à¦¾à¦°à§à¦¡-{$investment_card_no}, à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦œà¦®à¦¾ #{$installment_no})";
+        $cashPurpose = "à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦œà¦®à¦¾ à¦†à¦¦à¦¾à§Ÿ";
         $cashCategory = "investment";
         $cashRefId = "inv_inst_" . $insertId;
-        $cashRemarks = "ইনভেস্টর আইডি: {$investor_id}, কিস্তি: {$installment_no} (আদায়কারী: {$collectorName})";
+        $cashRemarks = "à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦° à¦†à¦‡à¦¡à¦¿: {$investor_id}, à¦•à¦¿à¦¸à§à¦¤à¦¿: {$installment_no} (à¦†à¦¦à¦¾à§Ÿà¦•à¦¾à¦°à§€: {$collectorName})";
         $approvedBy = ($signature_by > 0) ? $signature_by : null;
 
         $stmtCash = $mysqli->prepare("
@@ -166,8 +166,8 @@ try {
     // 3. Create Notification for Admin and Developer (Protected inside sub-catch)
     try {
         $formattedAmount = number_format($amount, 2);
-        $notifTitle = "নতুন বিনিয়োগ কিস্তি আদায়";
-        $notifMessage = "{$collectorName} ইনভেস্টর {$investorName} এর কার্ড #{$investment_card_no} ({$cardName})-এ ৳{$formattedAmount} টাকা বিনিয়োগ কিস্তি জমা করেছেন।";
+        $notifTitle = "à¦¨à¦¤à§à¦¨ à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ";
+        $notifMessage = "{$collectorName} à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦° {$investorName} à¦à¦° à¦•à¦¾à¦°à§à¦¡ #{$investment_card_no} ({$cardName})-à¦ à§³{$formattedAmount} à¦Ÿà¦¾à¦•à¦¾ à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦œà¦®à¦¾ à¦•à¦°à§‡à¦›à§‡à¦¨à¥¤";
         $notifLink = "/investors/investment_payments?card_id={$investment_card_no}";
 
         $stmtNotif = $mysqli->prepare("
@@ -189,18 +189,18 @@ try {
     try {
         require_once __DIR__ . '/../helpers/mailer.php';
         $emailData = [
-            'title'      => 'বিনিয়োগ কিস্তি জমা রশিদ',
-            'party_name' => "{$investorName} (কার্ড #{$investment_card_no})",
-            'category'   => 'ইনভেস্টর কিস্তি আদায়',
+            'title'      => 'à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦œà¦®à¦¾ à¦°à¦¶à¦¿à¦¦',
+            'party_name' => "{$investorName} (à¦•à¦¾à¦°à§à¦¡ #{$investment_card_no})",
+            'category'   => 'à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦° à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ',
             'amount'     => $amount,
             'date'       => $installment_date,
             'slip_no'    => $installment_no,
             'card_id'    => $investment_card_no,
             'collector'  => $collectorName,
-            'notes'      => 'বিনিয়োগ কিস্তির অর্থ সফলভাবে আদায় ও ক্যাশ অ্যাকাউন্টে অন্তর্ভুক্ত হয়েছে।'
+            'notes'      => 'à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦…à¦°à§à¦¥ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦†à¦¦à¦¾à§Ÿ à¦“ à¦•à§à¦¯à¦¾à¦¶ à¦…à§à¦¯à¦¾à¦•à¦¾à¦‰à¦¨à§à¦Ÿà§‡ à¦…à¦¨à§à¦¤à¦°à§à¦­à§à¦•à§à¦¤ à¦¹à§Ÿà§‡à¦›à§‡à¥¤'
         ];
         $emailHtml = renderSupplyLinkEmailTemplate($emailData);
-        $emailSubject = "বিনিয়োগ কিস্তি আদায় রশিদ - কার্ড #{$investment_card_no} (কিস্তি #{$installment_no})";
+        $emailSubject = "à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ à¦°à¦¶à¦¿à¦¦ - à¦•à¦¾à¦°à§à¦¡ #{$investment_card_no} (à¦•à¦¿à¦¸à§à¦¤à¦¿ #{$installment_no})";
         sendSupplyLinkNotification($investorEmail, $emailSubject, $emailHtml, [
             'type'    => 'investment_deposit',
             'title'   => $notifTitle,
@@ -215,7 +215,7 @@ try {
     if (ob_get_length()) ob_clean();
     echo json_encode([
         "success" => true,
-        "message" => "কিস্তি সফলভাবে যোগ হয়েছে",
+        "message" => "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦¯à§‹à¦— à¦¹à§Ÿà§‡à¦›à§‡",
         "insert_id" => $insertId,
         "data" => [
             "installment_no" => $installment_no,
@@ -237,7 +237,7 @@ try {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "error" => "সার্ভার এরর: " . $e->getMessage()
+        "error" => "à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦à¦°à¦°: " . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

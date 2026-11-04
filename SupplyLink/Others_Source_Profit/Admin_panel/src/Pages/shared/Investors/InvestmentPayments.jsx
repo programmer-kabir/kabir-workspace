@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+﻿import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import useInvestmentCards from "../../../utils/Investors/useInvestmentCards";
@@ -32,6 +32,7 @@ import LuxuryActionModal from "../../../components/Modal/LuxuryActionModal";
 import LuxuryToast from "../../../components/Modal/LuxuryToast";
 import { useAuth } from "../../../Provider/AuthProvider";
 import { MONTHS } from "../../../../public/month";
+import useUserRole from "../../../utils/Hooks/useUserRole";
 
 export default function InvestmentPayments() {
   const [searchParams] = useSearchParams();
@@ -44,7 +45,9 @@ export default function InvestmentPayments() {
   const { user } = useAuth();
   const userRole = String(user?.role || "").toLowerCase();
   const isAdminOrDev = ["admin", "developer"].includes(userRole);
-
+  // data_entry role সহ যারা investment entry করতে পারবে
+  const { canMakeEntry } = useUserRole();
+  // data_entry role সহ যারা investment entry করতে পারবে
   // Luxury Toast state
   const [luxuryToast, setLuxuryToast] = useState(null);
 
@@ -71,8 +74,8 @@ export default function InvestmentPayments() {
     variant: "cyan",
     title: "",
     description: "",
-    confirmText: "ঠিক আছে",
-    cancelText: "বাতিল",
+    confirmText: "à¦ à¦¿à¦• à¦†à¦›à§‡",
+    cancelText: "à¦¬à¦¾à¦¤à¦¿à¦²",
     showCancel: false,
     requiresInput: false,
     inputPlaceholder: "",
@@ -84,7 +87,7 @@ export default function InvestmentPayments() {
   const { investmentCards, isInvestmentCardsLoading, isInvestmentCardsError } = useInvestmentCards();
   const { users, isUsersLoading, isUsersError } = useUsers();
 
-  // ⚡ Fast card-level installments state & fetcher (only ~10-20 rows instead of 14,000+)
+  // âš¡ Fast card-level installments state & fetcher (only ~10-20 rows instead of 14,000+)
   const [cardInvestInstallments, setCardInvestInstallments] = useState([]);
   const [isInstallmentsLoading, setIsInstallmentsLoading] = useState(true);
   const [isInstallmentsError, setIsInstallmentsError] = useState(false);
@@ -194,54 +197,54 @@ export default function InvestmentPayments() {
   const handleInvestInstallments = async () => {
     if (!installmentNo) {
       setLuxuryToast({
-        title: "কিস্তি নং আবশ্যক ⚠️",
-        message: "অনুগ্রহ করে কিস্তি নম্বর প্রদান করুন।",
+        title: "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚ à¦†à¦¬à¦¶à§à¦¯à¦• âš ï¸",
+        message: "à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦®à§à¦¬à¦° à¦ªà§à¦°à¦¦à¦¾à¦¨ à¦•à¦°à§à¦¨à¥¤",
         type: "warning",
       });
       return;
     }
     if (!amount) {
       setLuxuryToast({
-        title: "পরিমাণ আবশ্যক ⚠️",
-        message: "অনুগ্রহ করে কিস্তির টাকার পরিমাণ লিখুন।",
+        title: "à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦†à¦¬à¦¶à§à¦¯à¦• âš ï¸",
+        message: "à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦Ÿà¦¾à¦•à¦¾à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦²à¦¿à¦–à§à¦¨à¥¤",
         type: "warning",
       });
       return;
     }
     if (Number(amount) <= 0) {
       setLuxuryToast({
-        title: "অকার্যকর পরিমাণ ⚠️",
-        message: "কিস্তির পরিমাণ অবশ্যই ০ এর বেশি হতে হবে।",
+        title: "à¦…à¦•à¦¾à¦°à§à¦¯à¦•à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ âš ï¸",
+        message: "à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦…à¦¬à¦¶à§à¦¯à¦‡ à§¦ à¦à¦° à¦¬à§‡à¦¶à¦¿ à¦¹à¦¤à§‡ à¦¹à¦¬à§‡à¥¤",
         type: "warning",
       });
       return;
     }
     if (!installmentDate) {
       setLuxuryToast({
-        title: "তারিখ আবশ্যক ⚠️",
-        message: "অনুগ্রহ করে কিস্তির কালেকশন তারিখ নির্বাচন করুন।",
+        title: "à¦¤à¦¾à¦°à¦¿à¦– à¦†à¦¬à¦¶à§à¦¯à¦• âš ï¸",
+        message: "à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨ à¦¤à¦¾à¦°à¦¿à¦– à¦¨à¦¿à¦°à§à¦¬à¦¾à¦šà¦¨ à¦•à¦°à§à¦¨à¥¤",
         type: "warning",
       });
       return;
     }
-    if (!isAdminOrDev && installmentDate > today) {
+    if (!canMakeEntry && installmentDate > today) {
       setLuxuryToast({
-        title: "ভবিষ্যতের তারিখ নিষিদ্ধ ⚠️",
-        message: "ভবিষ্যতের তারিখে কিস্তি এন্ট্রি দেওয়া সম্ভব নয়।",
+        title: "à¦­à¦¬à¦¿à¦·à§à¦¯à¦¤à§‡à¦° à¦¤à¦¾à¦°à¦¿à¦– à¦¨à¦¿à¦·à¦¿à¦¦à§à¦§ âš ï¸",
+        message: "à¦­à¦¬à¦¿à¦·à§à¦¯à¦¤à§‡à¦° à¦¤à¦¾à¦°à¦¿à¦–à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦à¦¨à§à¦Ÿà§à¦°à¦¿ à¦¦à§‡à¦“à§Ÿà¦¾ à¦¸à¦®à§à¦­à¦¬ à¦¨à§Ÿà¥¤",
         type: "warning",
       });
       return;
     }
     if (!card?.id || !card?.investor_id) {
       setLuxuryToast({
-        title: "কার্ড তথ্য পাওয়া যায়নি ⚠️",
-        message: "বিনিয়োগ কার্ডের তথ্য সঠিকভাবে লোড হয়নি।",
+        title: "à¦•à¦¾à¦°à§à¦¡ à¦¤à¦¥à§à¦¯ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿ âš ï¸",
+        message: "à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¾à¦°à§à¦¡à§‡à¦° à¦¤à¦¥à§à¦¯ à¦¸à¦ à¦¿à¦•à¦­à¦¾à¦¬à§‡ à¦²à§‹à¦¡ à¦¹à§Ÿà¦¨à¦¿à¥¤",
         type: "warning",
       });
       return;
     }
 
-    const finalDate = (isAdminOrDev && installmentDate) ? installmentDate : (installmentDate || today);
+    const finalDate = (canMakeEntry && installmentDate) ? installmentDate : (installmentDate || today);
 
     const data = {
       investment_card_no: Number(card?.id),
@@ -277,8 +280,8 @@ export default function InvestmentPayments() {
 
       if (!result || !result.success) {
         setLuxuryToast({
-          title: "কিস্তি যোগ ব্যর্থ ❌",
-          message: result?.error || result?.message || "সার্ভার থেকে সঠিক সাড়া পাওয়া যায়নি",
+          title: "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¯à§‹à¦— à¦¬à§à¦¯à¦°à§à¦¥ âŒ",
+          message: result?.error || result?.message || "à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦¥à§‡à¦•à§‡ à¦¸à¦ à¦¿à¦• à¦¸à¦¾à§œà¦¾ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿",
           type: "error",
         });
         return;
@@ -286,7 +289,7 @@ export default function InvestmentPayments() {
 
       const resData = result?.data || {};
 
-      // ⚡ Optimistic UI: তাৎক্ষণিক টেবিলে কিস্তি যুক্ত করা (0ms Latency)
+      // âš¡ Optimistic UI: à¦¤à¦¾à§Žà¦•à§à¦·à¦£à¦¿à¦• à¦Ÿà§‡à¦¬à¦¿à¦²à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¯à§à¦•à§à¦¤ à¦•à¦°à¦¾ (0ms Latency)
       const newCreatedInstallment = {
         id: result?.insert_id || Date.now(),
         investment_card_no: Number(card?.id),
@@ -294,7 +297,7 @@ export default function InvestmentPayments() {
         investment_no: Number(installmentNo),
         investment_date: finalDate,
         amount: Number(amount),
-        signature_by: user?.name || userRole || "কর্মী",
+        signature_by: user?.name || userRole || "à¦•à¦°à§à¦®à§€",
         active_days: 0,
       };
 
@@ -302,21 +305,21 @@ export default function InvestmentPayments() {
 
       setSuccessReceipt({
         isOpen: true,
-        investorName: resData.investor_name || card?.card_name || mergedInvestmentCards?.name || "ইনভেস্টর",
+        investorName: resData.investor_name || card?.card_name || mergedInvestmentCards?.name || "à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦°",
         cardId: resData.card_id || card?.id,
         cardName: resData.card_name || card?.card_name,
         installmentNo: resData.installment_no || installmentNo,
         amount: Number(resData.amount || amount),
         date: resData.date || finalDate,
-        collectorName: resData.collector_name || user?.name || "স্টাফ",
+        collectorName: resData.collector_name || user?.name || "à¦¸à§à¦Ÿà¦¾à¦«",
         collectorId: user?.id,
         avatarUrl: avatarUrl,
       });
 
       setLuxuryToast({
-        title: "কিস্তি আদায় সম্পন্ন 🎉",
-        message: `${card?.card_name || "ইনভেস্টর"} এর কিস্তি #${installmentNo} (${finalDate}) সফলভাবে যোগ হয়েছে।`,
-        tag: `কিস্তি #${installmentNo}`,
+        title: "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ à¦¸à¦®à§à¦ªà¦¨à§à¦¨ ðŸŽ‰",
+        message: `${card?.card_name || "à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦°"} à¦à¦° à¦•à¦¿à¦¸à§à¦¤à¦¿ #${installmentNo} (${finalDate}) à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦¯à§‹à¦— à¦¹à§Ÿà§‡à¦›à§‡à¥¤`,
+        tag: `à¦•à¦¿à¦¸à§à¦¤à¦¿ #${installmentNo}`,
         amount: Number(amount),
         type: "success",
       });
@@ -324,12 +327,12 @@ export default function InvestmentPayments() {
       setAmount("");
       setInstallmentDate(today);
 
-      // ব্যাকগ্রাউন্ডে সাইলেন্ট রিফ্রেশ (কোনো লোডার আসবে না)
+      // à¦¬à§à¦¯à¦¾à¦•à¦—à§à¦°à¦¾à¦‰à¦¨à§à¦¡à§‡ à¦¸à¦¾à¦‡à¦²à§‡à¦¨à§à¦Ÿ à¦°à¦¿à¦«à§à¦°à§‡à¦¶ (à¦•à§‹à¦¨à§‹ à¦²à§‹à¦¡à¦¾à¦° à¦†à¦¸à¦¬à§‡ à¦¨à¦¾)
       fetchCardInstallments(true);
     } catch (error) {
       setLuxuryToast({
-        title: "সার্ভারে সমস্যা ❌",
-        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
+        title: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ âŒ",
+        message: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡à¦° à¦¸à¦¾à¦¥à§‡ à¦¸à¦‚à¦¯à§‹à¦— à¦¸à§à¦¥à¦¾à¦ªà¦¨ à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤ à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦•à¦°à§à¦¨à¥¤",
         type: "error",
       });
     } finally {
@@ -365,9 +368,9 @@ export default function InvestmentPayments() {
     );
     if (existing) {
       setLuxuryToast({
-        title: "অনুরোধ পেন্ডিং রয়েছে ⏳",
-        message: `এই কিস্তির (পূর্বের ৳${formatMoney(existing.old_amount)} ➔ নতুন ৳${formatMoney(existing.new_amount)}) একটি সংশোধনের অনুরোধ ইতোমধ্যে পাঠানো হয়েছে।`,
-        tag: `কিস্তি #${row?.investment_no}`,
+        title: "à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà§‡à¦¨à§à¦¡à¦¿à¦‚ à¦°à§Ÿà§‡à¦›à§‡ â³",
+        message: `à¦à¦‡ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° (à¦ªà§‚à¦°à§à¦¬à§‡à¦° à§³${formatMoney(existing.old_amount)} âž” à¦¨à¦¤à§à¦¨ à§³${formatMoney(existing.new_amount)}) à¦à¦•à¦Ÿà¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§ à¦‡à¦¤à§‹à¦®à¦§à§à¦¯à§‡ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à§Ÿà§‡à¦›à§‡à¥¤`,
+        tag: `à¦•à¦¿à¦¸à§à¦¤à¦¿ #${row?.investment_no}`,
         amount: existing.new_amount,
         type: "warning",
       });
@@ -390,24 +393,24 @@ export default function InvestmentPayments() {
     if (!editingRow?.id || isEditSubmitting) return;
     if (!editDate) {
       setLuxuryToast({
-        title: "তারিখ প্রয়োজন ⚠️",
-        message: "অনুগ্রহ করে কিস্তির তারিখ প্রদান করুন।",
+        title: "à¦¤à¦¾à¦°à¦¿à¦– à¦ªà§à¦°à§Ÿà§‹à¦œà¦¨ âš ï¸",
+        message: "à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦¤à¦¾à¦°à¦¿à¦– à¦ªà§à¦°à¦¦à¦¾à¦¨ à¦•à¦°à§à¦¨à¥¤",
         type: "warning",
       });
       return;
     }
     if (!editAmount || Number(editAmount) <= 0) {
       setLuxuryToast({
-        title: "সঠিক পরিমাণ দিন ⚠️",
-        message: "কিস্তির পরিমাণ অবশ্যই ০ এর চেয়ে বেশি হতে হবে।",
+        title: "à¦¸à¦ à¦¿à¦• à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦¦à¦¿à¦¨ âš ï¸",
+        message: "à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à¦…à¦¬à¦¶à§à¦¯à¦‡ à§¦ à¦à¦° à¦šà§‡à§Ÿà§‡ à¦¬à§‡à¦¶à¦¿ à¦¹à¦¤à§‡ à¦¹à¦¬à§‡à¥¤",
         type: "warning",
       });
       return;
     }
     if (!update_reason.trim()) {
       setLuxuryToast({
-        title: "কারণ উল্লেখ করুন ⚠️",
-        message: "সংশোধনের সঠিক কারণ লিখতে হবে।",
+        title: "à¦•à¦¾à¦°à¦£ à¦‰à¦²à§à¦²à§‡à¦– à¦•à¦°à§à¦¨ âš ï¸",
+        message: "à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦¸à¦ à¦¿à¦• à¦•à¦¾à¦°à¦£ à¦²à¦¿à¦–à¦¤à§‡ à¦¹à¦¬à§‡à¥¤",
         type: "warning",
       });
       return;
@@ -436,8 +439,8 @@ export default function InvestmentPayments() {
 
       if (!result?.success) {
         setLuxuryToast({
-          title: "অনুরোধ পাঠানো যায়নি ❌",
-          message: result?.error || "কিছু একটা সমস্যা হয়েছে।",
+          title: "à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¯à¦¾à§Ÿà¦¨à¦¿ âŒ",
+          message: result?.error || "à¦•à¦¿à¦›à§ à¦à¦•à¦Ÿà¦¾ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤",
           type: "error",
         });
         return;
@@ -446,16 +449,16 @@ export default function InvestmentPayments() {
       closeEditModal();
       fetchPendingEdits();
       setLuxuryToast({
-        title: "অনুরোধ পাঠানো হয়েছে! ⏳",
-        message: result.message || "কিস্তি সংশোধনের অনুরোধ সফলভাবে পাঠানো হয়েছে। অ্যাডমিন বা ডেভেলপার অনুমোদন করলে কিস্তি ও ক্যাশ ব্যালেন্স আপডেট হবে।",
-        tag: `কিস্তি #${editingRow?.investment_no}`,
+        title: "à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à§Ÿà§‡à¦›à§‡! â³",
+        message: result.message || "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦¬à¦¾ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦•à¦°à¦²à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦“ à¦•à§à¦¯à¦¾à¦¶ à¦¬à§à¦¯à¦¾à¦²à§‡à¦¨à§à¦¸ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¬à§‡à¥¤",
+        tag: `à¦•à¦¿à¦¸à§à¦¤à¦¿ #${editingRow?.investment_no}`,
         amount: editAmount,
         type: "warning",
       });
     } catch (e) {
       setLuxuryToast({
-        title: "সার্ভারে সমস্যা ❌",
-        message: "সার্ভারে যোগাযোগ করা যায়নি।",
+        title: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ âŒ",
+        message: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¯à§‹à¦—à¦¾à¦¯à§‹à¦— à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤",
         type: "error",
       });
     } finally {
@@ -466,10 +469,10 @@ export default function InvestmentPayments() {
   const handleReviewAction = (editItem, action) => {
     if (!editItem?.id) return;
     const isApprove = action === "approved";
-    const title = isApprove ? "অনুমোদন নিশ্চিত করুন" : "বাতিল নিশ্চিত করুন";
+    const title = isApprove ? "à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦¨à¦¿à¦¶à§à¦šà¦¿à¦¤ à¦•à¦°à§à¦¨" : "à¦¬à¦¾à¦¤à¦¿à¦² à¦¨à¦¿à¦¶à§à¦šà¦¿à¦¤ à¦•à¦°à§à¦¨";
     const text = isApprove
-      ? `আপনি কি কিস্তি #${editItem?.installment_no} এর সংশোধিত পরিমাণ ৳${formatMoney(editItem?.new_amount)} অনুমোদন করতে চান? সংশ্লিষ্ট ক্যাশ-ইন স্বয়ংক্রিয়ভাবে আপডেট হবে।`
-      : `আপনি কি কিস্তি #${editItem?.installment_no} এর সংশোধনের অনুরোধটি বাতিল করতে চান? কিস্তি পূর্বের অবস্থায় বহাল থাকবে।`;
+      ? `à¦†à¦ªà¦¨à¦¿ à¦•à¦¿ à¦•à¦¿à¦¸à§à¦¤à¦¿ #${editItem?.installment_no} à¦à¦° à¦¸à¦‚à¦¶à§‹à¦§à¦¿à¦¤ à¦ªà¦°à¦¿à¦®à¦¾à¦£ à§³${formatMoney(editItem?.new_amount)} à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦•à¦°à¦¤à§‡ à¦šà¦¾à¦¨? à¦¸à¦‚à¦¶à§à¦²à¦¿à¦·à§à¦Ÿ à¦•à§à¦¯à¦¾à¦¶-à¦‡à¦¨ à¦¸à§à¦¬à§Ÿà¦‚à¦•à§à¦°à¦¿à§Ÿà¦­à¦¾à¦¬à§‡ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¬à§‡à¥¤`
+      : `à¦†à¦ªà¦¨à¦¿ à¦•à¦¿ à¦•à¦¿à¦¸à§à¦¤à¦¿ #${editItem?.installment_no} à¦à¦° à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§à¦Ÿà¦¿ à¦¬à¦¾à¦¤à¦¿à¦² à¦•à¦°à¦¤à§‡ à¦šà¦¾à¦¨? à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦ªà§‚à¦°à§à¦¬à§‡à¦° à¦…à¦¬à¦¸à§à¦¥à¦¾à§Ÿ à¦¬à¦¹à¦¾à¦² à¦¥à¦¾à¦•à¦¬à§‡à¥¤`;
 
     setFeedbackModal({
       isOpen: true,
@@ -477,8 +480,8 @@ export default function InvestmentPayments() {
       variant: isApprove ? "success" : "danger",
       title,
       description: text,
-      confirmText: isApprove ? "হ্যাঁ, অনুমোদন করুন" : "হ্যাঁ, বাতিল করুন",
-      cancelText: "ফিরে যান",
+      confirmText: isApprove ? "à¦¹à§à¦¯à¦¾à¦, à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦•à¦°à§à¦¨" : "à¦¹à§à¦¯à¦¾à¦, à¦¬à¦¾à¦¤à¦¿à¦² à¦•à¦°à§à¦¨",
+      cancelText: "à¦«à¦¿à¦°à§‡ à¦¯à¦¾à¦¨",
       showCancel: true,
       onConfirm: async () => {
         try {
@@ -503,24 +506,24 @@ export default function InvestmentPayments() {
 
           if (resJson.success) {
             setLuxuryToast({
-              title: isApprove ? "অনুমোদিত হয়েছে! ✅" : "বাতিল করা হয়েছে! 🚫",
-              message: resJson.message || "কার্যক্রম সফল হয়েছে।",
-              tag: `কিস্তি #${editItem?.installment_no}`,
+              title: isApprove ? "à¦…à¦¨à§à¦®à§‹à¦¦à¦¿à¦¤ à¦¹à§Ÿà§‡à¦›à§‡! âœ…" : "à¦¬à¦¾à¦¤à¦¿à¦² à¦•à¦°à¦¾ à¦¹à§Ÿà§‡à¦›à§‡! ðŸš«",
+              message: resJson.message || "à¦•à¦¾à¦°à§à¦¯à¦•à§à¦°à¦® à¦¸à¦«à¦² à¦¹à§Ÿà§‡à¦›à§‡à¥¤",
+              tag: `à¦•à¦¿à¦¸à§à¦¤à¦¿ #${editItem?.installment_no}`,
               amount: editItem?.new_amount,
               type: isApprove ? "success" : "warning",
             });
           } else {
             setLuxuryToast({
-              title: "ব্যর্থ হয়েছে ❌",
-              message: resJson.error || "কার্যক্রম সম্পন্ন করা যায়নি",
+              title: "à¦¬à§à¦¯à¦°à§à¦¥ à¦¹à§Ÿà§‡à¦›à§‡ âŒ",
+              message: resJson.error || "à¦•à¦¾à¦°à§à¦¯à¦•à§à¦°à¦® à¦¸à¦®à§à¦ªà¦¨à§à¦¨ à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿",
               type: "error",
             });
           }
         } catch (err) {
           setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
           setLuxuryToast({
-            title: "সার্ভার এরর ❌",
-            message: "সার্ভারে সমস্যা হয়েছে",
+            title: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦à¦°à¦° âŒ",
+            message: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à§Ÿà§‡à¦›à§‡",
             type: "error",
           });
         }
@@ -531,7 +534,7 @@ export default function InvestmentPayments() {
 
   const handleDelete = (row) => {
     if (!isAdminOrDev) {
-      toast.error("শুধুমাত্র অ্যাডমিন এবং ডেভেলপার কিস্তি ডিলিট করতে পারেন");
+      toast.error("à¦¶à§à¦§à§à¦®à¦¾à¦¤à§à¦° à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦à¦¬à¦‚ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¡à¦¿à¦²à¦¿à¦Ÿ à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¦¨");
       return;
     }
 
@@ -539,10 +542,10 @@ export default function InvestmentPayments() {
       isOpen: true,
       type: "confirm",
       variant: "danger",
-      title: "কিস্তি Delete করবেন?",
-      description: `বিনিয়োগ কিস্তি #${row?.investment_no} (৳${formatMoney(row?.amount)}) delete করলে সংশ্লিষ্ট ক্যাশ রেকর্ড মুছে যাবে। আপনি কি নিশ্চিত?`,
-      confirmText: "হ্যাঁ, মুছে ফেলুন",
-      cancelText: "বাতিল",
+      title: "à¦•à¦¿à¦¸à§à¦¤à¦¿ Delete à¦•à¦°à¦¬à§‡à¦¨?",
+      description: `à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿ #${row?.investment_no} (à§³${formatMoney(row?.amount)}) delete à¦•à¦°à¦²à§‡ à¦¸à¦‚à¦¶à§à¦²à¦¿à¦·à§à¦Ÿ à¦•à§à¦¯à¦¾à¦¶ à¦°à§‡à¦•à¦°à§à¦¡ à¦®à§à¦›à§‡ à¦¯à¦¾à¦¬à§‡à¥¤ à¦†à¦ªà¦¨à¦¿ à¦•à¦¿ à¦¨à¦¿à¦¶à§à¦šà¦¿à¦¤?`,
+      confirmText: "à¦¹à§à¦¯à¦¾à¦, à¦®à§à¦›à§‡ à¦«à§‡à¦²à§à¦¨",
+      cancelText: "à¦¬à¦¾à¦¤à¦¿à¦²",
       showCancel: true,
       onConfirm: async () => {
         try {
@@ -572,31 +575,31 @@ export default function InvestmentPayments() {
 
           if (!isSuccess) {
             setLuxuryToast({
-              title: "Delete করা যায়নি ❌",
-              message: result?.error || result?.message || "মুছে ফেলা যায়নি",
+              title: "Delete à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿ âŒ",
+              message: result?.error || result?.message || "à¦®à§à¦›à§‡ à¦«à§‡à¦²à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿",
               type: "error",
             });
             return;
           }
 
-          // ⚡ Optimistic UI: তাৎক্ষণিক ডিলিট
+          // âš¡ Optimistic UI: à¦¤à¦¾à§Žà¦•à§à¦·à¦£à¦¿à¦• à¦¡à¦¿à¦²à¦¿à¦Ÿ
           setCardInvestInstallments((prev) =>
             prev.filter((item) => Number(item.id) !== Number(row?.id))
           );
           fetchCardInstallments(true);
 
           setLuxuryToast({
-            title: "সফলভাবে মুছে ফেলা হয়েছে! ✅",
-            message: "কিস্তি ও সংশ্লিষ্ট ক্যাশ সফলভাবে মুছে ফেলা হয়েছে।",
-            tag: `কিস্তি #${row?.investment_no}`,
+            title: "à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦®à§à¦›à§‡ à¦«à§‡à¦²à¦¾ à¦¹à§Ÿà§‡à¦›à§‡! âœ…",
+            message: "à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦“ à¦¸à¦‚à¦¶à§à¦²à¦¿à¦·à§à¦Ÿ à¦•à§à¦¯à¦¾à¦¶ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦®à§à¦›à§‡ à¦«à§‡à¦²à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤",
+            tag: `à¦•à¦¿à¦¸à§à¦¤à¦¿ #${row?.investment_no}`,
             amount: row?.amount,
             type: "success",
           });
         } catch (e) {
           setFeedbackModal((prev) => ({ ...prev, isOpen: false }));
           setLuxuryToast({
-            title: "সার্ভার এরর ❌",
-            message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+            title: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦à¦°à¦° âŒ",
+            message: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡à¦° à¦¸à¦¾à¦¥à§‡ à¦¸à¦‚à¦¯à§‹à¦— à¦¸à§à¦¥à¦¾à¦ªà¦¨ à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤",
             type: "error",
           });
         }
@@ -615,7 +618,7 @@ export default function InvestmentPayments() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader />
-        <p className="text-xs text-slate-400 font-medium">কিস্তি ব্যবস্থাপনা লোড হচ্ছে...</p>
+        <p className="text-xs text-slate-400 font-medium">à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¬à§à¦¯à¦¬à¦¸à§à¦¥à¦¾à¦ªà¦¨à¦¾ à¦²à§‹à¦¡ à¦¹à¦šà§à¦›à§‡...</p>
       </div>
     );
   }
@@ -623,8 +626,8 @@ export default function InvestmentPayments() {
   if ((isInstallmentsError && !cardInvestInstallments?.length) || (isInvestmentCardsError && !investmentCards?.length)) {
     return (
       <NoDataFound
-        message="ডাটা লোড করা যায়নি"
-        subMessage="সার্ভার সংযোগে সমস্যা হয়েছে, অনুগ্রহ করে পেজটি রিফ্রেশ করুন"
+        message="à¦¡à¦¾à¦Ÿà¦¾ à¦²à§‹à¦¡ à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿"
+        subMessage="à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦¸à¦‚à¦¯à§‹à¦—à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à§Ÿà§‡à¦›à§‡, à¦…à¦¨à§à¦—à§à¦°à¦¹ à¦•à¦°à§‡ à¦ªà§‡à¦œà¦Ÿà¦¿ à¦°à¦¿à¦«à§à¦°à§‡à¦¶ à¦•à¦°à§à¦¨"
       />
     );
   }
@@ -632,13 +635,13 @@ export default function InvestmentPayments() {
   if (cardId && !card) {
     return (
       <NoDataFound
-        message="বিনিয়োগ কার্ড পাওয়া যায়নি"
-        subMessage={`কার্ড আইডি #${cardId} এর কোনো তথ্য পাওয়া যায়নি।`}
+        message="à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¾à¦°à§à¦¡ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿"
+        subMessage={`à¦•à¦¾à¦°à§à¦¡ à¦†à¦‡à¦¡à¦¿ #${cardId} à¦à¦° à¦•à§‹à¦¨à§‹ à¦¤à¦¥à§à¦¯ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤`}
       />
     );
   }
 
-  const canDelete = isAdminOrDev; // শুধুমাত্র অ্যাডমিন এবং ডেভেলপার ডিলিট করতে পারবে
+  const canDelete = isAdminOrDev; // à¦¶à§à¦§à§à¦®à¦¾à¦¤à§à¦° à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦à¦¬à¦‚ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦¡à¦¿à¦²à¦¿à¦Ÿ à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à¦¬à§‡
   const showAction = true;
 
   return (
@@ -659,20 +662,20 @@ export default function InvestmentPayments() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/[0.05] text-cyan-300 border border-white/10">
-                কার্ড #{card?.id}
+                à¦•à¦¾à¦°à§à¦¡ #{card?.id}
               </span>
               <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 text-emerald-300 font-bold">
                 {card?.status || "RUNNING"}
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-white tracking-wide mt-1">
-              {card?.card_name || mergedInvestmentCards?.name || "নামহীন কার্ড"}
+              {card?.card_name || mergedInvestmentCards?.name || "à¦¨à¦¾à¦®à¦¹à§€à¦¨ à¦•à¦¾à¦°à§à¦¡"}
             </h1>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 font-mono">
               <FiPhone className="text-cyan-400 h-3 w-3" />
               <span>{mergedInvestmentCards?.mobile || "N/A"}</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-400 font-sans">{mergedInvestmentCards?.address || "ঠিকানা নেই"}</span>
+              <span className="text-slate-600">â€¢</span>
+              <span className="text-slate-400 font-sans">{mergedInvestmentCards?.address || "à¦ à¦¿à¦•à¦¾à¦¨à¦¾ à¦¨à§‡à¦‡"}</span>
             </p>
           </div>
         </div>
@@ -681,7 +684,7 @@ export default function InvestmentPayments() {
           to={`/investors/investment_cards/details?card_id=${card?.id}`}
           className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] px-4 py-2 text-xs font-semibold text-slate-200 transition"
         >
-          কার্ড ডিটেইলস দেখুন
+          à¦•à¦¾à¦°à§à¦¡ à¦¡à¦¿à¦Ÿà§‡à¦‡à¦²à¦¸ à¦¦à§‡à¦–à§à¦¨
         </Link>
       </div>
 
@@ -693,22 +696,22 @@ export default function InvestmentPayments() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-white tracking-wide">
-              নতুন কিস্তি আদায় (Add Installment Collection)
+              à¦¨à¦¤à§à¦¨ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ (Add Installment Collection)
             </h2>
-            <p className="text-[11px] text-slate-400">বিনিয়োগকারীর প্রাপ্ত কিস্তির টাকা এন্ট্রি করুন</p>
+            <p className="text-[11px] text-slate-400">à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦—à¦•à¦¾à¦°à§€à¦° à¦ªà§à¦°à¦¾à¦ªà§à¦¤ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦Ÿà¦¾à¦•à¦¾ à¦à¦¨à§à¦Ÿà§à¦°à¦¿ à¦•à¦°à§à¦¨</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
           <div className="sm:col-span-3">
             <label className="text-xs font-semibold text-slate-300 mb-1 block">
-              কিস্তি নং (Slip / No)
+              à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚ (Slip / No)
             </label>
             <div className="relative">
               <FaReceipt className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="কিস্তি নং"
+                placeholder="à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚"
                 value={installmentNo}
                 onChange={(e) => setInstallmentNo(e.target.value)}
                 className="w-full rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400/50"
@@ -718,14 +721,14 @@ export default function InvestmentPayments() {
 
           <div className="sm:col-span-3">
             <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-              <span>কালেকশন তারিখ</span>
+              <span>à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨ à¦¤à¦¾à¦°à¦¿à¦–</span>
               {isAdminOrDev ? (
                 <span className="text-[10px] text-amber-400 font-medium">
-                  ★ পুরানো তারিখ নির্বাচন
+                  â˜… à¦ªà§à¦°à¦¾à¦¨à§‹ à¦¤à¦¾à¦°à¦¿à¦– à¦¨à¦¿à¦°à§à¦¬à¦¾à¦šà¦¨
                 </span>
               ) : (
                 <span className="text-[10px] text-slate-400 font-normal">
-                  (আজকের তারিখ)
+                  (à¦†à¦œà¦•à§‡à¦° à¦¤à¦¾à¦°à¦¿à¦–)
                 </span>
               )}
             </label>
@@ -744,8 +747,8 @@ export default function InvestmentPayments() {
                 }`}
                 title={
                   isAdminOrDev
-                    ? "অ্যাডমিন/ডেভেলপার প্রিভিলেজ: আপনি যেকোনো পুরানো তারিখ নির্বাচন করতে পারেন"
-                    : "শুধুমাত্র অ্যাডমিন এবং ডেভেলপার পুরানো তারিখ পরিবর্তন করতে পারেন"
+                    ? "à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨/à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦ªà§à¦°à¦¿à¦­à¦¿à¦²à§‡à¦œ: à¦†à¦ªà¦¨à¦¿ à¦¯à§‡à¦•à§‹à¦¨à§‹ à¦ªà§à¦°à¦¾à¦¨à§‹ à¦¤à¦¾à¦°à¦¿à¦– à¦¨à¦¿à¦°à§à¦¬à¦¾à¦šà¦¨ à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¦¨"
+                    : "à¦¶à§à¦§à§à¦®à¦¾à¦¤à§à¦° à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦à¦¬à¦‚ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦ªà§à¦°à¦¾à¦¨à§‹ à¦¤à¦¾à¦°à¦¿à¦– à¦ªà¦°à¦¿à¦¬à¦°à§à¦¤à¦¨ à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¦¨"
                 }
               />
             </div>
@@ -754,7 +757,7 @@ export default function InvestmentPayments() {
           <div className="sm:col-span-3">
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold text-slate-300">
-                পরিমাণ (Amount in BDT)
+                à¦ªà¦°à¦¿à¦®à¦¾à¦£ (Amount in BDT)
               </label>
               {amount && (
                 <button
@@ -762,15 +765,15 @@ export default function InvestmentPayments() {
                   onClick={() => setAmount("")}
                   className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer"
                 >
-                  ক্লিয়ার ✕
+                  à¦•à§à¦²à¦¿à§Ÿà¦¾à¦° âœ•
                 </button>
               )}
             </div>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400 font-bold text-sm">৳</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400 font-bold text-sm">à§³</span>
               <input
                 type="number"
-                placeholder="যেমন: 500"
+                placeholder="à¦¯à§‡à¦®à¦¨: 500"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full rounded-xl bg-black/40 border border-white/10 pl-9 pr-4 py-2.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-cyan-400/50"
@@ -791,12 +794,12 @@ export default function InvestmentPayments() {
               {isSubmitting ? (
                 <>
                   <FiLoader className="h-4 w-4 animate-spin text-cyan-300" />
-                  <span>জমা হচ্ছে...</span>
+                  <span>à¦œà¦®à¦¾ à¦¹à¦šà§à¦›à§‡...</span>
                 </>
               ) : (
                 <>
                   <FiPlus className="h-4 w-4" />
-                  <span>কিস্তি জমা করুন</span>
+                  <span>à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦œà¦®à¦¾ à¦•à¦°à§à¦¨</span>
                 </>
               )}
             </button>
@@ -807,7 +810,7 @@ export default function InvestmentPayments() {
         <div className="mt-3.5 pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1 mr-1">
-              <span className="text-cyan-400 text-xs">⚡</span> সাজেস্ট:
+              <span className="text-cyan-400 text-xs">âš¡</span> à¦¸à¦¾à¦œà§‡à¦¸à§à¦Ÿ:
             </span>
             {[50, 100, 200, 300, 500, 1000].map((amt) => {
               const isSelected = String(amount) === String(amt);
@@ -821,9 +824,9 @@ export default function InvestmentPayments() {
                       ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)] ring-1 ring-cyan-400/50"
                       : "bg-white/[0.04] border-white/10 text-slate-300 hover:bg-cyan-500/15 hover:border-cyan-500/30 hover:text-white"
                   }`}
-                  title={`ক্লিক করে টাকার পরিমাণ ৳${amt} নির্ধারণ করুন`}
+                  title={`à¦•à§à¦²à¦¿à¦• à¦•à¦°à§‡ à¦Ÿà¦¾à¦•à¦¾à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à§³${amt} à¦¨à¦¿à¦°à§à¦§à¦¾à¦°à¦£ à¦•à¦°à§à¦¨`}
                 >
-                  <span>৳{amt}</span>
+                  <span>à§³{amt}</span>
                 </button>
               );
             })}
@@ -837,12 +840,12 @@ export default function InvestmentPayments() {
                     ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400/50"
                     : "bg-emerald-950/30 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50"
                 }`}
-                title={`পূর্ববর্তী কিস্তির পরিমাণ ৳${lastInstallmentAmount} নির্ধারণ করুন`}
+                title={`à¦ªà§‚à¦°à§à¦¬à¦¬à¦°à§à¦¤à§€ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£ à§³${lastInstallmentAmount} à¦¨à¦¿à¦°à§à¦§à¦¾à¦°à¦£ à¦•à¦°à§à¦¨`}
               >
                 <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-sans font-medium">
-                  পূর্বের কিস্তি
+                  à¦ªà§‚à¦°à§à¦¬à§‡à¦° à¦•à¦¿à¦¸à§à¦¤à¦¿
                 </span>
-                <span>৳{lastInstallmentAmount}</span>
+                <span>à§³{lastInstallmentAmount}</span>
               </button>
             )}
           </div>
@@ -850,22 +853,22 @@ export default function InvestmentPayments() {
           {/* Quick Increment */}
           {amount && Number(amount) > 0 && (
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500 mr-0.5 hidden sm:inline">যোগ:</span>
+              <span className="text-[10px] text-slate-500 mr-0.5 hidden sm:inline">à¦¯à§‹à¦—:</span>
               <button
                 type="button"
                 onClick={() => setAmount(String(Number(amount) + 50))}
                 className="px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-cyan-300 transition cursor-pointer"
-                title="বর্তমান পরিমাণে +৫০ টাকা যোগ করুন"
+                title="à¦¬à¦°à§à¦¤à¦®à¦¾à¦¨ à¦ªà¦°à¦¿à¦®à¦¾à¦£à§‡ +à§«à§¦ à¦Ÿà¦¾à¦•à¦¾ à¦¯à§‹à¦— à¦•à¦°à§à¦¨"
               >
-                +৫০
+                +à§«à§¦
               </button>
               <button
                 type="button"
                 onClick={() => setAmount(String(Number(amount) + 100))}
                 className="px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-cyan-300 transition cursor-pointer"
-                title="বর্তমান পরিমাণে +১০০ টাকা যোগ করুন"
+                title="à¦¬à¦°à§à¦¤à¦®à¦¾à¦¨ à¦ªà¦°à¦¿à¦®à¦¾à¦£à§‡ +à§§à§¦à§¦ à¦Ÿà¦¾à¦•à¦¾ à¦¯à§‹à¦— à¦•à¦°à§à¦¨"
               >
-                +১০০
+                +à§§à§¦à§¦
               </button>
             </div>
           )}
@@ -881,15 +884,15 @@ export default function InvestmentPayments() {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                <span>এই কার্ডে {pendingEdits.length}টি কিস্তি সংশোধনের অনুরোধ পেন্ডিং রয়েছে</span>
+                <span>à¦à¦‡ à¦•à¦¾à¦°à§à¦¡à§‡ {pendingEdits.length}à¦Ÿà¦¿ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà§‡à¦¨à§à¦¡à¦¿à¦‚ à¦°à§Ÿà§‡à¦›à§‡</span>
                 <span className="px-2 py-0.2 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] font-mono text-amber-300 font-bold">
-                  {isAdminOrDev ? "অনুমোদন প্রয়োজন" : "অ্যাডমিন অনুমোদনের অপেক্ষায়"}
+                  {isAdminOrDev ? "à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦ªà§à¦°à§Ÿà§‹à¦œà¦¨" : "à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨à§‡à¦° à¦…à¦ªà§‡à¦•à§à¦·à¦¾à§Ÿ"}
                 </span>
               </h4>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {isAdminOrDev
-                  ? "অ্যাডমিন বা ডেভেলপার হিসেবে আপনি নিচের তালিকা থেকে সরাসরি 'রিভিউ' বাটনে ক্লিক করে অনুমোদন বা বাতিল করতে পারেন।"
-                  : "আপনার পাঠানো কিস্তি সংশোধনের অনুরোধটি অ্যাডমিন ও ডেভেলপারের পর্যালোচনার জন্য অপেক্ষমাণ রয়েছে।"}
+                  ? "à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦¬à¦¾ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦¹à¦¿à¦¸à§‡à¦¬à§‡ à¦†à¦ªà¦¨à¦¿ à¦¨à¦¿à¦šà§‡à¦° à¦¤à¦¾à¦²à¦¿à¦•à¦¾ à¦¥à§‡à¦•à§‡ à¦¸à¦°à¦¾à¦¸à¦°à¦¿ 'à¦°à¦¿à¦­à¦¿à¦‰' à¦¬à¦¾à¦Ÿà¦¨à§‡ à¦•à§à¦²à¦¿à¦• à¦•à¦°à§‡ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦¬à¦¾ à¦¬à¦¾à¦¤à¦¿à¦² à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¦¨à¥¤"
+                  : "à¦†à¦ªà¦¨à¦¾à¦° à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§à¦Ÿà¦¿ à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦“ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦°à§‡à¦° à¦ªà¦°à§à¦¯à¦¾à¦²à§‹à¦šà¦¨à¦¾à¦° à¦œà¦¨à§à¦¯ à¦…à¦ªà§‡à¦•à§à¦·à¦®à¦¾à¦£ à¦°à§Ÿà§‡à¦›à§‡à¥¤"}
               </p>
             </div>
           </div>
@@ -904,10 +907,10 @@ export default function InvestmentPayments() {
             onChange={(e) => setFilterType(e.target.value)}
             className="rounded-xl bg-black/40 border border-white/10 px-3.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-400/50 cursor-pointer"
           >
-            <option value="all" className="bg-[#0b1322]">সকল কিস্তি (All)</option>
-            <option value="date" className="bg-[#0b1322]">তারিখ অনুযায়ী (Date)</option>
-            <option value="month" className="bg-[#0b1322]">মাস অনুযায়ী (Month)</option>
-            <option value="year" className="bg-[#0b1322]">বছর অনুযায়ী (Year)</option>
+            <option value="all" className="bg-[#0b1322]">à¦¸à¦•à¦² à¦•à¦¿à¦¸à§à¦¤à¦¿ (All)</option>
+            <option value="date" className="bg-[#0b1322]">à¦¤à¦¾à¦°à¦¿à¦– à¦…à¦¨à§à¦¯à¦¾à§Ÿà§€ (Date)</option>
+            <option value="month" className="bg-[#0b1322]">à¦®à¦¾à¦¸ à¦…à¦¨à§à¦¯à¦¾à§Ÿà§€ (Month)</option>
+            <option value="year" className="bg-[#0b1322]">à¦¬à¦›à¦° à¦…à¦¨à§à¦¯à¦¾à§Ÿà§€ (Year)</option>
           </select>
 
           {filterType === "date" && (
@@ -926,7 +929,7 @@ export default function InvestmentPayments() {
                 onChange={(e) => setFilterMonth(e.target.value)}
                 className="rounded-xl bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400/50 cursor-pointer"
               >
-                <option value="" className="bg-[#0b1322]">মাস নির্বাচন করুন</option>
+                <option value="" className="bg-[#0b1322]">à¦®à¦¾à¦¸ à¦¨à¦¿à¦°à§à¦¬à¦¾à¦šà¦¨ à¦•à¦°à§à¦¨</option>
                 {MONTHS.map((month) => (
                   <option key={month.value} value={month.value} className="bg-[#0b1322]">
                     {month.label}
@@ -957,9 +960,9 @@ export default function InvestmentPayments() {
 
         {/* Total Filtered Summary Pill */}
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-slate-400">মোট সংগৃহীত:</span>
+          <span className="text-xs text-slate-400">à¦®à§‹à¦Ÿ à¦¸à¦‚à¦—à§ƒà¦¹à§€à¦¤:</span>
           <span className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 font-mono font-extrabold text-emerald-300 text-sm sm:text-base">
-            ৳{formatMoney(totalFilteredAmount)}
+            à§³{formatMoney(totalFilteredAmount)}
           </span>
         </div>
       </div>
@@ -970,11 +973,11 @@ export default function InvestmentPayments() {
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="border-b border-white/[0.08] bg-black/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4 text-center w-14">কিস্তি নং</th>
-                <th className="py-3 px-4">কালেকশন তারিখ</th>
-                <th className="py-3 px-4 text-right">পরিমাণ (৳)</th>
-                <th className="py-3 px-4 text-center">স্বাক্ষরকারী / আইডি</th>
-                {showAction && <th className="py-3 px-4 text-right w-28">অ্যাকশন</th>}
+                <th className="py-3 px-4 text-center w-14">à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚</th>
+                <th className="py-3 px-4">à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨ à¦¤à¦¾à¦°à¦¿à¦–</th>
+                <th className="py-3 px-4 text-right">à¦ªà¦°à¦¿à¦®à¦¾à¦£ (à§³)</th>
+                <th className="py-3 px-4 text-center">à¦¸à§à¦¬à¦¾à¦•à§à¦·à¦°à¦•à¦¾à¦°à§€ / à¦†à¦‡à¦¡à¦¿</th>
+                {showAction && <th className="py-3 px-4 text-right w-28">à¦…à§à¦¯à¦¾à¦•à¦¶à¦¨</th>}
               </tr>
             </thead>
 
@@ -983,8 +986,8 @@ export default function InvestmentPayments() {
                 <tr>
                   <td colSpan={showAction ? 5 : 4} className="py-12 text-center text-slate-400">
                     <FaReceipt className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-300">কোনো কিস্তি রেকর্ড পাওয়া যায়নি</p>
-                    <p className="text-xs text-slate-500 mt-0.5">নতুন কিস্তি যোগ করুন অথবা ফিল্টার পরিবর্তন করুন</p>
+                    <p className="font-semibold text-slate-300">à¦•à§‹à¦¨à§‹ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦°à§‡à¦•à¦°à§à¦¡ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿</p>
+                    <p className="text-xs text-slate-500 mt-0.5">à¦¨à¦¤à§à¦¨ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¯à§‹à¦— à¦•à¦°à§à¦¨ à¦…à¦¥à¦¬à¦¾ à¦«à¦¿à¦²à§à¦Ÿà¦¾à¦° à¦ªà¦°à¦¿à¦¬à¦°à§à¦¤à¦¨ à¦•à¦°à§à¦¨</p>
                   </td>
                 </tr>
               ) : (
@@ -1006,12 +1009,12 @@ export default function InvestmentPayments() {
                         {row?.investment_date}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-400 text-sm sm:text-base">
-                        <div>৳{formatMoney(row?.amount)}</div>
+                        <div>à§³{formatMoney(row?.amount)}</div>
                         {pendingEditForRow && (
                           <div className="mt-1 flex items-center justify-end">
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/35 px-2 py-0.5 text-[10px] font-bold text-amber-300">
                               <FiClock className="h-2.5 w-2.5 animate-spin" />
-                              <span>পেন্ডিং: ৳{formatMoney(pendingEditForRow.new_amount)}</span>
+                              <span>à¦ªà§‡à¦¨à§à¦¡à¦¿à¦‚: à§³{formatMoney(pendingEditForRow.new_amount)}</span>
                             </span>
                           </div>
                         )}
@@ -1046,16 +1049,16 @@ export default function InvestmentPayments() {
                           <div className="flex items-center justify-end gap-1.5">
                             {pendingEditForRow && isAdminOrDev && (
                               <button
-                                title="অনুরোধ পর্যালোচনা ও অনুমোদন করুন"
+                                title="à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà¦°à§à¦¯à¦¾à¦²à§‹à¦šà¦¨à¦¾ à¦“ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦•à¦°à§à¦¨"
                                 onClick={() => setReviewModalEdit(pendingEditForRow)}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer"
                               >
                                 <FiShield className="h-3.5 w-3.5" />
-                                <span>রিভিউ</span>
+                                <span>à¦°à¦¿à¦­à¦¿à¦‰</span>
                               </button>
                             )}
                             <button
-                              title={pendingEditForRow ? "সংশোধনের অনুরোধ পেন্ডিং রয়েছে" : "Edit"}
+                              title={pendingEditForRow ? "à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà§‡à¦¨à§à¦¡à¦¿à¦‚ à¦°à§Ÿà§‡à¦›à§‡" : "Edit"}
                               onClick={() => openEditModal(row)}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg border transition cursor-pointer ${
                                 pendingEditForRow 
@@ -1095,10 +1098,10 @@ export default function InvestmentPayments() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-base font-bold text-white tracking-wide">
-                  কিস্তি সংশোধনের অনুরোধ (Edit Request)
+                  à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦…à¦¨à§à¦°à§‹à¦§ (Edit Request)
                 </h3>
                 <p className="text-xs text-cyan-300 font-mono mt-0.5">
-                  কিস্তি নং #{editingRow?.investment_no}
+                  à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚ #{editingRow?.investment_no}
                 </p>
               </div>
               <button 
@@ -1114,13 +1117,13 @@ export default function InvestmentPayments() {
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 flex items-start gap-2.5 text-xs text-amber-300">
               <FiClock className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
               <p className="text-[11px] leading-relaxed">
-                সংশোধনের এই তথ্যটি সরাসরি আপডেট হবে না। এটি অনুমোদনের জন্য অ্যাডমিন ও ডেভেলপারের কাছে পেন্ডিং থাকবে এবং অনুমোদন পেলেই ক্যাশ ও কিস্তিতে কার্যকর হবে।
+                à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦à¦‡ à¦¤à¦¥à§à¦¯à¦Ÿà¦¿ à¦¸à¦°à¦¾à¦¸à¦°à¦¿ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¬à§‡ à¦¨à¦¾à¥¤ à¦à¦Ÿà¦¿ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨à§‡à¦° à¦œà¦¨à§à¦¯ à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦“ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦°à§‡à¦° à¦•à¦¾à¦›à§‡ à¦ªà§‡à¦¨à§à¦¡à¦¿à¦‚ à¦¥à¦¾à¦•à¦¬à§‡ à¦à¦¬à¦‚ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦ªà§‡à¦²à§‡à¦‡ à¦•à§à¦¯à¦¾à¦¶ à¦“ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦¤à§‡ à¦•à¦¾à¦°à§à¦¯à¦•à¦° à¦¹à¦¬à§‡à¥¤
               </p>
             </div>
 
             <div className="space-y-3.5">
               <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1 block">কালেকশন তারিখ</label>
+                <label className="text-xs font-semibold text-slate-300 mb-1 block">à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨ à¦¤à¦¾à¦°à¦¿à¦–</label>
                 <input
                   type="date"
                   disabled={isEditSubmitting}
@@ -1132,7 +1135,7 @@ export default function InvestmentPayments() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-300 block">নতুন পরিমাণ (New Amount ৳)</label>
+                  <label className="text-xs font-semibold text-slate-300 block">à¦¨à¦¤à§à¦¨ à¦ªà¦°à¦¿à¦®à¦¾à¦£ (New Amount à§³)</label>
                   {editAmount && (
                     <button
                       type="button"
@@ -1140,7 +1143,7 @@ export default function InvestmentPayments() {
                       onClick={() => setEditAmount("")}
                       className="text-[10px] text-rose-400 hover:text-rose-300 font-medium cursor-pointer disabled:opacity-40"
                     >
-                      ক্লিয়ার ✕
+                      à¦•à§à¦²à¦¿à§Ÿà¦¾à¦° âœ•
                     </button>
                   )}
                 </div>
@@ -1152,7 +1155,7 @@ export default function InvestmentPayments() {
                   className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono font-bold outline-none focus:border-cyan-400/50 disabled:opacity-50"
                 />
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-400">সাজেস্ট:</span>
+                  <span className="text-[10px] text-slate-400">à¦¸à¦¾à¦œà§‡à¦¸à§à¦Ÿ:</span>
                   {[50, 100, 200, 300, 500, 1000].map((amt) => {
                     const isSelected = String(editAmount) === String(amt);
                     return (
@@ -1167,7 +1170,7 @@ export default function InvestmentPayments() {
                             : "bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white"
                         }`}
                       >
-                        ৳{amt}
+                        à§³{amt}
                       </button>
                     );
                   })}
@@ -1176,14 +1179,14 @@ export default function InvestmentPayments() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                  সংশোধনের কারণ (Update Reason) <span className="text-rose-400">*</span>
+                  à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦•à¦¾à¦°à¦£ (Update Reason) <span className="text-rose-400">*</span>
                 </label>
                 <textarea
                   rows={3}
                   disabled={isEditSubmitting}
                   value={update_reason}
                   onChange={(e) => setUpdate_reason(e.target.value)}
-                  placeholder="কিস্তি পরিবর্তনের সঠিক কারণ লিখুন (অ্যাডমিন পর্যালোচনার জন্য প্রয়োজন)..."
+                  placeholder="à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦ªà¦°à¦¿à¦¬à¦°à§à¦¤à¦¨à§‡à¦° à¦¸à¦ à¦¿à¦• à¦•à¦¾à¦°à¦£ à¦²à¦¿à¦–à§à¦¨ (à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦ªà¦°à§à¦¯à¦¾à¦²à§‹à¦šà¦¨à¦¾à¦° à¦œà¦¨à§à¦¯ à¦ªà§à¦°à§Ÿà§‹à¦œà¦¨)..."
                   className="w-full rounded-xl bg-black/40 border border-white/10 p-3 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400/50 resize-none disabled:opacity-50"
                 />
               </div>
@@ -1195,7 +1198,7 @@ export default function InvestmentPayments() {
                   onClick={closeEditModal}
                   className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  বাতিল
+                  à¦¬à¦¾à¦¤à¦¿à¦²
                 </button>
                 <button
                   type="button"
@@ -1206,10 +1209,10 @@ export default function InvestmentPayments() {
                   {isEditSubmitting ? (
                     <>
                       <FiLoader className="h-4 w-4 animate-spin text-white" />
-                      <span>অনুরোধ পাঠানো হচ্ছে...</span>
+                      <span>à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à¦šà§à¦›à§‡...</span>
                     </>
                   ) : (
-                    <span>অনুরোধ পাঠান (Submit)</span>
+                    <span>à¦…à¦¨à§à¦°à§‹à¦§ à¦ªà¦¾à¦ à¦¾à¦¨ (Submit)</span>
                   )}
                 </button>
               </div>
@@ -1231,10 +1234,10 @@ export default function InvestmentPayments() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white tracking-wide">
-                    কিস্তি সংশোধন পর্যালোচনা
+                    à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¸à¦‚à¦¶à§‹à¦§à¦¨ à¦ªà¦°à§à¦¯à¦¾à¦²à§‹à¦šà¦¨à¦¾
                   </h3>
                   <p className="text-xs text-amber-400 font-mono mt-0.5">
-                    কিস্তি নং #{reviewModalEdit?.installment_no} • রিকোয়েস্ট #{reviewModalEdit?.id}
+                    à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦‚ #{reviewModalEdit?.installment_no} â€¢ à¦°à¦¿à¦•à§‹à§Ÿà§‡à¦¸à§à¦Ÿ #{reviewModalEdit?.id}
                   </p>
                 </div>
               </div>
@@ -1245,7 +1248,7 @@ export default function InvestmentPayments() {
 
             <div className="rounded-2xl bg-black/40 border border-white/[0.08] p-4 divide-y divide-white/[0.06] text-xs space-y-3">
               <div className="flex items-center justify-between pb-2">
-                <span className="text-slate-400">অনুরোধকারী কর্মী</span>
+                <span className="text-slate-400">à¦…à¦¨à§à¦°à§‹à¦§à¦•à¦¾à¦°à§€ à¦•à¦°à§à¦®à§€</span>
                 <span className="font-semibold text-white flex items-center gap-1.5">
                   <FiUser className="text-cyan-400 h-3.5 w-3.5" />
                   <span>{reviewModalEdit?.requester_name || `User #${reviewModalEdit?.requested_by}`}</span>
@@ -1254,28 +1257,28 @@ export default function InvestmentPayments() {
 
               <div className="grid grid-cols-2 gap-3 py-2">
                 <div>
-                  <span className="text-[10px] text-slate-400 block">বর্তমান পরিমাণ</span>
+                  <span className="text-[10px] text-slate-400 block">à¦¬à¦°à§à¦¤à¦®à¦¾à¦¨ à¦ªà¦°à¦¿à¦®à¦¾à¦£</span>
                   <span className="text-rose-400 font-mono font-bold text-sm">
-                    ৳{formatMoney(reviewModalEdit?.old_amount)}
+                    à§³{formatMoney(reviewModalEdit?.old_amount)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">অনুরোধকৃত নতুন পরিমাণ</span>
+                  <span className="text-[10px] text-slate-400 block">à¦…à¦¨à§à¦°à§‹à¦§à¦•à§ƒà¦¤ à¦¨à¦¤à§à¦¨ à¦ªà¦°à¦¿à¦®à¦¾à¦£</span>
                   <span className="text-emerald-400 font-mono font-bold text-base">
-                    ৳{formatMoney(reviewModalEdit?.new_amount)}
+                    à§³{formatMoney(reviewModalEdit?.new_amount)}
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 py-2">
                 <div>
-                  <span className="text-[10px] text-slate-400 block">বর্তমান তারিখ</span>
+                  <span className="text-[10px] text-slate-400 block">à¦¬à¦°à§à¦¤à¦®à¦¾à¦¨ à¦¤à¦¾à¦°à¦¿à¦–</span>
                   <span className="text-slate-300 font-mono">
                     {reviewModalEdit?.old_date}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">অনুরোধকৃত তারিখ</span>
+                  <span className="text-[10px] text-slate-400 block">à¦…à¦¨à§à¦°à§‹à¦§à¦•à§ƒà¦¤ à¦¤à¦¾à¦°à¦¿à¦–</span>
                   <span className="text-cyan-300 font-mono font-semibold">
                     {reviewModalEdit?.new_date}
                   </span>
@@ -1283,7 +1286,7 @@ export default function InvestmentPayments() {
               </div>
 
               <div className="pt-2">
-                <span className="text-[10px] text-slate-400 block mb-1">সংশোধনের কারণ:</span>
+                <span className="text-[10px] text-slate-400 block mb-1">à¦¸à¦‚à¦¶à§‹à¦§à¦¨à§‡à¦° à¦•à¦¾à¦°à¦£:</span>
                 <p className="rounded-xl bg-white/[0.03] p-2.5 text-xs text-slate-200 border border-white/5 italic">
                   "{reviewModalEdit?.request_reason}"
                 </p>
@@ -1295,13 +1298,13 @@ export default function InvestmentPayments() {
                 onClick={() => handleReviewAction(reviewModalEdit, "rejected")}
                 className="flex-1 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 py-2.5 text-xs font-bold text-rose-300 transition cursor-pointer text-center"
               >
-                ✕ বাতিল করুন (Reject)
+                âœ• à¦¬à¦¾à¦¤à¦¿à¦² à¦•à¦°à§à¦¨ (Reject)
               </button>
               <button
                 onClick={() => handleReviewAction(reviewModalEdit, "approved")}
                 className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-950/50 transition cursor-pointer text-center"
               >
-                ✓ অনুমোদন দিন (Approve)
+                âœ“ à¦…à¦¨à§à¦®à§‹à¦¦à¦¨ à¦¦à¦¿à¦¨ (Approve)
               </button>
             </div>
           </div>
@@ -1357,7 +1360,7 @@ export default function InvestmentPayments() {
                   <button
                     onClick={() => setSuccessReceipt(null)}
                     className="no-print absolute top-4 right-4 z-20 flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.12] transition cursor-pointer"
-                    title="বন্ধ করুন"
+                    title="à¦¬à¦¨à§à¦§ à¦•à¦°à§à¦¨"
                   >
                     <FiX className="h-4 w-4" />
                   </button>
@@ -1375,27 +1378,27 @@ export default function InvestmentPayments() {
 
                     <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>কিস্তি আদায় সম্পন্ন</span>
+                      <span>à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ à¦¸à¦®à§à¦ªà¦¨à§à¦¨</span>
                     </div>
 
                     <h3 className="text-xl font-black text-white tracking-wide mt-1.5">
-                      বিনিয়োগ কিস্তির ডিজিটাল রসিদ
+                      à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦— à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦¡à¦¿à¦œà¦¿à¦Ÿà¦¾à¦² à¦°à¦¸à¦¿à¦¦
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      ইনভেস্টরের কার্ডে কিস্তির অর্থ সফলভাবে যুক্ত হয়েছে
+                      à¦‡à¦¨à¦­à§‡à¦¸à§à¦Ÿà¦°à§‡à¦° à¦•à¦¾à¦°à§à¦¡à§‡ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦…à¦°à§à¦¥ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦¯à§à¦•à§à¦¤ à¦¹à§Ÿà§‡à¦›à§‡
                     </p>
 
                     {/* Prominent Amount Box */}
                     <div className="mt-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/50 via-[#06241a]/60 to-emerald-950/50 border border-emerald-500/30 p-3.5 shadow-inner">
                       <span className="text-[10px] font-semibold text-emerald-300/80 uppercase tracking-wider block">
-                        সংগৃহীত কিস্তির পরিমাণ
+                        à¦¸à¦‚à¦—à§ƒà¦¹à§€à¦¤ à¦•à¦¿à¦¸à§à¦¤à¦¿à¦° à¦ªà¦°à¦¿à¦®à¦¾à¦£
                       </span>
                       <div className="text-3xl sm:text-4xl font-extrabold font-mono text-emerald-300 mt-1 flex items-center justify-center gap-1">
-                        <span>৳</span>
+                        <span>à§³</span>
                         <span>{formatMoney(successReceipt.amount)}</span>
                       </div>
                       <span className="text-[10px] font-mono text-slate-400 mt-0.5 inline-block">
-                        Digital Investment Voucher • Cash In Hand
+                        Digital Investment Voucher â€¢ Cash In Hand
                       </span>
                     </div>
                   </div>
@@ -1415,14 +1418,14 @@ export default function InvestmentPayments() {
                             }}
                           />
                           <div>
-                            <span className="text-slate-400 text-[10px] block">বিনিয়োগকারী</span>
+                            <span className="text-slate-400 text-[10px] block">à¦¬à¦¿à¦¨à¦¿à§Ÿà§‹à¦—à¦•à¦¾à¦°à§€</span>
                             <span className="text-white font-bold text-sm block leading-tight">
                               {successReceipt.investorName}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block font-mono">কার্ড আইডি</span>
+                          <span className="text-[10px] text-slate-400 block font-mono">à¦•à¦¾à¦°à§à¦¡ à¦†à¦‡à¦¡à¦¿</span>
                           <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
                             #{successReceipt.cardId}
                           </span>
@@ -1432,13 +1435,13 @@ export default function InvestmentPayments() {
                       {/* Installment No & Date */}
                       <div className="grid grid-cols-2 gap-3 py-3">
                         <div>
-                          <span className="text-[10px] text-slate-400 block">কিস্তি নম্বর</span>
+                          <span className="text-[10px] text-slate-400 block">à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦¨à¦®à§à¦¬à¦°</span>
                           <span className="text-slate-100 font-bold font-mono text-sm">
-                            কিস্তি #{successReceipt.installmentNo}
+                            à¦•à¦¿à¦¸à§à¦¤à¦¿ #{successReceipt.installmentNo}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">কালেকশন তারিখ</span>
+                          <span className="text-[10px] text-slate-400 block">à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨ à¦¤à¦¾à¦°à¦¿à¦–</span>
                           <span className="text-slate-200 font-mono font-semibold">
                             {successReceipt.date}
                           </span>
@@ -1447,7 +1450,7 @@ export default function InvestmentPayments() {
 
                       {/* Collector Info */}
                       <div className="flex items-center justify-between pt-3">
-                        <span className="text-slate-400">কালেকশনকারী কর্মী</span>
+                        <span className="text-slate-400">à¦•à¦¾à¦²à§‡à¦•à¦¶à¦¨à¦•à¦¾à¦°à§€ à¦•à¦°à§à¦®à§€</span>
                         <span className="font-semibold text-white flex items-center gap-1.5">
                           <FiUser className="text-cyan-400 h-3.5 w-3.5" />
                           <span>{successReceipt.collectorName}</span>
@@ -1468,12 +1471,12 @@ export default function InvestmentPayments() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <h5 className="text-xs font-bold text-cyan-300">
-                            অ্যাডমিন ও ডেভেলপারকে নোটিফিকেশন পাঠানো হয়েছে
+                            à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦“ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦°à¦•à§‡ à¦¨à§‹à¦Ÿà¦¿à¦«à¦¿à¦•à§‡à¦¶à¦¨ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à§Ÿà§‡à¦›à§‡
                           </h5>
                           <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         </div>
                         <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
-                          স্বয়ংক্রিয়ভাবে অ্যাডমিন ও ডেভেলপার প্যানেলে এলার্ট চলে গেছে যে <span className="text-white font-semibold">{successReceipt.investorName}</span> এর ৳{formatMoney(successReceipt.amount)} টাকা কিস্তি আদায় সম্পন্ন হয়েছে।
+                          à¦¸à§à¦¬à§Ÿà¦‚à¦•à§à¦°à¦¿à§Ÿà¦­à¦¾à¦¬à§‡ à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨ à¦“ à¦¡à§‡à¦­à§‡à¦²à¦ªà¦¾à¦° à¦ªà§à¦¯à¦¾à¦¨à§‡à¦²à§‡ à¦à¦²à¦¾à¦°à§à¦Ÿ à¦šà¦²à§‡ à¦—à§‡à¦›à§‡ à¦¯à§‡ <span className="text-white font-semibold">{successReceipt.investorName}</span> à¦à¦° à§³{formatMoney(successReceipt.amount)} à¦Ÿà¦¾à¦•à¦¾ à¦•à¦¿à¦¸à§à¦¤à¦¿ à¦†à¦¦à¦¾à§Ÿ à¦¸à¦®à§à¦ªà¦¨à§à¦¨ à¦¹à§Ÿà§‡à¦›à§‡à¥¤
                         </p>
                       </div>
                     </div>
@@ -1487,7 +1490,7 @@ export default function InvestmentPayments() {
                       className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.1] px-4 py-2.5 text-xs font-semibold text-slate-200 transition cursor-pointer"
                     >
                       <FiPrinter className="h-3.5 w-3.5" />
-                      <span>প্রিন্ট রসিদ</span>
+                      <span>à¦ªà§à¦°à¦¿à¦¨à§à¦Ÿ à¦°à¦¸à¦¿à¦¦</span>
                     </button>
                     <button
                       type="button"
@@ -1495,7 +1498,7 @@ export default function InvestmentPayments() {
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/50 transition cursor-pointer"
                     >
                       <FiCheck className="h-4 w-4" />
-                      <span>ঠিক আছে, সম্পন্ন</span>
+                      <span>à¦ à¦¿à¦• à¦†à¦›à§‡, à¦¸à¦®à§à¦ªà¦¨à§à¦¨</span>
                     </button>
                   </div>
                 </motion.div>
