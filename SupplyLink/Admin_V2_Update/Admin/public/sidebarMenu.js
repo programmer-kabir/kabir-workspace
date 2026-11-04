@@ -99,11 +99,24 @@ export const sidebarMenu = [
         roles: ["admin", "developer", "manager"],
       },
       {
+        label: "Monthly Installment Audit",
+        path: "/audit/monthly_installment_sync",
+        icon: RiBankCardLine,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
         label: "Daily Installment Audit",
         path: "/audit/daily_installment_sync",
         icon: FaTasks,
         roles: ["admin", "developer", "manager"],
       },
+      {
+        label: "Stock Purchase Audit",
+        path: "/audit/stock_purchase_sync",
+        icon: FaBoxOpen,
+        roles: ["admin", "developer", "manager"],
+      },
+
       {
         label: "Double Entry Audit",
         path: "/audit/duplicate_payments",

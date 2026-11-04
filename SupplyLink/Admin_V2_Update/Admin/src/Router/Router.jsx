@@ -40,6 +40,8 @@ import CashReportApproved from "../Pages/CashMenage/CashReportApproved";
 import CashReportPrint from "../Pages/CashMenage/CashReportPrint";
 import DownpaymentSyncAudit from "../Pages/Audit/DownpaymentSyncAudit";
 import DailyInstallmentSyncAudit from "../Pages/Audit/DailyInstallmentSyncAudit";
+import MonthlyInstallmentSyncAudit from "../Pages/Audit/MonthlyInstallmentSyncAudit";
+import StockPurchaseSyncAudit from "../Pages/Audit/StockPurchaseSyncAudit";
 import DuplicateEntryAudit from "../Pages/Audit/DuplicateEntryAudit";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
@@ -103,6 +105,16 @@ const routes = createBrowserRouter([
           {
             path: "/audit/daily_installment_sync",
             element: <DailyInstallmentSyncAudit />,
+
+          },
+          {
+            path: "/audit/monthly_installment_sync",
+            element: <MonthlyInstallmentSyncAudit />,
+          },
+          {
+            path: "/audit/stock_purchase_sync",
+            element: <StockPurchaseSyncAudit />,
+
           },
           {
             path: "/audit/duplicate_payments",
