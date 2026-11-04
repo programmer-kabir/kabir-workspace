@@ -16,9 +16,27 @@ if ($sessionUser && !empty($sessionUser['id'])) {
             $sessionUser['name'] = $row['name'];
             $sessionUser['photo'] = $row['photo'];
             $sessionUser['mobile'] = $row['mobile'];
-            $_SESSION['user'] = $sessionUser;
         }
     }
+
+    // Always refresh roles dynamically from user_roles table
+    $stmtRoles = $mysqli->prepare("SELECT role FROM user_roles WHERE user_id = ?");
+    if ($stmtRoles) {
+        $stmtRoles->bind_param("i", $uid);
+        $stmtRoles->execute();
+        $resRoles = $stmtRoles->get_result();
+        $freshRoles = [];
+        while ($r = $resRoles->fetch_assoc()) {
+            if (!empty($r['role'])) {
+                $freshRoles[] = $r['role'];
+            }
+        }
+        $stmtRoles->close();
+        if (!empty($freshRoles)) {
+            $sessionUser['role'] = $freshRoles;
+        }
+    }
+    $_SESSION['user'] = $sessionUser;
 }
 
 echo json_encode([

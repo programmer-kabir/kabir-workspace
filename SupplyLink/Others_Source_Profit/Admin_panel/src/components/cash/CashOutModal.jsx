@@ -19,7 +19,7 @@ const getTodayDate = () => {
 };
 
 const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
-  const { isAdminOrDev, isDataEntry, isStaff, isManager } = useUserRole();
+  const { isAdminOrDev, isDataEntry, canMakeEntry } = useUserRole();
   const { cashOutCategories } = useCashCategories();
   const [loading, setLoading] = useState(false);
   const [isCompanyExpense, setIsCompanyExpense] = useState(false);
@@ -32,7 +32,7 @@ const CashOutModal = ({ openCashOutModal, isOpen, onClose, onSuccess }) => {
   });
 
   // staff ও manager = locked, কোনো entry নেই
-  const isLocked = isStaff || isManager;
+  const isLocked = !canMakeEntry;
   // data_entry = company expense only mode (admin/dev নয়)
   const isExpenseOnly = isDataEntry && !isAdminOrDev;
 
