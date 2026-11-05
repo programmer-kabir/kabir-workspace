@@ -45,6 +45,13 @@ export const sidebarMenu = [
     icon: MdOutlineDashboard,
     roles: ["admin", "developer", "manager", "staff"],
   },
+  // SUPPLYLINK REPORTS (PDF ARCHIVE)
+  {
+    label: "SupplyLink Reports",
+    path: "/supplylink-reports",
+    icon: TbReport,
+    roles: ["admin", "developer", "manager", "staff", "audit", "data_entry"],
+  },
 
   {
     type: "collapse",

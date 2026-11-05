@@ -53,6 +53,7 @@ import DashboardReport from "../components/Dashboard/DashboardReport";
 import DailyInstallmentsPaidReport from "../Pages/shared/DailyInstallments/DailyInstallmentsPaidReport";
 import Account from "../Pages/shared/Account/Account";
 import MonthlyProfitReport from "../Pages/shared/Reports/MonthlyProfitReport";
+import SupplyLinkReports from "../Pages/shared/Reports/SupplyLinkReports";
 
 const routes = createBrowserRouter([
   {
@@ -274,6 +275,10 @@ const routes = createBrowserRouter([
           },
 
           // Reports & Profit
+          {
+            path: "/supplylink-reports",
+            element: <SupplyLinkReports />,
+          },
           {
             path: "/reports/monthly-profit",
             element: <MonthlyProfitReport />,
