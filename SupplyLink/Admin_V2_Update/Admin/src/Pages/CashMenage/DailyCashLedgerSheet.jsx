@@ -17,8 +17,24 @@ import {
   FaCoins,
   FaReceipt,
   FaInfoCircle,
-  FaTimes
+  FaTimes,
+  FaArrowRight
 } from "react-icons/fa";
+
+// Helper to format date into readable Bengali & English text
+const formatReadableDate = (dateStr) => {
+  if (!dateStr || !dateStr.includes("-")) return "";
+  const [y, m, d] = dateStr.split("-");
+  const monthNamesBn = [
+    "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+    "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"
+  ];
+  const shortEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const mIndex = parseInt(m, 10) - 1;
+  const dayBn = d.replace(/\d/g, (digit) => "০১২৩৪৫৬৭৮৯"[digit]);
+  const yearBn = y.replace(/\d/g, (digit) => "০১২৩৪৫৬৭৮৯"[digit]);
+  return `${dayBn} ${monthNamesBn[mIndex] || ""} ${yearBn} (${d} ${shortEn[mIndex] || ""})`;
+};
 
 const DailyCashLedgerSheet = () => {
   const [loading, setLoading] = useState(true);
@@ -46,9 +62,13 @@ const DailyCashLedgerSheet = () => {
 
   const [startDate, setStartDate] = useState(defaultFirstDay);
   const [endDate, setEndDate] = useState(defaultToday);
+  const [activePreset, setActivePreset] = useState("this_month");
   const [includeEmptyDays, setIncludeEmptyDays] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedDayDetails, setSelectedDayDetails] = useState(null);
+
+  const startInputRef = useRef(null);
+  const endInputRef = useRef(null);
 
   const printRef = useRef(null);
   const handlePrint = useReactToPrint({
@@ -58,13 +78,15 @@ const DailyCashLedgerSheet = () => {
 
   const baseUrl = import.meta.env.VITE_LOCALHOST_KEY || "https://management.supplylinkbd.com/apis";
 
-  const fetchLedgerSheet = async () => {
+  const fetchLedgerSheet = async (overrideStart, overrideEnd) => {
+    const s = overrideStart || startDate;
+    const e = overrideEnd || endDate;
     setLoading(true);
     try {
       const res = await axios.get(`${baseUrl}/cash/daily_ledger_sheet.php`, {
         params: {
-          start_date: startDate,
-          end_date: endDate,
+          start_date: s,
+          end_date: e,
           include_empty_days: includeEmptyDays ? 1 : 0,
         },
         withCredentials: true,
@@ -85,9 +107,10 @@ const DailyCashLedgerSheet = () => {
     }
   };
 
+  // Auto fetch when startDate, endDate or includeEmptyDays change
   useEffect(() => {
     fetchLedgerSheet();
-  }, [includeEmptyDays]);
+  }, [startDate, endDate, includeEmptyDays]);
 
   const handleApplyFilter = (e) => {
     e?.preventDefault();
@@ -96,63 +119,36 @@ const DailyCashLedgerSheet = () => {
 
   // Quick Preset Handlers
   const handlePreset = (type) => {
+    setActivePreset(type);
     const curNow = new Date();
     const y = curNow.getFullYear();
     const m = curNow.getMonth(); // 0-based
 
+    let s = "";
+    let e = "";
+
     if (type === "this_month") {
-      const s = `${y}-${String(m + 1).padStart(2, "0")}-01`;
-      const e = curNow.toISOString().split("T")[0];
-      setStartDate(s);
-      setEndDate(e);
-      setTimeout(() => fetchCustomRange(s, e), 50);
+      s = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+      e = curNow.toISOString().split("T")[0];
     } else if (type === "last_month") {
       const lastMonthDate = new Date(y, m - 1, 1);
       const ly = lastMonthDate.getFullYear();
       const lm = String(lastMonthDate.getMonth() + 1).padStart(2, "0");
       const lastDay = new Date(ly, lastMonthDate.getMonth() + 1, 0).getDate();
-      const s = `${ly}-${lm}-01`;
-      const e = `${ly}-${lm}-${String(lastDay).padStart(2, "0")}`;
-      setStartDate(s);
-      setEndDate(e);
-      setTimeout(() => fetchCustomRange(s, e), 50);
+      s = `${ly}-${lm}-01`;
+      e = `${ly}-${lm}-${String(lastDay).padStart(2, "0")}`;
     } else if (type === "last_30_days") {
       const past30 = new Date(curNow.getTime() - 29 * 24 * 60 * 60 * 1000);
-      const s = past30.toISOString().split("T")[0];
-      const e = curNow.toISOString().split("T")[0];
-      setStartDate(s);
-      setEndDate(e);
-      setTimeout(() => fetchCustomRange(s, e), 50);
+      s = past30.toISOString().split("T")[0];
+      e = curNow.toISOString().split("T")[0];
     } else if (type === "all_time") {
-      const s = "2026-08-01";
-      const e = curNow.toISOString().split("T")[0];
+      s = "2026-08-01";
+      e = curNow.toISOString().split("T")[0];
+    }
+
+    if (s && e) {
       setStartDate(s);
       setEndDate(e);
-      setTimeout(() => fetchCustomRange(s, e), 50);
-    }
-  };
-
-  const fetchCustomRange = async (s, e) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${baseUrl}/cash/daily_ledger_sheet.php`, {
-        params: {
-          start_date: s,
-          end_date: e,
-          include_empty_days: includeEmptyDays ? 1 : 0,
-        },
-        withCredentials: true,
-      });
-
-      if (res.data?.success) {
-        setData(res.data.data || []);
-        setSummary(res.data.summary || {});
-        setDateRange(res.data.date_range || {});
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -234,7 +230,7 @@ const DailyCashLedgerSheet = () => {
               দৈনিক ক্যাশ ফ্লো ও ব্যালেন্স শিট (Excel Ledger)
             </h1>
             <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-              তারিখ অনুযায়ী প্রারম্ভিক ক্যাশ, ক্যাশ ইন, ক্যাশ আউট ও সমাপনী ক্যাশের এক্সেল ভিউ
+              তারিখ অনুযায়ী প্রারম্ভিক ক্যাশ, ক্যাশ ইন, ক্যাশ আউট ও সমাপনী ক্যাশের চলমান এক্সেল শিট
             </p>
           </div>
         </div>
@@ -260,7 +256,7 @@ const DailyCashLedgerSheet = () => {
           </button>
 
           <button
-            onClick={fetchLedgerSheet}
+            onClick={() => fetchLedgerSheet()}
             disabled={loading}
             className="flex items-center gap-2 px-3.5 py-2 bg-[#1c2541] hover:bg-[#253256] text-gray-200 border border-gray-700 rounded-lg text-xs transition-all cursor-pointer disabled:opacity-50"
             title="রিফ্রেশ করুন"
@@ -271,38 +267,108 @@ const DailyCashLedgerSheet = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar & Presets */}
-      <div className="bg-[#1c2541]/80 backdrop-blur border border-gray-800 rounded-xl p-4 mb-6 shadow">
-        <form onSubmit={handleApplyFilter} className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-          {/* Date Range Pickers */}
+      {/* Filter Toolbar with Redesigned Date Pickers */}
+      <div className="bg-[#1c2541]/90 backdrop-blur border border-indigo-500/20 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          
+          {/* Visual Date Picker Controls */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-[#0b132b] px-3 py-1.5 rounded-lg border border-gray-700">
-              <span className="text-xs text-gray-400 font-medium">শুরু:</span>
+            {/* Start Date Card */}
+            <div
+              onClick={() => {
+                if (startInputRef.current) {
+                  try {
+                    startInputRef.current.showPicker();
+                  } catch (e) {
+                    startInputRef.current.focus();
+                  }
+                }
+              }}
+              className="relative flex items-center gap-3 bg-[#0b132b] hover:bg-[#152042] px-3.5 py-2.5 rounded-xl border-2 border-indigo-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-md group min-w-[210px]"
+              title="ক্যালেন্ডার খুলতে ক্লিক করুন"
+            >
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+                <FaCalendarAlt />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                  <span>শুরুর তারিখ (Start)</span>
+                  <span className="text-[9px] text-gray-400 font-normal">ক্লিক করুন ▾</span>
+                </div>
+                <div className="text-sm font-bold text-white font-mono mt-0.5">
+                  {startDate}
+                </div>
+                <div className="text-[10px] text-indigo-300 font-sans">
+                  {formatReadableDate(startDate)}
+                </div>
+              </div>
+              {/* Invisible native input covering the card */}
               <input
+                ref={startInputRef}
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent text-white text-xs font-mono focus:outline-none"
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setActivePreset("custom");
+                }}
+                className="absolute inset-0 opacity-0 pointer-events-auto cursor-pointer [color-scheme:dark]"
               />
             </div>
 
-            <span className="text-gray-500 text-xs">থেকে</span>
+            {/* Arrow separator */}
+            <div className="hidden sm:flex items-center justify-center w-7 h-7 rounded-full bg-[#0b132b] text-cyan-400 text-xs border border-gray-700">
+              <FaArrowRight />
+            </div>
 
-            <div className="flex items-center gap-2 bg-[#0b132b] px-3 py-1.5 rounded-lg border border-gray-700">
-              <span className="text-xs text-gray-400 font-medium">শেষ:</span>
+            {/* End Date Card */}
+            <div
+              onClick={() => {
+                if (endInputRef.current) {
+                  try {
+                    endInputRef.current.showPicker();
+                  } catch (e) {
+                    endInputRef.current.focus();
+                  }
+                }
+              }}
+              className="relative flex items-center gap-3 bg-[#0b132b] hover:bg-[#152042] px-3.5 py-2.5 rounded-xl border-2 border-indigo-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-md group min-w-[210px]"
+              title="ক্যালেন্ডার খুলতে ক্লিক করুন"
+            >
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+                <FaCalendarAlt />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                  <span>শেষ তারিখ (End)</span>
+                  <span className="text-[9px] text-gray-400 font-normal">ক্লিক করুন ▾</span>
+                </div>
+                <div className="text-sm font-bold text-white font-mono mt-0.5">
+                  {endDate}
+                </div>
+                <div className="text-[10px] text-emerald-300 font-sans">
+                  {formatReadableDate(endDate)}
+                </div>
+              </div>
+              {/* Invisible native input covering the card */}
               <input
+                ref={endInputRef}
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-white text-xs font-mono focus:outline-none"
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setActivePreset("custom");
+                }}
+                className="absolute inset-0 opacity-0 pointer-events-auto cursor-pointer [color-scheme:dark]"
               />
             </div>
 
             <button
-              type="submit"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer"
+              onClick={() => fetchLedgerSheet()}
+              disabled={loading}
+              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-950/40 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
-              রিপোর্ট দেখুন
+              <FaSyncAlt className={loading ? "animate-spin" : ""} />
+              {loading ? "লোড হচ্ছে..." : "রিপোর্ট আপডেট"}
             </button>
           </div>
 
@@ -311,55 +377,73 @@ const DailyCashLedgerSheet = () => {
             <button
               type="button"
               onClick={() => handlePreset("this_month")}
-              className="px-2.5 py-1.5 bg-[#0b132b] hover:bg-[#253256] text-gray-300 rounded-lg text-xs transition-all cursor-pointer border border-gray-700"
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                activePreset === "this_month"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md"
+                  : "bg-[#0b132b] hover:bg-[#253256] text-gray-300 border-gray-700"
+              }`}
             >
               চলতি মাস
             </button>
             <button
               type="button"
               onClick={() => handlePreset("last_month")}
-              className="px-2.5 py-1.5 bg-[#0b132b] hover:bg-[#253256] text-gray-300 rounded-lg text-xs transition-all cursor-pointer border border-gray-700"
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                activePreset === "last_month"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md"
+                  : "bg-[#0b132b] hover:bg-[#253256] text-gray-300 border-gray-700"
+              }`}
             >
               গত মাস
             </button>
             <button
               type="button"
               onClick={() => handlePreset("last_30_days")}
-              className="px-2.5 py-1.5 bg-[#0b132b] hover:bg-[#253256] text-gray-300 rounded-lg text-xs transition-all cursor-pointer border border-gray-700"
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                activePreset === "last_30_days"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md"
+                  : "bg-[#0b132b] hover:bg-[#253256] text-gray-300 border-gray-700"
+              }`}
             >
               গত ৩০ দিন
             </button>
             <button
               type="button"
               onClick={() => handlePreset("all_time")}
-              className="px-2.5 py-1.5 bg-[#0b132b] hover:bg-[#253256] text-gray-300 rounded-lg text-xs transition-all cursor-pointer border border-gray-700"
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                activePreset === "all_time"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md"
+                  : "bg-[#0b132b] hover:bg-[#253256] text-gray-300 border-gray-700"
+              }`}
             >
               সব সময়
             </button>
           </div>
-        </form>
+        </div>
 
-        {/* Options Row */}
-        <div className="mt-3 pt-3 border-t border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        {/* Options & Table Search Row */}
+        <div className="mt-4 pt-3.5 border-t border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white">
             <input
               type="checkbox"
               checked={includeEmptyDays}
               onChange={(e) => setIncludeEmptyDays(e.target.checked)}
-              className="rounded bg-[#0b132b] border-gray-700 text-indigo-600 focus:ring-0 cursor-pointer"
+              className="w-4 h-4 rounded bg-[#0b132b] border-gray-700 text-indigo-600 focus:ring-0 cursor-pointer"
             />
-            <span>লেনদেনবিহীন দিনগুলোও তালিকায় দেখাও (All Calendar Days)</span>
+            <span className="font-medium">
+              লেনদেনবিহীন দিনগুলোও তালিকায় দেখাও (All Calendar Days)
+            </span>
           </label>
 
           {/* Table Search */}
-          <div className="relative w-full sm:w-56">
+          <div className="relative w-full sm:w-64">
             <FaSearch className="absolute left-3 top-2.5 text-gray-500 text-xs" />
             <input
               type="text"
-              placeholder="তারিখ খুঁজুন (YYYY-MM-DD)..."
+              placeholder="তারিখ দিয়ে খুঁজুন (YYYY-MM-DD)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[#0b132b] border border-gray-700 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full pl-8 pr-3 py-2 bg-[#0b132b] border border-gray-700 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
         </div>
@@ -368,9 +452,9 @@ const DailyCashLedgerSheet = () => {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Baseline Opening */}
-        <div className="bg-[#1c2541]/80 backdrop-blur border border-gray-800 rounded-xl p-4 shadow">
+        <div className="bg-[#1c2541]/80 backdrop-blur border border-indigo-500/30 rounded-xl p-4 shadow">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-indigo-400 font-medium">প্রারম্ভিক ক্যাশ ({startDate})</p>
+            <p className="text-xs text-indigo-300 font-medium">প্রারম্ভিক ক্যাশ ({startDate})</p>
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm">
               <FaWallet />
             </div>
