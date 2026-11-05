@@ -38,7 +38,7 @@ const SupplyLinkReports = () => {
       setIsGenerating(true);
       setGenMessage("");
       const baseUrl = import.meta.env.VITE_LOCALHOST_KEY || "https://management.supplylinkbd.com/apis";
-      const res = await axios.get(`${baseUrl}/cash/save_daily_report_drive.php`, {
+      const res = await axios.get(`${baseUrl}/cron/daily_cash_pdf_cron.php`, {
         withCredentials: true,
       });
       if (res.data?.success) {
