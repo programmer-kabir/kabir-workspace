@@ -12,7 +12,7 @@ import {
   FaCartShopping,
   FaCashRegister,
 } from "react-icons/fa6";
-import { FaTasks } from "react-icons/fa";
+import { FaTasks, FaFileExcel } from "react-icons/fa";
 
 import {
   TbUsers,
@@ -74,6 +74,12 @@ export const sidebarMenu = [
         label: "Print Reports",
         path: "/cash/cash_reports_print",
         icon: TbReport,
+        roles: ["admin", "developer", "manager", "staff"],
+      },
+      {
+        label: "Daily Cash Sheet",
+        path: "/cash/daily_ledger_sheet",
+        icon: FaFileExcel,
         roles: ["admin", "developer", "manager", "staff"],
       },
       {

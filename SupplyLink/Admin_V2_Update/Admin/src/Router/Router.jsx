@@ -38,6 +38,7 @@ import CashReport from "../Pages/CashMenage/CashReport";
 import CashOut from "../Pages/CashMenage/CashOut";
 import CashReportApproved from "../Pages/CashMenage/CashReportApproved";
 import CashReportPrint from "../Pages/CashMenage/CashReportPrint";
+import DailyCashLedgerSheet from "../Pages/CashMenage/DailyCashLedgerSheet";
 import DownpaymentSyncAudit from "../Pages/Audit/DownpaymentSyncAudit";
 import DailyInstallmentSyncAudit from "../Pages/Audit/DailyInstallmentSyncAudit";
 import MonthlyInstallmentSyncAudit from "../Pages/Audit/MonthlyInstallmentSyncAudit";
@@ -89,6 +90,10 @@ const routes = createBrowserRouter([
           {
             path: "/cash/cash_reports_print",
             element: <CashReportPrint />,
+          },
+          {
+            path: "/cash/daily_ledger_sheet",
+            element: <DailyCashLedgerSheet />,
           },
           {
             path: "/cash/cash-report-approval",
