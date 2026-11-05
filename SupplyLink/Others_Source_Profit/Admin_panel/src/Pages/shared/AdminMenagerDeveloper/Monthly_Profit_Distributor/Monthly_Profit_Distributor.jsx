@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { MONTHS } from "../../../../../public/month";
 import useUserRole from "../../../../utils/Hooks/useUserRole";
+import LuxuryToast from "../../../../components/Modal/LuxuryToast";
 import { 
   Coins, 
   Layers, 
@@ -35,6 +36,7 @@ const Monthly_Profit_Distributor = () => {
   const [distributionData, setDistributionData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   const START_YEAR = 2024;
 
@@ -303,10 +305,23 @@ const Monthly_Profit_Distributor = () => {
         `প্রফিট সফলভাবে সংরক্ষিত! কার্ড, রেন্টাল ও বিজনেস শেয়ার প্রফিট সহ মোট ${payloadRows.length}টি কার্ড আপডেট করা হয়েছে।`
       );
 
+      setLuxuryToast({
+        title: "মাসিক মুনাফা বণ্টন সংরক্ষিত! 💎",
+        message: `${monthName(month)} ${year} মাসের সকল ইনভেস্টর কার্ড, রেন্টাল ও বিজনেস শেয়ার প্রফিট চূড়ান্তভাবে সংরক্ষিত ও লক করা হয়েছে।`,
+        tag: `মোট ${payloadRows.length}টি কার্ড`,
+        amount: ui.totalProfit || ui.investorPoolProfit,
+        type: "success",
+      });
+
       // Re-fetch to immediately lock the month
       await fetchDistribution();
     } catch (err) {
       toast.error("Save error: " + err.message);
+      setLuxuryToast({
+        title: "সংরক্ষণ ব্যর্থ হয়েছে! ⚠️",
+        message: err.message || "সার্ভার এরর: প্রফিট সংরক্ষণ করা সম্ভব হয়নি।",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -774,6 +789,12 @@ const Monthly_Profit_Distributor = () => {
           )}
         </table>
       </div>
+
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={4800}
+      />
     </div>
   );
 };
