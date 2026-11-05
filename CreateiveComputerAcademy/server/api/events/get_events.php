@@ -37,10 +37,14 @@ try {
               LEFT JOIN users u_creator ON e.created_by = u_creator.id
               LEFT JOIN users u_lead ON e.lead_user_id = u_lead.id
               LEFT JOIN event_participants my_p ON my_p.event_id = e.id AND my_p.user_id = :my_uid
+              WHERE (:can_manage = 1 OR (my_p.user_id IS NOT NULL AND my_p.rsvp_status != 'not_going'))
               ORDER BY e.event_date DESC, e.id DESC";
 
     $stmt = $db->prepare($query);
-    $stmt->execute([':my_uid' => $user['id']]);
+    $stmt->execute([
+        ':my_uid'     => $user['id'],
+        ':can_manage' => $canGlobalManage ? 1 : 0
+    ]);
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Format numbers and add permissions

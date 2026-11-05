@@ -26,6 +26,8 @@ const PayrollWallet = React.lazy(() => import('./pages/PayrollWallet'));
 const MangoBreakTree = React.lazy(() => import('./pages/MangoBreakTree'));
 const CommunityFeed = React.lazy(() => import('./pages/CommunityFeed'));
 const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
+const DeveloperEvents = React.lazy(() => import('./pages/DeveloperEvents'));
+const MangoVaultManager = React.lazy(() => import('./pages/MangoVaultManager'));
 const DesktopAppDownload = React.lazy(() => import('./pages/DesktopAppDownload'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const TeamEvents = React.lazy(() => import('./pages/TeamEvents'));
@@ -198,6 +200,27 @@ function App() {
               } />
 
               {/* Developer Suite Route - Only for Developer / Admin */}
+              <Route path="/developer/events" element={
+                <DeveloperRoute>
+                  <AuthenticatedLayout>
+                    <DeveloperEvents />
+                  </AuthenticatedLayout>
+                </DeveloperRoute>
+              } />
+              <Route path="/developer/mango-vault" element={
+                <DeveloperRoute>
+                  <AuthenticatedLayout>
+                    <MangoVaultManager />
+                  </AuthenticatedLayout>
+                </DeveloperRoute>
+              } />
+              <Route path="/mango-vault" element={
+                <DeveloperRoute>
+                  <AuthenticatedLayout>
+                    <MangoVaultManager />
+                  </AuthenticatedLayout>
+                </DeveloperRoute>
+              } />
               <Route path="/developer" element={
                 <DeveloperRoute>
                   <AuthenticatedLayout>

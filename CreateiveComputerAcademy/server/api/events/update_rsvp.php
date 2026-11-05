@@ -54,9 +54,40 @@ try {
         ':names'  => $guestNames
     ]);
 
+    // Send feedback notification to event creator / admin
+    try {
+        $evStmt = $db->prepare("SELECT title, created_by, lead_user_id FROM team_events WHERE id = :eid LIMIT 1");
+        $evStmt->execute([':eid' => $eventId]);
+        $ev = $evStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($ev) {
+            require_once '../notifications/notification_helper.php';
+            $notifTarget = $ev['created_by'];
+            if ($notifTarget != $user['id']) {
+                $statusText = $rsvpStatus === 'going' ? 'Attending 😋' : 'Declined ✕';
+                $msg = $rsvpStatus === 'going'
+                    ? "{$user['name']} has accepted the invitation to {$ev['title']}!" . ($guestCount > 0 ? " (+{$guestCount} guests)" : "")
+                    : "{$user['name']} has declined the invitation to {$ev['title']}.";
+
+                NotificationHelper::sendToUser(
+                    $db,
+                    $notifTarget,
+                    $user['id'],
+                    "Event RSVP: {$user['name']} - {$statusText}",
+                    $msg,
+                    'event_rsvp_update',
+                    'admin',
+                    '/events',
+                    'normal',
+                    ['event_id' => $eventId, 'rsvp_status' => $rsvpStatus]
+                );
+            }
+        }
+    } catch (Throwable $tn) {}
+
     echo json_encode([
         "status"  => "success",
-        "message" => "RSVP updated successfully!"
+        "message" => $rsvpStatus === 'going' ? "Attending confirmed! See you there! 🍗" : "RSVP updated. Invitation declined."
     ]);
 
 } catch (PDOException $e) {

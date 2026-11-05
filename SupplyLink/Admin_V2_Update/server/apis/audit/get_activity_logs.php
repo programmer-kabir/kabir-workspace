@@ -170,3 +170,4 @@ try {
         "error" => $e->getMessage()
     ], JSON_UNESCAPED_UNICODE);
 }
+

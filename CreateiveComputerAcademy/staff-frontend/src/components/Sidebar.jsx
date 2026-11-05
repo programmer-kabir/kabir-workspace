@@ -89,6 +89,8 @@ const Sidebar = ({ isOpen = true, onClose }) => {
 
   const devSubMenuItems = [
     { name: 'Overview', transKey: 'dev_overview', path: '/developer', icon: <FiActivity size={14} /> },
+    { name: 'Team Events & Feasts', transKey: 'dev_events', path: '/developer/events', icon: <FiCalendar size={14} /> },
+    { name: 'Mango Vault & Leaves 🥭', transKey: 'dev_mango_vault', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span> },
     { name: 'User Impersonator', transKey: 'dev_impersonate', path: '/developer/impersonate', icon: <FiUsers size={14} /> },
     { name: 'System Logs', transKey: 'dev_logs', path: '/developer/logs', icon: <FiFileText size={14} /> },
     { name: 'API & Sockets', transKey: 'dev_api_tester', path: '/developer/api-tester', icon: <FiRadio size={14} /> },
@@ -100,7 +102,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
   const menuItems = [
     { name: 'Dashboard', transKey: 'dashboard', path: '/', icon: <FiHome size={19} /> },
     { name: 'Community Wall', transKey: 'community_wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" /> },
-    { name: 'Team Feasts & Tours', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
+    { name: 'Team Feasts & Tours', transKey: 'team_events', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Desktop App & Updates', transKey: 'desktop_app', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" /> },
@@ -186,7 +188,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
                         <div className={`transition-all duration-300 transform group-hover:scale-110 ${isActive ? 'drop-shadow-md text-primary-600 dark:text-primary-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary-500 dark:group-hover:text-primary-400'}`}>
                           {item.icon}
                         </div>
-                        <span className="text-xs lg:text-sm tracking-wide">{t(item.transKey)}</span>
+                        <span className="text-xs lg:text-sm tracking-wide">{item.transKey ? (t(item.transKey) || item.name) : item.name}</span>
                       </div>
                       {item.name === 'Message' && unreadCount > 0 && (
                         <span className="relative z-10 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs animate-pulse group-hover:scale-110 transition-transform">
@@ -246,7 +248,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
 
                   {/* Collapsible Sub-items */}
                   <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${devMenuOpen ? 'max-h-72 opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${devMenuOpen ? 'max-h-[500px] opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
                       }`}
                   >
                     <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4.5 my-1">

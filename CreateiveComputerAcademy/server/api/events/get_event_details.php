@@ -45,6 +45,22 @@ try {
 
     $canManage = EventAuthHelper::canManage($user, $event);
 
+    // If regular staff, verify they have an active invitation
+    if (!$canManage) {
+        $checkStmt = $db->prepare("SELECT rsvp_status FROM event_participants WHERE event_id = :eid AND user_id = :uid LIMIT 1");
+        $checkStmt->execute([':eid' => $eventId, ':uid' => $user['id']]);
+        $myRsvpStatus = $checkStmt->fetchColumn();
+
+        if ($myRsvpStatus === false || $myRsvpStatus === 'not_going') {
+            http_response_code(403);
+            echo json_encode([
+                "status"  => "error",
+                "message" => "Access denied. You do not have an active invitation for this event."
+            ]);
+            exit;
+        }
+    }
+
     // 2. Fetch Participants
     $partStmt = $db->prepare(
         "SELECT ep.*, u.name, u.username, u.email, u.phone, u.profile_picture,

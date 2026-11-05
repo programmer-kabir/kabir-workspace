@@ -89,7 +89,7 @@ const SystemLogsTab = ({
             {/* Sub-view 1: Server PHP error_log */}
             {logSubTab === 'server' && (
                 <div className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm dark:shadow-2xl space-y-4 font-mono">
-                    <div className="max-h-[500px] overflow-y-auto space-y-2 text-xs pr-2 custom-scrollbar">
+                    <div className="max-h-[700px] overflow-y-auto space-y-2 text-xs pr-2 custom-scrollbar">
                         {!serverErrorLog || serverErrorLog.lines?.length === 0 ? (
                             <div className="py-16 text-center text-slate-500 font-sans space-y-2">
                                 <FiCheckCircle className="w-8 h-8 text-emerald-500 mx-auto" />
@@ -178,7 +178,7 @@ const SystemLogsTab = ({
                         </div>
                     </div>
 
-                    <div className="max-h-96 overflow-y-auto space-y-2 text-xs pr-2 custom-scrollbar">
+                    <div className="max-h-[700px] overflow-y-auto space-y-2 text-xs pr-2 custom-scrollbar">
                         {filteredLogs.length === 0 ? (
                             <div className="py-12 text-center text-slate-400 dark:text-slate-600 font-sans text-xs">No log entries matching filter.</div>
                         ) : (

@@ -73,3 +73,4 @@ echo json_encode([
     "success" => (bool)$logId,
     "log_id" => $logId
 ]);
+

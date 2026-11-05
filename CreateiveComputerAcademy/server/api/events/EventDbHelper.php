@@ -14,6 +14,7 @@ class EventDbHelper {
                 `event_date` DATE NOT NULL,
                 `location` VARCHAR(255) NULL,
                 `description` TEXT NULL,
+                `banner_image` TEXT NULL,
                 `estimated_budget` DECIMAL(10,2) DEFAULT 0.00,
                 `target_per_head` DECIMAL(10,2) DEFAULT 0.00,
                 `collection_number` VARCHAR(100) NULL,
@@ -106,6 +107,14 @@ class EventDbHelper {
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX (`event_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+            // 6. Ensure banner_image column exists in team_events
+            try {
+                $cols = $db->query("SHOW COLUMNS FROM `team_events`")->fetchAll(PDO::FETCH_COLUMN);
+                if (!in_array('banner_image', $cols)) {
+                    $db->exec("ALTER TABLE `team_events` ADD COLUMN `banner_image` TEXT NULL AFTER `description`");
+                }
+            } catch (Throwable $e) {}
 
         } catch (Throwable $t) {
             error_log("EventDbHelper error: " . $t->getMessage());

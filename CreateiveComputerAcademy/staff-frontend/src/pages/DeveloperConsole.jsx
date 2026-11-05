@@ -40,7 +40,8 @@ import {
   FiHardDrive,
   FiTool,
   FiList,
-  FiInfo
+  FiInfo,
+  FiCalendar
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { toast } from 'sonner';
@@ -55,18 +56,6 @@ import DatabaseTab from '../components/DeveloperConsole/DatabaseTab';
 import ServerCodeEditorTab from '../components/DeveloperConsole/ServerCodeEditorTab';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-
-const TABS = [
-  { id: 'overview', label: 'Telemetry Overview', path: '/developer', icon: FiActivity },
-  { id: 'impersonate', label: 'User Impersonator', path: '/developer/impersonate', icon: FiUsers },
-  { id: 'logs', label: 'System Logs', path: '/developer/logs', icon: FiFileText },
-  { id: 'api-tester', label: 'API & Socket Tester', path: '/developer/api-tester', icon: FiRadio },
-  { id: 'crons', label: 'Crons & Automation', path: '/developer/crons', icon: FiClock },
-  { id: 'database', label: 'Database & Cache', path: '/developer/database', icon: FiDatabase },
-  { id: 'editor', label: 'Server Code Editor', path: '/developer/editor', icon: FiCode },
-];
-
-
 
 export default function DeveloperConsole() {
   const { currentUser, impersonateUser } = useAuth();
@@ -155,36 +144,13 @@ export default function DeveloperConsole() {
   } = useDeveloperConsole();
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16 select-text mx-auto">
-      {/* 1. Header Banner */}
+    <div className="space-y-6 animate-fadeIn  select-text mx-auto">
+      {/* 1. Overview Header Banner (Only on Overview page) */}
+      {activeTab === 'overview' && <DeveloperHeader />}
 
-      <DeveloperHeader />
+      {/* 2. Standalone Page Content */}
 
-      {/* 2. Modern Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200 dark:border-slate-800">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => navigate(tab.path)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${isActive
-                ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-black shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 3. TAB CONTENT */}
-
-      {/* === TAB 1: TELEMETRY OVERVIEW === */}
+      {/* === PAGE 1: TELEMETRY OVERVIEW === */}
       {activeTab === 'overview' && (
         <TelemetryTab
           telemetry={telemetry}

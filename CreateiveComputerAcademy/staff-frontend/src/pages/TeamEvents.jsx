@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import {
-    FiCalendar, FiPlus, FiDollarSign, FiUsers, FiCheckCircle,
-    FiXCircle, FiClock, FiMapPin, FiFileText, FiUploadCloud,
-    FiAlertCircle, FiRefreshCw, FiCheck, FiSend, FiInfo
+    FiCalendar, FiDollarSign, FiUsers,
+    FiXCircle, FiCheck, FiSend, FiFileText,
+    FiTerminal, FiCheckCircle
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const TeamEvents = () => {
     const { currentUser } = useAuth();
@@ -20,11 +21,6 @@ const TeamEvents = () => {
     const [submittingRsvp, setSubmittingRsvp] = useState(false);
     const [submittingPayment, setSubmittingPayment] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
-
-    // Modals for Dev / Admin accessing from Staff Portal
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showExpenseModal, setShowExpenseModal] = useState(false);
-    const [uploadingVoucher, setUploadingVoucher] = useState(false);
 
     // Forms
     const [rsvpState, setRsvpState] = useState({
@@ -42,32 +38,10 @@ const TeamEvents = () => {
         notes: ''
     });
 
-    const [expenseForm, setExpenseForm] = useState({
-        item_name: '',
-        category: 'food',
-        amount: '',
-        receipt_url: '',
-        notes: ''
-    });
-
-    const [createForm, setCreateForm] = useState({
-        title: '',
-        event_type: 'feast',
-        event_date: new Date().toISOString().split('T')[0],
-        location: '',
-        description: '',
-        estimated_budget: '',
-        target_per_head: '',
-        collection_number: '',
-        collection_note: '',
-        allow_guest: 1,
-        guest_fee: ''
-    });
-
-    const isManager = currentUser?.roles &&
+    const isDeveloper = currentUser?.roles &&
         currentUser.roles.some(r => ['developer', 'admin'].includes(r));
 
-    // Fetch all events
+    // Fetch all events user has access to
     const fetchEvents = async () => {
         try {
             setLoading(true);
@@ -89,7 +63,7 @@ const TeamEvents = () => {
         }
     };
 
-    // Fetch details
+    // Fetch event details
     const fetchEventDetails = async (id) => {
         if (!id) return;
         try {
@@ -126,7 +100,7 @@ const TeamEvents = () => {
         }
     }, [selectedEventId]);
 
-    // Handle RSVP
+    // Handle RSVP (Going / Not Going)
     const handleRsvp = async (status) => {
         try {
             setSubmittingRsvp(true);
@@ -139,14 +113,20 @@ const TeamEvents = () => {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+
             if (res.data.status === 'success') {
-                toast.success(status === 'going' ? 'Attending confirmed! See you there! 🍗' : 'RSVP updated.');
-                setRsvpState(prev => ({ ...prev, rsvp_status: status }));
-                fetchEventDetails(selectedEventId);
-                fetchEvents();
+                toast.success(res.data.message);
+                if (status === 'not_going') {
+                    toast.success('Invitation declined. Event removed from your list.');
+                    setSelectedEventId(null);
+                    fetchEvents();
+                } else {
+                    fetchEventDetails(selectedEventId);
+                    fetchEvents();
+                }
             }
         } catch (err) {
-            toast.error('Failed to update RSVP');
+            toast.error('Failed to update attendance');
         } finally {
             setSubmittingRsvp(false);
         }
@@ -159,17 +139,19 @@ const TeamEvents = () => {
             toast.error('Please enter payment amount');
             return;
         }
+
         try {
             setSubmittingPayment(true);
             const token = localStorage.getItem('cca_token') || localStorage.getItem('cca_admin_token');
-            const res = await axios.post(`${API_BASE}api/events/record_payment.php`, {
+            const res = await axios.post(`${API_BASE}api/events/submit_payment.php`, {
                 ...paymentForm,
                 event_id: selectedEventId
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+
             if (res.data.status === 'success') {
-                toast.success(res.data.message);
+                toast.success(res.data.message || 'Payment submitted! Admin will verify.');
                 setPaymentForm({
                     amount: '',
                     payment_method: 'bkash',
@@ -181,65 +163,9 @@ const TeamEvents = () => {
                 fetchEventDetails(selectedEventId);
             }
         } catch (err) {
-            toast.error('Payment submission failed');
+            toast.error('Failed to submit payment details');
         } finally {
             setSubmittingPayment(false);
-        }
-    };
-
-    // Handle Create Event (for Dev / Admin)
-    const handleCreateEvent = async (e) => {
-        e.preventDefault();
-        if (!createForm.title.trim()) {
-            toast.error('Event title is required');
-            return;
-        }
-        try {
-            const token = localStorage.getItem('cca_token') || localStorage.getItem('cca_admin_token');
-            const res = await axios.post(`${API_BASE}api/events/create_event.php`, createForm, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.status === 'success') {
-                toast.success('Team event created successfully!');
-                setShowCreateModal(false);
-                await fetchEvents();
-                if (res.data.event_id) setSelectedEventId(res.data.event_id);
-            }
-        } catch (err) {
-            toast.error('Failed to create event');
-        }
-    };
-
-    // Handle Log Expense (for Dev / Admin or Staff reimbursable)
-    const handleAddExpense = async (e) => {
-        e.preventDefault();
-        if (!expenseForm.item_name || !expenseForm.amount) {
-            toast.error('Item name and amount are required');
-            return;
-        }
-        try {
-            const token = localStorage.getItem('cca_token') || localStorage.getItem('cca_admin_token');
-            const res = await axios.post(`${API_BASE}api/events/log_expense.php`, {
-                ...expenseForm,
-                event_id: selectedEventId,
-                paid_by: currentUser?.id
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.status === 'success') {
-                toast.success('Expense recorded successfully!');
-                setShowExpenseModal(false);
-                setExpenseForm({
-                    item_name: '',
-                    category: 'food',
-                    amount: '',
-                    receipt_url: '',
-                    notes: ''
-                });
-                fetchEventDetails(selectedEventId);
-            }
-        } catch (err) {
-            toast.error('Failed to record expense');
         }
     };
 
@@ -247,7 +173,6 @@ const TeamEvents = () => {
     const summary = eventData?.summary || {};
     const participants = eventData?.participants || [];
     const expenses = eventData?.expenses || [];
-    const contributions = eventData?.contributions || [];
 
     const myParticipant = participants.find(p => p.user_id === currentUser?.id);
     const myTotalPaid = myParticipant?.total_paid || 0;
@@ -257,7 +182,7 @@ const TeamEvents = () => {
     const myBalance = roundTwo(myTotalPaid - myCalculatedShare);
 
     return (
-        <div className="p-4 sm:p-6  mx-auto space-y-6">
+        <div className="p-4 sm:p-6 mx-auto space-y-6 animate-fadeIn">
             {/* Top Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-linear-to-r from-amber-500 via-orange-500 to-rose-600 text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
                 <div className="relative z-10 space-y-2">
@@ -275,15 +200,16 @@ const TeamEvents = () => {
                     </p>
                 </div>
 
-                {isManager && (
+                {isDeveloper && (
                     <div className="relative z-10 flex items-center gap-2">
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="px-4 py-2.5 bg-white text-slate-900 hover:bg-slate-50 text-xs font-black rounded-2xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                        <Link
+                            to="/developer/events"
+                            className="px-4 py-2.5 bg-slate-950/80 hover:bg-slate-950 text-cyan-400 hover:text-cyan-300 text-xs font-black rounded-2xl shadow-md transition-all flex items-center gap-2 cursor-pointer border border-cyan-400/40 backdrop-blur-xs"
+                            title="Go to Developer Console to create events, manage invites and approve collections"
                         >
-                            <FiPlus size={15} />
-                            <span>Create Event (Dev/Admin)</span>
-                        </button>
+                            <FiTerminal size={14} className="text-cyan-400" />
+                            <span>Dev Console &bull; Event Manager →</span>
+                        </Link>
                     </div>
                 )}
             </div>
@@ -299,16 +225,22 @@ const TeamEvents = () => {
                                 : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'
                             }`}
                     >
-                        <span className="text-2xl">
-                            {ev.event_type === 'tour' ? '🏖️' : ev.event_type === 'feast' ? '🍗' : '🎉'}
-                        </span>
+                        {ev.banner_image ? (
+                            <img
+                                src={ev.banner_image.startsWith('http') ? ev.banner_image : `${API_BASE}${ev.banner_image}`}
+                                alt={ev.title}
+                                className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
+                            />
+                        ) : (
+                            <span className="text-2xl">
+                                {ev.event_type === 'tour' ? '🏖️' : ev.event_type === 'feast' ? '🍗' : '🎉'}
+                            </span>
+                        )}
                         <div>
-                            <div className="text-sm font-bold truncate max-w-[170px]">{ev.title}</div>
+                            <div className="text-sm font-bold truncate max-w-[180px]">{ev.title}</div>
                             <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                                 <span>{ev.event_date}</span>
-                                <span className="capitalize px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 font-medium text-[10px]">
-                                    {ev.status}
-                                </span>
+                                <span className="capitalize">{ev.event_type}</span>
                             </div>
                         </div>
                     </button>
@@ -319,22 +251,32 @@ const TeamEvents = () => {
                 <div className="space-y-6">
                     {/* Main Info Card */}
                     <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 capitalize">
-                                    {currentEvent.event_type}
-                                </span>
-                                <span>📅 {currentEvent.event_date}</span>
-                                <span>📍 {currentEvent.location || 'CCA Campus'}</span>
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                {currentEvent.title}
-                            </h2>
-                            {currentEvent.description && (
-                                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl">
-                                    {currentEvent.description}
-                                </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                            {currentEvent.banner_image && (
+                                <img
+                                    src={currentEvent.banner_image.startsWith('http') ? currentEvent.banner_image : `${API_BASE}${currentEvent.banner_image}`}
+                                    alt={currentEvent.title}
+                                    className="w-full sm:w-36 h-28 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm cursor-pointer hover:opacity-95"
+                                    onClick={() => setPreviewImage(currentEvent.banner_image.startsWith('http') ? currentEvent.banner_image : `${API_BASE}${currentEvent.banner_image}`)}
+                                />
                             )}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 capitalize">
+                                        {currentEvent.event_type}
+                                    </span>
+                                    <span>📅 {currentEvent.event_date}</span>
+                                    <span>📍 {currentEvent.location || 'CCA Campus'}</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {currentEvent.title}
+                                </h2>
+                                {currentEvent.description && (
+                                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl">
+                                        {currentEvent.description}
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         {/* Collection Account Card */}
@@ -358,6 +300,48 @@ const TeamEvents = () => {
                         )}
                     </div>
 
+                    {/* Pending Invitation Alert for Staff */}
+                    {rsvpState.rsvp_status === 'invited' && (
+                        <div className="bg-linear-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-300 dark:border-amber-700/60 p-5 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-md shrink-0">
+                                    💌
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <span>You are Invited! 🎉</span>
+                                        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500 text-white font-bold">Action Required</span>
+                                    </h4>
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                                        Admin has invited you to <strong>{currentEvent.title}</strong> ({currentEvent.event_date}). Will you join the feast/tour?
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    onClick={() => handleRsvp('going')}
+                                    disabled={submittingRsvp}
+                                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <FiCheck size={15} />
+                                    <span>Accept & Join (Going 😋)</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm("Are you sure you can't make it? This event will be removed from your dashboard.")) {
+                                            handleRsvp('not_going');
+                                        }
+                                    }}
+                                    disabled={submittingRsvp}
+                                    className="px-4 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-rose-950/40 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                                >
+                                    <span>Decline / Reject</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* User's RSVP & Personal Ledger Section */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* 1. RSVP Box */}
@@ -366,9 +350,11 @@ const TeamEvents = () => {
                                 <h3 className="font-bold text-slate-900 dark:text-white text-sm">Your Attendance</h3>
                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${rsvpState.rsvp_status === 'going'
                                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                        : rsvpState.rsvp_status === 'not_going'
+                                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                     }`}>
-                                    {rsvpState.rsvp_status === 'going' ? 'Going 😋' : 'Not Going'}
+                                    {rsvpState.rsvp_status === 'going' ? 'Going 😋' : rsvpState.rsvp_status === 'not_going' ? 'Not Going' : 'Invited ⏳'}
                                 </span>
                             </div>
 
@@ -388,7 +374,11 @@ const TeamEvents = () => {
 
                                 <button
                                     type="button"
-                                    onClick={() => handleRsvp('not_going')}
+                                    onClick={() => {
+                                        if (window.confirm("Are you sure you can't make it? This event will be removed from your dashboard.")) {
+                                            handleRsvp('not_going');
+                                        }
+                                    }}
                                     disabled={submittingRsvp}
                                     className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${rsvpState.rsvp_status === 'not_going'
                                             ? 'bg-rose-600 text-white shadow-xs'
@@ -431,7 +421,7 @@ const TeamEvents = () => {
                                         <button
                                             type="button"
                                             onClick={() => handleRsvp('going')}
-                                            className="w-full py-1 text-xs font-semibold text-blue-600 hover:underline text-right"
+                                            className="w-full py-1 text-xs font-semibold text-blue-600 hover:underline text-right cursor-pointer"
                                         >
                                             Update Guest List →
                                         </button>
@@ -562,6 +552,71 @@ const TeamEvents = () => {
                         </div>
                     </div>
 
+                    {/* Who's Joining & Guests List */}
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span>👥 Who's Joining & Guests</span>
+                                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                        {participants.filter(p => p.rsvp_status === 'going').length} Going ({participants.reduce((sum, p) => p.rsvp_status === 'going' ? sum + 1 + (Number(p.guest_count) || 0) : sum, 0)} Total Heads)
+                                    </span>
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                    List of academy team members and guests confirmed for this feast/tour.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Participants Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {participants.filter(p => p.rsvp_status === 'going').length === 0 ? (
+                                <div className="col-span-full p-6 text-center text-slate-400 text-xs">
+                                    No one has confirmed attendance yet. Be the first to click "I am Going!"
+                                </div>
+                            ) : (
+                                participants
+                                    .filter(p => p.rsvp_status === 'going')
+                                    .map(p => (
+                                        <div
+                                            key={p.user_id}
+                                            className="p-3 rounded-2xl border bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 transition-all flex items-center justify-between gap-3"
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                                                    {p.profile_picture ? (
+                                                        <img src={p.profile_picture.startsWith('http') ? p.profile_picture : `${API_BASE}${p.profile_picture}`} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        p.name?.charAt(0) || 'U'
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                                        {p.name}
+                                                    </div>
+                                                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                                                        Going {p.guest_count > 0 ? `(+${p.guest_count} guest)` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="text-right shrink-0">
+                                                {parseFloat(p.total_paid || 0) > 0 ? (
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                        ৳{parseFloat(p.total_paid)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-400 font-medium">
+                                                        ৳0
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                            )}
+                        </div>
+                    </div>
+
                     {/* Real-time Transparency Board */}
                     <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -574,16 +629,6 @@ const TeamEvents = () => {
                                     Every food packet, bus fare, or grocery cost verified with photo receipts.
                                 </p>
                             </div>
-
-                            {isManager && (
-                                <button
-                                    onClick={() => setShowExpenseModal(true)}
-                                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-                                >
-                                    <FiPlus size={14} />
-                                    <span>+ Log Expense</span>
-                                </button>
-                            )}
                         </div>
 
                         {/* Expenses Grid */}
@@ -638,186 +683,34 @@ const TeamEvents = () => {
                         </div>
                     </div>
                 </div>
+            ) : events.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-3xl">
+                        🎉
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        No Active Events Right Now
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                        When Admin or Lead organizes an academy tour or feast and invites you, it will appear here.
+                    </p>
+                    {isDeveloper && (
+                        <Link
+                            to="/developer/events"
+                            className="mt-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 inline-flex items-center gap-2 cursor-pointer transition-all"
+                        >
+                            <FiTerminal size={16} />
+                            <span>Create Event in Dev Console →</span>
+                        </Link>
+                    )}
+                </div>
             ) : (
-                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
                     <p className="text-slate-400 font-medium">Select an event above to view details.</p>
                 </div>
             )}
 
-            {/* CREATE EVENT MODAL FOR DEV / ADMIN */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Create Team Event / Feast</h3>
-                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-                        </div>
-
-                        <form onSubmit={handleCreateEvent} className="space-y-3.5 text-xs sm:text-sm">
-                            <div>
-                                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Event Title *</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Grand Kachchi Biryani Feast 🍗"
-                                    value={createForm.title}
-                                    onChange={e => setCreateForm(prev => ({ ...prev, title: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Event Type</label>
-                                    <select
-                                        value={createForm.event_type}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, event_type: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    >
-                                        <option value="feast">Feast / Biryani Party 🍗</option>
-                                        <option value="tour">Tour / Outing 🏖️</option>
-                                        <option value="sports">Sports Match 🏏</option>
-                                        <option value="celebration">Celebration 🎉</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Date</label>
-                                    <input
-                                        type="date"
-                                        value={createForm.event_date}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, event_date: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Collection bKash / Nagad Number</label>
-                                <input
-                                    type="text"
-                                    placeholder="017xxxxxxxx (bKash Personal / Send Money)"
-                                    value={createForm.collection_number}
-                                    onChange={e => setCreateForm(prev => ({ ...prev, collection_number: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Target Per Head (৳)</label>
-                                    <input
-                                        type="number"
-                                        placeholder="800"
-                                        value={createForm.target_per_head}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, target_per_head: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Venue / Location</label>
-                                    <input
-                                        type="text"
-                                        placeholder="CCA Academy Lounge"
-                                        value={createForm.location}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, location: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCreateModal(false)}
-                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-semibold"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold"
-                                >
-                                    Create Event
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* LOG EXPENSE MODAL */}
-            {showExpenseModal && (
-                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
-                        <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Record Expense</h3>
-                            <button onClick={() => setShowExpenseModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-                        </div>
-
-                        <form onSubmit={handleAddExpense} className="space-y-3.5 text-xs sm:text-sm">
-                            <div>
-                                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Item Name *</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. 15 Packets Biryani, Mineral Water"
-                                    value={expenseForm.item_name}
-                                    onChange={e => setExpenseForm(prev => ({ ...prev, item_name: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Category</label>
-                                    <select
-                                        value={expenseForm.category}
-                                        onChange={e => setExpenseForm(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    >
-                                        <option value="food">Food & Drinks 🍗</option>
-                                        <option value="transport">Transport 🚌</option>
-                                        <option value="snacks">Snacks & Tea ☕</option>
-                                        <option value="misc">Miscellaneous</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Amount (৳) *</label>
-                                    <input
-                                        type="number"
-                                        placeholder="4500"
-                                        value={expenseForm.amount}
-                                        onChange={e => setExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowExpenseModal(false)}
-                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-semibold"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                >
-                                    Save
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* PHOTO PREVIEW */}
+            {/* PHOTO PREVIEW MODAL */}
             {previewImage && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50" onClick={() => setPreviewImage(null)}>
                     <div className="max-w-2xl w-full bg-white dark:bg-slate-900 p-2 rounded-2xl overflow-hidden shadow-2xl relative" onClick={e => e.stopPropagation()}>

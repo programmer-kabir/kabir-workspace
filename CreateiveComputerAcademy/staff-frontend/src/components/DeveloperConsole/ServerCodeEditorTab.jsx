@@ -858,7 +858,7 @@ try {
     <div className={`border border-slate-200 dark:border-cyan-500/20 bg-white dark:bg-slate-900/95 overflow-hidden shadow-xl dark:shadow-2xl flex flex-col transition-all duration-200 ${
       isFullscreen
         ? 'fixed inset-0 z-50 rounded-none h-screen min-h-screen'
-        : 'rounded-3xl min-h-[720px] h-[calc(100vh-230px)]'
+        : 'rounded-3xl min-h-[840px] h-[calc(100vh-230px)]'
     }`}>
       {/* Top Header Bar */}
       <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/80 px-5 flex items-center justify-between shrink-0">

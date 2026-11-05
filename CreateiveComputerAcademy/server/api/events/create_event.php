@@ -4,6 +4,7 @@ require_once '../../config/cors.php';
 require_once '../../config/database.php';
 require_once 'EventDbHelper.php';
 require_once 'EventAuthHelper.php';
+require_once '../notifications/notification_helper.php';
 
 date_default_timezone_set('Asia/Dhaka');
 
@@ -34,6 +35,7 @@ $eventType         = trim($input['event_type'] ?? 'feast');
 $eventDate         = trim($input['event_date'] ?? date('Y-m-d'));
 $location          = trim($input['location'] ?? '');
 $description       = trim($input['description'] ?? '');
+$bannerImage       = trim($input['banner_image'] ?? ($input['image_url'] ?? ''));
 $estimatedBudget   = (float)($input['estimated_budget'] ?? 0);
 $targetPerHead     = (float)($input['target_per_head'] ?? 0);
 $collectionNumber  = trim($input['collection_number'] ?? '');
@@ -49,11 +51,11 @@ if (empty($title)) {
 
 try {
     $stmt = $db->prepare("INSERT INTO team_events (
-        title, event_type, event_date, location, description, 
+        title, event_type, event_date, location, description, banner_image,
         estimated_budget, target_per_head, collection_number, collection_note, 
         status, created_by, lead_user_id, allow_guest, guest_fee
     ) VALUES (
-        :title, :event_type, :event_date, :location, :description,
+        :title, :event_type, :event_date, :location, :description, :banner_image,
         :estimated_budget, :target_per_head, :collection_number, :collection_note,
         'active', :created_by, :lead_user_id, :allow_guest, :guest_fee
     )");
@@ -64,6 +66,7 @@ try {
         ':event_date'       => $eventDate,
         ':location'         => $location,
         ':description'      => $description,
+        ':banner_image'     => $bannerImage ?: null,
         ':estimated_budget' => $estimatedBudget,
         ':target_per_head'  => $targetPerHead,
         ':collection_number'=> $collectionNumber,
@@ -76,18 +79,49 @@ try {
 
     $eventId = (int)$db->lastInsertId();
 
-    // Auto-invite active staff/employees
-    $staffQuery = $db->query("SELECT u.id FROM users u WHERE u.status = 'active'");
-    $staffList = $staffQuery->fetchAll(PDO::FETCH_ASSOC);
+    // 1. Always mark the creator / lead as 'going'
+    $creatorStmt = $db->prepare("INSERT INTO event_participants (event_id, user_id, rsvp_status) VALUES (:eid, :uid, 'going')");
+    $creatorStmt->execute([':eid' => $eventId, ':uid' => $user['id']]);
+    if ($leadUserId && $leadUserId !== (int)$user['id']) {
+        $creatorStmt->execute([':eid' => $eventId, ':uid' => $leadUserId]);
+    }
+
+    // 2. Handle invitations (all active staff OR selective)
+    $inviteScope = trim($input['invite_scope'] ?? 'all'); // 'all', 'selective', 'none'
+    $targetUids = [];
+
+    if ($inviteScope === 'all') {
+        $staffQuery = $db->query("SELECT u.id FROM users u WHERE u.status = 'active'");
+        $targetUids = $staffQuery->fetchAll(PDO::FETCH_COLUMN);
+    } elseif ($inviteScope === 'selective' && !empty($input['invited_user_ids']) && is_array($input['invited_user_ids'])) {
+        $targetUids = $input['invited_user_ids'];
+    }
 
     $partStmt = $db->prepare("INSERT IGNORE INTO event_participants (event_id, user_id, rsvp_status) VALUES (:eid, :uid, 'invited')");
-    foreach ($staffList as $s) {
-        $partStmt->execute([':eid' => $eventId, ':uid' => $s['id']]);
+    foreach ($targetUids as $sUid) {
+        $sUid = (int)$sUid;
+        if ($sUid <= 0 || $sUid === (int)$user['id'] || $sUid === $leadUserId) continue;
+
+        $partStmt->execute([':eid' => $eventId, ':uid' => $sUid]);
+
+        // Send Notification
+        NotificationHelper::sendToUser(
+            $db,
+            $sUid,
+            $user['id'],
+            "Team Event Invitation: {$title} 🎉",
+            "You have been invited to {$title} on {$eventDate}! Please Accept or Decline your invitation.",
+            'event_invite',
+            'staff',
+            '/events',
+            'high',
+            ['event_id' => $eventId]
+        );
     }
 
     echo json_encode([
         "status"   => "success",
-        "message"  => "Team event created successfully!",
+        "message"  => "Team event created successfully with invitations sent!",
         "event_id" => $eventId
     ]);
 

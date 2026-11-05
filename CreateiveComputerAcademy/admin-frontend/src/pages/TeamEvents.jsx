@@ -23,6 +23,11 @@ const TeamEvents = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [eventStaffList, setEventStaffList] = useState([]);
+    const [loadingStaffList, setLoadingStaffList] = useState(false);
+    const [inviteSearch, setInviteSearch] = useState('');
+    const [selectedToInvite, setSelectedToInvite] = useState([]);
     const [selectedUserForPay, setSelectedUserForPay] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
 
@@ -38,7 +43,9 @@ const TeamEvents = () => {
         collection_number: '',
         collection_note: '',
         allow_guest: 1,
-        guest_fee: ''
+        guest_fee: '',
+        banner_image: '',
+        invite_scope: 'all'
     });
 
     const [expenseForm, setExpenseForm] = useState({
@@ -116,6 +123,74 @@ const TeamEvents = () => {
         }
     }, [selectedEventId]);
 
+    // Fetch staff with invite status
+    const fetchEventStaffStatus = async (eventId) => {
+        if (!eventId) return;
+        try {
+            setLoadingStaffList(true);
+            const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token');
+            const res = await axios.get(`${API_BASE}api/events/manage_invites.php?action=get_event_staff_status&event_id=${eventId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.status === 'success') {
+                setEventStaffList(res.data.data || []);
+            }
+        } catch (err) {
+            console.error('Failed to load staff list for invite', err);
+        } finally {
+            setLoadingStaffList(false);
+        }
+    };
+
+    // Send invitations
+    const handleSendInvitations = async (userIds) => {
+        if (!selectedEventId || !userIds || userIds.length === 0) return;
+        try {
+            const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token');
+            const res = await axios.post(`${API_BASE}api/events/manage_invites.php`, {
+                action: 'invite_staff',
+                event_id: selectedEventId,
+                user_ids: userIds
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.status === 'success') {
+                toast.success(res.data.message || 'Invitations sent!');
+                setSelectedToInvite([]);
+                fetchEventStaffStatus(selectedEventId);
+                fetchEventDetails(selectedEventId);
+            } else {
+                toast.error(res.data.message || 'Failed to send invites');
+            }
+        } catch (err) {
+            toast.error('Failed to send invitations');
+        }
+    };
+
+    // Uninvite staff
+    const handleUninvite = async (userId) => {
+        if (!window.confirm('Remove this staff member from the event?')) return;
+        try {
+            const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token');
+            const res = await axios.post(`${API_BASE}api/events/manage_invites.php`, {
+                action: 'uninvite_staff',
+                event_id: selectedEventId,
+                user_id: userId
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.status === 'success') {
+                toast.success(res.data.message);
+                fetchEventStaffStatus(selectedEventId);
+                fetchEventDetails(selectedEventId);
+            } else {
+                toast.error(res.data.message || 'Failed to uninvite');
+            }
+        } catch (err) {
+            toast.error('Failed to uninvite staff member');
+        }
+    };
+
     // Handle Voucher Upload
     const handleFileUpload = async (e, setTargetUrl) => {
         const file = e.target.files[0];
@@ -172,7 +247,9 @@ const TeamEvents = () => {
                     collection_number: '',
                     collection_note: '',
                     allow_guest: 1,
-                    guest_fee: ''
+                    guest_fee: '',
+                    banner_image: '',
+                    invite_scope: 'all'
                 });
                 await fetchEvents();
                 if (res.data.event_id) {
@@ -356,9 +433,17 @@ const TeamEvents = () => {
                             : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'
                             }`}
                     >
-                        <span className="text-2xl">
-                            {ev.event_type === 'tour' ? '🏖️' : ev.event_type === 'feast' ? '🍗' : '🎉'}
-                        </span>
+                        {ev.banner_image ? (
+                            <img
+                                src={ev.banner_image.startsWith('http') ? ev.banner_image : `${API_BASE}${ev.banner_image}`}
+                                alt={ev.title}
+                                className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
+                            />
+                        ) : (
+                            <span className="text-2xl">
+                                {ev.event_type === 'tour' ? '🏖️' : ev.event_type === 'feast' ? '🍗' : '🎉'}
+                            </span>
+                        )}
                         <div>
                             <div className="text-sm font-bold truncate max-w-[180px]">{ev.title}</div>
                             <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
@@ -427,20 +512,30 @@ const TeamEvents = () => {
 
                     {/* Event Instructions Banner */}
                     <div className="bg-linear-to-r from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-white/20 text-xs rounded-md font-bold uppercase tracking-wider">
-                                    {currentEvent.event_type}
-                                </span>
-                                <span className="text-xs opacity-80">📍 {currentEvent.location || 'Creative Computer Academy'}</span>
-                                <span className="text-xs opacity-80">📅 {currentEvent.event_date}</span>
-                            </div>
-                            <h2 className="text-xl font-bold">{currentEvent.title}</h2>
-                            {currentEvent.collection_number && (
-                                <div className="text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-lg inline-block mt-1">
-                                    📱 Official Collection Number: <span className="font-bold underline">{currentEvent.collection_number}</span> {currentEvent.collection_note && `(${currentEvent.collection_note})`}
-                                </div>
+                        <div className="flex items-start gap-4">
+                            {currentEvent.banner_image && (
+                                <img
+                                    src={currentEvent.banner_image.startsWith('http') ? currentEvent.banner_image : `${API_BASE}${currentEvent.banner_image}`}
+                                    alt={currentEvent.title}
+                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0 border-2 border-white/30 shadow-md cursor-pointer hover:opacity-90"
+                                    onClick={() => setPreviewImage(currentEvent.banner_image.startsWith('http') ? currentEvent.banner_image : `${API_BASE}${currentEvent.banner_image}`)}
+                                />
                             )}
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-white/20 text-xs rounded-md font-bold uppercase tracking-wider">
+                                        {currentEvent.event_type}
+                                    </span>
+                                    <span className="text-xs opacity-80">📍 {currentEvent.location || 'Creative Computer Academy'}</span>
+                                    <span className="text-xs opacity-80">📅 {currentEvent.event_date}</span>
+                                </div>
+                                <h2 className="text-xl font-bold">{currentEvent.title}</h2>
+                                {currentEvent.collection_number && (
+                                    <div className="text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-lg inline-block mt-1">
+                                        📱 Official Collection Number: <span className="font-bold underline">{currentEvent.collection_number}</span> {currentEvent.collection_note && `(${currentEvent.collection_note})`}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
@@ -498,9 +593,21 @@ const TeamEvents = () => {
                     {/* TAB 1: OVERVIEW & PARTICIPANTS */}
                     {activeTab === 'overview' && (
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-                            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                                <h3 className="font-bold text-slate-800 dark:text-white text-sm">Staff Attendance & Payment Progress</h3>
-                                <span className="text-xs text-slate-400">Total Confirmed: {summary.confirmed_staff}</span>
+                            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm">Staff Attendance & Invitations</h3>
+                                    <p className="text-[11px] text-slate-400">Total Confirmed: {summary.confirmed_staff} • Invited: {participants.length}</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        fetchEventStaffStatus(selectedEventId);
+                                        setShowInviteModal(true);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs self-start sm:self-auto cursor-pointer"
+                                >
+                                    <FiUsers size={14} />
+                                    <span>Manage Invites (কাকে কাকে নিবেন)</span>
+                                </button>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-xs sm:text-sm">
@@ -530,9 +637,9 @@ const TeamEvents = () => {
                                                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                                                         : p.rsvp_status === 'not_going'
                                                             ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                                         }`}>
-                                                        {p.rsvp_status === 'going' ? 'Going 😋' : p.rsvp_status === 'not_going' ? 'Not Going' : 'Pending'}
+                                                        {p.rsvp_status === 'going' ? 'Going 😋' : p.rsvp_status === 'not_going' ? 'Not Going' : 'Invited ⏳'}
                                                     </span>
                                                 </td>
                                                 <td className="p-3.5 text-slate-600 dark:text-slate-400">
@@ -541,7 +648,7 @@ const TeamEvents = () => {
                                                 <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200">
                                                     ৳{p.total_paid || 0}
                                                 </td>
-                                                <td className="p-3.5 text-right">
+                                                <td className="p-3.5 text-right space-x-2">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedUserForPay(p.user_id);
@@ -552,6 +659,15 @@ const TeamEvents = () => {
                                                     >
                                                         + Record Cash
                                                     </button>
+                                                    {p.user_id !== currentEvent.created_by && (!p.total_paid || parseFloat(p.total_paid) === 0) && (
+                                                        <button
+                                                            onClick={() => handleUninvite(p.user_id)}
+                                                            className="px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                                            title="Uninvite"
+                                                        >
+                                                            Uninvite
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -822,9 +938,28 @@ const TeamEvents = () => {
                         </div>
                     )}
                 </div>
+            ) : events.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-3xl">
+                        🎉
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        No Team Events Created Yet
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                        Ready for an academy outing or biryani feast? Click "+ Create Event" above to create an event and invite staff.
+                    </p>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="mt-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 inline-flex items-center gap-2 cursor-pointer transition-all"
+                    >
+                        <FiPlus size={16} />
+                        <span>Create Your First Event</span>
+                    </button>
+                </div>
             ) : (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-slate-400 font-medium">Select or create an event to view full details.</p>
+                    <p className="text-slate-400 font-medium">Select an event above to view full details.</p>
                 </div>
             )}
 
@@ -923,6 +1058,102 @@ const TeamEvents = () => {
                                     onChange={e => setCreateForm(prev => ({ ...prev, collection_number: e.target.value }))}
                                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block font-semibold mb-1.5 text-slate-700 dark:text-slate-300">
+                                    Event Cover Photo / Picture 📸
+                                </label>
+                                
+                                {createForm.banner_image ? (
+                                    <div className="relative group w-full h-36 rounded-2xl overflow-hidden border-2 border-dashed border-blue-400 dark:border-blue-600/60 bg-slate-900 shadow-sm">
+                                        <img
+                                            src={createForm.banner_image.startsWith('http') ? createForm.banner_image : `${API_BASE}${createForm.banner_image}`}
+                                            alt="Event Banner"
+                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40 pointer-events-none"></div>
+
+                                        <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/90 text-white text-[11px] font-bold backdrop-blur-xs shadow-xs">
+                                            <FiCheck size={13} />
+                                            <span>Cover Photo Ready</span>
+                                        </div>
+
+                                        <div className="absolute top-2.5 right-2.5 flex items-center gap-2">
+                                            <label className="cursor-pointer px-2.5 py-1 bg-white/95 hover:bg-white text-slate-800 text-xs font-bold rounded-lg shadow-sm backdrop-blur-xs transition-all flex items-center gap-1.5">
+                                                <FiUploadCloud size={13} />
+                                                <span>Change</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={e => handleFileUpload(e, url => setCreateForm(prev => ({ ...prev, banner_image: url })))}
+                                                />
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCreateForm(prev => ({ ...prev, banner_image: '' }))}
+                                                className="p-1.5 bg-rose-600/90 hover:bg-rose-600 text-white rounded-lg shadow-sm backdrop-blur-xs transition-all cursor-pointer"
+                                                title="Remove Image"
+                                            >
+                                                <FiTrash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <label className={`relative flex flex-col items-center justify-center w-full h-32 px-4 py-3 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+                                        uploadingFile
+                                            ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/20 animate-pulse'
+                                            : 'border-slate-300 hover:border-blue-500 dark:border-slate-700 dark:hover:border-blue-400 bg-slate-50/70 hover:bg-blue-50/30 dark:bg-slate-800/40 dark:hover:bg-slate-800/80'
+                                    }`}>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            disabled={uploadingFile}
+                                            onChange={e => handleFileUpload(e, url => setCreateForm(prev => ({ ...prev, banner_image: url })))}
+                                        />
+                                        {uploadingFile ? (
+                                            <div className="flex flex-col items-center gap-2 text-blue-600 dark:text-blue-400">
+                                                <FiRefreshCw className="animate-spin" size={24} />
+                                                <span className="text-xs font-bold">Uploading Cover Photo...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center text-center gap-1.5 pointer-events-none">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                                                    <FiUploadCloud size={20} />
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                        Click to upload cover photo / banner
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                                        PNG, JPG, WEBP (e.g. Biryani feast or Tour landscape)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </label>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                                    Invitation Scope (কাদের ইনভাইট করবেন?) 👥
+                                </label>
+                                <select
+                                    value={createForm.invite_scope}
+                                    onChange={e => setCreateForm(prev => ({ ...prev, invite_scope: e.target.value }))}
+                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                                >
+                                    <option value="all">Invite All Active Staff (সবাইকে ইনভাইট পাঠানো হবে)</option>
+                                    <option value="none">Only Me / Creator (পরে বেছে বেছে ইনভাইট করবো)</option>
+                                </select>
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                    {createForm.invite_scope === 'all'
+                                        ? 'Everyone will receive an instant invitation notification with Accept/Decline buttons.'
+                                        : 'Only you can see this event initially. You can invite specific staff members later from the "Manage Invites" tab.'}
+                                </p>
                             </div>
 
                             <div>
@@ -1146,6 +1377,132 @@ const TeamEvents = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MANAGE INVITES MODAL */}
+            {showInviteModal && (
+                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+                        <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span>Manage Event Invitations</span>
+                                    <span className="text-sm font-normal text-slate-400">(কাকে কাকে নিবেন)</span>
+                                </h3>
+                                <p className="text-xs text-slate-400">
+                                    Send personal invitations & notifications for <strong>{currentEvent?.title}</strong>
+                                </p>
+                            </div>
+                            <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+                        </div>
+
+                        {/* Search & Bulk Actions */}
+                        <div className="flex items-center justify-between gap-3">
+                            <input
+                                type="text"
+                                placeholder="Search staff by name or designation..."
+                                value={inviteSearch}
+                                onChange={e => setInviteSearch(e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+                            />
+                            {selectedToInvite.length > 0 && (
+                                <button
+                                    onClick={() => handleSendInvitations(selectedToInvite)}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shrink-0 shadow-xs transition-all cursor-pointer"
+                                >
+                                    Send {selectedToInvite.length} Invite(s)
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Staff List */}
+                        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl p-2 max-h-96">
+                            {loadingStaffList ? (
+                                <div className="p-8 text-center text-slate-400 text-xs">Loading staff list...</div>
+                            ) : eventStaffList.filter(s => s.name.toLowerCase().includes(inviteSearch.toLowerCase()) || (s.designation || '').toLowerCase().includes(inviteSearch.toLowerCase())).length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-xs">No matching staff found.</div>
+                            ) : (
+                                eventStaffList
+                                    .filter(s => s.name.toLowerCase().includes(inviteSearch.toLowerCase()) || (s.designation || '').toLowerCase().includes(inviteSearch.toLowerCase()))
+                                    .map(s => {
+                                        const isAlreadyInvited = Boolean(s.is_invited && s.is_invited !== '0' && s.is_invited !== 0);
+                                        const isSelected = selectedToInvite.includes(s.id);
+
+                                        return (
+                                            <div key={s.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    {!isAlreadyInvited && (
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={e => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedToInvite(prev => [...prev, s.id]);
+                                                                } else {
+                                                                    setSelectedToInvite(prev => prev.filter(id => id !== s.id));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 rounded text-blue-600"
+                                                        />
+                                                    )}
+                                                    <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-xs uppercase">
+                                                        {s.name?.charAt(0) || 'U'}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{s.name}</div>
+                                                        <div className="text-[11px] text-slate-400">{s.designation} {s.employee_code ? `• ${s.employee_code}` : ''}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    {isAlreadyInvited ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                                                s.rsvp_status === 'going'
+                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                                    : s.rsvp_status === 'not_going'
+                                                                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                                            }`}>
+                                                                {s.rsvp_status === 'going' ? 'Going 😋' : s.rsvp_status === 'not_going' ? 'Declined ✕' : 'Invited ⏳'}
+                                                            </span>
+                                                            {(!s.total_paid || parseFloat(s.total_paid) === 0) && (
+                                                                <button
+                                                                    onClick={() => handleUninvite(s.id)}
+                                                                    className="text-xs text-rose-500 hover:underline cursor-pointer ml-1"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleSendInvitations([s.id])}
+                                                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white dark:bg-blue-950 dark:hover:bg-blue-600 dark:text-blue-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                                                        >
+                                                            + Send Invite
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                            <span className="text-slate-400">
+                                Staff who are not invited will not see this event on their portal.
+                            </span>
+                            <button
+                                onClick={() => setShowInviteModal(false)}
+                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl cursor-pointer"
+                            >
+                                Done
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

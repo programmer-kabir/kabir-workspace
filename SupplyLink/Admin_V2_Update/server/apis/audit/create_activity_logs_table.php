@@ -40,3 +40,4 @@ if ($mysqli->query($sql)) {
         "error" => $mysqli->error
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
+
