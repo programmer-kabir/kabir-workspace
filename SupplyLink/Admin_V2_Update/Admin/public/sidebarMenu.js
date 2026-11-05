@@ -25,6 +25,7 @@ import {
   TbChartBar,
   TbReport,
   TbClock,
+  TbActivity,
   TbFiles,
   TbFileUpload,
 } from "react-icons/tb";
@@ -134,6 +135,12 @@ export const sidebarMenu = [
         label: "Double Entry Audit",
         path: "/audit/duplicate_payments",
         icon: TbClipboardList,
+        roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "User Activity Tracker",
+        path: "/audit/activity_logs",
+        icon: TbActivity,
         roles: ["admin", "developer", "manager"],
       },
     ],

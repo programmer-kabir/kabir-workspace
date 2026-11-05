@@ -130,6 +130,20 @@ if (!$exec) {
     ], 500);
 }
 
+$insertedId = $stmt->insert_id;
+$stmt->close();
+
+require_once __DIR__ . '/../helpers/activity_logger.php';
+logSystemActivity([
+    'action_type' => 'CASH_OUT',
+    'category' => 'financial',
+    'entity_type' => 'cash',
+    'entity_id' => $insertedId,
+    'amount' => $amount,
+    'description' => "ক্যাশ আউট / খরচ: ৳" . number_format($amount, 2) . " (উদ্দেশ্য: {$purpose}, খাত: {$category})",
+    'details' => ['purpose' => $purpose, 'category' => $category, 'source' => $source]
+]);
+
 // ==========================
 // ✅ Success Response
 // ==========================
@@ -137,5 +151,5 @@ if (!$exec) {
 sendJson([
     "success" => true,
     "message" => "Cash-out entry saved successfully",
-    "insertedId" => $stmt->insert_id
+    "insertedId" => $insertedId
 ], 200);

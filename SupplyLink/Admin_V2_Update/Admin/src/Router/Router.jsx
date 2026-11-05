@@ -44,6 +44,7 @@ import DailyInstallmentSyncAudit from "../Pages/Audit/DailyInstallmentSyncAudit"
 import MonthlyInstallmentSyncAudit from "../Pages/Audit/MonthlyInstallmentSyncAudit";
 import StockPurchaseSyncAudit from "../Pages/Audit/StockPurchaseSyncAudit";
 import DuplicateEntryAudit from "../Pages/Audit/DuplicateEntryAudit";
+import UserActivityAudit from "../Pages/Audit/UserActivityAudit";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
@@ -125,6 +126,10 @@ const routes = createBrowserRouter([
           {
             path: "/audit/duplicate_payments",
             element: <DuplicateEntryAudit />,
+          },
+          {
+            path: "/audit/activity_logs",
+            element: <UserActivityAudit />,
           },
           // Users
 

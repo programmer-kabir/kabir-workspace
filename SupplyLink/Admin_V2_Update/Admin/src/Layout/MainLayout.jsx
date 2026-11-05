@@ -2,13 +2,35 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Dashboard/Sidebar";
 import TopHeader from "../components/Dashboard/TopHeader";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../Provider/AuthProvider";
 import "./Scrollbar.css";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth?.() || {};
 
   const mainRef = useRef(null);
   const location = useLocation();
+
+  // Background Navigation Audit Tracker
+  useEffect(() => {
+    if (!user?.id || !location.pathname) return;
+    const baseUrl = import.meta.env.VITE_LOCALHOST_KEY || "https://management.supplylinkbd.com/apis";
+    try {
+      fetch(`${baseUrl}/audit/log_page_visit.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          path: location.pathname,
+          page_title: document.title || location.pathname,
+          user_id: user.id,
+          user_name: user.name || user.fullName || `User #${user.id}`,
+          user_role: Array.isArray(user.role) ? user.role.join(",") : user.role,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+  }, [location.pathname, user?.id]);
 
   useEffect(() => {
     const container = mainRef.current;

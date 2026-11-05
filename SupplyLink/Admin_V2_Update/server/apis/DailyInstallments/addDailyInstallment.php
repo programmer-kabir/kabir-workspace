@@ -89,6 +89,17 @@ try {
     // Auto-sync with Cash In table
     syncDailyInstallmentCash($mysqli, $insertId, $cardId, $userId, $amount, $date, $receiver);
 
+    require_once __DIR__ . '/../helpers/activity_logger.php';
+    logSystemActivity([
+        'action_type' => 'INSTALLMENT_PAID',
+        'category' => 'financial',
+        'entity_type' => 'daily_installment',
+        'entity_id' => $insertId,
+        'amount' => $amount,
+        'description' => "দৈনিক কিস্তি আদায়: ৳" . number_format($amount, 2) . " (কার্ড #{$cardId}, রিসিভার: {$receiver})",
+        'details' => ['cardId' => $cardId, 'userId' => $userId, 'date' => $date, 'receiver' => $receiver]
+    ]);
+
     echo json_encode([
         "success" => true,
         "message" => "Payment Added Successfully ✅",

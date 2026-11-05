@@ -83,8 +83,22 @@ if (!$stmt->execute()) {
     ], 500);
 }
 
+$insertedId = $stmt->insert_id;
+$stmt->close();
+
+require_once __DIR__ . '/../helpers/activity_logger.php';
+logSystemActivity([
+    'action_type' => 'CASH_IN',
+    'category' => 'financial',
+    'entity_type' => 'cash',
+    'entity_id' => $insertedId,
+    'amount' => $amount,
+    'description' => "ক্যাশ ইন জমা: ৳" . number_format($amount, 2) . " (উৎস: {$source}, ক্যাটাগরি: {$category})",
+    'details' => ['source' => $source, 'category' => $category, 'refId' => $refId, 'remarks' => $remarks]
+]);
+
 sendJson([
     "success" => true,
     "message" => "Cash-in entry saved",
-    "insertedId" => $stmt->insert_id
+    "insertedId" => $insertedId
 ]);
