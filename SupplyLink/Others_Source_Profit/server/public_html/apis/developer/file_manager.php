@@ -27,7 +27,94 @@ $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $action = $input['action'] ?? $_GET['action'] ?? '';
 
 try {
-    // 1. List PHP files in apis/ directory
+    // 1. Browse Folder (hPanel Directory View)
+    if ($action === 'browse_folder') {
+        $folder = trim($input['folder'] ?? $_GET['folder'] ?? '');
+        $targetDir = resolveSafePath($folder, $baseDir);
+
+        if (!is_dir($targetDir)) {
+            echo json_encode(["success" => false, "message" => "Folder not found: " . htmlspecialchars($folder)]);
+            exit;
+        }
+
+        $items = scandir($targetDir);
+        $folderList = [];
+        $fileList = [];
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+            if ($item === '.code_backups') continue;
+
+            $itemFullPath = $targetDir . DIRECTORY_SEPARATOR . $item;
+            $relItemPath = trim(($folder !== '' ? $folder . '/' : '') . $item, '/');
+
+            if (is_dir($itemFullPath)) {
+                // Count items inside subfolder
+                $subItems = @scandir($itemFullPath);
+                $subCount = $subItems ? count(array_diff($subItems, ['.', '..', '.code_backups'])) : 0;
+
+                $folderList[] = [
+                    "type" => "folder",
+                    "name" => $item,
+                    "path" => $relItemPath,
+                    "item_count" => $subCount,
+                    "modified" => date("Y-m-d H:i:s", filemtime($itemFullPath))
+                ];
+            } else if (is_file($itemFullPath)) {
+                $ext = strtolower(pathinfo($item, PATHINFO_EXTENSION));
+                $fileList[] = [
+                    "type" => "file",
+                    "name" => $item,
+                    "path" => $relItemPath,
+                    "size_bytes" => filesize($itemFullPath),
+                    "size_kb" => round(filesize($itemFullPath) / 1024, 2),
+                    "modified" => date("Y-m-d H:i:s", filemtime($itemFullPath)),
+                    "ext" => $ext
+                ];
+            }
+        }
+
+        usort($folderList, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        usort($fileList, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+
+        // Build breadcrumbs
+        $breadcrumbs = [
+            ["name" => "apis", "path" => ""]
+        ];
+        if (!empty($folder)) {
+            $parts = explode('/', str_replace('\\', '/', $folder));
+            $accum = '';
+            foreach ($parts as $p) {
+                if ($p === '') continue;
+                $accum = trim($accum . '/' . $p, '/');
+                $breadcrumbs[] = [
+                    "name" => $p,
+                    "path" => $accum
+                ];
+            }
+        }
+
+        // Parent folder calculation
+        $parentFolder = null;
+        if (!empty($folder)) {
+            $parent = dirname($folder);
+            $parentFolder = ($parent === '.' || $parent === '/') ? '' : str_replace('\\', '/', $parent);
+        }
+
+        echo json_encode([
+            "success" => true,
+            "current_folder" => $folder,
+            "parent_folder" => $parentFolder,
+            "breadcrumbs" => $breadcrumbs,
+            "folders" => $folderList,
+            "files" => $fileList,
+            "total_folders" => count($folderList),
+            "total_files" => count($fileList)
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 1.1 List all files flat (search support)
     if ($action === 'list_files') {
         $files = [];
         $iterator = new RecursiveIteratorIterator(
@@ -123,19 +210,27 @@ try {
         exit;
     }
 
-    // 4. Create new file
+    // 4. Create new file (supports current open folder)
     if ($action === 'create_file') {
+        $folder = trim($input['folder'] ?? '');
+        $fileName = trim($input['filename'] ?? $input['name'] ?? '');
         $rel = trim($input['path'] ?? '');
+
+        // If filename is given with or without folder
+        if (!empty($fileName)) {
+            $rel = trim(($folder !== '' ? $folder . '/' : '') . $fileName, '/');
+        }
+
         $content = $input['content'] ?? "<?php\n\nrequire_once __DIR__ . '/../cors.php';\nrequire_once __DIR__ . '/../auth_guard.php';\nguardAdminDevOnly();\n\nheader('Content-Type: application/json');\n\necho json_encode(['success' => true, 'message' => 'New API endpoint initialized']);\n";
 
         if (empty($rel)) {
-            echo json_encode(["success" => false, "message" => "File path is required"]);
+            echo json_encode(["success" => false, "message" => "File name/path is required"]);
             exit;
         }
 
         $fullPath = resolveSafePath($rel, $baseDir);
         if (file_exists($fullPath)) {
-            echo json_encode(["success" => false, "message" => "File already exists"]);
+            echo json_encode(["success" => false, "message" => "File already exists: " . htmlspecialchars($rel)]);
             exit;
         }
 
@@ -146,14 +241,51 @@ try {
 
         $written = file_put_contents($fullPath, $content);
         if ($written === false) {
-            echo json_encode(["success" => false, "message" => "Failed to create file"]);
+            echo json_encode(["success" => false, "message" => "Failed to create file. Check folder write permissions."]);
             exit;
         }
 
         echo json_encode([
             "success" => true,
             "message" => "New file created successfully ✅",
-            "path" => $rel
+            "path" => $rel,
+            "name" => basename($rel),
+            "folder" => $folder
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 5. Create new folder (inside current open folder)
+    if ($action === 'create_folder') {
+        $folder = trim($input['folder'] ?? '');
+        $newFolderName = trim($input['folder_name'] ?? $input['name'] ?? '');
+
+        if (empty($newFolderName)) {
+            echo json_encode(["success" => false, "message" => "Folder name cannot be empty"]);
+            exit;
+        }
+
+        // Clean folder name to prevent traversal
+        $newFolderName = trim(str_replace(['../', '..\\', '/', '\\'], '', $newFolderName));
+        $relPath = trim(($folder !== '' ? $folder . '/' : '') . $newFolderName, '/');
+        $fullPath = resolveSafePath($relPath, $baseDir);
+
+        if (is_dir($fullPath) || file_exists($fullPath)) {
+            echo json_encode(["success" => false, "message" => "Folder or file already exists with this name"]);
+            exit;
+        }
+
+        if (!@mkdir($fullPath, 0755, true)) {
+            echo json_encode(["success" => false, "message" => "Failed to create directory. Permission denied."]);
+            exit;
+        }
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Directory created successfully 📁",
+            "path" => $relPath,
+            "name" => $newFolderName,
+            "folder" => $folder
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -169,3 +301,4 @@ try {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+

@@ -51,6 +51,117 @@ try {
         exit;
     }
 
+    if ($action === 'browse_table') {
+        $tableName = trim($input['table'] ?? $_GET['table'] ?? '');
+        $page = max(1, (int)($input['page'] ?? $_GET['page'] ?? 1));
+        $limit = max(10, min(200, (int)($input['limit'] ?? $_GET['limit'] ?? 50)));
+        $search = trim($input['search'] ?? $_GET['search'] ?? '');
+        $offset = ($page - 1) * $limit;
+
+        if (empty($tableName)) {
+            echo json_encode(["success" => false, "message" => "Table name is required"]);
+            exit;
+        }
+
+        // 1. Verify table exists in current database (SQL Injection Shield)
+        $chkStmt = $mysqli->prepare("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $chkStmt->bind_param("s", $tableName);
+        $chkStmt->execute();
+        $chkRes = $chkStmt->get_result();
+        if ($chkRes->num_rows === 0) {
+            echo json_encode(["success" => false, "message" => "Table '{$tableName}' not found in database"]);
+            exit;
+        }
+
+        // 2. Fetch Columns and Primary Key
+        $colStmt = $mysqli->prepare("
+            SELECT COLUMN_NAME, DATA_TYPE, COLUMN_KEY, IS_NULLABLE
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+            ORDER BY ORDINAL_POSITION ASC
+        ");
+        $colStmt->bind_param("s", $tableName);
+        $colStmt->execute();
+        $columnsMeta = $colStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $columnNames = [];
+        $searchableCols = [];
+        $primaryKey = null;
+
+        foreach ($columnsMeta as $col) {
+            $cName = $col['COLUMN_NAME'];
+            $columnNames[] = $cName;
+            if ($col['COLUMN_KEY'] === 'PRI' && $primaryKey === null) {
+                $primaryKey = $cName;
+            }
+            if (in_array(strtolower($col['DATA_TYPE']), ['varchar', 'text', 'char', 'int', 'bigint', 'mediumtext'])) {
+                $searchableCols[] = "`" . str_replace("`", "``", $cName) . "`";
+            }
+        }
+
+        if (!$primaryKey && !empty($columnNames)) {
+            $primaryKey = $columnNames[0];
+        }
+
+        $safeTable = "`" . str_replace("`", "``", $tableName) . "`";
+        $whereSql = "";
+        $types = "";
+        $params = [];
+
+        if ($search !== '' && !empty($searchableCols)) {
+            $likes = [];
+            foreach ($searchableCols as $sc) {
+                $likes[] = "{$sc} LIKE ?";
+                $types .= "s";
+                $params[] = "%{$search}%";
+            }
+            $whereSql = " WHERE (" . implode(" OR ", $likes) . ")";
+        }
+
+        // 3. Count Total Matching Rows
+        $countSql = "SELECT COUNT(*) AS total FROM {$safeTable}" . $whereSql;
+        if (!empty($params)) {
+            $cntStmt = $mysqli->prepare($countSql);
+            $cntStmt->bind_param($types, ...$params);
+            $cntStmt->execute();
+            $cntRes = $cntStmt->get_result();
+            $totalRows = (int)($cntRes->fetch_assoc()['total'] ?? 0);
+        } else {
+            $cntRes = $mysqli->query($countSql);
+            $totalRows = (int)($cntRes->fetch_assoc()['total'] ?? 0);
+        }
+
+        // 4. Fetch Paginated Records
+        $orderSql = $primaryKey ? " ORDER BY `" . str_replace("`", "``", $primaryKey) . "` DESC" : "";
+        $dataSql = "SELECT * FROM {$safeTable}" . $whereSql . $orderSql . " LIMIT ?, ?";
+        
+        $dataStmt = $mysqli->prepare($dataSql);
+        if (!empty($params)) {
+            $dataTypes = $types . "ii";
+            $dataParams = array_merge($params, [$offset, $limit]);
+            $dataStmt->bind_param($dataTypes, ...$dataParams);
+        } else {
+            $dataStmt->bind_param("ii", $offset, $limit);
+        }
+        
+        $dataStmt->execute();
+        $rows = $dataStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "table" => $tableName,
+            "primary_key" => $primaryKey,
+            "columns" => $columnNames,
+            "columns_meta" => $columnsMeta,
+            "rows" => $rows,
+            "total_rows" => $totalRows,
+            "page" => $page,
+            "limit" => $limit,
+            "total_pages" => max(1, ceil($totalRows / $limit))
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'run_query') {
         $query = trim($input['query'] ?? '');
         if (empty($query)) {
@@ -122,3 +233,4 @@ try {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+

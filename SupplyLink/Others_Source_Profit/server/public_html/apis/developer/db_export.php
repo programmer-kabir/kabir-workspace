@@ -106,3 +106,4 @@ fwrite($out, "SET FOREIGN_KEY_CHECKS=1;\n");
 fwrite($out, "-- Backup completed successfully.\n");
 fclose($out);
 exit;
+
