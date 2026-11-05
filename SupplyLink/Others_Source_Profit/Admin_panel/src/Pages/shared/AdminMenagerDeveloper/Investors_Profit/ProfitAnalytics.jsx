@@ -4,7 +4,9 @@ import { toast } from "react-toastify";
 import { MONTHS } from "../../../../../public/month";
 import useUsers from "../../../../utils/Hooks/useUsers";
 import useInvestmentCards from "../../../../utils/Investors/useInvestmentCards";
+import useUserRole from "../../../../utils/Hooks/useUserRole";
 import Loader from "../../../../components/Loader/Loader";
+import LuxuryToast from "../../../../components/Modal/LuxuryToast";
 import {
   TrendingUp,
   RefreshCw,
@@ -19,6 +21,7 @@ import {
   Layers,
   Clock,
   ArrowUpRight,
+  Lock,
 } from "lucide-react";
 
 const money = (n) => `৳ ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -29,6 +32,7 @@ const getMonthLabel = (m) => {
 };
 
 const ProfitAnalytics = () => {
+  const { canMakeEntry } = useUserRole();
   const { users } = useUsers();
   const { investmentCards } = useInvestmentCards();
 
@@ -43,6 +47,7 @@ const ProfitAnalytics = () => {
   const [pageSize, setPageSize] = useState(50);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isReinvesting, setIsReinvesting] = useState(false);
+  const [luxuryToast, setLuxuryToast] = useState(null);
 
   // Fetch only the latest profit month directly from server
   const fetchLatestProfit = useCallback(async () => {
@@ -184,10 +189,28 @@ const ProfitAnalytics = () => {
   };
 
   const handleReinvest = async () => {
+    if (!canMakeEntry) {
+      setLuxuryToast({
+        title: "অনুমতি নেই 🔒",
+        message: "আপনার রোলে রি-ইনভেস্ট করার অনুমতি নেই (শুধুমাত্র Admin, Developer ও Data Entry)।",
+        type: "error",
+      });
+      return;
+    }
+
     if (selectedIds.size === 0) {
-      return toast.info("কোন রো নির্বাচন করা হয়নি");
+      setLuxuryToast({
+        title: "কোনো কার্ড নির্বাচন করা হয়নি ⚠️",
+        message: "অনুগ্রহ করে রি-ইনভেস্ট করার জন্য অন্তত একটি কার্ডের চেকবাক্স নির্বাচন করুন।",
+        type: "warning",
+      });
+      return;
     }
     const selectedRows = filteredRows.filter((r) => selectedIds.has(r.id));
+    const totalReinvestAmount = selectedRows.reduce(
+      (sum, r) => sum + Number(r.profit_amount || r.profit || 0),
+      0
+    );
 
     try {
       setIsReinvesting(true);
@@ -216,10 +239,23 @@ const ProfitAnalytics = () => {
       }
 
       toast.success("নির্বাচিত প্রফিট সফলভাবে রি-ইনভেস্ট করা হয়েছে");
+      setLuxuryToast({
+        title: "রি-ইনভেস্ট সফল হয়েছে! 💎",
+        message: `নির্বাচিত ${selectedRows.length}টি কার্ডের মোট মুনাফা সফলভাবে রি-ইনভেস্ট ব্যালেন্সে জমা করা হয়েছে।`,
+        tag: `মোট ${selectedRows.length}টি কার্ড`,
+        amount: totalReinvestAmount,
+        type: "success",
+      });
+
       setSelectedIds(new Set());
       fetchLatestProfit();
     } catch (err) {
       toast.error(err.message || "রি-ইনভেস্ট সম্পন্ন করা যায়নি");
+      setLuxuryToast({
+        title: "রি-ইনভেস্ট ব্যর্থ হয়েছে! ⚠️",
+        message: err.message || "সার্ভার এরর: রি-ইনভেস্ট সম্পন্ন করা সম্ভব হয়নি।",
+        type: "error",
+      });
     } finally {
       setIsReinvesting(false);
     }
@@ -301,14 +337,24 @@ const ProfitAnalytics = () => {
             <span>রিফ্রেশ</span>
           </button>
 
-          <button
-            onClick={handleReinvest}
-            disabled={isReinvesting || selectedIds.size === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Coins className="w-3.5 h-3.5" />
-            <span>রি-ইনভেস্ট ({selectedIds.size})</span>
-          </button>
+          {!canMakeEntry ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/80 border border-red-500/30 text-red-300 text-xs font-semibold cursor-not-allowed select-none shadow-sm"
+              title="শুধুমাত্র Admin, Developer এবং Data Entry রি-ইনভেস্ট করতে পারবেন"
+            >
+              <Lock className="w-3.5 h-3.5 text-red-400" />
+              <span>রি-ইনভেস্ট লক্ড (View Only)</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleReinvest}
+              disabled={isReinvesting || selectedIds.size === 0}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Coins className="w-3.5 h-3.5" />
+              <span>রি-ইনভেস্ট ({selectedIds.size})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -412,8 +458,9 @@ const ProfitAnalytics = () => {
                 <th className="px-4 py-3.5 text-center">
                   <button
                     onClick={toggleSelectAllCurrent}
-                    className="text-slate-400 hover:text-white"
-                    title="সব সিলেক্ট / আনসিলেক্ট করুন"
+                    disabled={!canMakeEntry}
+                    className={`text-slate-400 ${canMakeEntry ? "hover:text-white cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+                    title={canMakeEntry ? "সব সিলেক্ট / আনসিলেক্ট করুন" : "রি-ইনভেস্ট করার অনুমতি নেই"}
                   >
                     {paginatedRows.length > 0 &&
                     paginatedRows.every((r) => selectedIds.has(r.id)) ? (
@@ -468,8 +515,12 @@ const ProfitAnalytics = () => {
                         <input
                           type="checkbox"
                           checked={isSelected}
+                          disabled={!canMakeEntry}
                           onChange={() => toggleSelect(r.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                          className={`h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-1 focus:ring-indigo-500 ${
+                            canMakeEntry ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+                          }`}
+                          title={canMakeEntry ? "সিলেক্ট করুন" : "রি-ইনভেস্ট করার অনুমতি নেই"}
                         />
                       </td>
 
@@ -601,6 +652,12 @@ const ProfitAnalytics = () => {
           </div>
         )}
       </div>
+
+      <LuxuryToast
+        toast={luxuryToast}
+        onClose={() => setLuxuryToast(null)}
+        duration={4800}
+      />
     </div>
   );
 };

@@ -298,7 +298,7 @@ export const sidebarMenu = [
         label: "Profit Analytics",
         path: "/profit/profit-analytics",
         icon: MdShowChart,
-        roles: ["admin", "developer", "manager"],
+        roles: ["admin", "developer", "manager", "data_entry"],
       },
       {
         label: "Monthly Profit Distributor",
