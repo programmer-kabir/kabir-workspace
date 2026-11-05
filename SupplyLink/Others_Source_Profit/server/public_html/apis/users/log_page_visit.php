@@ -31,3 +31,4 @@ $logged = logStaffActivity(
 
 echo json_encode(["success" => $logged]);
 exit;
+
