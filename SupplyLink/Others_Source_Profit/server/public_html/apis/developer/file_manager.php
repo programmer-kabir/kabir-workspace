@@ -9,6 +9,8 @@ require_once __DIR__ . '/../cors.php';
 require_once __DIR__ . '/../auth_guard.php';
 guardAdminDevOnly();
 
+date_default_timezone_set('Asia/Dhaka');
+
 header("Content-Type: application/json; charset=UTF-8");
 
 $baseDir = realpath(__DIR__ . '/../..'); // Points to server/public_html/ (Full server codebase)
