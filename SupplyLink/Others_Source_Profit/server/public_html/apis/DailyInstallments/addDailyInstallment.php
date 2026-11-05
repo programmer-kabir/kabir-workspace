@@ -164,6 +164,24 @@ try {
     // Commit transaction
     $mysqli->commit();
 
+    // 🛡️ Activity Audit Log
+    require_once __DIR__ . '/../helpers/log_activity.php';
+    logStaffActivity(
+        'INSTALLMENT_COLLECT',
+        'financial',
+        'daily_installment',
+        $cardId,
+        $amount,
+        "কাস্টমার ID #{$userId} (কার্ড #{$cardId}) এর ৳ " . number_format($amount, 2) . " কিস্তি আদায় করেছেন",
+        [
+            "customer_id" => $userId,
+            "card_id" => $cardId,
+            "amount" => $amount,
+            "date" => $date,
+            "receiver" => $receiver
+        ]
+    );
+
 } catch (Throwable $e) {
     $mysqli->rollback();
     http_response_code(500);

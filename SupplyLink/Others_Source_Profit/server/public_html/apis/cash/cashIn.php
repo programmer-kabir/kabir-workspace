@@ -7,8 +7,6 @@ guardEntryOnly();
 
 // DB
 require_once __DIR__ . '/../db.php'; // এখানে $mysqli আসবে
-require_once __DIR__ . '/../cors.php';
-// ✅ helper functions inline
 
 function getBody() {
     $input = file_get_contents("php://input");
@@ -78,8 +76,29 @@ if (!$stmt->execute()) {
     ], 500);
 }
 
+$insertedId = $stmt->insert_id;
+
+// 🛡️ Activity Audit Log
+require_once __DIR__ . '/../helpers/log_activity.php';
+logStaffActivity(
+    'CASH_IN',
+    'financial',
+    'cash',
+    $insertedId,
+    $amount,
+    "ক্যাশ ইন এন্ট্রি করেছেন ৳ " . number_format($amount, 2) . " (উৎস: {$source})",
+    [
+        "source" => $source,
+        "amount" => $amount,
+        "category" => $category,
+        "refId" => $refId,
+        "remarks" => $remarks,
+        "date" => $date
+    ]
+);
+
 sendJson([
     "success" => true,
     "message" => "Cash-in entry saved",
-    "insertedId" => $stmt->insert_id
+    "insertedId" => $insertedId
 ]);

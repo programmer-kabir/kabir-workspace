@@ -490,7 +490,7 @@ export const sidebarMenu = [
         label: "Staff Activity",
         path: "/developer/staff_activity",
         icon: TbClock,
-        roles: ["developer"],
+        roles: ["developer", "admin"],
       },
     ],
   },

@@ -124,6 +124,26 @@ if (!$exec) {
     ], 500);
 }
 
+$insertedId = $stmt->insert_id;
+
+// 🛡️ Activity Audit Log
+require_once __DIR__ . '/../helpers/log_activity.php';
+logStaffActivity(
+    'CASH_OUT',
+    'financial',
+    'cash',
+    $insertedId,
+    $amount,
+    "ক্যাশ আউট / খরচ এন্ট্রি করেছেন ৳ " . number_format($amount, 2) . " (বিবরণ: {$purpose})",
+    [
+        "purpose" => $purpose,
+        "amount" => $amount,
+        "category" => $category,
+        "source" => $source,
+        "date" => $date
+    ]
+);
+
 // ==========================
 // ✅ Success Response
 // ==========================
@@ -131,5 +151,5 @@ if (!$exec) {
 sendJson([
     "success" => true,
     "message" => "Cash-out entry saved successfully",
-    "insertedId" => $stmt->insert_id
+    "insertedId" => $insertedId
 ], 200);

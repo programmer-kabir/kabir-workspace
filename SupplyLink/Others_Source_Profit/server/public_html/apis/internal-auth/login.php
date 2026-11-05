@@ -63,17 +63,22 @@ $_SESSION['user'] = [
 try {
     require_once __DIR__ . "/../helpers/log_activity.php";
 
-    logActivity(
+    $roleStr = is_array($roles) ? implode(',', array_filter($roles)) : (string)$roles;
+    logStaffActivity(
+        "LOGIN",
         "auth",
-        "login",
-        "User logged in",
         "user",
         (int)$userData['id'],
-        null,
+        0.00,
+        "সিস্টেমে সফলভাবে লগইন করেছেন",
         [
             "login_id" => (int)$id,
-            "roles" => $roles
-        ]
+            "roles" => $roles,
+            "mobile" => $userData['mobile'] ?? null
+        ],
+        (int)$userData['id'],
+        $userData['name'],
+        $roleStr
     );
 } catch (Throwable $e) {
     error_log("Login activity logging failed: " . $e->getMessage());

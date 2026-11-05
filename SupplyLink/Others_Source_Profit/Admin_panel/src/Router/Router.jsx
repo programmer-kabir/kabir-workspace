@@ -401,9 +401,9 @@ const routes = createBrowserRouter([
               },
             ],
           },
-          // Only Developer
+          // Staff Activity (Developer & Admin)
           {
-            element: <RoleProtectedRoute allow={["developer"]} />,
+            element: <RoleProtectedRoute allow={["developer", "admin"]} />,
             children: [
               {
                 path: "/developer/staff_activity",

@@ -185,6 +185,24 @@ try {
 
     $mysqli->commit();
 
+    // 🛡️ Activity Audit Log
+    require_once __DIR__ . '/../helpers/log_activity.php';
+    logStaffActivity(
+        'INVESTMENT_ADD',
+        'financial',
+        'investment_installment',
+        $investment_card_no,
+        $amount,
+        "ইনভেস্টর ID #{$investor_id} (কার্ড #{$investment_card_no}) এর ৳ " . number_format($amount, 2) . " ইনভেস্টমেন্ট জমা করেছেন",
+        [
+            "card_no" => $investment_card_no,
+            "investor_id" => $investor_id,
+            "amount" => $amount,
+            "installment_no" => $installment_no,
+            "installment_date" => $installment_date
+        ]
+    );
+
     // 4. Send Automated Email Notification (Investor + Admin Copy) in isolated try-catch
     try {
         require_once __DIR__ . '/../helpers/mailer.php';
