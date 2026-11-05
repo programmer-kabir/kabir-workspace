@@ -340,43 +340,7 @@ const DashboardReport = () => {
 
           {/* বিস্তারিত টেবিলসমূহ */}
           <div className="report-tables-container space-y-6">
-            {/* 🔹 ১. Cash Table থেকে আজকের সকল ক্যাশ ইন */}
-            {cashSummary?.cash_in_list?.length > 0 && (
-              <ReportTable
-                title="আজকের সকল ক্যাশ ইন লেনদেন (Cash In Details)"
-                columns={["#", "উৎস / গ্রাহক (Source)", "ক্যাটাগরি", "রেফারেন্স / রসিদ", "বিবরণ (Remarks)", "পরিমাণ"]}
-                data={cashSummary.cash_in_list}
-                total={cashSummary.today_in}
-                totalColSpan={5}
-                renderRow={(item, index) => [
-                  index + 1,
-                  item?.source || "-",
-                  item?.category || "-",
-                  item?.refId || "-",
-                  item?.remarks || "-",
-                  Number(item.amount).toLocaleString(),
-                ]}
-              />
-            )}
 
-            {/* 🔹 ২. Cash Table থেকে আজকের সকল ক্যাশ আউট */}
-            {cashSummary?.cash_out_list?.length > 0 && (
-              <ReportTable
-                title="আজকের সকল ক্যাশ আউট লেনদেন (Cash Out Details)"
-                columns={["#", "ব্যয়ের খাত / উদ্দেশ্য (Purpose)", "উৎস (Source)", "ক্যাটাগরি", "বিবরণ (Remarks)", "পরিমাণ"]}
-                data={cashSummary.cash_out_list}
-                total={cashSummary.today_out}
-                totalColSpan={5}
-                renderRow={(item, index) => [
-                  index + 1,
-                  item?.purpose || item?.source || "-",
-                  item?.source || "-",
-                  item?.category || "-",
-                  item?.remarks || "-",
-                  Number(item.amount).toLocaleString(),
-                ]}
-              />
-            )}
 
             {/* Investment Collection */}
             <ReportTable

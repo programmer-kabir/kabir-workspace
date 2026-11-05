@@ -99,13 +99,14 @@ const SupplyLinkReports = () => {
   }, [reports, searchQuery, selectedMonth]);
 
   const handleOpenPreview = (report) => {
-    setPreviewPdfUrl(report.file_url);
+    const freshUrl = `${report.file_url}?t=${Date.now()}`;
+    setPreviewPdfUrl(freshUrl);
     setPreviewPdfTitle(`Daily Cash Ledger - ${report.formatted_date}`);
   };
 
   const handleDownload = (report) => {
     const link = document.createElement("a");
-    link.href = report.file_url;
+    link.href = `${report.file_url}?t=${Date.now()}`;
     link.download = report.file_name;
     link.target = "_blank";
     document.body.appendChild(link);
