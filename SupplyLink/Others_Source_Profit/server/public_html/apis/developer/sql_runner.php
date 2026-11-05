@@ -162,6 +162,238 @@ try {
         exit;
     }
 
+    // 3. Insert Row
+    if ($action === 'insert_row') {
+        $tableName = trim($input['table'] ?? '');
+        $rowData = $input['data'] ?? [];
+
+        if (empty($tableName) || empty($rowData) || !is_array($rowData)) {
+            echo json_encode(["success" => false, "message" => "Table name and row data are required"]);
+            exit;
+        }
+
+        // Validate table
+        $chkStmt = $mysqli->prepare("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $chkStmt->bind_param("s", $tableName);
+        $chkStmt->execute();
+        if ($chkStmt->get_result()->num_rows === 0) {
+            echo json_encode(["success" => false, "message" => "Table not found"]);
+            exit;
+        }
+
+        // Fetch columns info
+        $colStmt = $mysqli->prepare("
+            SELECT COLUMN_NAME, EXTRA, IS_NULLABLE, DATA_TYPE 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+        ");
+        $colStmt->bind_param("s", $tableName);
+        $colStmt->execute();
+        $cols = $colStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $colMap = [];
+        foreach ($cols as $c) {
+            $colMap[$c['COLUMN_NAME']] = $c;
+        }
+
+        $colsToInsert = [];
+        $placeholders = [];
+        $types = "";
+        $params = [];
+
+        foreach ($rowData as $col => $val) {
+            if (!isset($colMap[$col])) continue;
+
+            // Skip auto_increment if empty
+            if (strpos(strtolower($colMap[$col]['EXTRA']), 'auto_increment') !== false && ($val === '' || $val === null)) {
+                continue;
+            }
+
+            $colsToInsert[] = "`" . str_replace("`", "``", $col) . "`";
+            $placeholders[] = "?";
+
+            if ($val === '' && $colMap[$col]['IS_NULLABLE'] === 'YES') {
+                $types .= "s";
+                $params[] = null;
+            } else {
+                $types .= "s";
+                $params[] = (string)$val;
+            }
+        }
+
+        if (empty($colsToInsert)) {
+            echo json_encode(["success" => false, "message" => "No valid columns provided to insert"]);
+            exit;
+        }
+
+        $safeTable = "`" . str_replace("`", "``", $tableName) . "`";
+        $insertSql = "INSERT INTO {$safeTable} (" . implode(", ", $colsToInsert) . ") VALUES (" . implode(", ", $placeholders) . ")";
+        $stmt = $mysqli->prepare($insertSql);
+        if (!$stmt) {
+            echo json_encode(["success" => false, "message" => $mysqli->error]);
+            exit;
+        }
+
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            echo json_encode(["success" => false, "message" => $stmt->error]);
+            exit;
+        }
+
+        echo json_encode([
+            "success" => true,
+            "message" => "নতুন রেকর্ড সফলভাবে যুক্ত হয়েছে ✅",
+            "inserted_id" => $mysqli->insert_id ?: null
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 4. Update Row
+    if ($action === 'update_row') {
+        $tableName = trim($input['table'] ?? '');
+        $primaryKeys = $input['primary_keys'] ?? [];
+        $rowData = $input['data'] ?? [];
+
+        if (empty($tableName) || empty($primaryKeys) || !is_array($primaryKeys) || empty($rowData) || !is_array($rowData)) {
+            echo json_encode(["success" => false, "message" => "Table, primary keys, and data are required"]);
+            exit;
+        }
+
+        // Fetch columns info
+        $colStmt = $mysqli->prepare("
+            SELECT COLUMN_NAME, IS_NULLABLE 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+        ");
+        $colStmt->bind_param("s", $tableName);
+        $colStmt->execute();
+        $cols = $colStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $colMap = [];
+        foreach ($cols as $c) {
+            $colMap[$c['COLUMN_NAME']] = $c;
+        }
+
+        $setClauses = [];
+        $types = "";
+        $params = [];
+
+        foreach ($rowData as $col => $val) {
+            if (!isset($colMap[$col])) continue;
+            // Don't update primary key in SET clause if it's identical
+            $setClauses[] = "`" . str_replace("`", "``", $col) . "` = ?";
+            if ($val === '' && $colMap[$col]['IS_NULLABLE'] === 'YES') {
+                $types .= "s";
+                $params[] = null;
+            } else {
+                $types .= "s";
+                $params[] = (string)$val;
+            }
+        }
+
+        if (empty($setClauses)) {
+            echo json_encode(["success" => false, "message" => "No valid columns provided for update"]);
+            exit;
+        }
+
+        $whereClauses = [];
+        foreach ($primaryKeys as $pkCol => $pkVal) {
+            if (!isset($colMap[$pkCol])) continue;
+            $whereClauses[] = "`" . str_replace("`", "``", $pkCol) . "` = ?";
+            $types .= "s";
+            $params[] = (string)$pkVal;
+        }
+
+        if (empty($whereClauses)) {
+            echo json_encode(["success" => false, "message" => "No valid primary key identifiers provided"]);
+            exit;
+        }
+
+        $safeTable = "`" . str_replace("`", "``", $tableName) . "`";
+        $updateSql = "UPDATE {$safeTable} SET " . implode(", ", $setClauses) . " WHERE " . implode(" AND ", $whereClauses) . " LIMIT 1";
+        $stmt = $mysqli->prepare($updateSql);
+        if (!$stmt) {
+            echo json_encode(["success" => false, "message" => $mysqli->error]);
+            exit;
+        }
+
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            echo json_encode(["success" => false, "message" => $stmt->error]);
+            exit;
+        }
+
+        echo json_encode([
+            "success" => true,
+            "message" => "রেকর্ড সফলভাবে আপডেট হয়েছে ✅",
+            "affected_rows" => $stmt->affected_rows
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 5. Delete Row
+    if ($action === 'delete_row') {
+        $tableName = trim($input['table'] ?? '');
+        $primaryKeys = $input['primary_keys'] ?? [];
+
+        if (empty($tableName) || empty($primaryKeys) || !is_array($primaryKeys)) {
+            echo json_encode(["success" => false, "message" => "Table name and primary keys are required"]);
+            exit;
+        }
+
+        // Fetch columns info
+        $colStmt = $mysqli->prepare("
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+        ");
+        $colStmt->bind_param("s", $tableName);
+        $colStmt->execute();
+        $cols = $colStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $colMap = [];
+        foreach ($cols as $c) {
+            $colMap[$c['COLUMN_NAME']] = true;
+        }
+
+        $whereClauses = [];
+        $types = "";
+        $params = [];
+
+        foreach ($primaryKeys as $pkCol => $pkVal) {
+            if (!isset($colMap[$pkCol])) continue;
+            $whereClauses[] = "`" . str_replace("`", "``", $pkCol) . "` = ?";
+            $types .= "s";
+            $params[] = (string)$pkVal;
+        }
+
+        if (empty($whereClauses)) {
+            echo json_encode(["success" => false, "message" => "No valid primary key identifiers provided"]);
+            exit;
+        }
+
+        $safeTable = "`" . str_replace("`", "``", $tableName) . "`";
+        $delSql = "DELETE FROM {$safeTable} WHERE " . implode(" AND ", $whereClauses) . " LIMIT 1";
+        $stmt = $mysqli->prepare($delSql);
+        if (!$stmt) {
+            echo json_encode(["success" => false, "message" => $mysqli->error]);
+            exit;
+        }
+
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            echo json_encode(["success" => false, "message" => $stmt->error]);
+            exit;
+        }
+
+        echo json_encode([
+            "success" => true,
+            "message" => "রেকর্ড সফলভাবে মুছে ফেলা হয়েছে 🗑️",
+            "affected_rows" => $stmt->affected_rows
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'run_query') {
         $query = trim($input['query'] ?? '');
         if (empty($query)) {

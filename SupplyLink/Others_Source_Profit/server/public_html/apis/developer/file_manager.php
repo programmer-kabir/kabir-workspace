@@ -11,7 +11,7 @@ guardAdminDevOnly();
 
 header("Content-Type: application/json; charset=UTF-8");
 
-$baseDir = realpath(__DIR__ . '/..'); // Points to server/public_html/apis/
+$baseDir = realpath(__DIR__ . '/../..'); // Points to server/public_html/ (Full server codebase)
 $backupDir = $baseDir . '/.code_backups';
 if (!is_dir($backupDir)) {
     @mkdir($backupDir, 0755, true);
@@ -79,7 +79,7 @@ try {
 
         // Build breadcrumbs
         $breadcrumbs = [
-            ["name" => "apis", "path" => ""]
+            ["name" => "public_html", "path" => ""]
         ];
         if (!empty($folder)) {
             $parts = explode('/', str_replace('\\', '/', $folder));
@@ -288,6 +288,66 @@ try {
             "folder" => $folder
         ], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    // 6. Delete File or Folder (with auto-backup)
+    if ($action === 'delete_item') {
+        $rel = trim($input['path'] ?? '');
+        $type = trim($input['type'] ?? 'file');
+
+        if (empty($rel) || $rel === '/' || $rel === '.') {
+            echo json_encode(["success" => false, "message" => "Invalid target path"]);
+            exit;
+        }
+
+        $fullPath = resolveSafePath($rel, $baseDir);
+
+        if (!file_exists($fullPath)) {
+            echo json_encode(["success" => false, "message" => "Item not found: " . htmlspecialchars($rel)]);
+            exit;
+        }
+
+        if (is_file($fullPath)) {
+            // Backup before delete
+            $sanitizedName = str_replace(['/', '\\'], '_', $rel);
+            $backupFile = $backupDir . '/' . $sanitizedName . '_deleted_' . date("Ymd_His") . '.bak';
+            @copy($fullPath, $backupFile);
+
+            if (@unlink($fullPath)) {
+                echo json_encode([
+                    "success" => true,
+                    "message" => "ফাইল সফলভাবে মুছে ফেলা হয়েছে 🗑️ (ব্যাকআপ সংরক্ষিত)",
+                    "path" => $rel
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                echo json_encode(["success" => false, "message" => "Failed to delete file. Permission denied."]);
+                exit;
+            }
+        } else if (is_dir($fullPath)) {
+            // Recursive directory removal helper
+            $deleteDir = function($dir) use (&$deleteDir) {
+                if (!is_dir($dir)) return false;
+                $files = array_diff(scandir($dir), ['.', '..']);
+                foreach ($files as $file) {
+                    $p = "$dir/$file";
+                    is_dir($p) ? $deleteDir($p) : @unlink($p);
+                }
+                return @rmdir($dir);
+            };
+
+            if ($deleteDir($fullPath)) {
+                echo json_encode([
+                    "success" => true,
+                    "message" => "ফোল্ডার সফলভাবে মুছে ফেলা হয়েছে 🗑️",
+                    "path" => $rel
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                echo json_encode(["success" => false, "message" => "Failed to delete directory. Permission denied."]);
+                exit;
+            }
+        }
     }
 
     echo json_encode(["success" => false, "message" => "Unknown action"]);
