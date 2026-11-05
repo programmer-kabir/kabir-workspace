@@ -40,6 +40,7 @@ import ProfitActionHistory from "../Pages/shared/Withdraw/ProfitActionHistory";
 import Monthly_Profit_Distributor from "../Pages/shared/AdminMenagerDeveloper/Monthly_Profit_Distributor/Monthly_Profit_Distributor";
 import All_profit_Distributor from "../Pages/shared/AdminMenagerDeveloper/Monthly_Profit_Distributor/All_profit_Distributor";
 import StaffActivity from "../Pages/shared/Users/StaffActivity";
+import DevStudio from "../Pages/shared/Developer/DevStudio";
 import InvestmentWithdraw from "../Pages/shared/AdminMenagerDeveloper/ApplicationActions/InvestmentWithdraw";
 import StaffReport from "../Pages/MenagerDashobard/ManagerReport/StaffReport";
 import ReferencesUsers from "../Pages/MenagerDashobard/ReferencesUsers/ReferencesUsers";
@@ -387,6 +388,16 @@ const routes = createBrowserRouter([
               {
                 path: "/audit/customer-khata-reconciliation",
                 element: <CustomerKhataReconciliation />,
+              },
+            ],
+          },
+          // Developer & Admin Studio
+          {
+            element: <RoleProtectedRoute allow={["developer", "admin"]} />,
+            children: [
+              {
+                path: "/developer/dev_studio",
+                element: <DevStudio />,
               },
             ],
           },

@@ -33,6 +33,7 @@ import {
   TbCalendarTime,
   TbCoins,
   TbBook2,
+  TbServer,
 } from "react-icons/tb";
 
 import { RiBankCardLine, RiBankCard2Line, RiMailSendLine } from "react-icons/ri";
@@ -472,13 +473,19 @@ export const sidebarMenu = [
     ],
   },
 
-  // DEVELOPER
+  // DEVELOPER & SERVER STUDIO
   {
     type: "collapse",
     label: "Developer",
     icon: MdDeveloperMode,
-    roles: ["developer"],
+    roles: ["developer", "admin"],
     children: [
+      {
+        label: "Dev & Server Studio",
+        path: "/developer/dev_studio",
+        icon: TbServer,
+        roles: ["developer", "admin"],
+      },
       {
         label: "Staff Activity",
         path: "/developer/staff_activity",

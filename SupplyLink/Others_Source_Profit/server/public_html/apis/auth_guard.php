@@ -119,6 +119,11 @@ function guardManagerAdminOnly() {
     return requireRole(['admin', 'developer', 'manager']);
 }
 
+// 7.5 Developer & Admin Only Guard
+function guardAdminDevOnly() {
+    return requireRole(['admin', 'developer'], "Access Denied: Developer or Admin privilege required.");
+}
+
 // 8. Detect if request is direct browser address bar visit
 function isDirectBrowserNavigation() {
     $secFetchMode = $_SERVER['HTTP_SEC_FETCH_MODE'] ?? '';
