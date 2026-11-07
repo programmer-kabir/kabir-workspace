@@ -157,15 +157,16 @@ try {
       }
     }
 
-    $payAmount = ((float)($row['payable_amount'] ?? 0) > 0)
-      ? (float)$row['payable_amount']
-      : (((float)($row['amount'] ?? 0) > 0) ? (float)$row['amount'] : $cardAmt);
+    // 💰 Investment Capital Payout (Prioritize investment principal 'amount', then card's 'investment_amount')
+    $payAmount = ((float)($row['amount'] ?? 0) > 0)
+      ? (float)$row['amount']
+      : (((float)$cardAmt > 0) ? (float)$cardAmt : (float)($row['payable_amount'] ?? 0));
 
     if ($payAmount > 0) {
       $cardDetailsStr = ($card_id > 0) ? " (কার্ড #{$card_id})" : "";
       $cashSource = "গ্রাহক: {$investorName} - কার্ড #{$card_id} ({$cardName})";
       $cashPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত - গ্রাহক: {$investorName}{$cardDetailsStr}";
-      $cashCategory = "invest_withdraw";
+      $cashCategory = "investor-payout";
       $cashRefId = ($card_id > 0) ? "inv_wth_card_" . $card_id : "inv_wth_req_" . $request_id;
       $cashRemarks = "উইথড্র আবেদন #{$request_id} অনুমোদন ও মূলধন পরিশোধ (পদ্ধতি: " . ($payment_method ?: "Cash") . ")";
       $cashDate = date('Y-m-d');
@@ -207,16 +208,16 @@ try {
           $stmtCash->close();
         }
       } else {
-        // Sync existing cash record with enhanced purpose & source
+        // Sync existing cash record with correct investment amount, purpose, source & category
         $existCashId = (int)$existingCash['id'];
         $stmtUpdCash = $mysqli->prepare("
           UPDATE cash
-          SET source = ?, purpose = ?, remarks = ?
+          SET source = ?, purpose = ?, amount = ?, category = ?, remarks = ?
           WHERE id = ?
           LIMIT 1
         ");
         if ($stmtUpdCash) {
-          $stmtUpdCash->bind_param("sssi", $cashSource, $cashPurpose, $cashRemarks, $existCashId);
+          $stmtUpdCash->bind_param("ssdssi", $cashSource, $cashPurpose, $payAmount, $cashCategory, $cashRemarks, $existCashId);
           $stmtUpdCash->execute();
           $stmtUpdCash->close();
         }

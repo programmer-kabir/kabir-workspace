@@ -11,16 +11,10 @@ try {
     @$mysqli->query("SET time_zone = '+06:00'");
 
     $sql = "
-        SELECT c.id, c.refId, c.source, c.purpose, c.amount
+        SELECT c.id, c.refId, c.source, c.purpose, c.amount, c.category
         FROM cash c
-        WHERE c.category = 'invest_withdraw'
-          AND (
-            c.purpose = 'বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত' 
-            OR c.purpose IS NULL 
-            OR c.purpose = ''
-            OR c.source IS NULL 
-            OR c.source = ''
-          )
+        WHERE c.category IN ('invest_withdraw', 'investor-payout')
+          AND c.refId LIKE 'inv_wth_card_%'
     ";
 
     $res = $mysqli->query($sql);
@@ -34,7 +28,7 @@ try {
 
     $updStmt = $mysqli->prepare("
         UPDATE cash 
-        SET source = ?, purpose = ? 
+        SET source = ?, purpose = ?, amount = ?, category = 'investor-payout' 
         WHERE id = ? 
         LIMIT 1
     ");
@@ -49,9 +43,9 @@ try {
         }
 
         if ($cardId > 0) {
-            // Fetch investor name and card name
+            // Fetch investor name, card name and investment amount
             $cardQ = $mysqli->prepare("
-                SELECT ic.id AS card_id, ic.card_name, u.name AS investor_name
+                SELECT ic.id AS card_id, ic.card_name, ic.investment_amount, u.name AS investor_name
                 FROM investment_cards ic
                 LEFT JOIN users u ON u.id = ic.investor_id
                 WHERE ic.id = ?
@@ -64,19 +58,31 @@ try {
 
             $invName  = !empty($cardInfo['investor_name']) ? $cardInfo['investor_name'] : "গ্রাহক";
             $cardName = !empty($cardInfo['card_name']) ? $cardInfo['card_name'] : "কার্ড #" . $cardId;
+            $cardPrincipal = (float)($cardInfo['investment_amount'] ?? 0);
 
             $newSource  = "গ্রাহক: {$invName} - কার্ড #{$cardId} ({$cardName})";
             $newPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত - গ্রাহক: {$invName} (কার্ড #{$cardId})";
+            $targetAmt  = ($cardPrincipal > 0) ? $cardPrincipal : (float)$r['amount'];
 
-            $updStmt->bind_param("ssi", $newSource, $newPurpose, $cashId);
-            if ($updStmt->execute()) {
-                $updatedCount++;
-                $updatedDetails[] = [
-                    "cash_id"     => $cashId,
-                    "card_id"     => $cardId,
-                    "new_source"  => $newSource,
-                    "new_purpose" => $newPurpose
-                ];
+            // Update if any field differs
+            $needsUpdate = ($r['source'] !== $newSource) 
+                        || ($r['purpose'] !== $newPurpose) 
+                        || (abs((float)$r['amount'] - $targetAmt) > 0.001)
+                        || ($r['category'] !== 'investor-payout');
+
+            if ($needsUpdate) {
+                $updStmt->bind_param("ssdi", $newSource, $newPurpose, $targetAmt, $cashId);
+                if ($updStmt->execute()) {
+                    $updatedCount++;
+                    $updatedDetails[] = [
+                        "cash_id"     => $cashId,
+                        "card_id"     => $cardId,
+                        "old_amount"  => (float)$r['amount'],
+                        "new_amount"  => $targetAmt,
+                        "new_source"  => $newSource,
+                        "new_purpose" => $newPurpose
+                    ];
+                }
             }
         }
     }
@@ -99,3 +105,4 @@ try {
         "error"   => $e->getMessage()
     ], JSON_UNESCAPED_UNICODE);
 }
+
