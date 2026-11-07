@@ -162,8 +162,9 @@ try {
       : (((float)($row['amount'] ?? 0) > 0) ? (float)$row['amount'] : $cardAmt);
 
     if ($payAmount > 0) {
+      $cardDetailsStr = ($card_id > 0) ? " (কার্ড #{$card_id})" : "";
       $cashSource = "গ্রাহক: {$investorName} - কার্ড #{$card_id} ({$cardName})";
-      $cashPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত";
+      $cashPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত - গ্রাহক: {$investorName}{$cardDetailsStr}";
       $cashCategory = "invest_withdraw";
       $cashRefId = ($card_id > 0) ? "inv_wth_card_" . $card_id : "inv_wth_req_" . $request_id;
       $cashRemarks = "উইথড্র আবেদন #{$request_id} অনুমোদন ও মূলধন পরিশোধ (পদ্ধতি: " . ($payment_method ?: "Cash") . ")";
@@ -204,6 +205,20 @@ try {
             throw new Exception("Cash out insert failed: " . $stmtCash->error);
           }
           $stmtCash->close();
+        }
+      } else {
+        // Sync existing cash record with enhanced purpose & source
+        $existCashId = (int)$existingCash['id'];
+        $stmtUpdCash = $mysqli->prepare("
+          UPDATE cash
+          SET source = ?, purpose = ?, remarks = ?
+          WHERE id = ?
+          LIMIT 1
+        ");
+        if ($stmtUpdCash) {
+          $stmtUpdCash->bind_param("sssi", $cashSource, $cashPurpose, $cashRemarks, $existCashId);
+          $stmtUpdCash->execute();
+          $stmtUpdCash->close();
         }
       }
     }

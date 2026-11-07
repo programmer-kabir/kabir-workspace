@@ -319,7 +319,7 @@ if ($dateValid && (isset($_REQUEST['run']) || $isCli || (isset($_REQUEST['action
                     $staffId = (int)($cCard['reference_user_id'] ?: 1);
 
                     $source = "গ্রাহক: {$invName} - কার্ড #{$cId} ({$cardName})";
-                    $purpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত";
+                    $purpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত - গ্রাহক: {$invName} (কার্ড #{$cId})";
                     $remarks = "কার্ড ক্লোজড ডেট অনুযায়ী মূলধন উত্তোলন পরিশোধ";
 
                     $insCashQ->bind_param(
