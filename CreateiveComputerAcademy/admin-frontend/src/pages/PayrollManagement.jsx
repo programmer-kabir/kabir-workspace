@@ -97,6 +97,13 @@ export default function PayrollManagement() {
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
   const staffDropdownRef = useRef(null);
   const [userSearchText, setUserSearchText] = useState('');
+  const defaultContractTiers = [
+    { tier_number: 1, tier_name: 'Quarter 1 (মাসের ১ - ৩)', start_month_index: 1, end_month_index: 3, monthly_salary: 3500 },
+    { tier_number: 2, tier_name: 'Quarter 2 (মাসের ৪ - ৬)', start_month_index: 4, end_month_index: 6, monthly_salary: 4500 },
+    { tier_number: 3, tier_name: 'Quarter 3 (মাসের ৭ - ৯)', start_month_index: 7, end_month_index: 9, monthly_salary: 5500 },
+    { tier_number: 4, tier_name: 'Quarter 4 (মাসের ১০ - ১২)', start_month_index: 10, end_month_index: 12, monthly_salary: 6500 }
+  ];
+
   const [schemeForm, setSchemeForm] = useState({
     scheme_id: 0,
     user_id: 0,
@@ -108,7 +115,8 @@ export default function PayrollManagement() {
     standard_daily_hours: '8',
     contract_start_date: new Date().toISOString().split('T')[0],
     contract_end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    tiers: defaultContractTiers
   });
   const [submittingScheme, setSubmittingScheme] = useState(false);
 
@@ -140,6 +148,26 @@ export default function PayrollManagement() {
   const [dailyFilterMonth, setDailyFilterMonth] = useState('ALL');
   const [dailySearchDate, setDailySearchDate] = useState('');
   const [selectedAdminInvoice, setSelectedAdminInvoice] = useState(null);
+
+  // Tab 4: Forecast and Analytics states
+  const [forecastData, setForecastData] = useState(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastFilter, setForecastFilter] = useState('ALL'); // 'ALL' | 'READY' | 'THRESHOLD_BLOCKED' | 'PENDING_APPROVAL'
+  const [forecastSearch, setForecastSearch] = useState('');
+
+  const fetchForecast = async () => {
+    try {
+      setForecastLoading(true);
+      const res = await axios.get(`${API_BASE}api/admin/payroll/get_payroll_forecast.php`);
+      if (res.data.status === 'success' && res.data.data) {
+        setForecastData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error loading payroll forecast:', err);
+    } finally {
+      setForecastLoading(false);
+    }
+  };
 
   const handleOpenDetailsModal = async (userId) => {
     setIsDetailsModalOpen(true);
@@ -226,10 +254,56 @@ export default function PayrollManagement() {
     }
   };
 
+  // Fetch billing cycles & payout controls
+  const [cycles, setCycles] = useState([]);
+  const [cyclesLoading, setCyclesLoading] = useState(false);
+  const [togglingCycle, setTogglingCycle] = useState(null);
+
+  const fetchCycles = async () => {
+    try {
+      setCyclesLoading(true);
+      const res = await axios.get(`${API_BASE}api/admin/payroll/get_cycle_controls.php`);
+      if (res.data.status === 'success') {
+        setCycles(res.data.cycles || []);
+      }
+    } catch (err) {
+      console.error('Error fetching cycles:', err);
+    } finally {
+      setCyclesLoading(false);
+    }
+  };
+
+  const handleToggleCycle = async (cycle) => {
+    try {
+      setTogglingCycle(cycle.month_key);
+      const newStatus = cycle.is_unlocked ? 0 : 1;
+      const res = await axios.post(`${API_BASE}api/admin/payroll/toggle_cycle_unlock.php`, {
+        month_key: cycle.month_key,
+        is_unlocked: newStatus,
+        admin_id: currentUser?.id || 1,
+        notes: `Admin manual ${newStatus ? 'unlock' : 'lock'}`
+      });
+
+      if (res.data.status === 'success') {
+        toast.success(res.data.message);
+        fetchCycles();
+        fetchSchemes();
+      } else {
+        toast.error(res.data.message || 'Failed to update cycle');
+      }
+    } catch (err) {
+      toast.error('Network error updating cycle status');
+    } finally {
+      setTogglingCycle(null);
+    }
+  };
+
   useEffect(() => {
     fetchSchemes();
     fetchEligibleUsers();
     fetchWithdrawals();
+    fetchCycles();
+    fetchForecast();
   }, [withdrawalFilter]);
 
   // Click outside to close staff dropdown
@@ -253,6 +327,10 @@ export default function PayrollManagement() {
       const amount = parseFloat(schemeForm.contract_amount) || 0;
       const totalHours = days * months * hours;
       return totalHours > 0 ? (amount / totalHours).toFixed(2) : '0.00';
+    } else if (schemeForm.scheme_type === 'STAGGERED_CONTRACT') {
+      const t1 = schemeForm.tiers?.[0]?.monthly_salary || 3500;
+      const monthlyHours = days * hours;
+      return monthlyHours > 0 ? (t1 / monthlyHours).toFixed(2) : '0.00';
     } else {
       const amount = parseFloat(schemeForm.salary_amount) || 0;
       const monthlyHours = days * hours;
@@ -275,7 +353,8 @@ export default function PayrollManagement() {
       standard_daily_hours: '8',
       contract_start_date: new Date().toISOString().split('T')[0],
       contract_end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-      notes: ''
+      notes: '',
+      tiers: defaultContractTiers
     });
     setIsSchemeModalOpen(true);
   };
@@ -285,18 +364,26 @@ export default function PayrollManagement() {
     setSelectedUserForScheme(user);
     const summary = user.wallet_summary?.scheme || {};
     const isYearly = (user.scheme_type || 'YEARLY_CONTRACT') === 'YEARLY_CONTRACT';
+    const isStaggered = user.scheme_type === 'STAGGERED_CONTRACT';
+    const existingTiers = (user.tiers && user.tiers.length > 0)
+      ? user.tiers
+      : (user.wallet_summary?.contract_roadmap?.tiers && user.wallet_summary.contract_roadmap.tiers.length > 0)
+        ? user.wallet_summary.contract_roadmap.tiers
+        : defaultContractTiers;
+
     setSchemeForm({
       scheme_id: user.scheme_id || 0,
       user_id: user.user_id,
       scheme_type: user.scheme_type || 'YEARLY_CONTRACT',
       salary_amount: user.salary_amount || '',
-      contract_amount: user.contract_amount || '50000',
+      contract_amount: user.contract_amount || (isStaggered ? '60000' : '50000'),
       contract_duration_months: user.contract_duration_months || '12',
       working_days_per_month: user.working_days_per_month || '26',
       standard_daily_hours: user.standard_daily_hours || '8',
       contract_start_date: user.contract_start_date || new Date().toISOString().split('T')[0],
-      contract_end_date: isYearly ? (user.contract_end_date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]) : '',
-      notes: summary.notes || ''
+      contract_end_date: (isYearly || isStaggered) ? (user.contract_end_date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]) : '',
+      notes: summary.notes || '',
+      tiers: existingTiers
     });
     setIsSchemeModalOpen(true);
   };
@@ -439,6 +526,22 @@ export default function PayrollManagement() {
       (w.transaction_reference && w.transaction_reference.toLowerCase().includes(withdrawalSearch.toLowerCase()));
     const matchesMethod = methodFilter === 'ALL' || (w.payment_method && w.payment_method.toLowerCase() === methodFilter.toLowerCase());
     return matchesSearch && matchesMethod;
+  });
+
+  // Filtered diagnostic ledger for Tab 4 (Forecast)
+  const filteredLedger = (forecastData?.staff_ledger || []).filter((s) => {
+    if (forecastFilter === 'READY' && s.diagnostic_code !== 'READY') return false;
+    if (forecastFilter === 'THRESHOLD_BLOCKED' && s.diagnostic_code !== 'THRESHOLD_BLOCKED') return false;
+    if (forecastFilter === 'PENDING_APPROVAL' && s.diagnostic_code !== 'PENDING_APPROVAL') return false;
+
+    if (forecastSearch.trim()) {
+      const q = forecastSearch.toLowerCase();
+      const matchName = (s.name || '').toLowerCase().includes(q);
+      const matchEmail = (s.email || '').toLowerCase().includes(q);
+      const matchDesig = (s.designation || '').toLowerCase().includes(q);
+      return matchName || matchEmail || matchDesig;
+    }
+    return true;
   });
 
   // Metrics & KPIs calculation across all schemes
@@ -690,6 +793,48 @@ export default function PayrollManagement() {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('cycles');
+            fetchCycles();
+          }}
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
+            activeTab === 'cycles'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
+          }`}
+        >
+          <FiCalendar className="w-4 h-4" />
+          <span>Billing Cycles & Payout Controls</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+            activeTab === 'cycles' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          }`}>
+            {cycles.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('forecast');
+            fetchForecast();
+          }}
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
+            activeTab === 'forecast'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
+          }`}
+        >
+          <FiTrendingUp className="w-4 h-4" />
+          <span>Analytics & Liability Forecast</span>
+          {forecastData?.metrics?.ready_to_cashout_total > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+              activeTab === 'forecast' ? 'bg-white/20 text-white' : 'bg-emerald-500 text-white'
+            }`}>
+              ৳ {Math.floor(forecastData.metrics.ready_to_cashout_total / 1000)}k
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tab 1: Staff & Student Schemes */}
@@ -733,6 +878,7 @@ export default function PayrollManagement() {
                   className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="ALL">All Schemes</option>
+                  <option value="STAGGERED_CONTRACT">📈 Staggered Contract (ধাপভিত্তিক)</option>
                   <option value="YEARLY_CONTRACT">Yearly Milestone Contract</option>
                   <option value="MONTHLY">Monthly Regular Salary</option>
                 </select>
@@ -744,7 +890,9 @@ export default function PayrollManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSchemes.map((user) => {
               const summary = user.wallet_summary || {};
+              const isStaggered = user.scheme_type === 'STAGGERED_CONTRACT';
               const isYearly = user.scheme_type === 'YEARLY_CONTRACT';
+              const activeTier = summary.active_tier || null;
               const progress = summary.progress_percent || 0;
               const targetCompleted = summary.target_completed;
               const isStudent = user.roles && user.roles.includes('student');
@@ -754,16 +902,20 @@ export default function PayrollManagement() {
                   key={user.user_id}
                   onClick={() => handleOpenDetailsModal(user.user_id)}
                   className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300 group flex flex-col justify-between cursor-pointer relative overflow-hidden ${
-                    isYearly 
-                      ? 'border-amber-300/80 dark:border-amber-500/30 hover:border-amber-400' 
-                      : 'border-slate-200/80 dark:border-slate-800 hover:border-indigo-500'
+                    isStaggered
+                      ? 'border-purple-300/80 dark:border-purple-500/30 hover:border-purple-400'
+                      : isYearly 
+                        ? 'border-amber-300/80 dark:border-amber-500/30 hover:border-amber-400' 
+                        : 'border-slate-200/80 dark:border-slate-800 hover:border-indigo-500'
                   }`}
                 >
                   {/* Subtle Top Accent Ribbon */}
                   <div className={`absolute top-0 left-0 right-0 h-1.5 ${
-                    isYearly 
-                      ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400' 
-                      : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-400'
+                    isStaggered
+                      ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500'
+                      : isYearly 
+                        ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400' 
+                        : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-400'
                   }`} />
 
                   <div className="space-y-4 pt-1">
@@ -794,21 +946,29 @@ export default function PayrollManagement() {
                       </div>
 
                       {/* Scheme Badge */}
-                      <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs ${
-                        isYearly
-                          ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40'
-                          : 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/40'
-                      }`}>
-                        {isYearly ? '🏆 Yearly Contract' : '💼 Monthly Salary'}
-                      </span>
+                      {isStaggered ? (
+                        <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/40">
+                          📈 Tier {activeTier?.tier_number || 1} • ৳{Number(activeTier?.monthly_salary || 3500).toLocaleString()}/mo
+                        </span>
+                      ) : isYearly ? (
+                        <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40">
+                          🏆 Yearly Contract
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/40">
+                          💼 Monthly Salary
+                        </span>
+                      )}
                     </div>
 
                     {/* Rate & Hours KPI */}
                     <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hourly Rate</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {isStaggered ? `Tier ${activeTier?.tier_number || 1} Rate` : 'Hourly Rate'}
+                        </span>
                         <div className="text-base font-black text-slate-900 dark:text-white">
-                          ৳ {Number(user.hourly_rate || 0).toFixed(2)}
+                          ৳ {Number(activeTier?.hourly_rate || user.hourly_rate || 0).toFixed(2)}
                           <span className="text-[10px] text-slate-400 font-normal">/h</span>
                         </div>
                       </div>
@@ -822,7 +982,31 @@ export default function PayrollManagement() {
                     </div>
 
                     {/* Contract Progress / Monthly Earned */}
-                    {isYearly ? (
+                    {isStaggered ? (
+                      <div className="space-y-2 p-3.5 bg-purple-50/50 dark:bg-purple-950/20 rounded-2xl border border-purple-200/70 dark:border-purple-800/40">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                            <span>📈</span>
+                            <span>{activeTier?.tier_name || `Quarter ${activeTier?.tier_number || 1}`}</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                            মাস {activeTier?.month_index || 1} of 12
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-700"
+                            style={{ width: `${Math.min(100, Math.max(3, ((summary.total_earned || 0) / (Number(user.contract_amount) || 60000)) * 100))}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold pt-0.5">
+                          <span>অর্জিত: ৳{Number(summary.total_earned || 0).toLocaleString()}</span>
+                          <span className="font-bold text-purple-700 dark:text-purple-300">
+                            লক্ষ্য: ৳{Number(user.contract_amount || 60000).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ) : isYearly ? (
                       <div className="space-y-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-amber-200/80 dark:border-amber-500/20">
                         <div className="flex items-center justify-between text-xs font-bold">
                           <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -1017,6 +1201,13 @@ export default function PayrollManagement() {
                               </span>
                             </div>
                           )}
+                          {w.covered_months && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold">
+                                🗓️ {w.covered_months}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="p-4 md:p-5">
                           <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
@@ -1153,7 +1344,389 @@ export default function PayrollManagement() {
         </div>
       )}
 
-      {/* Modal 1: Configure / Edit Scheme (Rendered via Portal to avoid top-gap/clipping) */}
+      {/* Tab 3: Billing Cycles & Payout Controls */}
+      {activeTab === 'cycles' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+                <FiCalendar className="text-indigo-600 dark:text-indigo-400 w-5 h-5" />
+                Monthly Billing Cycles & Flexible Payout Controls
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Control when staff can withdraw their monthly earnings. Under default rules, past cycles mature on the 15th. Use the toggle buttons below to instantly unlock or lock any month ahead of time.
+              </p>
+            </div>
+            <button
+              onClick={fetchCycles}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
+            >
+              <FiRefreshCw className={`w-3.5 h-3.5 ${cyclesLoading ? 'animate-spin' : ''}`} />
+              Refresh Cycles
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cycles.map((cy) => (
+              <div
+                key={cy.month_key}
+                className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5 hover:shadow-md transition-all relative overflow-hidden"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      {cy.month_key}
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1">
+                      {cy.month_label}
+                    </h3>
+                  </div>
+                  <div>
+                    {cy.is_unlocked ? (
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-bold shadow-xs">
+                        <FiCheckCircle className="w-3.5 h-3.5" /> Unlocked
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-full text-xs font-bold shadow-xs">
+                        <FiClock className="w-3.5 h-3.5" /> Locked
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metrics */}
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Staff</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{cy.active_staff_count}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Hours</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{cy.total_hours}h</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Accrued</span>
+                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">৳{Math.floor(cy.total_payroll_earned).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Status info */}
+                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Unlock Mode:</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {cy.has_admin_control ? 'Admin Manual Override' : 'System Auto (15th)'}
+                    </span>
+                  </div>
+                  {cy.unlocked_at && (
+                    <div className="flex items-center justify-between">
+                      <span>Date / Source:</span>
+                      <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                        {cy.unlocked_by_name || 'System'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action button */}
+                <button
+                  onClick={() => handleToggleCycle(cy)}
+                  disabled={togglingCycle === cy.month_key}
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm ${
+                    cy.is_unlocked
+                      ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                  }`}
+                >
+                  {togglingCycle === cy.month_key ? (
+                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : cy.is_unlocked ? (
+                    <>
+                      <FiX className="w-3.5 h-3.5" /> Lock Cycle (Prevent Withdrawal)
+                    </>
+                  ) : (
+                    <>
+                      <FiCheck className="w-3.5 h-3.5" /> Unlock Payout for Staff Now
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Analytics, Diagnostic Ledger & Future Liability Forecast */}
+      {activeTab === 'forecast' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Top 4 KPI Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* 1. Total Disbursed */}
+            <div className="p-6 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-3xl shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs font-bold uppercase tracking-wider">Total Disbursed</span>
+                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950 rounded-2xl">
+                  <FiCheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
+                ৳ {Number(forecastData?.metrics?.total_disbursed || 0).toLocaleString()}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                পরিশোধিত পে-আউট (অনুমোদিত সর্বমোট)
+              </p>
+            </div>
+
+            {/* 2. Ready to Cashout Now */}
+            <div className="p-6 bg-gradient-to-br from-indigo-50/80 via-white to-blue-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20 border border-indigo-200/80 dark:border-indigo-800/40 rounded-3xl shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-indigo-600 dark:text-indigo-400">
+                <span className="text-xs font-bold uppercase tracking-wider">Ready for Cashout</span>
+                <div className="p-2.5 bg-indigo-100 dark:bg-indigo-950 rounded-2xl">
+                  <FiDollarSign className="w-5 h-5 text-indigo-600" />
+                </div>
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-indigo-600 dark:text-indigo-400">
+                ৳ {Number(forecastData?.metrics?.ready_to_cashout_total || 0).toLocaleString()}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                উত্তোলনযোগ্য বকেয়া (যেকোনো মুহূর্তে ক্লেইমযোগ্য)
+              </p>
+            </div>
+
+            {/* 3. Threshold / Limit Blocked */}
+            <div className="p-6 bg-gradient-to-br from-amber-50/80 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 rounded-3xl shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-amber-600 dark:text-amber-400">
+                <span className="text-xs font-bold uppercase tracking-wider">Threshold Blocked</span>
+                <div className="p-2.5 bg-amber-100 dark:bg-amber-950 rounded-2xl">
+                  <FiAlertCircle className="w-5 h-5 text-amber-600" />
+                </div>
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-amber-600 dark:text-amber-400">
+                ৳ {Number(forecastData?.metrics?.threshold_blocked_total || 0).toLocaleString()}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                ন্যূনতম বেতন সীমা অপূর্ণ থাকায় রোলওভার রয়েছে
+              </p>
+            </div>
+
+            {/* 4. Projected Next Month Liability */}
+            <div className="p-6 bg-gradient-to-br from-purple-50/80 via-white to-fuchsia-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-purple-950/20 border border-purple-200/80 dark:border-purple-800/40 rounded-3xl shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-purple-600 dark:text-purple-400">
+                <span className="text-xs font-bold uppercase tracking-wider">Next Cycle Forecast</span>
+                <div className="p-2.5 bg-purple-100 dark:bg-purple-950 rounded-2xl">
+                  <FiTrendingUp className="w-5 h-5 text-purple-600" />
+                </div>
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-purple-600 dark:text-purple-400">
+                ৳ {Number(forecastData?.metrics?.projected_next_month_liability || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                {forecastData?.metrics?.next_maturity_date || 'পরবর্তী সাইকেল'} সম্ভাব্য মোট খরচ
+              </p>
+            </div>
+          </div>
+
+          {/* Next Month Budget Readiness Indicator Banner */}
+          <div className="p-5 md:p-6 bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💼</span>
+                <h3 className="font-black text-base md:text-lg text-white tracking-tight">
+                  Next Payout Readiness Forecast ({forecastData?.metrics?.next_maturity_date || 'Upcoming Cycle'})
+                </h3>
+              </div>
+              <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed max-w-2xl">
+                চলমান মাসের কাজের গতি (Burn Rate) এবং পূর্বের আনক্যাশড বকেয়া বিশ্লেষণ অনুযায়ী আগামী <strong>১৫ তারিখে</strong> অ্যাডমিনকে আনুমানিক <strong>৳ {Number(forecastData?.metrics?.projected_next_month_liability || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> লিকুইড ক্যাশ/ব্যাংক ফান্ড প্রস্তুত রাখতে হবে।
+              </p>
+            </div>
+            <div className="text-right shrink-0 bg-white/10 px-5 py-3 rounded-2xl border border-white/20">
+              <span className="text-[10px] uppercase font-bold text-indigo-200 block">Estimated Fund Required</span>
+              <span className="text-2xl font-black text-white">৳ {Number(forecastData?.metrics?.projected_next_month_liability || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            </div>
+          </div>
+
+          {/* Monthly Trend Bars */}
+          {forecastData?.monthly_trends && (
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-slate-900 dark:text-white text-base">Monthly Payroll Liability & Disbursement Flow</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">বিগত মাসগুলোর অর্জিত আয় ও ডিসবার্সমেন্টের তুলনায় আগামী মাসের বাজেট পূর্বাভাস</p>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-200 dark:border-indigo-800/40">
+                  {forecastData.monthly_trends.length} Months Tracked
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
+                {forecastData.monthly_trends.map((tr) => (
+                  <div key={tr.month_key} className={`p-4 rounded-2xl border transition ${tr.is_forecast ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800' : tr.is_current ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-300 dark:border-indigo-800' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-xs text-slate-800 dark:text-slate-200">{tr.month_label}</span>
+                      {tr.is_forecast && <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500 text-white">Forecast</span>}
+                      {tr.is_current && <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-500 text-white">Ongoing</span>}
+                    </div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">
+                      ৳ {Number(tr.earned || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="mt-1 text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>Paid: ৳{Number(tr.disbursed || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Staff Diagnostic & Audit Ledger Table */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white text-base">
+                  Staff Payout Diagnostic & Liability Ledger
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  কার কোন মাস পেইড হয়েছে, কার কত টাকা বকেয়া রয়েছে এবং কী কারণে রয়েছে তার সার্বিক বিবরণী
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <FiSearch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    value={forecastSearch}
+                    onChange={(e) => setForecastSearch(e.target.value)}
+                    placeholder="Search staff..."
+                    className="pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                  {['ALL', 'READY', 'THRESHOLD_BLOCKED', 'PENDING_APPROVAL'].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setForecastFilter(f)}
+                      className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                        forecastFilter === f
+                          ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {f === 'ALL' ? 'All Staff' : f === 'READY' ? 'Ready Now' : f === 'THRESHOLD_BLOCKED' ? 'Under Limit' : 'Pending'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/70 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/60 dark:border-slate-800">
+                  <tr>
+                    <th className="p-4 md:p-5">Staff Member</th>
+                    <th className="p-4 md:p-5">Scheme & Limit</th>
+                    <th className="p-4 md:p-5">গৃহীত মাসসমূহ (Paid)</th>
+                    <th className="p-4 md:p-5">উত্তোলনযোগ্য বকেয়া</th>
+                    <th className="p-4 md:p-5">বকেয়া থাকার কারণ (Diagnostics)</th>
+                    <th className="p-4 md:p-5 text-right">পরবর্তী মাসের প্রাক্কলন</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {filteredLedger.map((staff) => (
+                    <tr key={staff.user_id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                      {/* Staff Info */}
+                      <td className="p-4 md:p-5">
+                        <div className="flex items-center gap-3">
+                          <StaffAvatar name={staff.name} picture={staff.profile_picture} size="md" />
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">{staff.name}</div>
+                            <div className="text-[11px] text-slate-400">{staff.designation} • {staff.department_name}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Scheme & Limit */}
+                      <td className="p-4 md:p-5">
+                        <div className="font-bold text-slate-800 dark:text-slate-200">
+                          {staff.scheme_type === 'YEARLY_CONTRACT' ? '🏆 1-Year Contract' : '💼 Monthly Salary'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Min Limit: ৳{Number(staff.min_limit).toLocaleString()}
+                        </div>
+                      </td>
+
+                      {/* Cashed Cycles */}
+                      <td className="p-4 md:p-5">
+                        {staff.cashed_cycles && staff.cashed_cycles.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {staff.cashed_cycles.map((c, idx) => (
+                              <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800/60">
+                                ✓ {c}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">— No withdrawals yet —</span>
+                        )}
+                      </td>
+
+                      {/* Ready Balance */}
+                      <td className="p-4 md:p-5">
+                        <div className="font-black text-slate-900 dark:text-white text-sm">
+                          ৳ {Number(staff.ready_balance).toLocaleString()}
+                        </div>
+                        {staff.ready_cycles && staff.ready_cycles.length > 0 && (
+                          <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
+                            🗓️ {staff.ready_cycles.join(' + ')}
+                          </div>
+                        )}
+                        {staff.overtime_hours > 0 && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                            🥭 +{staff.overtime_hours}h OT (৳{Number(staff.overtime_cash).toFixed(2)})
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Diagnostic Reason */}
+                      <td className="p-4 md:p-5 max-w-xs">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            staff.diagnostic_code === 'READY'
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                              : staff.diagnostic_code === 'THRESHOLD_BLOCKED'
+                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                              : staff.diagnostic_code === 'PENDING_APPROVAL'
+                              ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}>
+                            {staff.diagnostic_code === 'READY' ? 'Ready for Cashout' : staff.diagnostic_code === 'THRESHOLD_BLOCKED' ? 'Under Limit' : staff.diagnostic_code === 'PENDING_APPROVAL' ? 'Pending Approval' : 'Accruing Only'}
+                          </span>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                            {staff.diagnostic_reason_bn}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Next Month Forecast */}
+                      <td className="p-4 md:p-5 text-right">
+                        <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                          ৳ {Number(staff.next_month_forecast).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Est. liability
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {isSchemeModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -1345,7 +1918,7 @@ export default function PayrollManagement() {
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Scheme Model
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setSchemeForm({ ...schemeForm, scheme_type: 'YEARLY_CONTRACT' })}
@@ -1369,11 +1942,101 @@ export default function PayrollManagement() {
                     <div className="font-bold text-sm">Monthly Regular</div>
                     <div className="text-[11px] text-slate-400 mt-0.5">Fixed monthly base salary</div>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const initialTiers = schemeForm.tiers && schemeForm.tiers.length > 0 ? schemeForm.tiers : defaultContractTiers;
+                      const initialTotal = initialTiers.reduce((acc, t) => acc + (Number(t.monthly_salary) || 0) * 3, 0);
+                      setSchemeForm({
+                        ...schemeForm,
+                        scheme_type: 'STAGGERED_CONTRACT',
+                        contract_amount: String(initialTotal),
+                        salary_amount: String(initialTiers[0].monthly_salary),
+                        contract_duration_months: '12',
+                        contract_end_date: schemeForm.contract_end_date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                        tiers: initialTiers
+                      });
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${schemeForm.scheme_type === 'STAGGERED_CONTRACT'
+                      ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 shadow-xs ring-2 ring-purple-500/20'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      }`}
+                  >
+                    <div className="font-bold text-sm text-purple-700 dark:text-purple-300">📈 Staggered Contract</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">ধাপভিত্তিক চুক্তি (3.5k ➔ 6.5k = 60k)</div>
+                  </button>
                 </div>
               </div>
 
-              {/* Amount input */}
-              {schemeForm.scheme_type === 'YEARLY_CONTRACT' ? (
+              {/* Amount & Tier Input Section */}
+              {schemeForm.scheme_type === 'STAGGERED_CONTRACT' ? (
+                <div className="space-y-3 p-4 bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-purple-900 dark:text-purple-300 uppercase tracking-wider">
+                        📈 ৪টি ত্রৈমাসিক ধাপ (Quarterly Tiers)
+                      </label>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        প্রতি ৩ মাস পর পর বেতন স্বয়ংক্রিয়ভাবে পরবর্তী ধাপে উন্নীত হবে
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">মোট বার্ষিক চুক্তি</span>
+                      <span className="text-sm font-black text-purple-700 dark:text-purple-300">
+                        ৳ {((schemeForm.tiers || []).reduce((acc, t) => acc + (Number(t.monthly_salary) || 0) * 3, 0)).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    {(schemeForm.tiers || []).map((t, idx) => {
+                      const days = parseInt(schemeForm.working_days_per_month) || 26;
+                      const hours = parseFloat(schemeForm.standard_daily_hours) || 8.0;
+                      const monthlyHours = days * hours;
+                      const calcRate = monthlyHours > 0 ? (Number(t.monthly_salary || 0) / monthlyHours).toFixed(2) : '0.00';
+
+                      return (
+                        <div key={idx} className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-1.5 shadow-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                              Tier {t.tier_number || idx + 1} (মাসের {t.start_month_index} - {t.end_month_index})
+                            </span>
+                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                              ৳{calcRate}/h
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
+                            <input
+                              type="number"
+                              value={t.monthly_salary}
+                              onChange={(e) => {
+                                const newSalary = parseFloat(e.target.value) || 0;
+                                const updatedTiers = [...schemeForm.tiers];
+                                updatedTiers[idx] = { ...updatedTiers[idx], monthly_salary: newSalary };
+                                const newTotal = updatedTiers.reduce((acc, cur) => acc + (Number(cur.monthly_salary) || 0) * 3, 0);
+                                setSchemeForm({
+                                  ...schemeForm,
+                                  tiers: updatedTiers,
+                                  contract_amount: String(newTotal),
+                                  salary_amount: String(updatedTiers[0].monthly_salary)
+                                });
+                              }}
+                              className="w-full pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white"
+                              placeholder="3500"
+                            />
+                          </div>
+                          <div className="text-[10px] text-slate-400 flex justify-between">
+                            <span>৩ মাসের মোট:</span>
+                            <span className="font-semibold text-slate-600 dark:text-slate-300">৳{((Number(t.monthly_salary) || 0) * 3).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : schemeForm.scheme_type === 'YEARLY_CONTRACT' ? (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                     Yearly Contract Target (৳)
@@ -1419,7 +2082,7 @@ export default function PayrollManagement() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Standard Daily Hours (Divisor)
+                    Standard Daily Hours (Shift Length)
                   </label>
                   <input
                     type="number"
@@ -1433,7 +2096,7 @@ export default function PayrollManagement() {
               </div>
 
               {/* Dates */}
-              {schemeForm.scheme_type === 'YEARLY_CONTRACT' ? (
+              {(schemeForm.scheme_type === 'YEARLY_CONTRACT' || schemeForm.scheme_type === 'STAGGERED_CONTRACT') ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
@@ -1490,12 +2153,14 @@ export default function PayrollManagement() {
                   ⚡ Computed Hourly Rate Preview:
                 </span>
                 <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300">
-                  ৳ {calculatePreviewRate()} <span className="text-xs font-medium text-slate-500">/ approved hour</span>
+                  ৳ {calculatePreviewRate()} <span className="text-xs font-medium text-slate-500">{schemeForm.scheme_type === 'STAGGERED_CONTRACT' ? '/ hour (Tier 1 Rate)' : '/ approved hour'}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Formula: {schemeForm.scheme_type === 'YEARLY_CONTRACT'
-                    ? `৳${schemeForm.contract_amount || 0} ÷ (${schemeForm.working_days_per_month} days × 12 months × 8h standard)`
-                    : `৳${schemeForm.salary_amount || 0} ÷ (${schemeForm.working_days_per_month} days × 8h standard)`}
+                    ? `৳${schemeForm.contract_amount || 0} ÷ (${schemeForm.working_days_per_month} days × 12 months × ${schemeForm.standard_daily_hours}h standard)`
+                    : schemeForm.scheme_type === 'STAGGERED_CONTRACT'
+                      ? `Tier 1: ৳${schemeForm.tiers?.[0]?.monthly_salary || 3500} ÷ (${schemeForm.working_days_per_month}d × ${schemeForm.standard_daily_hours}h) ➔ Tier 4: ৳${schemeForm.tiers?.[3]?.monthly_salary || 6500}`
+                      : `৳${schemeForm.salary_amount || 0} ÷ (${schemeForm.working_days_per_month} days × ${schemeForm.standard_daily_hours}h standard)`}
                 </p>
               </div>
 
@@ -2261,15 +2926,15 @@ export default function PayrollManagement() {
                             <div>
                               <span className="text-slate-400 text-[10px] uppercase font-bold">Scheme Type</span>
                               <div className="font-black text-slate-900 dark:text-white">
-                                {s.scheme_type === 'YEARLY_CONTRACT' ? '50K Contract Target' : 'Monthly Salary'}
+                                {s.scheme_type === 'STAGGERED_CONTRACT' ? '📈 Staggered Contract' : s.scheme_type === 'YEARLY_CONTRACT' ? '50K Contract Target' : 'Monthly Salary'}
                               </div>
                             </div>
                             <div>
                               <span className="text-slate-400 text-[10px] uppercase font-bold">
-                                {s.scheme_type === 'YEARLY_CONTRACT' ? 'Contract Amount' : 'Salary Amount'}
+                                {s.scheme_type === 'MONTHLY' ? 'Salary Amount' : 'Contract Amount'}
                               </span>
                               <div className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                                ৳ {Number(s.scheme_type === 'YEARLY_CONTRACT' ? s.contract_amount : s.salary_amount).toLocaleString()}
+                                ৳ {Number(s.scheme_type === 'MONTHLY' ? s.salary_amount : s.contract_amount).toLocaleString()}
                               </div>
                             </div>
                             <div>
@@ -2293,6 +2958,35 @@ export default function PayrollManagement() {
                               <div className="font-bold text-slate-800 dark:text-slate-200">{s.standard_daily_hours} hrs/day</div>
                             </div>
                           </div>
+
+                          {s.scheme_type === 'STAGGERED_CONTRACT' && (
+                            <div className="mt-3 p-3.5 bg-purple-50/60 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
+                              <div className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📈</span>
+                                <span>৪টি ত্রৈমাসিক ধাপ বিবরণী (Quarterly Milestone Tiers)</span>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                {(s.tiers && s.tiers.length > 0 ? s.tiers : [
+                                  { tier_number: 1, tier_name: 'Quarter 1 (মাসের ১-৩)', monthly_salary: 3500 },
+                                  { tier_number: 2, tier_name: 'Quarter 2 (মাসের ৪-৬)', monthly_salary: 4500 },
+                                  { tier_number: 3, tier_name: 'Quarter 3 (মাসের ৭-৯)', monthly_salary: 5500 },
+                                  { tier_number: 4, tier_name: 'Quarter 4 (মাসের ১০-১২)', monthly_salary: 6500 }
+                                ]).map((t, tIdx) => {
+                                  const tSalary = Number(t.monthly_salary) || 0;
+                                  const days = Number(s.working_days_per_month) || 26;
+                                  const hours = Number(s.standard_daily_hours) || 8;
+                                  const tRate = Number(t.hourly_rate) || (tSalary / (days * hours));
+                                  return (
+                                    <div key={tIdx} className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                                      <div className="text-[10px] font-bold text-slate-500">Tier {t.tier_number || tIdx + 1}</div>
+                                      <div className="font-black text-purple-700 dark:text-purple-300">৳ {tSalary.toLocaleString()}/mo</div>
+                                      <div className="text-[10px] text-slate-400 font-mono">৳ {tRate.toFixed(2)}/h</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
                           {s.notes && (
                             <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
@@ -2369,11 +3063,21 @@ export default function PayrollManagement() {
               </div>
               <div>
                 <span className="text-slate-400 uppercase font-bold text-[10px] block">Status</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  ✅ Verified Statement
+                <span className={`font-bold ${
+                  selectedAdminInvoice.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' :
+                  selectedAdminInvoice.is_unlocked ? 'text-indigo-600 dark:text-indigo-400' : 'text-purple-600 dark:text-purple-400'
+                }`}>
+                  {selectedAdminInvoice.status_label || (selectedAdminInvoice.is_unlocked ? '✅ Matured' : '⏳ Accruing')}
                 </span>
               </div>
             </div>
+
+            {selectedAdminInvoice.transaction_reference && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                <span>Payment Reference: <strong className="font-mono">{selectedAdminInvoice.transaction_reference}</strong> ({selectedAdminInvoice.payment_method?.toUpperCase()})</span>
+                {selectedAdminInvoice.paid_at && <span>Paid on: {new Date(selectedAdminInvoice.paid_at).toLocaleDateString()}</span>}
+              </div>
+            )}
 
             {/* Staff Info */}
             <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -2409,6 +3113,18 @@ export default function PayrollManagement() {
                     <td className="p-3 text-center font-bold">{selectedAdminInvoice.total_hours} hrs ({selectedAdminInvoice.total_minutes}m)</td>
                     <td className="p-3 text-right font-black text-slate-900 dark:text-white">৳ {Number(selectedAdminInvoice.total_earned || 0).toFixed(2)}</td>
                   </tr>
+                  {Number(selectedAdminInvoice.overtime_hours || 0) > 0 && (
+                    <tr className="bg-amber-50/50 dark:bg-amber-950/20">
+                      <td className="p-3 font-medium">
+                        <div className="font-bold text-amber-800 dark:text-amber-300">
+                          🥭 Mango Overtime Bank ({selectedAdminInvoice.month_label})
+                        </div>
+                        <div className="text-[11px] text-amber-600 dark:text-amber-400">Approved accumulated overtime hours</div>
+                      </td>
+                      <td className="p-3 text-center font-bold text-amber-700 dark:text-amber-300">{selectedAdminInvoice.overtime_hours} hrs</td>
+                      <td className="p-3 text-right font-black text-amber-700 dark:text-amber-300">৳ {Number(selectedAdminInvoice.overtime_cash || 0).toFixed(2)}</td>
+                    </tr>
+                  )}
                   <tr className="bg-emerald-50/40 dark:bg-emerald-950/20">
                     <td className="p-3 font-bold text-emerald-700 dark:text-emerald-300" colSpan={2}>
                       1. Whole Integer Payable (Cashout Limit)

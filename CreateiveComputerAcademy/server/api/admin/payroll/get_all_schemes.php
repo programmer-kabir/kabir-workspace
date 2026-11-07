@@ -58,6 +58,9 @@ try {
     foreach ($userList as $user) {
         $summary = PayrollHelper::getStaffWalletSummary($pdo, $user['user_id']);
         $user['wallet_summary'] = $summary;
+        if (($user['scheme_type'] ?? '') === 'STAGGERED_CONTRACT') {
+            $user['tiers'] = PayrollHelper::getContractTiers($pdo, $user['scheme_id']);
+        }
         $enrichedList[] = $user;
     }
 

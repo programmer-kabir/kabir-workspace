@@ -39,6 +39,13 @@ const dictionary = {
     dev_crons: "Crons & Auto",
     dev_database: "Database",
     dev_editor: "Server Code Editor",
+    staggered_roadmap_title: "1-Year Staggered Career Roadmap",
+    staggered_roadmap_subtitle: "Your annual contract progresses through 4 quarterly milestone tiers. Past months remain permanently locked at their exact rate.",
+    active_quarter: "Active Quarter",
+    quarter_milestones: "Quarterly Milestones",
+    quarter_completed: "Completed",
+    quarter_active: "Active Now",
+    quarter_upcoming: "Upcoming",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -74,6 +81,13 @@ const dictionary = {
     dev_crons: "ক্রন ও অটোমেশন",
     dev_database: "ডাটাবেজ",
     dev_editor: "সার্ভার কোড এডিটর",
+    staggered_roadmap_title: "১ বছরের ধাপভিত্তিক ক্যারিয়ার রোডম্যাপ",
+    staggered_roadmap_subtitle: "আপনার বার্ষিক চুক্তি ৪টি ত্রৈমাসিক ধাপে বিভক্ত। পেছনের মাসগুলো স্থায়ীভাবে সেই ধাপের রেটেই সংরক্ষিত থাকে।",
+    active_quarter: "বর্তমান সক্রিয় ধাপ",
+    quarter_milestones: "ত্রৈমাসিক ধাপসমূহ",
+    quarter_completed: "সম্পন্ন",
+    quarter_active: "বর্তমান সক্রিয়",
+    quarter_upcoming: "আসন্ন",
   }
 };
 

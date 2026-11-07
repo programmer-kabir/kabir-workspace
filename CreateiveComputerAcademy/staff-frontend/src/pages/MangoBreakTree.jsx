@@ -298,9 +298,6 @@ export default function MangoBreakTree() {
             </div>
             <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2 flex-wrap">
               <span>{formatHoursToHuman(summary?.total_expected_hours)}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                ({summary?.total_expected_hours || 0}h)
-              </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Scheduled duty requirement based on roster
@@ -332,9 +329,6 @@ export default function MangoBreakTree() {
             </div>
             <div className="text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight flex items-baseline gap-2 flex-wrap">
               <span>{formatHoursToHuman(summary?.total_worked_hours)}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-100/70 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300">
-                ({summary?.total_worked_hours || 0}h)
-              </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Total clocked-in work time verified
@@ -349,7 +343,7 @@ export default function MangoBreakTree() {
             >
               <span className="underline decoration-dotted">Gross Overtime:</span>
               <span className="font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                +{formatHoursToHuman(summary?.total_overtime_hours)} (+{summary?.total_overtime_hours || 0}h)
+                +{formatHoursToHuman(summary?.total_overtime_hours)}
                 <span className="text-[10px]">➔</span>
               </span>
             </button>
@@ -373,9 +367,6 @@ export default function MangoBreakTree() {
             </div>
             <div className="text-3xl font-black text-rose-600 dark:text-rose-400 tracking-tight flex items-baseline gap-2 flex-wrap">
               <span>-{formatHoursToHuman(summary?.total_gap_hours)}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-100/70 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300">
-                (-{summary?.total_gap_hours || 0}h)
-              </span>
             </div>
             <p className="text-xs text-rose-600/90 dark:text-rose-400/90 mt-1 font-semibold flex items-center gap-1">
               <span>ℹ️</span> Shift shortfalls are handled in Monthly Payroll
@@ -435,9 +426,6 @@ export default function MangoBreakTree() {
               <>
                 <div className="text-3xl font-black text-white tracking-tight flex items-baseline gap-2 flex-wrap">
                   <span>-{formatHoursToHuman(summary?.overtime_debt_hours)}</span>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-white/20 text-rose-100">
-                    (-{summary?.overtime_debt_hours}h)
-                  </span>
                 </div>
                 <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/30 text-rose-100 font-bold text-xs border border-rose-400/30">
                   <span>⚠️</span>
@@ -448,9 +436,6 @@ export default function MangoBreakTree() {
               <>
                 <div className="text-3xl font-black text-white tracking-tight flex items-baseline gap-2 flex-wrap">
                   <span>+{formatHoursToHuman(availableBreakHours)}</span>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-white/25 text-white">
-                    ({availableBreakHours}h)
-                  </span>
                 </div>
                 <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/20 text-white font-black text-xs">
                   <span>🥭</span>
@@ -1128,7 +1113,7 @@ export default function MangoBreakTree() {
                   top: `${pos.y}%`
                 }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 group select-none"
-                title={`Click to inspect: ${mango.title} (+${mango.hours}h Break)`}
+                title={`Click to inspect: ${mango.title} (+${formatHoursToHuman(mango.hours)} Break)`}
               >
                 {/* Natural Branch Anchor & Leaf Sprig (Anchors the Mango to the Tree) */}
                 <div className="relative flex flex-col items-center">
@@ -1285,7 +1270,7 @@ export default function MangoBreakTree() {
                       {/* Prominent High-Contrast Reward Pill Badge */}
                       <div className="mt-1 px-2.5 py-0.5 rounded-full bg-slate-900/95 text-amber-300 text-[10px] font-black tracking-wide border border-amber-400/50 shadow-md flex items-center gap-1 z-20 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-200">
                         <span>🥭</span>
-                        <span>+{mango.hours}h</span>
+                        <span>+{formatHoursToHuman(mango.hours)}</span>
                       </div>
                     </div>
 
@@ -1312,7 +1297,7 @@ export default function MangoBreakTree() {
                 top: '33%'
               }}
               className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 group select-none"
-              title={`Ripening: ${growingMango.current_hours}h / ${growingMango.target_hours}h`}
+              title={`Ripening: ${formatHoursToHuman(growingMango.current_hours)} / ${formatHoursToHuman(growingMango.target_hours)}`}
             >
               {/* Natural Branch Anchor for Growing Mango */}
               <div className="relative flex flex-col items-center">
@@ -1858,15 +1843,26 @@ export default function MangoBreakTree() {
                                 leave.reason || 'Approved Leave'
                               )}
                             </td>
-                            <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 text-xs">
-                              -{formatHoursToHuman(leave.hours_deducted || shiftHours)}
+                            <td className="py-3.5 px-4 font-black text-xs">
+                              {leave.is_student_exempt || leave.type === 'Student Academic Leave' ? (
+                                <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
+                                  <span>0h</span>
+                                  <span className="text-[10px] font-normal text-indigo-500">(Student Quota 🎓)</span>
+                                </span>
+                              ) : (
+                                <span className="text-rose-600 dark:text-rose-400">
+                                  -{formatHoursToHuman(leave.hours_deducted || shiftHours)}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 text-right">
-                              <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border shadow-2xs ${leave.type === 'Absent'
+                              <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border shadow-2xs ${leave.is_student_exempt || leave.type === 'Student Academic Leave'
+                                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                                : leave.type === 'Absent'
                                 ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-700/80 font-black'
                                 : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/60'
                                 }`}>
-                                {leave.type === 'Absent' ? '-8h Debt Impact' : '- Deducted'}
+                                {leave.is_student_exempt || leave.type === 'Student Academic Leave' ? 'No Mango Cut 🛡️' : leave.type === 'Absent' ? '-8h Debt Impact' : '- Deducted'}
                               </span>
                             </td>
                           </tr>
@@ -2073,7 +2069,7 @@ export default function MangoBreakTree() {
                   <span>🥭</span> Efficiency Bonus
                 </div>
                 <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                  +{summary?.tiffin_summary?.bonus_minutes || 0}m <span className="text-xs font-bold">({summary?.total_tiffin_bonus_hours || 0}h)</span>
+                  +{summary?.tiffin_summary?.bonus_minutes || 0}m
                 </div>
                 <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">
                   {summary?.tiffin_summary?.penalty_minutes > 0 ? `Penalty: -${summary?.tiffin_summary?.penalty_minutes}m` : 'বাস্তব সাশ্রয়ী সময়'}
@@ -2087,9 +2083,6 @@ export default function MangoBreakTree() {
                 </div>
                 <div className={`text-xl font-black ${(summary?.tiffin_summary?.net_tiffin_delta || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {(summary?.tiffin_summary?.net_tiffin_delta || 0) >= 0 ? `+${summary?.tiffin_summary?.net_tiffin_delta || 0}m` : `${summary?.tiffin_summary?.net_tiffin_delta}m`}
-                  <span className="text-xs font-bold ml-1">
-                    (+{((summary?.tiffin_summary?.net_tiffin_delta || 0) / 60).toFixed(2)}h)
-                  </span>
                 </div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">
                   সরাসরি ওভারটাইম ব্যাংকে যোগ
@@ -2238,8 +2231,10 @@ export default function MangoBreakTree() {
                 <span className="text-slate-600 dark:text-slate-400 font-semibold">Orchard Equivalent:</span>
                 <span className="text-emerald-700 dark:text-emerald-300 font-bold">100% Paid Compensatory Leave</span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-amber-200/60 dark:border-amber-800/40">
-                {selectedMango.description}
+              <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-amber-200/60 dark:border-amber-800/40 font-medium">
+                {selectedMango.type === 'ripe'
+                  ? selectedMango.description
+                  : `Ripening: ${formatHoursToHuman(selectedMango.current_hours)} / ${formatHoursToHuman(selectedMango.target_hours)} earned. Need ${formatHoursToHuman(selectedMango.remaining_hours)} more overtime to mature!`}
               </p>
             </div>
 

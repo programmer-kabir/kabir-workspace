@@ -43,6 +43,13 @@ try {
     $stmtSchemes->execute([':user_id' => $userId]);
     $allSchemes = $stmtSchemes->fetchAll(PDO::FETCH_ASSOC);
 
+    foreach ($allSchemes as &$sc) {
+        if (($sc['scheme_type'] ?? '') === 'STAGGERED_CONTRACT') {
+            $sc['tiers'] = PayrollHelper::getContractTiers($pdo, $sc['id']);
+        }
+    }
+    unset($sc);
+
     // Monthly breakdown
     $stmtMonthly = $pdo->prepare("
         SELECT 

@@ -163,6 +163,7 @@ class BreakDbHelper {
             }
 
             $totalOvertimeSeconds = 0;
+            $totalShortSeconds = 0;
             foreach ($dailyWorked as $d => $workedSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
                 $expectedSec = $isFriday ? 0 : ($shift_hours * 3600);
@@ -172,9 +173,12 @@ class BreakDbHelper {
                 $diffSec = $workedSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
+                } elseif ($diffSec < -900 && !$isFriday) {
+                    $totalShortSeconds += abs($diffSec);
                 }
             }
             $totalOvertimeMinutes = round($totalOvertimeSeconds / 60);
+            $totalShortMinutes = round($totalShortSeconds / 60);
 
             // 4. Deduct claimed mango breaks (Full Day 480 mins + In-Shift minutes)
             $claimStmt = $db->prepare("SELECT SUM(duration_minutes) as used_mins FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') AND status != 'Rejected'");
@@ -233,7 +237,7 @@ class BreakDbHelper {
 
             // Total net earned across all attendance and transactions
             $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
-            $totalDeductedMins = $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            $totalDeductedMins = $totalShortMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
             $totalNetAvailableMins = max(0, $totalGrossMins - $totalDeductedMins);
 
             // Staff only sees and can claim what is NOT held in the admin vault
@@ -281,6 +285,7 @@ class BreakDbHelper {
             }
 
             $totalOvertimeSeconds = 0;
+            $totalShortSeconds = 0;
             foreach ($dailyWorked as $d => $workedSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
                 $expectedSec = $isFriday ? 0 : ($shift_hours * 3600);
@@ -290,9 +295,12 @@ class BreakDbHelper {
                 $diffSec = $workedSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
+                } elseif ($diffSec < -900 && !$isFriday) {
+                    $totalShortSeconds += abs($diffSec);
                 }
             }
             $totalOvertimeMinutes = round($totalOvertimeSeconds / 60);
+            $totalShortMinutes = round($totalShortSeconds / 60);
 
             $claimStmt = $db->prepare("SELECT SUM(duration_minutes) as used_mins FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') AND status != 'Rejected'");
             $claimStmt->execute([':user_id' => $user_id]);
@@ -342,7 +350,7 @@ class BreakDbHelper {
             $vaultTransInMins = $vaultSummary['transferred_in_minutes'];
 
             $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
-            $totalDeductedMins = $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            $totalDeductedMins = $totalShortMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
             // Return raw signed balance (negative if staff has overtime debt/deficit from absences)
             return (int)($totalGrossMins - $totalDeductedMins);
         } catch (Throwable $e) {

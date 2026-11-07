@@ -34,9 +34,9 @@ try {
         exit();
     }
 
-    if (!in_array($schemeType, ['MONTHLY', 'YEARLY_CONTRACT'])) {
+    if (!in_array($schemeType, ['MONTHLY', 'YEARLY_CONTRACT', 'STAGGERED_CONTRACT'])) {
         http_response_code(400);
-        echo json_encode(['status' => 'error', 'message' => 'scheme_type must be either MONTHLY or YEARLY_CONTRACT.']);
+        echo json_encode(['status' => 'error', 'message' => 'scheme_type must be MONTHLY, YEARLY_CONTRACT, or STAGGERED_CONTRACT.']);
         exit();
     }
 
@@ -45,6 +45,15 @@ try {
         $contractEndDate = null;
         $contractDurationMonths = null;
         $totalContractHours = null;
+    } elseif ($schemeType === 'STAGGERED_CONTRACT') {
+        // 1-Year Staggered Contract with Quarterly Milestones
+        $contractDurationMonths = isset($data['contract_duration_months']) ? intval($data['contract_duration_months']) : 12;
+        $contractEndDate = !empty($data['contract_end_date']) ? trim($data['contract_end_date']) : date('Y-m-d', strtotime("+$contractDurationMonths months", strtotime($contractStartDate)));
+        $totalContractHours = $workingDaysPerMonth * $contractDurationMonths * $standardDailyHours;
+        if (!empty($data['tiers']) && isset($data['tiers'][0]['monthly_salary'])) {
+            $salaryAmount = floatval($data['tiers'][0]['monthly_salary']);
+        }
+        $contractAmount = isset($data['contract_amount']) ? floatval($data['contract_amount']) : 60000.0;
     } else {
         // Yearly contract has defined duration & end date
         $contractDurationMonths = isset($data['contract_duration_months']) ? intval($data['contract_duration_months']) : 12;
@@ -143,6 +152,18 @@ try {
 
         $savedId = $pdo->lastInsertId();
         $message = 'New pay scheme created successfully.';
+    }
+
+    // If STAGGERED_CONTRACT and tiers provided, save / update them
+    if ($schemeType === 'STAGGERED_CONTRACT' && !empty($data['tiers'])) {
+        PayrollHelper::saveContractTiers(
+            $pdo,
+            $savedId,
+            $userId,
+            $data['tiers'],
+            $workingDaysPerMonth,
+            $standardDailyHours
+        );
     }
 
     echo json_encode([

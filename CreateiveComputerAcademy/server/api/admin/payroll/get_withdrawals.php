@@ -30,6 +30,8 @@ try {
             ps.salary_amount,
             w.amount,
             COALESCE(w.overtime_hours_cashed, 0) AS overtime_hours_cashed,
+            COALESCE(w.covered_months, '') AS covered_months,
+            COALESCE(w.invoice_ids, '') AS invoice_ids,
             w.withdrawal_type,
             w.status,
             w.payment_method,

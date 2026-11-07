@@ -17,6 +17,18 @@ class StudentLeaveHelper {
             if (!in_array('student_institution', $cols)) {
                 $db->exec("ALTER TABLE `employees` ADD COLUMN `student_institution` VARCHAR(150) NULL");
             }
+
+            // Ensure leave_requests.type allows 'Student Academic Leave' (widen ENUM to VARCHAR)
+            $lrType = $db->query("SHOW COLUMNS FROM `leave_requests` LIKE 'type'")->fetch(PDO::FETCH_ASSOC);
+            if ($lrType && stripos($lrType['Type'], 'varchar') === false && stripos($lrType['Type'], 'Student Academic Leave') === false) {
+                $db->exec("ALTER TABLE `leave_requests` MODIFY COLUMN `type` VARCHAR(50) NOT NULL DEFAULT 'Casual'");
+            }
+
+            // Ensure attendance.status allows 'Student Leave' (widen ENUM to VARCHAR)
+            $attStatus = $db->query("SHOW COLUMNS FROM `attendance` LIKE 'status'")->fetch(PDO::FETCH_ASSOC);
+            if ($attStatus && stripos($attStatus['Type'], 'varchar') === false && stripos($attStatus['Type'], 'Student Leave') === false) {
+                $db->exec("ALTER TABLE `attendance` MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'Absent'");
+            }
         } catch (Throwable $e) {}
     }
 

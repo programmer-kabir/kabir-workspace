@@ -77,6 +77,22 @@ const Leave = () => {
         return;
     }
 
+    if (type === 'Student Academic Leave') {
+        const reqWorkingDays = calculateWorkingDays(startDate, endDate);
+        if (reqWorkingDays <= 0) {
+            setMessage({ text: 'Selected dates do not include any working days (only Fridays).', type: 'error' });
+            return;
+        }
+        const rem = studentQuota?.remaining_days ?? 0;
+        if (reqWorkingDays > rem) {
+            setMessage({ 
+                text: `Requested ${reqWorkingDays} working day(s) exceed your remaining student leave quota (${rem} day(s) left).`, 
+                type: 'error' 
+            });
+            return;
+        }
+    }
+
     setSubmitLoading(true);
     setMessage(null);
     try {
@@ -108,12 +124,36 @@ const Leave = () => {
 
   const calculateDays = (start, end) => {
       if(!start || !end) return 0;
-      const s = new Date(start);
-      const e = new Date(end);
+      const s = new Date(start + 'T00:00:00');
+      const e = new Date(end + 'T00:00:00');
+      if (e < s) return 0;
       const diffTime = Math.abs(e - s);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
       return diffDays + 1; // inclusive
-  }
+  };
+
+  const calculateWorkingDays = (start, end) => {
+      if(!start || !end) return 0;
+      const cur = new Date(start + 'T00:00:00');
+      const last = new Date(end + 'T00:00:00');
+      if (last < cur) return 0;
+      let count = 0;
+      const iter = new Date(cur);
+      while (iter <= last) {
+          if (iter.getDay() !== 5) { // 5 is Friday
+              count++;
+          }
+          iter.setDate(iter.getDate() + 1);
+      }
+      return count;
+  };
+
+  const calendarDays = calculateDays(startDate, endDate);
+  const workingDays = calculateWorkingDays(startDate, endDate);
+  const isStudentLeave = type === 'Student Academic Leave';
+  const remainingStudentQuota = studentQuota?.remaining_days ?? 0;
+  const isExceedingStudentQuota = isStudentLeave && Boolean(startDate && endDate) && (workingDays > remainingStudentQuota);
+  const isNoWorkingDays = isStudentLeave && Boolean(startDate && endDate) && (workingDays === 0);
 
   const calculateStats = () => {
     let casual = 0;
@@ -197,7 +237,10 @@ const Leave = () => {
                                     <input 
                                         type="date" 
                                         value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
+                                        onChange={(e) => {
+                                            setStartDate(e.target.value);
+                                            if (message?.type === 'success') setMessage(null);
+                                        }}
                                         min={new Date().toISOString().split('T')[0]}
                                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block pl-10 p-2.5 outline-none transition-all"
                                         required
@@ -211,7 +254,10 @@ const Leave = () => {
                                     <input 
                                         type="date" 
                                         value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
+                                        onChange={(e) => {
+                                            setEndDate(e.target.value);
+                                            if (message?.type === 'success') setMessage(null);
+                                        }}
                                         min={startDate}
                                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block pl-10 p-2.5 outline-none transition-all"
                                         required
@@ -221,9 +267,49 @@ const Leave = () => {
                         </div>
 
                         {startDate && endDate && (
-                            <div className="bg-primary-50 text-primary-700 p-3 rounded-xl text-sm font-semibold flex items-center justify-between border border-primary-100">
-                                <span>Total Duration:</span>
-                                <span>{calculateDays(startDate, endDate)} Days</span>
+                            <div className="space-y-2">
+                                <div className="bg-primary-50 dark:bg-slate-900/60 text-primary-700 dark:text-primary-300 p-3 rounded-xl text-sm font-semibold flex items-center justify-between border border-primary-100 dark:border-primary-900/30">
+                                    <span>Total Duration:</span>
+                                    <span className="text-right">
+                                        {isStudentLeave ? (
+                                            <>
+                                                <span className="font-bold">{workingDays} Working Day{workingDays !== 1 ? 's' : ''}</span>
+                                                {calendarDays > workingDays && (
+                                                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400 block sm:inline sm:ml-1.5">
+                                                        ({calendarDays - workingDays} Friday{calendarDays - workingDays !== 1 ? 's' : ''} off excluded)
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <span className="font-bold">{calendarDays} Day{calendarDays !== 1 ? 's' : ''}</span>
+                                        )}
+                                    </span>
+                                </div>
+
+                                {isExceedingStudentQuota && (
+                                    <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 shadow-xs animate-in fade-in duration-200">
+                                        <FiXCircle className="text-rose-500 mt-0.5 shrink-0 text-base" />
+                                        <div>
+                                            <p className="font-bold">⚠️ কোটা অতিক্রম করেছে (Quota Exceeded):</p>
+                                            <p className="mt-0.5 leading-relaxed">
+                                                চলতি মাসে আপনার স্টুডেন্ট কোটা বাকি আছে মাত্র <strong>{remainingStudentQuota} দিন</strong>, 
+                                                কিন্তু নির্বাচিত কর্মদিবস <strong>{workingDays} দিন</strong>। কোটার চেয়ে বেশি দিনের আবেদন করা সম্ভব নয়।
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isNoWorkingDays && (
+                                    <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2.5 shadow-xs animate-in fade-in duration-200">
+                                        <FiClock className="text-amber-500 mt-0.5 shrink-0 text-base" />
+                                        <div>
+                                            <p className="font-bold">⚠️ কোনো কর্মদিবস নেই (Off Day):</p>
+                                            <p className="mt-0.5 leading-relaxed">
+                                                নির্বাচিত তারিখটি শুধুমাত্র শুক্রবার (সাপ্তাহিক ছুটি)। ছুটির দিনে একাডেমিক ছুটির আবেদন করার প্রয়োজন নেই।
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -231,12 +317,15 @@ const Leave = () => {
                             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Leave Type</label>
                             <select 
                                 value={type}
-                                onChange={(e) => setType(e.target.value)}
+                                onChange={(e) => {
+                                    setType(e.target.value);
+                                    if (message?.type === 'success') setMessage(null);
+                                }}
                                 className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-2.5 outline-none transition-all"
                             >
                                 {studentQuota?.is_student && (
                                     <option value="Student Academic Leave">
-                                        🎓 Student Academic Leave ({studentQuota.remaining_days} days left)
+                                        🎓 Student Academic Leave ({remainingStudentQuota} days left)
                                     </option>
                                 )}
                                 <option value="Casual">Casual Leave</option>
@@ -247,7 +336,7 @@ const Leave = () => {
                             {type === 'Student Academic Leave' && (
                                 <div className="mt-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed shadow-xs">
                                     <p className="font-bold">🎓 স্টুডেন্ট একাডেমিক ছুটি:</p>
-                                    <p className="mt-0.5">এই ছুটির জন্য কোনো বেতন প্রদান হবে না (Unpaid Day), তবে আপনার জমানো ম্যাঙ্গো (ওভারটাইম) ব্যালেন্স থেকে ১ মিনিটও কাটা হবে না এবং কোনো জরিমানা হবে না। চলতি মাসের অবশিষ্ট কোটা: <strong>{studentQuota?.remaining_days || 0} দিন</strong>।</p>
+                                    <p className="mt-0.5">এই ছুটির জন্য কোনো বেতন প্রদান হবে না (Unpaid Day), তবে আপনার জমানো ম্যাঙ্গো (ওভারটাইম) ব্যালেন্স থেকে ১ মিনিটও কাটা হবে না এবং কোনো জরিমানা হবে না। চলতি মাসের অবশিষ্ট কোটা: <strong>{remainingStudentQuota} দিন</strong>।</p>
                                 </div>
                             )}
                         </div>
@@ -269,11 +358,15 @@ const Leave = () => {
 
                         <button 
                             type="submit" 
-                            disabled={submitLoading}
-                            className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                            disabled={submitLoading || isExceedingStudentQuota || isNoWorkingDays || !startDate || !endDate || !reason.trim()}
+                            className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {submitLoading ? (
                                 <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                            ) : isExceedingStudentQuota ? (
+                                <>⚠️ কোটা শেষ (সর্বোচ্চ {remainingStudentQuota} দিন সম্ভব)</>
+                            ) : isNoWorkingDays ? (
+                                <>⚠️ শুধুমাত্র শুক্রবার সিলেক্টেড</>
                             ) : (
                                 <>Submit Application <FiSend /></>
                             )}
@@ -304,12 +397,16 @@ const Leave = () => {
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded">
-                                            {leave.type}
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                            leave.type === 'Student Academic Leave'
+                                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                        }`}>
+                                            {leave.type === 'Student Academic Leave' ? '🎓 Student Academic Leave' : leave.type}
                                         </span>
                                         <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                            {new Date(leave.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
-                                            {leave.start_date !== leave.end_date && ` - ${new Date(leave.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                                            {new Date(leave.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
+                                            {leave.start_date !== leave.end_date && ` - ${new Date(leave.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-400 font-medium">Applied on {new Date(leave.created_at).toLocaleDateString()}</p>

@@ -69,6 +69,56 @@ export const StaffAvatar = ({ name = '', picture = '', size = 'md', className = 
   );
 };
 
+const formatHoursToClock = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return '0m';
+  const num = Number(val);
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  const h = Math.floor(abs);
+  const m = Math.round((abs - h) * 60);
+  const finalH = m === 60 ? h + 1 : h;
+  const finalM = m === 60 ? 0 : m;
+
+  let text = '';
+  if (finalH === 0 && finalM === 0) text = '0m';
+  else if (finalH === 0) text = `${finalM}m`;
+  else if (finalM === 0) text = `${finalH}h`;
+  else text = `${finalH}h ${finalM}m`;
+  return isNeg ? `-${text}` : text;
+};
+
+const formatHoursToBengali = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return '০ মিনিট';
+  const num = Number(val);
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  const h = Math.floor(abs);
+  const m = Math.round((abs - h) * 60);
+  const finalH = m === 60 ? h + 1 : h;
+  const finalM = m === 60 ? 0 : m;
+
+  let text = '';
+  if (finalH === 0 && finalM === 0) text = '০ মিনিট';
+  else if (finalH === 0) text = `${finalM} মিনিট`;
+  else if (finalM === 0) text = `${finalH} ঘণ্টা`;
+  else text = `${finalH} ঘণ্টা ${finalM} মিনিট`;
+  return isNeg ? `-${text}` : text;
+};
+
+const formatMinutesToClock = (mins) => {
+  const m = Math.round(Number(mins) || 0);
+  const isNeg = m < 0;
+  const absM = Math.abs(m);
+  const h = Math.floor(absM / 60);
+  const remM = absM % 60;
+  let text = '';
+  if (h === 0 && remM === 0) text = '0m';
+  else if (h === 0) text = `${remM}m`;
+  else if (remM === 0) text = `${h}h`;
+  else text = `${h}h ${remM}m`;
+  return isNeg ? `-${text}` : text;
+};
+
 export default function PayrollWallet() {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -106,6 +156,8 @@ export default function PayrollWallet() {
 
   const openWithdrawModal = () => {
     setIncludeOvertimeCashout(false);
+    const baseVal = Math.floor(Number(data?.summary?.available_withdrawable || 0));
+    setWithdrawAmount(baseVal > 0 ? baseVal : '');
     if (savedPayoutSettings && savedPayoutSettings.account_number) {
       setPaymentMethod(savedPayoutSettings.payment_method || 'bkash');
     } else {
@@ -173,7 +225,8 @@ export default function PayrollWallet() {
       return;
     }
 
-    const available = (data?.summary?.available_withdrawable || 0) + (includeOvertimeCashout ? (data?.summary?.overtime_bank?.cash_value || 0) : 0);
+    const totalFunds = Number(data?.summary?.available_withdrawable_total ?? data?.summary?.available_withdrawable ?? 0) + (includeOvertimeCashout ? Number(data?.summary?.overtime_bank?.cash_value || 0) : 0);
+    const available = Math.floor(totalFunds);
     const minLimit = Number(data?.summary?.min_withdrawal_limit || 0);
 
     if (minLimit > 0 && amountNum < minLimit) {
@@ -249,15 +302,25 @@ export default function PayrollWallet() {
   const hasScheme = data?.has_scheme;
   const scheme = summary?.scheme || {};
   const isYearlyContract = scheme.scheme_type === 'YEARLY_CONTRACT';
+  const isStaggeredContract = scheme.scheme_type === 'STAGGERED_CONTRACT';
+  const contractRoadmap = summary?.contract_roadmap || null;
+  const activeTier = summary?.active_tier || null;
   const progressPercent = summary.progress_percent || 0;
   const targetCompleted = summary.target_completed;
 
-
-  const activeHourlyRate = Number(scheme.hourly_rate || summary?.active_session?.hourly_rate || 0);
+  const activeHourlyRate = Number(activeTier?.hourly_rate || summary?.active_session?.hourly_rate || scheme.hourly_rate || 0);
   const liveEarned = (liveSeconds / 3600) * activeHourlyRate;
-  const liveHours = (liveSeconds / 3600).toFixed(2);
-  const liveMinutes = Math.floor(liveSeconds / 60);
+  const liveTotalMinutes = Math.floor(liveSeconds / 60);
+  const liveMinutes = liveTotalMinutes;
+  const liveClockHours = Math.floor(liveTotalMinutes / 60);
+  const liveClockMinutes = liveTotalMinutes % 60;
   const liveSecsRemainder = liveSeconds % 60;
+  const liveHumanTime = liveClockHours > 0 
+    ? `${liveClockHours}h ${liveClockMinutes}m` 
+    : `${liveClockMinutes}m`;
+  const liveHumanTimeFull = liveClockHours > 0 
+    ? `${liveClockHours} ঘণ্টা ${liveClockMinutes} মিনিট` 
+    : `${liveClockMinutes} মিনিট`;
   const hasActiveShift = !!summary?.active_session;
 
   // Period stats from backend
@@ -299,7 +362,7 @@ export default function PayrollWallet() {
 
   // Active shift contributes to whatever timeframe is selected
   const currentPeriodEarned = basePeriodEarned + (hasActiveShift ? liveEarned : 0);
-  const currentPeriodMinutes = basePeriodMinutes + (hasActiveShift ? liveMinutes : 0);
+  const currentPeriodMinutes = basePeriodMinutes + (hasActiveShift ? liveTotalMinutes : 0);
   const currentPeriodHours = (currentPeriodMinutes / 60).toFixed(1);
   const currentPeriodSessions = basePeriodSessions + (hasActiveShift ? 1 : 0);
 
@@ -344,17 +407,25 @@ export default function PayrollWallet() {
             className="border-2 border-indigo-400/40 shadow-sm shrink-0"
           />
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-400/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wider">
+            <div className={`inline-flex items-center gap-2 px-3 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
+              isStaggeredContract
+                ? 'bg-purple-50 dark:bg-purple-500/20 border-purple-200 dark:border-purple-400/30 text-purple-700 dark:text-purple-300'
+                : isYearlyContract
+                  ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-200 dark:border-amber-400/30 text-amber-700 dark:text-amber-300'
+                  : 'bg-indigo-50 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-400/30 text-indigo-700 dark:text-indigo-300'
+            }`}>
               <FiShield className="w-3.5 h-3.5" />
-              {isYearlyContract ? 'Yearly Company Contract' : 'Monthly Salary Scheme'}
+              {isStaggeredContract ? '1-Year Staggered Contract' : isYearlyContract ? 'Yearly Company Contract' : 'Monthly Salary Scheme'}
             </div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {currentUser?.name}'s Work Wallet
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm max-w-xl">
-              {isYearlyContract
-                ? 'Your approved work time contributes to your agreed contract target. Once complete, 100% of all additional earnings are yours to withdraw!'
-                : 'Your salary is computed dynamically from your approved work time (8 standard hours base divisor + overtime).'}
+              {isStaggeredContract
+                ? 'Your salary progresses across 4 quarterly milestone tiers (৳3.5k ➔ ৳4.5k ➔ ৳5.5k ➔ ৳6.5k). Past months stay permanently locked at their exact rate!'
+                : isYearlyContract
+                  ? 'Your approved work time contributes to your agreed contract target. Once complete, 100% of all additional earnings are yours to withdraw!'
+                  : 'Your salary is computed dynamically from your approved work time (8 standard hours base divisor + overtime).'}
             </p>
           </div>
         </div>
@@ -418,7 +489,7 @@ export default function PayrollWallet() {
                     </span>
                   </div>
                   <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                    Currently Working: <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">{liveHours} hrs</span> ({liveMinutes} mins {liveSecsRemainder} secs)
+                    Currently Working: <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">{liveHumanTime}</span> ({liveTotalMinutes} mins {liveSecsRemainder} secs)
                   </h4>
                 </div>
               </div>
@@ -630,11 +701,25 @@ export default function PayrollWallet() {
                 <div className="text-3xl font-black text-white">
                   ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
                 </div>
-                {summary.fractional_rollover > 0 && (
-                  <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/15 text-[11px] font-semibold text-emerald-50">
-                    + ৳{Number(summary.fractional_rollover).toFixed(2)} rolling forward
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  {summary.fractional_rollover > 0 && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/15 text-[11px] font-semibold text-emerald-50">
+                      + ৳{Number(summary.fractional_rollover).toFixed(2)} rolling forward
+                    </div>
+                  )}
+                  {(() => {
+                    const unlockedList = (summary.monthly_cycle_ledger || []).filter(c => c.is_unlocked && c.status !== 'paid');
+                    if (unlockedList.length > 1) {
+                      const monthNames = unlockedList.map(c => c.month_label.split(' ')[0]).join(' + ');
+                      return (
+                        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-900/60 text-[10px] font-black text-emerald-100 border border-emerald-300/40 shadow-xs">
+                          ✨ {unlockedList.length} মাস সমন্বিত ({monthNames})
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
               </div>
               <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-100/90">
                 <span>Min: ৳{Number(summary.min_withdrawal_limit || 500).toLocaleString()}</span>
@@ -715,6 +800,144 @@ export default function PayrollWallet() {
             </div>
           )}
 
+          {/* Staggered 1-Year Contract Milestone Roadmap (If Staggered Contract) */}
+          {isStaggeredContract && contractRoadmap && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-purple-200/80 dark:border-purple-800/60 shadow-sm space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider border border-purple-200 dark:border-purple-800">
+                      📈 ১ বছরের ধাপভিত্তিক চুক্তি (Staggered Contract)
+                    </span>
+                    {activeTier && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800">
+                        বর্তমান: Tier {activeTier.tier_number} (মাস {activeTier.month_index} of {contractRoadmap.total_months})
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">
+                    ১ বছরের ক্যারিয়ার ও ইনক্রিমেন্ট রোডম্যাপ (4-Quarter Career Growth)
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 max-w-2xl mt-0.5">
+                    প্রতি ৩ মাস পর পর আপনার বেতন স্বয়ংক্রিয়ভাবে পরবর্তী ধাপে উন্নীত হবে। পেছনের মাসগুলো স্থায়ীভাবে সেই ধাপের রেটেই সংরক্ষিত থাকে।
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 bg-purple-50 dark:bg-purple-950/40 p-3.5 rounded-2xl border border-purple-200 dark:border-purple-800/60 shrink-0">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block">বর্তমান মাসিক বেতন</span>
+                    <div className="text-xl font-black text-purple-700 dark:text-purple-300">
+                      ৳ {Number(activeTier?.monthly_salary || 3500).toLocaleString()} <span className="text-xs font-normal text-slate-400">/মাস</span>
+                    </div>
+                  </div>
+                  <div className="h-8 w-px bg-purple-200 dark:bg-purple-800" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block">ঘণ্টা প্রতি রেট</span>
+                    <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                      ৳ {Number(activeTier?.hourly_rate || 0).toFixed(2)}/h
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Overall Contract Progress Bar */}
+              <div className="space-y-2 z-10 relative">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-slate-700 dark:text-slate-300">
+                    বার্ষিক সর্বমোট চুক্তি: ৳ {Number(contractRoadmap.contract_amount || 60000).toLocaleString()}
+                  </span>
+                  <span className="text-purple-700 dark:text-purple-300">
+                    ৳ {Number(contractRoadmap.total_earned || 0).toLocaleString()} অর্জিত ({contractRoadmap.progress_percent}%)
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-600 transition-all duration-700"
+                    style={{ width: `${Math.min(100, Math.max(3, contractRoadmap.progress_percent))}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>চুক্তির অবশিষ্ট: ৳ {Number(contractRoadmap.remaining_contract || 0).toLocaleString()}</span>
+                  <span>মোট ১২ মাস • ৪টি ৩-মাসের কোয়ার্টার</span>
+                </div>
+              </div>
+
+              {/* 4 Quarterly Milestones Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 z-10 relative">
+                {(contractRoadmap.tiers || []).map((t) => {
+                  const isCompleted = t.status === 'completed';
+                  const isActive = t.status === 'active';
+
+                  return (
+                    <div
+                      key={t.tier_number}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col justify-between relative overflow-hidden ${
+                        isActive
+                          ? 'bg-gradient-to-b from-purple-50/80 to-indigo-50/50 dark:from-purple-950/40 dark:to-indigo-950/20 border-purple-400 dark:border-purple-600 shadow-md ring-2 ring-purple-500/20'
+                          : isCompleted
+                            ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50'
+                            : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-80'
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="absolute top-0 right-0 bg-purple-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-bl-lg">
+                          Active Tier
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Tier {t.tier_number}
+                          </span>
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                              <FiCheckCircle size={12} /> সম্পন্ন
+                            </span>
+                          ) : isActive ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-600 dark:text-purple-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping inline-block mr-0.5" />
+                              বর্তমান ধাপ
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400">
+                              🔒 আসন্ন
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                          {t.tier_name || `Quarter ${t.tier_number}`}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          মাসের {t.start_month_index} থেকে {t.end_month_index} (৩ মাস)
+                        </p>
+
+                        <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">মাসিক বেতন</div>
+                          <div className="text-xl font-black text-slate-900 dark:text-white">
+                            ৳ {Number(t.monthly_salary).toLocaleString()}
+                            <span className="text-xs font-normal text-slate-400">/মাস</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-slate-200/40 dark:border-slate-700/40 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">রেট:</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                          ৳ {Number(t.hourly_rate).toFixed(2)}/h
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Monthly Cycle & Rollover Ledger */}
           {summary.monthly_cycle_ledger && summary.monthly_cycle_ledger.length > 0 && (
             <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
@@ -746,16 +969,31 @@ export default function PayrollWallet() {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">
-                          {cycle.month_label || cycle.month_key}
-                        </span>
-                        {cycle.is_unlocked ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                            <FiCheckCircle className="w-3 h-3" /> Matured
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                            {cycle.month_label || cycle.month_key}
+                          </span>
+                          {cycle.tier_number && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-bold border border-purple-200 dark:border-purple-800">
+                              Tier {cycle.tier_number}
+                            </span>
+                          )}
+                        </div>
+                        {cycle.status === 'paid' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                            <FiCheckCircle className="w-3 h-3" /> Paid & Settled
+                          </span>
+                        ) : cycle.status === 'partially_paid' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800">
+                            <FiCheckCircle className="w-3 h-3" /> Partially Paid
+                          </span>
+                        ) : cycle.is_unlocked ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800">
+                            <FiCheckCircle className="w-3 h-3" /> Ready for Payout
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold">
-                            <FiClock className="w-3 h-3" /> Unlocks {cycle.payout_unlock_date?.split('-')[2] || '15'}th
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold">
+                            <FiClock className="w-3 h-3" /> {cycle.payout_unlock_date?.includes('Admin') ? cycle.payout_unlock_date : `Unlocks ${cycle.payout_unlock_date?.split(' ')[0] || '15th'}`}
                           </span>
                         )}
                       </div>
@@ -765,7 +1003,7 @@ export default function PayrollWallet() {
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/40">
-                        <span>{cycle.approved_hours || 0} hrs ({cycle.approved_minutes || 0}m)</span>
+                        <span>{formatMinutesToClock(cycle.approved_minutes)} ({cycle.approved_minutes || 0}m)</span>
                         <span>{cycle.sessions_count || 0} sessions</span>
                       </div>
                     </div>
@@ -821,7 +1059,7 @@ export default function PayrollWallet() {
                           {todayStr} (Live)
                         </td>
                         <td className="py-3 font-mono font-bold text-emerald-700 dark:text-emerald-300">
-                          {liveHours}h ({liveMinutes}m {liveSecsRemainder}s)
+                          {liveClockHours > 0 ? `${liveClockHours}h ${liveClockMinutes}m ${liveSecsRemainder}s` : `${liveClockMinutes}m ${liveSecsRemainder}s`}
                         </td>
                         <td className="py-3">৳ {activeHourlyRate.toFixed(2)}/h</td>
                         <td className="py-3 font-black text-emerald-600 dark:text-emerald-400">
@@ -839,7 +1077,7 @@ export default function PayrollWallet() {
                       filteredEarnings.map((item) => (
                         <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">{item.work_date}</td>
-                          <td className="py-3">{item.approved_minutes} mins ({(item.approved_minutes / 60).toFixed(1)}h)</td>
+                          <td className="py-3">{formatMinutesToClock(item.approved_minutes)} ({item.approved_minutes}m)</td>
                           <td className="py-3">৳ {Number(item.applied_rate).toFixed(2)}/h</td>
                           <td className="py-3 font-bold text-emerald-600 dark:text-emerald-400">৳ {Number(item.earned_amount).toFixed(2)}</td>
                           <td className="py-3 text-right">
@@ -890,12 +1128,19 @@ export default function PayrollWallet() {
                     {data.recent_withdrawals && data.recent_withdrawals.length > 0 ? (
                       data.recent_withdrawals.map((w) => (
                         <tr key={w.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                          <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">{w.requested_at?.split(' ')[0]}</td>
+                          <td className="py-3 font-semibold text-slate-800 dark:text-slate-200">
+                            <div>{w.requested_at?.split(' ')[0]}</div>
+                            {w.covered_months && (
+                              <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
+                                🗓️ {w.covered_months}
+                              </div>
+                            )}
+                          </td>
                           <td className="py-3 font-bold text-slate-900 dark:text-white">
                             ৳ {Number(w.amount).toFixed(2)}
                             {Number(w.overtime_hours_cashed || 0) > 0 && (
-                              <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold" title={`${w.overtime_hours_cashed}h Overtime cashed out`}>
-                                🥭 +{w.overtime_hours_cashed}h OT
+                              <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold" title={`${formatHoursToClock(w.overtime_hours_cashed)} Overtime cashed out`}>
+                                🥭 +{formatHoursToClock(w.overtime_hours_cashed)} OT
                               </span>
                             )}
                           </td>
@@ -950,20 +1195,87 @@ export default function PayrollWallet() {
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                   Available for Cashout
                 </label>
-                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300 block">Integer Cashout Limit</span>
-                    {summary.fractional_rollover > 0 && (
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                        (+৳{Number(summary.fractional_rollover).toFixed(2)} fraction stays in wallet)
+                {(() => {
+                  const baseTotal = Number(summary.available_withdrawable_total ?? summary.available_withdrawable ?? 0);
+                  const otVal = includeOvertimeCashout ? Number(summary.overtime_bank?.cash_value || 0) : 0;
+                  const currentTotal = baseTotal + otVal;
+                  const integerLimit = Math.floor(currentTotal);
+                  const fractionRemainder = (currentTotal - integerLimit).toFixed(2);
+
+                  return (
+                    <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300 block">
+                          Integer Cashout Limit {includeOvertimeCashout && <span className="text-amber-600 dark:text-amber-400 font-bold">(+🥭 Overtime)</span>}
+                        </span>
+                        {Number(fractionRemainder) > 0 && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                            (+৳{fractionRemainder} fraction stays in wallet)
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                        ৳ {integerLimit.toLocaleString()}
                       </span>
-                    )}
-                  </div>
-                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                    ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
-                  </span>
-                </div>
+                    </div>
+                  );
+                })()}
               </div>
+
+              {/* Covered Billing Cycles Detailed Breakdown Box */}
+              {(() => {
+                const coveredCycles = (summary.monthly_cycle_ledger || []).filter(c => c.is_unlocked && c.status !== 'paid');
+                if (coveredCycles.length === 0) return null;
+
+                return (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📋</span>
+                        <span>উত্তোলনযোগ্য মাসসমূহের বিস্তারিত ({coveredCycles.length > 1 ? `${coveredCycles.length} মাস সমন্বিত` : '১টি মাস'})</span>
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                        Covered Billing Cycles
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {coveredCycles.map((c) => (
+                        <div key={c.month_key} className="pt-2 first:pt-0 flex items-start justify-between text-xs">
+                          <div>
+                            <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <span>🗓️ {c.month_label}</span>
+                              <span className="text-[10px] font-medium text-slate-400">({c.sessions_count || 0} সেশন • {formatMinutesToClock(c.approved_minutes)})</span>
+                            </div>
+                            {Number(c.overtime_hours || 0) > 0 && (
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pl-4 mt-0.5">
+                                🥭 ওভারটাইম: {formatHoursToBengali(c.overtime_hours)} (মূল্য: ৳{Number(c.overtime_cash || 0).toFixed(2)})
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="font-black text-slate-900 dark:text-white">৳ {Number(c.total_earned || 0).toLocaleString()}</span>
+                            {Number(c.overtime_hours || 0) > 0 && (
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                +৳{Number(c.overtime_cash || 0).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-600 dark:text-slate-300">
+                        মূল কাজের সমন্বিত ব্যালেন্স:
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                        ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Mango Overtime Bank Conversion Box (Money vs Mango Choice) */}
               {summary.overtime_bank && Number(summary.overtime_bank.available_hours || 0) > 0 && (
@@ -974,15 +1286,25 @@ export default function PayrollWallet() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                            ম্যাঙ্গো ওভারটাইম ব্যাংক {summary.overtime_bank.cycle_label ? `(${summary.overtime_bank.cycle_label})` : ''} ({summary.overtime_bank.available_hours}h / {summary.overtime_bank.ripe_mangoes}টি আম)
+                            ম্যাঙ্গো ওভারটাইম ব্যাংক {summary.overtime_bank.cycle_label ? `(${summary.overtime_bank.cycle_label})` : ''} ({formatHoursToClock(summary.overtime_bank.available_hours)} / {summary.overtime_bank.ripe_mangoes}টি আম)
                           </h4>
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                             Money vs Mango
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                          {summary.overtime_bank.cycle_label ? `${summary.overtime_bank.cycle_label} মাসের ` : ''}আপনার কাছে <strong>{summary.overtime_bank.available_hours} ঘণ্টা</strong> ওভারটাইম জমা আছে (মূল্য: <strong>৳{Number(summary.overtime_bank.cash_value).toLocaleString()}</strong>)। আপনি কি এই ওভারটাইম টাকায় ক্যাশ আউট করতে চান?
+                          {summary.overtime_bank.cycle_label ? `${summary.overtime_bank.cycle_label} মাসের ` : ''}আপনার কাছে <strong>{formatHoursToBengali(summary.overtime_bank.available_hours)} ({formatHoursToClock(summary.overtime_bank.available_hours)})</strong> ওভারটাইম জমা আছে (মূল্য: <strong>৳{Number(summary.overtime_bank.cash_value).toLocaleString()}</strong>)। আপনি কি এই ওভারটাইম টাকায় ক্যাশ আউট করতে চান?
                         </p>
+                        {summary.overtime_bank.monthly_breakdown && summary.overtime_bank.monthly_breakdown.length > 1 && (
+                          <div className="mt-2.5 pl-3 py-1 border-l-2 border-amber-400/60 space-y-1 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                            {summary.overtime_bank.monthly_breakdown.map((mb) => (
+                              <div key={mb.month_key} className="flex items-center justify-between">
+                                <span>• 🗓️ {mb.month_label}: <strong>{formatHoursToBengali(mb.ot_hours)} ({formatHoursToClock(mb.ot_hours)})</strong></span>
+                                <span>(মূল্য: ৳{Number(mb.cash_value).toFixed(2)})</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <input
@@ -992,12 +1314,12 @@ export default function PayrollWallet() {
                       onChange={(e) => {
                         const checked = e.target.checked;
                         setIncludeOvertimeCashout(checked);
-                        const baseVal = Number(summary.available_withdrawable) || 0;
-                        const otVal = Number(summary.overtime_bank.cash_value) || 0;
+                        const baseTotal = Number(summary.available_withdrawable_total ?? summary.available_withdrawable ?? 0);
+                        const otVal = Number(summary.overtime_bank?.cash_value || 0);
                         if (checked) {
-                          setWithdrawAmount(Math.floor(baseVal + otVal));
+                          setWithdrawAmount(Math.floor(baseTotal + otVal));
                         } else {
-                          setWithdrawAmount(Math.floor(baseVal));
+                          setWithdrawAmount(Math.floor(baseTotal));
                         }
                       }}
                       className="w-5 h-5 accent-amber-500 rounded cursor-pointer shrink-0 mt-1"
@@ -1005,7 +1327,7 @@ export default function PayrollWallet() {
                   </label>
                   {includeOvertimeCashout && (
                     <div className="mt-3 pt-3 border-t border-amber-500/20 flex items-center justify-between text-xs font-bold text-amber-700 dark:text-amber-300">
-                      <span>✓ গাছ থেকে {summary.overtime_bank.available_hours} ঘণ্টা ওভারটাইম ক্যাশে রূপান্তর হবে</span>
+                      <span>✓ গাছ থেকে {formatHoursToBengali(summary.overtime_bank.available_hours)} ({formatHoursToClock(summary.overtime_bank.available_hours)}) ওভারটাইম ক্যাশে রূপান্তর হবে</span>
                       <span className="text-sm font-black">+ ৳{Number(summary.overtime_bank.cash_value).toLocaleString()}</span>
                     </div>
                   )}
@@ -1026,7 +1348,7 @@ export default function PayrollWallet() {
                     type="number"
                     step="1"
                     min={summary?.min_withdrawal_limit || 5000}
-                    max={(summary.available_withdrawable || 0) + (includeOvertimeCashout ? (summary.overtime_bank?.cash_value || 0) : 0)}
+                    max={Math.floor(Number(summary.available_withdrawable_total ?? summary.available_withdrawable ?? 0) + (includeOvertimeCashout ? Number(summary.overtime_bank?.cash_value || 0) : 0))}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder={`e.g. ${summary.min_withdrawal_limit || 5000}`}
@@ -1036,7 +1358,7 @@ export default function PayrollWallet() {
                   <button
                     type="button"
                     onClick={() => {
-                      const maxVal = (summary.available_withdrawable || 0) + (includeOvertimeCashout ? (summary.overtime_bank?.cash_value || 0) : 0);
+                      const maxVal = Number(summary.available_withdrawable_total ?? summary.available_withdrawable ?? 0) + (includeOvertimeCashout ? Number(summary.overtime_bank?.cash_value || 0) : 0);
                       setWithdrawAmount(Math.floor(maxVal));
                     }}
                     className="absolute right-2 top-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl hover:bg-indigo-200 transition cursor-pointer"
@@ -1193,11 +1515,22 @@ export default function PayrollWallet() {
               </div>
               <div>
                 <span className="text-slate-400 uppercase font-bold text-[10px] block">Status</span>
-                <span className={`font-bold ${selectedInvoice.is_unlocked ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-600 dark:text-purple-400'}`}>
-                  {selectedInvoice.is_unlocked ? '✅ Matured & Rolled' : '⏳ Accruing'}
+                <span className={`font-bold ${
+                  selectedInvoice.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' :
+                  selectedInvoice.status === 'partially_paid' ? 'text-blue-600 dark:text-blue-400' :
+                  selectedInvoice.is_unlocked ? 'text-indigo-600 dark:text-indigo-400' : 'text-purple-600 dark:text-purple-400'
+                }`}>
+                  {selectedInvoice.status_label || (selectedInvoice.is_unlocked ? '✅ Matured & Rolled' : '⏳ Accruing')}
                 </span>
               </div>
             </div>
+
+            {selectedInvoice.transaction_reference && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                <span>Payment Reference: <strong className="font-mono">{selectedInvoice.transaction_reference}</strong> ({selectedInvoice.payment_method?.toUpperCase()})</span>
+                {selectedInvoice.paid_at && <span>Paid Date: {new Date(selectedInvoice.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+              </div>
+            )}
 
             {/* Staff Info */}
             <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -1209,8 +1542,17 @@ export default function PayrollWallet() {
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Rate Applied</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">৳{Number(scheme.hourly_rate || 0).toFixed(2)} / hr</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                  {selectedInvoice.tier_name ? selectedInvoice.tier_name : 'Rate Applied'}
+                </span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                  ৳{Number(selectedInvoice.tier_hourly_rate || scheme.hourly_rate || 0).toFixed(2)} / hr
+                </span>
+                {selectedInvoice.tier_salary && (
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold block">
+                    Base: ৳{Number(selectedInvoice.tier_salary).toLocaleString()}/mo
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1230,9 +1572,21 @@ export default function PayrollWallet() {
                       Gross Accrued Work Earnings ({selectedInvoice.month_label})
                       <div className="text-[11px] text-slate-400">{selectedInvoice.sessions_count || 0} approved work sessions ({selectedInvoice.days_count || 0} active days)</div>
                     </td>
-                    <td className="p-3 text-center font-bold">{selectedInvoice.approved_hours} hrs ({selectedInvoice.approved_minutes}m)</td>
+                    <td className="p-3 text-center font-bold">{formatMinutesToClock(selectedInvoice.approved_minutes)} ({selectedInvoice.approved_minutes}m)</td>
                     <td className="p-3 text-right font-black text-slate-900 dark:text-white">৳ {Number(selectedInvoice.total_earned || 0).toFixed(2)}</td>
                   </tr>
+                  {Number(selectedInvoice.overtime_hours || 0) > 0 && (
+                    <tr className="bg-amber-50/50 dark:bg-amber-950/20">
+                      <td className="p-3 font-medium">
+                        <div className="font-bold text-amber-800 dark:text-amber-300">
+                          🥭 Mango Overtime Bank ({selectedInvoice.month_label})
+                        </div>
+                        <div className="text-[11px] text-amber-600 dark:text-amber-400">Approved accumulated overtime hours</div>
+                      </td>
+                      <td className="p-3 text-center font-bold text-amber-700 dark:text-amber-300">{formatHoursToClock(selectedInvoice.overtime_hours)}</td>
+                      <td className="p-3 text-right font-black text-amber-700 dark:text-amber-300">৳ {Number(selectedInvoice.overtime_cash || 0).toFixed(2)}</td>
+                    </tr>
+                  )}
                   <tr className="bg-emerald-50/40 dark:bg-emerald-950/20">
                     <td className="p-3 font-bold text-emerald-700 dark:text-emerald-300" colSpan={2}>
                       1. Whole Integer Payable (Cashout Limit)

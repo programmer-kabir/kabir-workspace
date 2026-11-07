@@ -6,10 +6,12 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 require_once '../../../config/database.php';
 require_once '../../notifications/notification_helper.php';
+require_once '../../leave/StudentLeaveHelper.php';
 
 $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
+StudentLeaveHelper::ensureSchema($db);
 
 $data = json_decode(file_get_contents("php://input"));
 

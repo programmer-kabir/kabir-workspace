@@ -269,11 +269,13 @@ try {
                 }
                 // Exclude Fridays and dates already paid/covered by claimed mango breaks
                 if (date('N', $cur) != 5 && !isset($claimed_break_dates[$dt])) {
+                    $isStudentAcademic = (($al['type'] ?? '') === 'Student Academic Leave');
                     $leaveDates[$dt] = [
                         'date' => $dt,
                         'type' => $al['type'] ?? 'Approved Leave',
                         'reason' => $al['reason'] ?? 'Approved Leave Request',
-                        'hours_deducted' => $shift_hours,
+                        'hours_deducted' => $isStudentAcademic ? 0.0 : $shift_hours,
+                        'is_student_exempt' => $isStudentAcademic,
                         'source' => 'Leave Request'
                     ];
                 }
@@ -309,7 +311,11 @@ try {
     } catch (Throwable $e) {}
 
     $total_leave_days = count($leaveDates);
-    $total_leave_deducted_hours = round($total_leave_days * $shift_hours, 2);
+    $total_leave_deducted_hours = 0.0;
+    foreach ($leaveDates as $ld) {
+        $total_leave_deducted_hours += (float)($ld['hours_deducted'] ?? 0);
+    }
+    $total_leave_deducted_hours = round($total_leave_deducted_hours, 2);
     $total_gap_hours = round($total_short_hours + $total_leave_deducted_hours, 2);
 
     $total_absent_days = 0;
@@ -487,18 +493,33 @@ try {
     $vault_trans_out_hours = round($vaultSummary['transferred_out_minutes'] / 60.0, 2);
     $vault_trans_in_hours = round($vaultSummary['transferred_in_minutes'] / 60.0, 2);
 
-    // Available Net Overtime Balance for this period (Vault held hours are completely hidden from staff)
-    $total_gross_overtime_hours = round($total_overtime_hours + $total_bought_overtime_hours + $total_tiffin_bonus_hours + $vault_trans_in_hours, 2);
-    $total_deducted_hours = round($total_claimed_hours + $total_in_shift_mango_hours + $total_cashed_out_overtime_hours + $total_sold_overtime_hours + $total_tiffin_penalty_hours + $total_absent_deducted_hours + $vault_trans_out_hours + $vault_held_hours, 2);
+    // Available Net Overtime Balance for this period calculated from exact seconds to avoid rounding drift
+    $total_gross_overtime_seconds = $total_overtime_seconds + (int)($total_bought_overtime_hours * 3600) + ((int)($tiffin_summary['bonus_minutes'] ?? 0) * 60) + (int)($vaultSummary['transferred_in_minutes'] * 60);
     
-    $net_balance_hours = round($total_gross_overtime_hours - $total_deducted_hours, 2);
-    $has_overtime_debt = ($net_balance_hours < 0);
-    $overtime_debt_hours = $has_overtime_debt ? abs($net_balance_hours) : 0.0;
+    $total_in_shift_break_seconds = 0;
+    foreach ($in_shift_mango_breaks as $imb) {
+        $total_in_shift_break_seconds += (int)$imb['duration_minutes'] * 60;
+    }
+    $total_claimed_break_seconds = 0;
+    foreach ($all_mango_breaks as $mb) {
+        if ($mb['break_type'] === 'Mango Full Day') {
+            $total_claimed_break_seconds += (int)$mb['duration_minutes'] * 60;
+        }
+    }
+    $total_deducted_seconds = $total_short_seconds + $total_claimed_break_seconds + $total_in_shift_break_seconds + (int)($total_cashed_out_overtime_hours * 3600) + (int)($total_sold_overtime_hours * 3600) + ((int)($tiffin_summary['penalty_minutes'] ?? 0) * 60) + (int)($total_absent_deducted_hours * 3600) + (int)($vaultSummary['transferred_out_minutes'] * 60) + (int)($vaultSummary['held_minutes'] * 60);
+
+    $total_gross_overtime_hours = round($total_gross_overtime_seconds / 3600.0, 2);
+    $total_deducted_hours = round($total_deducted_seconds / 3600.0, 2);
+    $net_balance_seconds = $total_gross_overtime_seconds - $total_deducted_seconds;
+    $net_balance_hours = round($net_balance_seconds / 3600.0, 2);
+
+    $has_overtime_debt = ($net_balance_seconds < 0);
+    $overtime_debt_hours = $has_overtime_debt ? round(abs($net_balance_seconds) / 3600.0, 2) : 0.0;
     $available_hours = max(0, $net_balance_hours);
 
     // Calculate Ripe Mangoes for this selected period
     $ripe_mango_count = $has_overtime_debt ? 0 : (int)floor($available_hours / $shift_hours);
-    $partial_hours = $has_overtime_debt ? 0.0 : fmod($available_hours, $shift_hours);
+    $partial_hours = $has_overtime_debt ? 0.0 : round(fmod($available_hours, $shift_hours), 2);
     $progress_to_next_mango = ($shift_hours > 0 && !$has_overtime_debt) ? round(($partial_hours / $shift_hours) * 100, 1) : 0;
     $remaining_hours_for_next = $has_overtime_debt 
         ? round($overtime_debt_hours + $shift_hours, 2) 
@@ -549,6 +570,16 @@ try {
     $growing_mango = null;
     if ($partial_hours > 0) {
         $pos = $posTemplates[$display_mango_count % count($posTemplates)];
+        $curr_h = floor($partial_hours);
+        $curr_m = round(($partial_hours - $curr_h) * 60);
+        if ($curr_m === 60) { $curr_h += 1; $curr_m = 0; }
+        $curr_str = $curr_h > 0 ? ($curr_m > 0 ? "{$curr_h}h {$curr_m}m" : "{$curr_h}h") : "{$curr_m}m";
+
+        $rem_h = floor($remaining_hours_for_next);
+        $rem_m = round(($remaining_hours_for_next - $rem_h) * 60);
+        if ($rem_m === 60) { $rem_h += 1; $rem_m = 0; }
+        $rem_str = $rem_h > 0 ? ($rem_m > 0 ? "{$rem_h}h {$rem_m}m" : "{$rem_h}h") : "{$rem_m}m";
+
         $growing_mango = [
             'id' => $display_mango_count + 1,
             'title' => "Growing Mango #" . ($display_mango_count + 1),
@@ -558,7 +589,7 @@ try {
             'target_hours' => $shift_hours,
             'remaining_hours' => $remaining_hours_for_next,
             'progress_percent' => $progress_to_next_mango,
-            'description' => "Ripening: {$partial_hours}h / {$shift_hours}h earned. Need {$remaining_hours_for_next}h more overtime to mature!",
+            'description' => "Ripening: {$curr_str} / {$shift_hours}h earned. Need {$rem_str} more overtime to mature!",
             'position' => [
                 'x' => min(64, max(36, $pos['x'] + 2)),
                 'y' => min(46, max(22, $pos['y'] + 4))
