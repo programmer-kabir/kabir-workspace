@@ -320,7 +320,9 @@ export default function PayrollManagement() {
   const getEffectiveHours = (h) => {
     const num = parseFloat(h) || 0;
     if (Math.abs(num - 7.33) < 0.05 || Math.abs(num - 7.3333) < 0.05) return 440 / 60;
+    if (Math.abs(num - 6.33) < 0.05 || Math.abs(num - 6.3333) < 0.05) return 380 / 60;
     if (Math.abs(num - 5.33) < 0.05 || Math.abs(num - 5.3333) < 0.05) return 320 / 60;
+    if (Math.abs(num - 4.33) < 0.05 || Math.abs(num - 4.3333) < 0.05) return 260 / 60;
     return num > 0 ? num : 7.33;
   };
 
@@ -2103,69 +2105,133 @@ export default function PayrollManagement() {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Daily Work Hours (নিরেট কাজ)
                     </label>
-                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                      {Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05 ? '৭ ঘণ্টা ২০ মিনিট' : Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05 ? '৫ ঘণ্টা ২০ মিনিট' : `${schemeForm.standard_daily_hours} ঘণ্টা`}
+                    <span className="text-[11px] font-black text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.5 rounded-lg border border-purple-200 dark:border-purple-800">
+                      {Math.floor(Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) / 60)} ঘণ্টা {Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) % 60} মিনিট
                     </span>
                   </div>
-                  <div className="flex gap-1.5 mb-2">
+
+                  {/* 6 Quick Presets Buttons */}
+                  <div className="grid grid-cols-3 gap-1 mb-2">
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '7.33' })}
-                      className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
                         Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                       }`}
-                      title="8h Shift - 40m Tiffin Break = 7h 20m Net Work"
+                      title="8h Shift - 40m Tiffin = 7h 20m Net Work"
                     >
                       ⚡ 7h 20m (8h শিফট)
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5.33' })}
-                      className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
-                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '6.33' })}
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
+                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 6.33) < 0.05
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                       }`}
-                      title="6h Shift - 40m Tiffin Break = 5h 20m Net Work"
+                      title="7h Shift - 40m Tiffin = 6h 20m Net Work"
+                    >
+                      6h 20m (7h শিফট)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5.33' })}
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
+                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                      title="6h Shift - 40m Tiffin = 5h 20m Net Work"
                     >
                       5h 20m (6h শিফট)
                     </button>
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '8' })}
-                      className={`py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
                         parseFloat(schemeForm.standard_daily_hours) === 8
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                       }`}
+                      title="8 Hours Full (No Tiffin)"
                     >
-                      8h
+                      8h ফুল (টিফিন ছাড়া)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '6' })}
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
+                        parseFloat(schemeForm.standard_daily_hours) === 6
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                      title="6 Hours Full (No Tiffin)"
+                    >
+                      6h ফুল (টিফিন ছাড়া)
                     </button>
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5' })}
-                      className={`py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
                         parseFloat(schemeForm.standard_daily_hours) === 5
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                       }`}
+                      title="5 Hours Full (No Tiffin)"
                     >
-                      5h
+                      5h ফুল (টিফিন ছাড়া)
                     </button>
                   </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={schemeForm.standard_daily_hours}
-                    onChange={(e) => setSchemeForm({ ...schemeForm, standard_daily_hours: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
-                    required
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    * ৭.৩৩ = ৭ ঘণ্টা ২০ মিনিট নিরেট কাজ (৪০ মিনিট আনপেইড টিফিন ব্রেক)
-                  </p>
+
+                  {/* Dual Direct Hours & Minutes Inputs */}
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">কাজের ঘণ্টা (Hours)</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          max="24"
+                          value={Math.floor(Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) / 60)}
+                          onChange={(e) => {
+                            const newH = parseInt(e.target.value) || 0;
+                            const curM = Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) % 60;
+                            const dec = (newH + (curM / 60)).toFixed(2);
+                            setSchemeForm({ ...schemeForm, standard_daily_hours: dec });
+                          }}
+                          className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-black text-slate-900 dark:text-white"
+                        />
+                        <span className="text-xs font-bold text-slate-500">ঘণ্টা</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">কাজের মিনিট (Minutes)</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          max="59"
+                          step="5"
+                          value={Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) % 60}
+                          onChange={(e) => {
+                            const curH = Math.floor(Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60) / 60);
+                            const newM = parseInt(e.target.value) || 0;
+                            const dec = (curH + (newM / 60)).toFixed(2);
+                            setSchemeForm({ ...schemeForm, standard_daily_hours: dec });
+                          }}
+                          className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-black text-slate-900 dark:text-white"
+                        />
+                        <span className="text-xs font-bold text-slate-500">মিনিট</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 px-0.5">
+                    <span>💡 মোট দৈনিক নিরেট কাজ: <strong>{Math.round(parseFloat(schemeForm.standard_daily_hours || 0) * 60)} মিনিট</strong></span>
+                    <span className="font-mono text-purple-600 dark:text-purple-400">({schemeForm.standard_daily_hours}h)</span>
+                  </div>
                 </div>
               </div>
 

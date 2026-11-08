@@ -150,7 +150,13 @@ class BreakDbHelper {
             if ($shift_hours <= 0) $shift_hours = 7.33;
             $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
                 ? 440
-                : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05) ? 320 : max(60, intval(round($shift_hours * 60))));
+                : ((abs($shift_hours - 6.33) < 0.05 || abs($shift_hours - 6.3333) < 0.05)
+                    ? 380
+                    : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05)
+                        ? 320
+                        : ((abs($shift_hours - 4.33) < 0.05 || abs($shift_hours - 4.3333) < 0.05)
+                            ? 260
+                            : max(60, intval(round($shift_hours * 60))))));
 
             // 2. Fetch holidays
             $holidays = [];
@@ -290,7 +296,13 @@ class BreakDbHelper {
             if ($shift_hours <= 0) $shift_hours = 7.33;
             $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
                 ? 440
-                : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05) ? 320 : max(60, intval(round($shift_hours * 60))));
+                : ((abs($shift_hours - 6.33) < 0.05 || abs($shift_hours - 6.3333) < 0.05)
+                    ? 380
+                    : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05)
+                        ? 320
+                        : ((abs($shift_hours - 4.33) < 0.05 || abs($shift_hours - 4.3333) < 0.05)
+                            ? 260
+                            : max(60, intval(round($shift_hours * 60))))));
 
             $holidays = [];
             $holStmt = $db->query("SELECT date, expected_hours FROM holidays");

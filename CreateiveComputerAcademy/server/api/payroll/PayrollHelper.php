@@ -65,14 +65,18 @@ class PayrollHelper {
     }
 
     /**
-     * Map daily hours to exact net work minutes (e.g. 7.33h = 440m / 7h 20m, 5.33h = 320m / 5h 20m)
+     * Map daily hours to exact net work minutes (e.g. 7.33h = 440m / 7h 20m, 6.33h = 380m / 6h 20m, 5.33h = 320m / 5h 20m)
      */
     public static function getStandardDailyMinutes($dailyHours) {
         $dh = floatval($dailyHours);
         if (abs($dh - 7.33) < 0.05 || abs($dh - 7.3333) < 0.05) {
             return 440; // 7h 20m (8h shift minus 40m unpaid tiffin)
+        } elseif (abs($dh - 6.33) < 0.05 || abs($dh - 6.3333) < 0.05) {
+            return 380; // 6h 20m (7h shift minus 40m unpaid tiffin)
         } elseif (abs($dh - 5.33) < 0.05 || abs($dh - 5.3333) < 0.05) {
             return 320; // 5h 20m (6h shift minus 40m unpaid tiffin)
+        } elseif (abs($dh - 4.33) < 0.05 || abs($dh - 4.3333) < 0.05) {
+            return 260; // 4h 20m (5h shift minus 40m unpaid tiffin)
         }
         return max(60, intval(round($dh * 60)));
     }
