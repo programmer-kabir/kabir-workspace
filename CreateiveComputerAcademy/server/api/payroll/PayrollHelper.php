@@ -1336,13 +1336,17 @@ class PayrollHelper {
         }
 
         $schemeId = $scheme['id'];
-        $hourlyRate = floatval($scheme['hourly_rate']);
         $workDate = $workDate ?: date('Y-m-d');
         $sessionStart = $sessionStart ?: date('Y-m-d H:i:s', strtotime("-{$approvedMinutes} minutes"));
         $sessionEnd = $sessionEnd ?: date('Y-m-d H:i:s');
 
+        // Resolve active tier rate if staggered contract
+        $tiers = self::getContractTiers($pdo, $schemeId);
+        $tierInfo = self::getTierInfoForMonth($scheme, $workDate, $tiers);
+        $hourlyRate = $tierInfo['hourly_rate'] ?: floatval($scheme['hourly_rate']);
+
         // Check if contract is expired
-        if ($workDate > $scheme['contract_end_date']) {
+        if (!empty($scheme['contract_end_date']) && $workDate > $scheme['contract_end_date']) {
             throw new Exception("The pay scheme contract ended on {$scheme['contract_end_date']}. Please contact admin for renewal.");
         }
 
