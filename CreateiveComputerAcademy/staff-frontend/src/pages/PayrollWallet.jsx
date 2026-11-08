@@ -845,6 +845,13 @@ export default function PayrollWallet() {
                       ৳ {Number(activeTier?.hourly_rate || 0).toFixed(2)}/h
                     </div>
                   </div>
+                  <div className="h-8 w-px bg-purple-200 dark:bg-purple-800 hidden sm:block" />
+                  <div className="hidden sm:block">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block">দৈনিক কাজের লক্ষ্য</span>
+                    <div className="text-sm font-bold text-purple-900 dark:text-purple-200">
+                      ৭ ঘণ্টা ২০ মিনিট <span className="text-[10px] font-normal text-slate-400">(৪০মি. টিফিন)</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

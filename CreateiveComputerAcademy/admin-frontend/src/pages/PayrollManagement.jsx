@@ -317,10 +317,17 @@ export default function PayrollManagement() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const getEffectiveHours = (h) => {
+    const num = parseFloat(h) || 0;
+    if (Math.abs(num - 7.33) < 0.05 || Math.abs(num - 7.3333) < 0.05) return 440 / 60;
+    if (Math.abs(num - 5.33) < 0.05 || Math.abs(num - 5.3333) < 0.05) return 320 / 60;
+    return num > 0 ? num : 7.33;
+  };
+
   // Live Hourly Rate calculation
   const calculatePreviewRate = () => {
     const days = parseInt(schemeForm.working_days_per_month) || 26;
-    const hours = parseFloat(schemeForm.standard_daily_hours) || 8.0;
+    const hours = getEffectiveHours(schemeForm.standard_daily_hours);
     const months = parseInt(schemeForm.contract_duration_months) || 12;
 
     if (schemeForm.scheme_type === 'YEARLY_CONTRACT') {
@@ -2092,17 +2099,73 @@ export default function PayrollManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Standard Daily Hours (Shift Length)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Daily Work Hours (নিরেট কাজ)
+                    </label>
+                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                      {Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05 ? '৭ ঘণ্টা ২০ মিনিট' : Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05 ? '৫ ঘণ্টা ২০ মিনিট' : `${schemeForm.standard_daily_hours} ঘণ্টা`}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '7.33' })}
+                      className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                      title="8h Shift - 40m Tiffin Break = 7h 20m Net Work"
+                    >
+                      ⚡ 7h 20m (8h শিফট)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5.33' })}
+                      className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                      title="6h Shift - 40m Tiffin Break = 5h 20m Net Work"
+                    >
+                      5h 20m (6h শিফট)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '8' })}
+                      className={`py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                        parseFloat(schemeForm.standard_daily_hours) === 8
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      8h
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5' })}
+                      className={`py-1 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                        parseFloat(schemeForm.standard_daily_hours) === 5
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      5h
+                    </button>
+                  </div>
                   <input
                     type="number"
-                    step="0.5"
+                    step="0.01"
                     value={schemeForm.standard_daily_hours}
                     onChange={(e) => setSchemeForm({ ...schemeForm, standard_daily_hours: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
                     required
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    * ৭.৩৩ = ৭ ঘণ্টা ২০ মিনিট নিরেট কাজ (৪০ মিনিট আনপেইড টিফিন ব্রেক)
+                  </p>
                 </div>
               </div>
 
@@ -2966,7 +3029,9 @@ export default function PayrollManagement() {
                             </div>
                             <div>
                               <span className="text-slate-400 text-[10px] uppercase font-bold">Standard Daily Hours</span>
-                              <div className="font-bold text-slate-800 dark:text-slate-200">{s.standard_daily_hours} hrs/day</div>
+                              <div className="font-bold text-slate-800 dark:text-slate-200">
+                                {Math.abs(Number(s.standard_daily_hours) - 7.33) < 0.05 ? '7h 20m / দিন (নিরেট কাজ)' : Math.abs(Number(s.standard_daily_hours) - 5.33) < 0.05 ? '5h 20m / দিন (নিরেট কাজ)' : `${s.standard_daily_hours} hrs/day`}
+                              </div>
                             </div>
                           </div>
 

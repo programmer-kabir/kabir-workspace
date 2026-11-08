@@ -65,27 +65,43 @@ class PayrollHelper {
     }
 
     /**
+     * Map daily hours to exact net work minutes (e.g. 7.33h = 440m / 7h 20m, 5.33h = 320m / 5h 20m)
+     */
+    public static function getStandardDailyMinutes($dailyHours) {
+        $dh = floatval($dailyHours);
+        if (abs($dh - 7.33) < 0.05 || abs($dh - 7.3333) < 0.05) {
+            return 440; // 7h 20m (8h shift minus 40m unpaid tiffin)
+        } elseif (abs($dh - 5.33) < 0.05 || abs($dh - 5.3333) < 0.05) {
+            return 320; // 5h 20m (6h shift minus 40m unpaid tiffin)
+        }
+        return max(60, intval(round($dh * 60)));
+    }
+
+    /**
      * Calculate hourly rate based on scheme parameters
      */
-    public static function calculateHourlyRate($schemeType, $salaryAmount, $contractAmount, $workingDays = 26, $dailyHours = 8.0, $durationMonths = 12) {
+    public static function calculateHourlyRate($schemeType, $salaryAmount, $contractAmount, $workingDays = 26, $dailyHours = 7.33, $durationMonths = 12) {
         $workingDays = max(1, intval($workingDays));
         $dailyHours = max(0.1, floatval($dailyHours));
         $durationMonths = max(1, intval($durationMonths));
 
+        $dailyMins = self::getStandardDailyMinutes($dailyHours);
+        $effectiveDailyHours = $dailyMins / 60.0;
+
         if ($schemeType === 'YEARLY_CONTRACT') {
             $amount = floatval($contractAmount);
-            $totalHours = $workingDays * $durationMonths * $dailyHours;
+            $totalHours = $workingDays * $durationMonths * $effectiveDailyHours;
             if ($totalHours <= 0) return 0.0;
             return round($amount / $totalHours, 6);
         } elseif ($schemeType === 'STAGGERED_CONTRACT') {
             $amount = floatval($salaryAmount > 0 ? $salaryAmount : 3500.0);
-            $monthlyHours = $workingDays * $dailyHours;
+            $monthlyHours = $workingDays * $effectiveDailyHours;
             if ($monthlyHours <= 0) return 0.0;
             return round($amount / $monthlyHours, 6);
         } else {
             // MONTHLY
             $amount = floatval($salaryAmount);
-            $monthlyHours = $workingDays * $dailyHours;
+            $monthlyHours = $workingDays * $effectiveDailyHours;
             if ($monthlyHours <= 0) return 0.0;
             return round($amount / $monthlyHours, 6);
         }
@@ -154,7 +170,9 @@ class PayrollHelper {
 
             $dailyHours = max(0.1, floatval($dailyHours));
             $workingDays = max(1, intval($workingDays));
-            $monthlyHours = $workingDays * $dailyHours;
+            $dailyMins = self::getStandardDailyMinutes($dailyHours);
+            $effectiveDailyHours = $dailyMins / 60.0;
+            $monthlyHours = $workingDays * $effectiveDailyHours;
 
             foreach ($tiers as $idx => $t) {
                 $tNum = isset($t['tier_number']) ? intval($t['tier_number']) : ($idx + 1);
@@ -444,8 +462,8 @@ class PayrollHelper {
                 }
 
                 $rawMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
-                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
-                $standardDailyMinutes = max(60, intval(round($standardDailyHours * 60)));
+                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 7.33);
+                $standardDailyMinutes = self::getStandardDailyMinutes($standardDailyHours);
                 $approvedMinutes = min($rawMinutes, $standardDailyMinutes);
 
                 // Tier-aware active hourly rate for this date
@@ -455,7 +473,8 @@ class PayrollHelper {
                 $earnedAmount = round(($approvedMinutes / 60.0) * $activeDayRate, 2);
                 $sessionStart = date('Y-m-d H:i:s', $inTs);
                 $sessionEnd = date('Y-m-d H:i:s', $outTs);
-                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw}" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$standardDailyHours}h; overtime reserved for Mango Bank]" : "");
+                $dispCapHours = round($standardDailyMinutes / 60.0, 2);
+                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw}" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$dispCapHours}h ({$standardDailyMinutes}m); overtime reserved for Mango Bank]" : "");
 
                 // Check if already in staff_work_earnings
                 $stmtCheck = $pdo->prepare("
@@ -1055,8 +1074,10 @@ class PayrollHelper {
 
         // 5. Overtime Bank (Money vs Mango Choice Calculation)
         try {
-            $shiftHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
-            if ($shiftHours <= 0) $shiftHours = 8.0;
+            $shiftHours = floatval($scheme['standard_daily_hours'] ?: 7.33);
+            if ($shiftHours <= 0) $shiftHours = 7.33;
+            $shiftMins = self::getStandardDailyMinutes($shiftHours);
+            $effectiveShiftHours = $shiftMins / 60.0;
 
             // Determine cutoff date and covered month labels for unlocked withdrawal cycles
             $unlockedMonths = [];
@@ -1125,7 +1146,7 @@ class PayrollHelper {
             $monthlyShortSec = [];
             foreach ($dailyWorkedSec as $dStr => $wSec) {
                 $isFri = (date('N', strtotime($dStr)) == 5);
-                $expSec = $isFri ? 0 : ($shiftHours * 3600);
+                $expSec = $isFri ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$dStr])) {
                     $expSec = $holidays[$dStr] * 3600;
                 }
@@ -1239,7 +1260,7 @@ class PayrollHelper {
                 }
             } catch (Throwable $e) {}
 
-            $totalLeaveHours = round(count($leaveDatesMap) * $shiftHours, 2);
+            $totalLeaveHours = round(count($leaveDatesMap) * $effectiveShiftHours, 2);
             $totalGapHours = round($totalShortHours + $totalLeaveHours, 2);
 
             // Cashed out overtime from staff_withdrawals

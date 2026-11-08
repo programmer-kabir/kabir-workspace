@@ -49,7 +49,8 @@ try {
         // 1-Year Staggered Contract with Quarterly Milestones
         $contractDurationMonths = isset($data['contract_duration_months']) ? intval($data['contract_duration_months']) : 12;
         $contractEndDate = !empty($data['contract_end_date']) ? trim($data['contract_end_date']) : date('Y-m-d', strtotime("+$contractDurationMonths months", strtotime($contractStartDate)));
-        $totalContractHours = $workingDaysPerMonth * $contractDurationMonths * $standardDailyHours;
+        $effectiveHours = PayrollHelper::getStandardDailyMinutes($standardDailyHours) / 60.0;
+        $totalContractHours = round($workingDaysPerMonth * $contractDurationMonths * $effectiveHours, 2);
         if (!empty($data['tiers']) && isset($data['tiers'][0]['monthly_salary'])) {
             $salaryAmount = floatval($data['tiers'][0]['monthly_salary']);
         }
@@ -58,7 +59,8 @@ try {
         // Yearly contract has defined duration & end date
         $contractDurationMonths = isset($data['contract_duration_months']) ? intval($data['contract_duration_months']) : 12;
         $contractEndDate = !empty($data['contract_end_date']) ? trim($data['contract_end_date']) : date('Y-m-d', strtotime('+1 year'));
-        $totalContractHours = $workingDaysPerMonth * $contractDurationMonths * $standardDailyHours;
+        $effectiveHours = PayrollHelper::getStandardDailyMinutes($standardDailyHours) / 60.0;
+        $totalContractHours = round($workingDaysPerMonth * $contractDurationMonths * $effectiveHours, 2);
     }
 
     // Calculate exact hourly rate using 3-pillar formula

@@ -106,6 +106,11 @@ const TiffinTimer = () => {
             ? `${displayStart} – ${displayEnd} · ${fmt(remaining)} বাকি`
             : `${fmt(remaining)} পরে শুরু হবে · ${displayStart} থেকে ${displayEnd}`}
         </p>
+        {isOngoing && (
+          <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90 font-medium mt-0.5">
+            💡 ৪০ মিনিটের মধ্যে দ্রুত টিফিন শেষ করে কাজে ফিরলে বেঁচে যাওয়া সময় সরাসরি Mango Bank (ওভারটাইম)-এ জমা হবে!
+          </p>
+        )}
       </div>
 
       {/* Big countdown */}

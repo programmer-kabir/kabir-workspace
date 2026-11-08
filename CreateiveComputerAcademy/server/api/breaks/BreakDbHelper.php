@@ -130,12 +130,27 @@ class BreakDbHelper {
     public static function getAvailableMangoMinutes($db, $user_id) {
         if (!$db || !$user_id) return 0;
         try {
-            // 1. Fetch user shift hours
-            $userStmt = $db->prepare("SELECT COALESCE(e.shift_hours, 8) as shift_hours FROM users u LEFT JOIN employees e ON u.id = e.user_id WHERE u.id = :user_id LIMIT 1");
-            $userStmt->execute([':user_id' => $user_id]);
-            $uRow = $userStmt->fetch(PDO::FETCH_ASSOC);
-            $shift_hours = $uRow ? (float)$uRow['shift_hours'] : 8.0;
-            if ($shift_hours <= 0) $shift_hours = 8.0;
+            // 1. Fetch user shift hours (prefer active pay scheme standard_daily_hours)
+            $shift_hours = 7.33;
+            try {
+                $psStmt = $db->prepare("SELECT standard_daily_hours FROM staff_pay_schemes WHERE user_id = :user_id AND status = 'active' ORDER BY id DESC LIMIT 1");
+                $psStmt->execute([':user_id' => $user_id]);
+                $psHours = $psStmt->fetchColumn();
+                if ($psHours && floatval($psHours) > 0) {
+                    $shift_hours = floatval($psHours);
+                } else {
+                    $userStmt = $db->prepare("SELECT COALESCE(e.shift_hours, 8) as shift_hours FROM users u LEFT JOIN employees e ON u.id = e.user_id WHERE u.id = :user_id LIMIT 1");
+                    $userStmt->execute([':user_id' => $user_id]);
+                    $uRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+                    $shift_hours = $uRow ? (float)$uRow['shift_hours'] : 8.0;
+                }
+            } catch (Throwable $pe) {
+                $shift_hours = 8.0;
+            }
+            if ($shift_hours <= 0) $shift_hours = 7.33;
+            $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
+                ? 440
+                : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05) ? 320 : max(60, intval(round($shift_hours * 60))));
 
             // 2. Fetch holidays
             $holidays = [];
@@ -166,7 +181,7 @@ class BreakDbHelper {
             $totalShortSeconds = 0;
             foreach ($dailyWorked as $d => $workedSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
-                $expectedSec = $isFriday ? 0 : ($shift_hours * 3600);
+                $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
@@ -256,11 +271,26 @@ class BreakDbHelper {
     public static function getTotalEarnedMangoMinutes($db, $user_id) {
         if (!$db || !$user_id) return 0;
         try {
-            $userStmt = $db->prepare("SELECT COALESCE(e.shift_hours, 8) as shift_hours FROM users u LEFT JOIN employees e ON u.id = e.user_id WHERE u.id = :user_id LIMIT 1");
-            $userStmt->execute([':user_id' => $user_id]);
-            $uRow = $userStmt->fetch(PDO::FETCH_ASSOC);
-            $shift_hours = $uRow ? (float)$uRow['shift_hours'] : 8.0;
-            if ($shift_hours <= 0) $shift_hours = 8.0;
+            $shift_hours = 7.33;
+            try {
+                $psStmt = $db->prepare("SELECT standard_daily_hours FROM staff_pay_schemes WHERE user_id = :user_id AND status = 'active' ORDER BY id DESC LIMIT 1");
+                $psStmt->execute([':user_id' => $user_id]);
+                $psHours = $psStmt->fetchColumn();
+                if ($psHours && floatval($psHours) > 0) {
+                    $shift_hours = floatval($psHours);
+                } else {
+                    $userStmt = $db->prepare("SELECT COALESCE(e.shift_hours, 8) as shift_hours FROM users u LEFT JOIN employees e ON u.id = e.user_id WHERE u.id = :user_id LIMIT 1");
+                    $userStmt->execute([':user_id' => $user_id]);
+                    $uRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+                    $shift_hours = $uRow ? (float)$uRow['shift_hours'] : 8.0;
+                }
+            } catch (Throwable $pe) {
+                $shift_hours = 8.0;
+            }
+            if ($shift_hours <= 0) $shift_hours = 7.33;
+            $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
+                ? 440
+                : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05) ? 320 : max(60, intval(round($shift_hours * 60))));
 
             $holidays = [];
             $holStmt = $db->query("SELECT date, expected_hours FROM holidays");
@@ -288,7 +318,7 @@ class BreakDbHelper {
             $totalShortSeconds = 0;
             foreach ($dailyWorked as $d => $workedSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
-                $expectedSec = $isFriday ? 0 : ($shift_hours * 3600);
+                $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
