@@ -528,7 +528,7 @@ export default function PayrollManagement() {
 
   // Filtered withdrawals
   const filteredWithdrawals = withdrawals.filter(w => {
-    const matchesSearch = !withdrawalSearch || 
+    const matchesSearch = !withdrawalSearch ||
       (w.staff_name && w.staff_name.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
       (w.staff_email && w.staff_email.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
       (w.account_details && w.account_details.toLowerCase().includes(withdrawalSearch.toLowerCase())) ||
@@ -765,28 +765,25 @@ export default function PayrollManagement() {
       <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('schemes')}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
-            activeTab === 'schemes'
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${activeTab === 'schemes'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
-          }`}
+            }`}
         >
           <FiUsers className="w-4 h-4" />
           <span>Assigned Schemes & Live Progress</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-            activeTab === 'schemes' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-          }`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === 'schemes' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}>
             {staffSchemes.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('withdrawals')}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 relative cursor-pointer ${
-            activeTab === 'withdrawals'
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 relative cursor-pointer ${activeTab === 'withdrawals'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
-          }`}
+            }`}
         >
           <FiDollarSign className="w-4 h-4" />
           <span>Withdrawal Requests</span>
@@ -795,9 +792,8 @@ export default function PayrollManagement() {
               {pendingWithdrawalsCount}
             </span>
           ) : (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-              activeTab === 'withdrawals' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === 'withdrawals' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}>
               {withdrawals.length}
             </span>
           )}
@@ -808,17 +804,15 @@ export default function PayrollManagement() {
             setActiveTab('cycles');
             fetchCycles();
           }}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
-            activeTab === 'cycles'
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${activeTab === 'cycles'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
-          }`}
+            }`}
         >
           <FiCalendar className="w-4 h-4" />
           <span>Billing Cycles & Payout Controls</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-            activeTab === 'cycles' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-          }`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === 'cycles' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}>
             {cycles.length}
           </span>
         </button>
@@ -828,18 +822,16 @@ export default function PayrollManagement() {
             setActiveTab('forecast');
             fetchForecast();
           }}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${
-            activeTab === 'forecast'
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${activeTab === 'forecast'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
-          }`}
+            }`}
         >
           <FiTrendingUp className="w-4 h-4" />
           <span>Analytics & Liability Forecast</span>
           {forecastData?.metrics?.ready_to_cashout_total > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-              activeTab === 'forecast' ? 'bg-white/20 text-white' : 'bg-emerald-500 text-white'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === 'forecast' ? 'bg-white/20 text-white' : 'bg-emerald-500 text-white'
+              }`}>
               ৳ {Math.floor(forecastData.metrics.ready_to_cashout_total / 1000)}k
             </span>
           )}
@@ -910,22 +902,20 @@ export default function PayrollManagement() {
                 <div
                   key={user.user_id}
                   onClick={() => handleOpenDetailsModal(user.user_id)}
-                  className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300 group flex flex-col justify-between cursor-pointer relative overflow-hidden ${
-                    isStaggered
+                  className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300 group flex flex-col justify-between cursor-pointer relative overflow-hidden ${isStaggered
                       ? 'border-purple-300/80 dark:border-purple-500/30 hover:border-purple-400'
-                      : isYearly 
-                        ? 'border-amber-300/80 dark:border-amber-500/30 hover:border-amber-400' 
+                      : isYearly
+                        ? 'border-amber-300/80 dark:border-amber-500/30 hover:border-amber-400'
                         : 'border-slate-200/80 dark:border-slate-800 hover:border-indigo-500'
-                  }`}
+                    }`}
                 >
                   {/* Subtle Top Accent Ribbon */}
-                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${
-                    isStaggered
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${isStaggered
                       ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500'
-                      : isYearly 
-                        ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400' 
+                      : isYearly
+                        ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400'
                         : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-400'
-                  }`} />
+                    }`} />
 
                   <div className="space-y-4 pt-1">
                     {/* Header: Profile & Roles */}
@@ -1033,11 +1023,10 @@ export default function PayrollManagement() {
                             <FaCoins className="w-3.5 h-3.5 text-amber-500" />
                             Target: ৳{Number(user.contract_amount || 50000).toLocaleString()}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
-                            targetCompleted 
-                              ? 'bg-emerald-600 text-white' 
+                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${targetCompleted
+                              ? 'bg-emerald-600 text-white'
                               : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20'
-                          }`}>
+                            }`}>
                             {progress.toFixed(1)}% {targetCompleted && '✅'}
                           </span>
                         </div>
@@ -1136,18 +1125,16 @@ export default function PayrollManagement() {
                 <button
                   key={st.key}
                   onClick={() => setWithdrawalFilter(st.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                    withdrawalFilter === st.key
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${withdrawalFilter === st.key
                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-102'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/80'
-                  }`}
+                    }`}
                 >
                   <span>{st.label}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    withdrawalFilter === st.key
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${withdrawalFilter === st.key
                       ? 'bg-white/20 text-white'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}>
+                    }`}>
                     {st.count}
                   </span>
                 </button>
@@ -1230,11 +1217,10 @@ export default function PayrollManagement() {
                           )}
                         </td>
                         <td className="p-4 md:p-5">
-                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                            w.withdrawal_type === 'CONTRACT_SURPLUS'
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${w.withdrawal_type === 'CONTRACT_SURPLUS'
                               ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
                               : 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30'
-                          }`}>
+                            }`}>
                             {w.withdrawal_type === 'CONTRACT_SURPLUS' ? '🏆 Milestone Surplus' : '💼 Monthly Salary'}
                           </span>
                         </td>
@@ -1272,20 +1258,18 @@ export default function PayrollManagement() {
                           )}
                         </td>
                         <td className="p-4 md:p-5">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            w.status === 'paid' || w.status === 'approved'
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${w.status === 'paid' || w.status === 'approved'
                               ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                               : w.status === 'rejected'
                                 ? 'bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400'
                                 : 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 animate-pulse'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              w.status === 'paid' || w.status === 'approved'
+                            }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${w.status === 'paid' || w.status === 'approved'
                                 ? 'bg-emerald-500'
                                 : w.status === 'rejected'
                                   ? 'bg-rose-500'
                                   : 'bg-amber-500'
-                            }`} />
+                              }`} />
                             {w.status}
                           </span>
                         </td>
@@ -1452,11 +1436,10 @@ export default function PayrollManagement() {
                 <button
                   onClick={() => handleToggleCycle(cy)}
                   disabled={togglingCycle === cy.month_key}
-                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm ${
-                    cy.is_unlocked
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm ${cy.is_unlocked
                       ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                  }`}
+                    }`}
                 >
                   {togglingCycle === cy.month_key ? (
                     <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
@@ -1628,11 +1611,10 @@ export default function PayrollManagement() {
                     <button
                       key={f}
                       onClick={() => setForecastFilter(f)}
-                      className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                        forecastFilter === f
+                      className={`px-3 py-1 rounded-lg transition cursor-pointer ${forecastFilter === f
                           ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                        }`}
                     >
                       {f === 'ALL' ? 'All Staff' : f === 'READY' ? 'Ready Now' : f === 'THRESHOLD_BLOCKED' ? 'Under Limit' : 'Pending'}
                     </button>
@@ -1713,15 +1695,14 @@ export default function PayrollManagement() {
                       {/* Diagnostic Reason */}
                       <td className="p-4 md:p-5 max-w-xs">
                         <div className="space-y-1">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            staff.diagnostic_code === 'READY'
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${staff.diagnostic_code === 'READY'
                               ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                               : staff.diagnostic_code === 'THRESHOLD_BLOCKED'
-                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
-                              : staff.diagnostic_code === 'PENDING_APPROVAL'
-                              ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}>
+                                ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                                : staff.diagnostic_code === 'PENDING_APPROVAL'
+                                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}>
                             {staff.diagnostic_code === 'READY' ? 'Ready for Cashout' : staff.diagnostic_code === 'THRESHOLD_BLOCKED' ? 'Under Limit' : staff.diagnostic_code === 'PENDING_APPROVAL' ? 'Pending Approval' : 'Accruing Only'}
                           </span>
                           <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -1749,7 +1730,7 @@ export default function PayrollManagement() {
       )}
       {isSchemeModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-5xl w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
@@ -1786,8 +1767,8 @@ export default function PayrollManagement() {
                       type="button"
                       onClick={() => setIsStaffDropdownOpen(prev => !prev)}
                       className={`w-full flex items-center justify-between gap-3 p-3 rounded-2xl border text-left transition cursor-pointer shadow-xs ${isStaffDropdownOpen
-                          ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-                          : 'bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+                        ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                        : 'bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
                         }`}
                     >
                       {schemeForm.user_id ? (
@@ -1879,8 +1860,8 @@ export default function PayrollManagement() {
                                     setIsStaffDropdownOpen(false);
                                   }}
                                   className={`flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer group ${isSelected
-                                      ? 'bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200 font-semibold'
-                                      : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200 font-semibold'
+                                    : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
                                     }`}
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -2115,11 +2096,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '7.33' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${Math.abs(parseFloat(schemeForm.standard_daily_hours) - 7.33) < 0.05
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="8h Shift - 40m Tiffin = 7h 20m Net Work"
                     >
                       ⚡ 7h 20m (8h শিফট)
@@ -2127,11 +2107,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '6.33' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 6.33) < 0.05
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${Math.abs(parseFloat(schemeForm.standard_daily_hours) - 6.33) < 0.05
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="7h Shift - 40m Tiffin = 6h 20m Net Work"
                     >
                       6h 20m (7h শিফট)
@@ -2139,11 +2118,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5.33' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${Math.abs(parseFloat(schemeForm.standard_daily_hours) - 5.33) < 0.05
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="6h Shift - 40m Tiffin = 5h 20m Net Work"
                     >
                       5h 20m (6h শিফট)
@@ -2151,11 +2129,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '8' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        parseFloat(schemeForm.standard_daily_hours) === 8
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${parseFloat(schemeForm.standard_daily_hours) === 8
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="8 Hours Full (No Tiffin)"
                     >
                       8h ফুল (টিফিন ছাড়া)
@@ -2163,11 +2140,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '6' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        parseFloat(schemeForm.standard_daily_hours) === 6
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${parseFloat(schemeForm.standard_daily_hours) === 6
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="6 Hours Full (No Tiffin)"
                     >
                       6h ফুল (টিফিন ছাড়া)
@@ -2175,11 +2151,10 @@ export default function PayrollManagement() {
                     <button
                       type="button"
                       onClick={() => setSchemeForm({ ...schemeForm, standard_daily_hours: '5' })}
-                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${
-                        parseFloat(schemeForm.standard_daily_hours) === 5
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition border cursor-pointer text-center ${parseFloat(schemeForm.standard_daily_hours) === 5
                           ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-1 ring-purple-400'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                       title="5 Hours Full (No Tiffin)"
                     >
                       5h ফুল (টিফিন ছাড়া)
@@ -2500,7 +2475,7 @@ export default function PayrollManagement() {
       {isDetailsModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-slate-950/75 backdrop-blur-md animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-5xl w-full p-5 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 max-h-[92vh] flex flex-col overflow-hidden">
-            
+
             {/* Header: User Overview & Top Actions */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-3.5 min-w-0">
@@ -2526,16 +2501,15 @@ export default function PayrollManagement() {
                       </span>
                     )}
                     {selectedUserPayrollDetails?.summary?.scheme && (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        selectedUserPayrollDetails.summary.scheme.scheme_type === 'YEARLY_CONTRACT'
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedUserPayrollDetails.summary.scheme.scheme_type === 'YEARLY_CONTRACT'
                           ? 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300'
                           : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300'
-                      }`}>
+                        }`}>
                         {selectedUserPayrollDetails.summary.scheme.scheme_type === 'YEARLY_CONTRACT' ? '50K Contract' : 'Monthly Salary'}
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-3 text-xs text-slate-400 mt-1 flex-wrap">
                     <span>{selectedUserPayrollDetails?.user?.email}</span>
                     {selectedUserPayrollDetails?.user?.phone && (
@@ -2593,7 +2567,7 @@ export default function PayrollManagement() {
               </div>
             ) : selectedUserPayrollDetails ? (
               <div className="space-y-6 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                
+
                 {/* Active Live Session Alert */}
                 {selectedUserPayrollDetails.summary?.active_session && (
                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 animate-pulse">
@@ -2683,16 +2657,14 @@ export default function PayrollManagement() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveDetailsTab(tab.id)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-                        activeDetailsTab === tab.id
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${activeDetailsTab === tab.id
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                           : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-                      }`}
+                        }`}
                     >
                       <span>{tab.label}</span>
-                      <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
-                        activeDetailsTab === tab.id ? 'bg-indigo-700/80 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}>
+                      <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${activeDetailsTab === tab.id ? 'bg-indigo-700/80 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}>
                         {tab.count}
                       </span>
                     </button>
@@ -2942,13 +2914,12 @@ export default function PayrollManagement() {
                                   ৳ {Number(e.earned_amount || 0).toFixed(2)}
                                 </td>
                                 <td className="p-3.5">
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                                    e.source_type === 'attendance'
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${e.source_type === 'attendance'
                                       ? 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300'
                                       : e.source_type === 'timer'
                                         ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
                                         : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
-                                  }`}>
+                                    }`}>
                                     {e.source_type}
                                   </span>
                                 </td>
@@ -3009,13 +2980,12 @@ export default function PayrollManagement() {
                                   {w.transaction_reference || '—'}
                                 </td>
                                 <td className="p-3.5">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                    w.status === 'paid' || w.status === 'approved'
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${w.status === 'paid' || w.status === 'approved'
                                       ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                                       : w.status === 'rejected'
                                         ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
                                         : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
-                                  }`}>
+                                    }`}>
                                     {w.status}
                                   </span>
                                 </td>
@@ -3051,9 +3021,8 @@ export default function PayrollManagement() {
                               <span className="font-bold text-slate-900 dark:text-white text-sm">
                                 Pay Scheme #{s.id} {idx === 0 && '(Active Scheme)'}
                               </span>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                s.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                              }`}>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                                }`}>
                                 {s.status}
                               </span>
                             </div>
@@ -3123,15 +3092,14 @@ export default function PayrollManagement() {
                                   const isDone = rmTier?.status === 'completed';
 
                                   return (
-                                    <div 
-                                      key={tIdx} 
-                                      className={`p-2.5 rounded-xl border flex flex-col justify-between ${
-                                        isCurrent 
-                                          ? 'bg-purple-100/70 dark:bg-purple-950/60 border-purple-400 dark:border-purple-600 shadow-xs ring-1 ring-purple-400' 
-                                          : isDone 
-                                            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800' 
+                                    <div
+                                      key={tIdx}
+                                      className={`p-2.5 rounded-xl border flex flex-col justify-between ${isCurrent
+                                          ? 'bg-purple-100/70 dark:bg-purple-950/60 border-purple-400 dark:border-purple-600 shadow-xs ring-1 ring-purple-400'
+                                          : isDone
+                                            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
                                             : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-purple-900/40 opacity-80'
-                                      }`}
+                                        }`}
                                     >
                                       <div>
                                         <div className="flex items-center justify-between">
@@ -3184,7 +3152,7 @@ export default function PayrollManagement() {
             ) : (
               <div className="p-12 text-center text-slate-400">No details available.</div>
             )}
-            
+
             {/* Modal Footer */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
               <div className="text-xs text-slate-400 font-medium">
@@ -3242,10 +3210,9 @@ export default function PayrollManagement() {
               </div>
               <div>
                 <span className="text-slate-400 uppercase font-bold text-[10px] block">Status</span>
-                <span className={`font-bold ${
-                  selectedAdminInvoice.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' :
-                  selectedAdminInvoice.is_unlocked ? 'text-indigo-600 dark:text-indigo-400' : 'text-purple-600 dark:text-purple-400'
-                }`}>
+                <span className={`font-bold ${selectedAdminInvoice.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' :
+                    selectedAdminInvoice.is_unlocked ? 'text-indigo-600 dark:text-indigo-400' : 'text-purple-600 dark:text-purple-400'
+                  }`}>
                   {selectedAdminInvoice.status_label || (selectedAdminInvoice.is_unlocked ? '✅ Matured' : '⏳ Accruing')}
                 </span>
               </div>

@@ -1,111 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiSearch, FiMessageSquare, FiImage, FiUser, FiPaperclip, FiSend, FiX, FiCheck, FiMoreVertical, FiDownload, FiUsers, FiInfo, FiTrash2, FiUserPlus, FiPlus, FiFile, FiEdit2 } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
 import useMessages from '../components/Messages/useMessages';
 import ChatSidebar from '../components/Messages/ChatSidebar';
 import MessageBubble from '../components/Messages/MessageBubble';
 import MessageInput from '../components/Messages/MessageInput';
 import ChatHeader from '../components/Messages/ChatHeader';
-import NewChatModal from '../components/Messages/NewChatModal';
-import ForwardMessageModal from '../components/Messages/ForwardMessageModal';
-import GroupInfoSidebar from '../components/Messages/GroupInfoSidebar';
-import MiniProfileModal from '../components/Messages/MiniProfileModal';
-import DeleteModal from '../components/Messages/DeleteModal';
-import AddMemberModal from '../components/Messages/AddMemberModal';
-import EditGroupModal from '../components/Messages/EditGroupModal';
-import MessageInfoModal from '../components/Messages/MessageInfoModal';
-import LightboxModal from '../components/Messages/LightboxModal';
-import FullProfileModal from '../components/Messages/FullProfileModal';
+import ChatModals from '../components/Messages/ChatModals';
 import PendingChatView from '../components/Messages/PendingChatView';
 import { ChatBgProvider, useChatBg } from '../context/ChatBgContext';
 
 // Inner component that consumes ChatBgContext
 const MessagesInner = () => {
   const { getChatBg, isPinned } = useChatBg();
-  const navigate = useNavigate();
+  const messagesState = useMessages();
   const {
-    chats, setChats,
-    activeChat, setActiveChat,
-    messages, setMessages,
-    contacts, setContacts,
-    admins, setAdmins,
-    searchChat, setSearchChat,
-    searchContact, setSearchContact,
-    selectedContacts, setSelectedContacts,
-    groupName, setGroupName,
-    contactingAdmin, setContactingAdmin,
-    pendingChatTarget, setPendingChatTarget,
-    isNewChatModalOpen, setIsNewChatModalOpen,
-    isGroupInfoOpen, setIsGroupInfoOpen,
-    isAddMemberModalOpen, setIsAddMemberModalOpen,
-    isEditGroupModalOpen, setIsEditGroupModalOpen,
-    editGroupName, setEditGroupName,
-    editGroupFile, setEditGroupFile,
-    memberSearchQuery, setMemberSearchQuery,
-    selectedMiniProfile, setSelectedMiniProfile,
-    userToRemove, setUserToRemove,
-    loadingChats, setLoadingChats,
-    loadingMessages, setLoadingMessages,
-    typedMessage, setTypedMessage,
-    selectedFile, setSelectedFile,
-    lightboxImage, setLightboxImage,
-    isSending, setIsSending,
-    replyingTo, setReplyingTo,
-    editingMessage, setEditingMessage,
-    activeDropdown, setActiveDropdown,
-    infoMessage, setInfoMessage,
-    messageToDelete, setMessageToDelete,
-    typingUsers, setTypingUsers,
-    forwardingMessage, setForwardingMessage,
-    forwardModalOpen, setForwardModalOpen,
-    forwardSearchQuery, setForwardSearchQuery,
-    forwardSelectedTargets, setForwardSelectedTargets,
-    isForwarding, setIsForwarding,
-    reactionHoverId, setReactionHoverId,
-    showEmojiPickerId, setShowEmojiPickerId,
-    emojis,
-    viewingProfileCode, setViewingProfileCode,
-    viewingProfileData, setViewingProfileData,
-    loadingProfile, setLoadingProfile,
+    activeChat, setActiveChat, messages, setMessages, contacts, admins,
+    searchChat, setSearchChat, searchContact, setSearchContact, selectedContacts, setSelectedContacts, groupName, setGroupName,
+    contactingAdmin, pendingChatTarget, isNewChatModalOpen, setIsNewChatModalOpen, isEditGroupModalOpen,
+    isGroupInfoOpen, setIsGroupInfoOpen, isAddMemberModalOpen, setIsAddMemberModalOpen, setIsEditGroupModalOpen,
+    editGroupName, setEditGroupName, editGroupFile, setEditGroupFile, memberSearchQuery, setMemberSearchQuery,
+    selectedMiniProfile, setSelectedMiniProfile, userToRemove, setUserToRemove, loadingChats, loadingMessages,
+    setLoadingMessages, typedMessage, setTypedMessage, selectedFile, setSelectedFile, lightboxImage, setLightboxImage, isSending,
+    replyingTo, setReplyingTo, editingMessage, setEditingMessage, activeDropdown, setActiveDropdown, isForwarding,
+    infoMessage, setInfoMessage, messageToDelete, setMessageToDelete, typingUsers, setTypingUsers, setForwardingMessage,
+    forwardModalOpen, setForwardModalOpen, forwardSearchQuery, setForwardSearchQuery, forwardSelectedTargets, setForwardSelectedTargets,
+    showEmojiPickerId, setShowEmojiPickerId, emojis, viewingProfileCode, setViewingProfileCode, viewingProfileData, loadingProfile,
     // Functions
-    fetchChats,
-    fetchMessages,
-    handleReact,
-    handleViewProfile,
-    loadContacts,
-    loadAdmins,
-    handleContactAdmin,
-    handleSendMessage,
-    handleDownloadImage,
-    handleDeleteMessage,
-    handleForwardMessage,
-    toggleForwardTarget,
-    filteredForwardContacts,
-    filteredForwardChats,
-    handleCreateChat,
-    handleManageMember,
-    handleAddMembers,
-    handleEditGroup,
-    handleTyping,
+    handleViewProfile, loadContacts, loadAdmins, handleContactAdmin, handleSendMessage, handleDeleteMessage,
+    handleForwardMessage, toggleForwardTarget, filteredForwardContacts, handleReact, fetchMessages, fetchChats,
+    filteredForwardChats, handleCreateChat, handleManageMember, handleAddMembers, handleEditGroup, handleTyping,
     // Helpers & computed
-    getDirectRecipient,
-    getChatTitle,
-    getChatSub,
-    toggleContactSelection,
-    filteredChats,
-    filteredContacts,
-    handleDirectMessage,
-    amIAdmin,
-    amIRemoved,
-    scrollToBottom,
-    messagesEndRef,
-    fileInputRef,
-    currentUser,
-    API_URL,
-  } = useMessages();
-
+    getDirectRecipient, getChatTitle, getChatSub, toggleContactSelection, filteredChats, filteredContacts, API_URL,
+    handleDirectMessage, amIAdmin, amIRemoved, scrollToBottom, messagesEndRef, fileInputRef, currentUser,
+  } = messagesState;
 
   // Initial loads and polling interval
   useEffect(() => {
@@ -340,129 +267,8 @@ const MessagesInner = () => {
         )}
       </div>
 
-      {/* 3. NEW CHAT / GROUP MODAL */}
-      <NewChatModal
-        isNewChatModalOpen={isNewChatModalOpen}
-        setIsNewChatModalOpen={setIsNewChatModalOpen}
-        selectedContacts={selectedContacts}
-        setSelectedContacts={setSelectedContacts}
-        groupName={groupName}
-        setGroupName={setGroupName}
-        searchContact={searchContact}
-        setSearchContact={setSearchContact}
-        filteredContacts={filteredContacts}
-        toggleContactSelection={toggleContactSelection}
-        handleCreateChat={handleCreateChat}
-        API_URL={API_URL}
-      />
-
-      {/* Lightbox for Images */}
-      <LightboxModal
-        lightboxImage={lightboxImage}
-        setLightboxImage={setLightboxImage}
-        API_URL={API_URL}
-      />
-
-      {/* 4. MESSAGE INFO MODAL */}
-      <MessageInfoModal
-        infoMessage={infoMessage}
-        setInfoMessage={setInfoMessage}
-      />
-
-      {/* 5. DELETE CONFIRMATION MODALS */}
-      <DeleteModal
-        messageToDelete={messageToDelete}
-        setMessageToDelete={setMessageToDelete}
-        handleDeleteMessage={handleDeleteMessage}
-        userToRemove={userToRemove}
-        setUserToRemove={setUserToRemove}
-        handleManageMember={handleManageMember}
-      />
-
-      {/* 6. FORWARD MODAL */}
-      <ForwardMessageModal
-        forwardModalOpen={forwardModalOpen}
-        setForwardModalOpen={setForwardModalOpen}
-        forwardSearchQuery={forwardSearchQuery}
-        setForwardSearchQuery={setForwardSearchQuery}
-        filteredForwardChats={filteredForwardChats}
-        filteredForwardContacts={filteredForwardContacts}
-        forwardSelectedTargets={forwardSelectedTargets}
-        toggleForwardTarget={toggleForwardTarget}
-        contacts={contacts}
-        API_URL={API_URL}
-        handleForwardMessage={handleForwardMessage}
-        isForwarding={isForwarding}
-      />
-
-      {/* Group Info Sidebar */}
-      <GroupInfoSidebar
-        isGroupInfoOpen={isGroupInfoOpen}
-        setIsGroupInfoOpen={setIsGroupInfoOpen}
-        activeChat={activeChat}
-        setSelectedMiniProfile={setSelectedMiniProfile}
-        setMemberSearchQuery={setMemberSearchQuery}
-        memberSearchQuery={memberSearchQuery}
-        API_URL={API_URL}
-        amIAdmin={amIAdmin}
-        setEditGroupName={setEditGroupName}
-        setEditGroupFile={setEditGroupFile}
-        setIsEditGroupModalOpen={setIsEditGroupModalOpen}
-        setIsAddMemberModalOpen={setIsAddMemberModalOpen}
-        currentUser={currentUser}
-      />
-
-      {/* Mini Profile Modal */}
-      <MiniProfileModal
-        selectedMiniProfile={selectedMiniProfile}
-        setSelectedMiniProfile={setSelectedMiniProfile}
-        API_URL={API_URL}
-        amIAdmin={amIAdmin}
-        currentUser={currentUser}
-        handleManageMember={handleManageMember}
-        setUserToRemove={setUserToRemove}
-        handleDirectMessage={handleDirectMessage}
-        handleViewProfile={handleViewProfile}
-      />
-
-
-
-      {/* Add Members Modal */}
-      <AddMemberModal
-        isAddMemberModalOpen={isAddMemberModalOpen}
-        setIsAddMemberModalOpen={setIsAddMemberModalOpen}
-        selectedContacts={selectedContacts}
-        setSelectedContacts={setSelectedContacts}
-        searchContact={searchContact}
-        setSearchContact={setSearchContact}
-        contacts={contacts}
-        activeChat={activeChat}
-        toggleContactSelection={toggleContactSelection}
-        API_URL={API_URL}
-        handleAddMembers={handleAddMembers}
-      />
-
-      {/* Edit Group Modal */}
-      <EditGroupModal
-        isEditGroupModalOpen={isEditGroupModalOpen}
-        setIsEditGroupModalOpen={setIsEditGroupModalOpen}
-        handleEditGroup={handleEditGroup}
-        editGroupFile={editGroupFile}
-        setEditGroupFile={setEditGroupFile}
-        activeChat={activeChat}
-        API_URL={API_URL}
-        editGroupName={editGroupName}
-        setEditGroupName={setEditGroupName}
-      />
-
-      {/* Full Staff Profile Modal */}
-      <FullProfileModal
-        viewingProfileCode={viewingProfileCode}
-        setViewingProfileCode={setViewingProfileCode}
-        viewingProfileData={viewingProfileData}
-        loadingProfile={loadingProfile}
-        API_URL={API_URL}
-      />
+      {/* 3. Floating Modals & Overlays */}
+      <ChatModals {...messagesState} />
 
     </div>
   );

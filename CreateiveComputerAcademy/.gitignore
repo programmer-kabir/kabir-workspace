@@ -50,3 +50,5 @@ server/backups/*
 
 server/config/google_drive_token_cache.json
 *token_cache*.json
+
+server/error_log
