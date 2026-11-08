@@ -993,6 +993,17 @@ export default function PayrollManagement() {
                             মাস {activeTier?.month_index || 1} of 12
                           </span>
                         </div>
+
+                        {/* Period Days Count & Promotion Tracker */}
+                        {activeTier?.days_elapsed !== undefined && (
+                          <div className="flex items-center justify-between text-[11px] text-purple-900 dark:text-purple-200 bg-purple-100/70 dark:bg-purple-900/40 px-2.5 py-1.5 rounded-xl border border-purple-200/50 dark:border-purple-800/50 font-medium">
+                            <span>⏳ এই ধাপে: <strong>{activeTier.days_elapsed} দিন</strong> {activeTier.attendance_days > 0 ? `(${activeTier.attendance_days} দিন কাজ)` : ''}</span>
+                            <span className="font-bold text-indigo-700 dark:text-indigo-300">
+                              {activeTier.days_remaining > 0 ? `বাকি: ${activeTier.days_remaining} দিন` : 'চূড়ান্ত ধাপ'}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-700"
@@ -2976,11 +2987,48 @@ export default function PayrollManagement() {
                                   const days = Number(s.working_days_per_month) || 26;
                                   const hours = Number(s.standard_daily_hours) || 8;
                                   const tRate = Number(t.hourly_rate) || (tSalary / (days * hours));
+                                  const rmTier = selectedUserPayrollDetails?.summary?.contract_roadmap?.tiers?.[tIdx];
+                                  const isCurrent = rmTier?.status === 'active';
+                                  const isDone = rmTier?.status === 'completed';
+
                                   return (
-                                    <div key={tIdx} className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-purple-100 dark:border-purple-900/40">
-                                      <div className="text-[10px] font-bold text-slate-500">Tier {t.tier_number || tIdx + 1}</div>
-                                      <div className="font-black text-purple-700 dark:text-purple-300">৳ {tSalary.toLocaleString()}/mo</div>
-                                      <div className="text-[10px] text-slate-400 font-mono">৳ {tRate.toFixed(2)}/h</div>
+                                    <div 
+                                      key={tIdx} 
+                                      className={`p-2.5 rounded-xl border flex flex-col justify-between ${
+                                        isCurrent 
+                                          ? 'bg-purple-100/70 dark:bg-purple-950/60 border-purple-400 dark:border-purple-600 shadow-xs ring-1 ring-purple-400' 
+                                          : isDone 
+                                            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800' 
+                                            : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-purple-900/40 opacity-80'
+                                      }`}
+                                    >
+                                      <div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-[10px] font-bold text-slate-500">Tier {t.tier_number || tIdx + 1}</span>
+                                          {isCurrent ? (
+                                            <span className="text-[9px] font-black text-purple-600 dark:text-purple-300 uppercase">🔥 বর্তমান</span>
+                                          ) : isDone ? (
+                                            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase">✅ সম্পন্ন</span>
+                                          ) : (
+                                            <span className="text-[9px] font-medium text-slate-400">🔒 আসন্ন</span>
+                                          )}
+                                        </div>
+                                        <div className="font-black text-purple-700 dark:text-purple-300 mt-0.5">৳ {tSalary.toLocaleString()}/mo</div>
+                                        <div className="text-[10px] text-slate-400 font-mono">৳ {tRate.toFixed(2)}/h</div>
+                                        {rmTier?.start_date && rmTier?.end_date && (
+                                          <div className="text-[9px] font-mono text-slate-400 mt-1">
+                                            {rmTier.start_date.substring(5)} ~ {rmTier.end_date.substring(5)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {rmTier?.total_days && (
+                                        <div className="mt-1.5 pt-1.5 border-t border-slate-200/50 dark:border-slate-800 text-[9px] text-slate-500 flex justify-between">
+                                          <span>{rmTier.days_elapsed}/{rmTier.total_days} দিন</span>
+                                          {isCurrent && rmTier.days_remaining > 0 && (
+                                            <span className="font-bold text-purple-700 dark:text-purple-300">বাকি: {rmTier.days_remaining}দ</span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}

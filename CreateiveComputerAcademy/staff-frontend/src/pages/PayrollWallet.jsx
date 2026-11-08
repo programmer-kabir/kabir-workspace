@@ -813,8 +813,13 @@ export default function PayrollWallet() {
                       📈 ১ বছরের ধাপভিত্তিক চুক্তি (Staggered Contract)
                     </span>
                     {activeTier && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800">
-                        বর্তমান: Tier {activeTier.tier_number} (মাস {activeTier.month_index} of {contractRoadmap.total_months})
+                      <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 flex-wrap">
+                        <span>বর্তমান: Tier {activeTier.tier_number} (মাস {activeTier.month_index} of {contractRoadmap.total_months})</span>
+                        {activeTier.days_elapsed !== undefined && (
+                          <span className="opacity-90 font-medium text-slate-500 dark:text-slate-400">
+                            • {activeTier.days_elapsed} দিন অতিবাহিত {activeTier.days_remaining > 0 && `(আর ${activeTier.days_remaining} দিন বাকি)`}
+                          </span>
+                        )}
                       </span>
                     )}
                   </div>
@@ -914,6 +919,11 @@ export default function PayrollWallet() {
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                           মাসের {t.start_month_index} থেকে {t.end_month_index} (৩ মাস)
+                          {t.start_date && t.end_date && (
+                            <span className="block text-[10px] text-slate-400 font-mono mt-0.5">
+                              📅 {t.start_date} ~ {t.end_date}
+                            </span>
+                          )}
                         </p>
 
                         <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
@@ -923,6 +933,38 @@ export default function PayrollWallet() {
                             <span className="text-xs font-normal text-slate-400">/মাস</span>
                           </div>
                         </div>
+
+                        {/* Days Breakdown in this Quarter */}
+                        {t.total_days && (
+                          <div className="mt-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/40 text-[10px] space-y-1">
+                            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+                              <span>সময় অতিবাহিত:</span>
+                              <span className="font-bold text-slate-800 dark:text-slate-100">
+                                {t.days_elapsed} / {t.total_days} দিন
+                              </span>
+                            </div>
+                            {isActive && t.days_remaining > 0 && (
+                              <div className="flex items-center justify-between text-purple-700 dark:text-purple-300 font-medium">
+                                <span>ইনক্রিমেন্টে বাকি:</span>
+                                <span className="font-bold">{t.days_remaining} দিন</span>
+                              </div>
+                            )}
+                            {t.attendance_days > 0 && (
+                              <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                                <span>উপস্থিতি হাজিরা:</span>
+                                <span className="font-bold">{t.attendance_days} দিন</span>
+                              </div>
+                            )}
+                            {isActive && (
+                              <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-1">
+                                <div 
+                                  className="h-full bg-purple-500 rounded-full transition-all"
+                                  style={{ width: `${t.days_progress}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-3 pt-2 border-t border-slate-200/40 dark:border-slate-700/40 flex items-center justify-between text-[11px]">

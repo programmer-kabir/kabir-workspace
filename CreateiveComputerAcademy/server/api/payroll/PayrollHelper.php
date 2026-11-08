@@ -249,12 +249,12 @@ class PayrollHelper {
     /**
      * Build visual roadmap object for Staggered Contracts
      */
-    public static function buildContractRoadmap($scheme, $tiers, $totalEarned) {
+    public static function buildContractRoadmap($scheme, $tiers, $totalEarned, $pdo = null, $userId = null) {
         if (($scheme['scheme_type'] ?? '') !== 'STAGGERED_CONTRACT' || empty($tiers)) {
             return null;
         }
 
-        $contractStart = $scheme['contract_start_date'];
+        $contractStart = !empty($scheme['contract_start_date']) ? $scheme['contract_start_date'] : date('Y-m-d');
         $contractTarget = floatval($scheme['contract_amount'] ?: 60000.0);
         $startTs = strtotime($contractStart);
         $startYear = (int)date('Y', $startTs);
@@ -263,24 +263,65 @@ class PayrollHelper {
         $nowYear = (int)date('Y');
         $nowMonth = (int)date('n');
         $currentMonthIndex = max(1, ($nowYear - $startYear) * 12 + ($nowMonth - $startMonth) + 1);
+        $today = date('Y-m-d');
+        $todayTs = strtotime($today);
 
         $tierList = [];
         $activeTier = null;
         $totalContractMonths = intval($scheme['contract_duration_months'] ?: 12);
 
-        foreach ($tiers as $t) {
+        foreach ($tiers as $idx => $t) {
             $tNum = intval($t['tier_number']);
             $sIdx = intval($t['start_month_index']);
             $eIdx = intval($t['end_month_index']);
             $sal = floatval($t['monthly_salary']);
             $rate = floatval($t['hourly_rate']);
 
+            // Precise date boundaries for this tier
+            $tierStartDate = date('Y-m-d', strtotime("+" . ($sIdx - 1) . " months", $startTs));
+            $nextMonthStart = date('Y-m-d', strtotime("+" . $eIdx . " months", $startTs));
+            $tierEndDate = date('Y-m-d', strtotime("-1 day", strtotime($nextMonthStart)));
+            $totalDays = max(1, (int)round((strtotime($tierEndDate) - strtotime($tierStartDate)) / 86400) + 1);
+
             $status = 'upcoming';
-            if ($currentMonthIndex > $eIdx) {
+            $daysElapsed = 0;
+            $daysRemaining = $totalDays;
+
+            if ($today > $tierEndDate) {
                 $status = 'completed';
-            } elseif ($currentMonthIndex >= $sIdx && $currentMonthIndex <= $eIdx) {
+                $daysElapsed = $totalDays;
+                $daysRemaining = 0;
+            } elseif ($today >= $tierStartDate && $today <= $tierEndDate) {
                 $status = 'active';
+                $daysElapsed = max(1, (int)round(($todayTs - strtotime($tierStartDate)) / 86400) + 1);
+                $daysRemaining = max(0, (int)round((strtotime($tierEndDate) - $todayTs) / 86400));
+            } else {
+                $status = 'upcoming';
+                $daysElapsed = 0;
+                $daysRemaining = $totalDays;
             }
+
+            // Attendance days worked in this tier
+            $attendanceDays = 0;
+            if ($pdo && $userId) {
+                try {
+                    $stmtAttCount = $pdo->prepare("
+                        SELECT COUNT(DISTINCT work_date) 
+                        FROM staff_work_earnings 
+                        WHERE user_id = :user_id 
+                          AND work_date BETWEEN :t_start AND :t_end
+                    ");
+                    $stmtAttCount->execute([
+                        ':user_id' => $userId,
+                        ':t_start' => $tierStartDate,
+                        ':t_end' => $tierEndDate
+                    ]);
+                    $attendanceDays = intval($stmtAttCount->fetchColumn() ?: 0);
+                } catch (Throwable $e) {}
+            }
+
+            $daysProgress = min(100.0, round(($daysElapsed / $totalDays) * 100, 1));
+            $nextTier = isset($tiers[$idx + 1]) ? $tiers[$idx + 1] : null;
 
             $tObj = [
                 'tier_number' => $tNum,
@@ -288,6 +329,16 @@ class PayrollHelper {
                 'start_month_index' => $sIdx,
                 'end_month_index' => $eIdx,
                 'month_span_label' => "Month {$sIdx}–{$eIdx}",
+                'start_date' => $tierStartDate,
+                'end_date' => $tierEndDate,
+                'total_days' => $totalDays,
+                'days_elapsed' => $daysElapsed,
+                'days_remaining' => $daysRemaining,
+                'days_progress' => $daysProgress,
+                'attendance_days' => $attendanceDays,
+                'next_promotion_date' => $nextTier ? $nextMonthStart : null,
+                'next_tier_salary' => $nextTier ? floatval($nextTier['monthly_salary']) : null,
+                'next_tier_name' => $nextTier ? $nextTier['tier_name'] : null,
                 'monthly_salary' => $sal,
                 'hourly_rate' => $rate,
                 'status' => $status
@@ -302,8 +353,9 @@ class PayrollHelper {
         }
 
         if (!$activeTier && !empty($tierList)) {
-            $activeTier = ($currentMonthIndex > $totalContractMonths) 
-                ? end($tierList) 
+            $lastT = end($tierList);
+            $activeTier = ($today > $lastT['end_date']) 
+                ? $lastT 
                 : $tierList[0];
         }
 
@@ -894,7 +946,11 @@ class PayrollHelper {
             $activeTierInfo = self::getTierInfoForMonth($scheme, $currentMonthKey, $tiers);
             $minWithdrawalLimit = ($activeTierInfo['monthly_salary'] > 0) ? $activeTierInfo['monthly_salary'] : 3500.0;
 
-            $roadmap = self::buildContractRoadmap($scheme, $tiers, $totalEarned);
+            $roadmap = self::buildContractRoadmap($scheme, $tiers, $totalEarned, $pdo, $userId);
+
+            if ($roadmap && !empty($roadmap['active_tier'])) {
+                $activeTierInfo = array_merge($activeTierInfo, $roadmap['active_tier']);
+            }
 
             $summary['contract_target'] = $contractTarget;
             $summary['monthly_salary'] = $activeTierInfo['monthly_salary'];
