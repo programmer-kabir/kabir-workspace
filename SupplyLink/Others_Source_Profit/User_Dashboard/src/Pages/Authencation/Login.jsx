@@ -42,7 +42,10 @@ export default function LoginForm() {
       let data;
 
       try {
-        data = await res.json();
+        const rawText = await res.text();
+        const jsonStart = rawText.indexOf("{");
+        const cleanJson = jsonStart !== -1 ? rawText.substring(jsonStart) : rawText;
+        data = JSON.parse(cleanJson);
       } catch {
         toast.error("Server error, পরে আবার চেষ্টা করুন");
         return;
@@ -79,7 +82,10 @@ export default function LoginForm() {
         const res = await fetch(
           `${import.meta.env.VITE_LOCALHOST_KEY}/users/users.php`
         );
-        const data = await res.json();
+        const rawText = await res.text();
+        const jsonStart = rawText.indexOf("{") !== -1 ? rawText.indexOf("{") : rawText.indexOf("[");
+        const cleanJson = jsonStart !== -1 ? rawText.substring(jsonStart) : rawText;
+        const data = JSON.parse(cleanJson);
         const userList = Array.isArray(data) ? data : data?.data || [];
         const found = userList.find(
           (u) => Number(u.id) === Number(impersonateId)
