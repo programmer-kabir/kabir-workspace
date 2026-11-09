@@ -7,7 +7,7 @@ export const fetchCardProfitHistory = createAsyncThunk(
     try {
       const baseUrl = `${
         import.meta.env.VITE_LOCALHOST_KEY
-      }/profit/get_profit_status.php`;
+      }/investor_apis/get_profit_status.php`;
 
       const params = new URLSearchParams();
       if (cardId) {

@@ -144,7 +144,7 @@ const Profile = () => {
 
     // ===== API CALL =====
     const res = await fetch(
-      `${import.meta.env.VITE_LOCALHOST_KEY || "https://api.supplylinkbd.com/apis"}/paymentMethod/update_payment_method.php`,
+      `${import.meta.env.VITE_LOCALHOST_KEY || "https://api.supplylinkbd.com/apis"}/investor_apis/update_payment_method.php`,
       {
         method: "POST",
         body: formData,

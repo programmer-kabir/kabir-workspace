@@ -6,7 +6,7 @@ export const fetchInvestProfitHistory = createAsyncThunk(
     try {
       let url = `${
         import.meta.env.VITE_LOCALHOST_KEY
-      }/profit/getAllProfitHistory.php`;
+      }/investor_apis/get_profit_status.php`;
       const response = await axios.get(url);
       // console.log(response?.data?.data);
       return response.data?.data;

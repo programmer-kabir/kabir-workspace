@@ -7,7 +7,7 @@ export const fetchAllPaymentMethod = createAsyncThunk(
     try {
       const baseUrl = `${
         import.meta.env.VITE_LOCALHOST_KEY
-      }/paymentMethod/get_payment_method.php`;
+      }/investor_apis/get_payment_method.php`;
 
       const params = new URLSearchParams();
 
