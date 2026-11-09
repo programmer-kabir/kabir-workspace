@@ -6,7 +6,7 @@ export const fetchAllInvestInstallments = createAsyncThunk(
     try {
       const baseUrl = `${
         import.meta.env.VITE_LOCALHOST_KEY
-      }/investors/getAllInstallments.php`;
+      }/investor_apis/get_installments.php`;
       const response = await axios.get(baseUrl);
       const data = response.data?.data || [];
       return Array.isArray(data) ? data : [];

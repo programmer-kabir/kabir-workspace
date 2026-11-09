@@ -5,8 +5,8 @@ export const fetchInstallmentsCards = createAsyncThunk(
   async (investor_id, { rejectWithValue }) => {
     try {
       const url = investor_id
-        ? `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php?investor_id=${investor_id}`
-        : `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php`;
+        ? `${import.meta.env.VITE_LOCALHOST_KEY}/investor_apis/get_cards.php?investor_id=${investor_id}`
+        : `${import.meta.env.VITE_LOCALHOST_KEY}/investor_apis/get_cards.php`;
       const response = await axios.get(url);
       const raw = response.data;
       const cards = Array.isArray(raw)

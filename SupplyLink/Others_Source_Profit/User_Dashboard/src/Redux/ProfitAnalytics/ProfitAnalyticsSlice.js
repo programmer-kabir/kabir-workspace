@@ -23,7 +23,7 @@ export const fetchProfitAnalytics = createAsyncThunk(
     try {
       const baseURL = `${
         import.meta.env.VITE_LOCALHOST_KEY
-      }/profit_generator/get_profrit_generator.php`;
+      }/investor_apis/get_profits.php`;
 
       const limit = 200; // ✅ backend safe limit
       let page = 1;

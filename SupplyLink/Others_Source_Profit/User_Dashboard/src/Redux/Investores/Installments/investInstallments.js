@@ -7,7 +7,7 @@ export const fetchInvestInstallments = createAsyncThunk(
       const response = await axios.get(
         `${
           import.meta.env.VITE_LOCALHOST_KEY
-        }/investors/getAllInstallments.php?investment_card_no=${card_no}`
+        }/investor_apis/get_installments.php?investment_card_no=${card_no}`
       );
       const raw = response.data;
       const data = Array.isArray(raw) ? raw : (raw?.data || []);
