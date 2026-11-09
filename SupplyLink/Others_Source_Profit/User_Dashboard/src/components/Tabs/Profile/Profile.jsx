@@ -12,8 +12,8 @@ const Profile = () => {
   console.log(runningUser)
   const { paymentMethods, isPaymentMethodsLoading, isPaymentMethodsError } =
     usePaymentMethod(runningUser?.id);
-  const userInstallmentsCards = investInstallmentCards?.filter(
-    (userCard) => userCard.investor_id === runningUser?.id,
+  const userInstallmentsCards = (investInstallmentCards || []).filter(
+    (userCard) => String(userCard.investor_id) === String(runningUser?.id),
   );
   const totalAmount = userInstallmentsCards.reduce(
     (sum, card) => sum + Number(card.investment_amount || 0),

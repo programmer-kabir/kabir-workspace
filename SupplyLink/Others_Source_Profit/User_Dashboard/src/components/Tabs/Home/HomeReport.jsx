@@ -101,7 +101,7 @@ const runningCards = investInstallmentCards?.filter(iv=>iv.status==='running')
   );
 
   const myBestCard = sortedAllCards.find(
-    (inv) => inv.investor_id === runningUser?.id
+    (inv) => String(inv.investor_id) === String(runningUser?.id)
   );
 
   const myRank = myBestCard

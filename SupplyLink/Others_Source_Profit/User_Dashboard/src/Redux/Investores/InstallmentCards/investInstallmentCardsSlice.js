@@ -8,7 +8,10 @@ export const fetchInstallmentsCards = createAsyncThunk(
         ? `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php?investor_id=${investor_id}`
         : `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php`;
       const response = await axios.get(url);
-      const cards = response.data?.cards || response.data?.data || [];
+      const raw = response.data;
+      const cards = Array.isArray(raw)
+        ? raw
+        : (raw?.cards || raw?.data || []);
       return Array.isArray(cards) ? cards : [];
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);

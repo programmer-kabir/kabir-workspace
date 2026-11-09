@@ -9,7 +9,8 @@ export const fetchInvestInstallments = createAsyncThunk(
           import.meta.env.VITE_LOCALHOST_KEY
         }/investors/getAllInstallments.php?investment_card_no=${card_no}`
       );
-      const data = response.data?.data || [];
+      const raw = response.data;
+      const data = Array.isArray(raw) ? raw : (raw?.data || []);
       return Array.isArray(data) ? data : [];
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);

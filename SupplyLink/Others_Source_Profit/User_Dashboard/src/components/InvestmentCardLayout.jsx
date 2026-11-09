@@ -14,8 +14,8 @@ const InvestmentCardLayout = ({ children, onSelectedCardChange }) => {
   const { investInstallments, inInvestInstallmentsLoading } =
     useInvestInstallment(selectedCardId);
 
-  const currentCard = investInstallmentCards?.filter(
-    (card) => card.investor_id === runningUser?.id
+  const currentCard = (investInstallmentCards || []).filter(
+    (card) => String(card.investor_id) === String(runningUser?.id)
   );
 
   const sortedCards = [...currentCard].sort((a, b) => {
@@ -30,7 +30,9 @@ const InvestmentCardLayout = ({ children, onSelectedCardChange }) => {
     }
   }, [selectedCardId, sortedCards]);
 
-  const selectedCard = currentCard.find((c) => c.id === selectedCardId);
+  const selectedCard = currentCard.find(
+    (c) => String(c.id) === String(selectedCardId)
+  );
 
   // 👉 selectedCard যখনই বদলাবে, parent-এ জানিয়ে দিচ্ছি
   useEffect(() => {
