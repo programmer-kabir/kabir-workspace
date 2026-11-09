@@ -14,7 +14,7 @@ const InvestmentCardLayout = ({ children, onSelectedCardChange }) => {
   const { investInstallments, inInvestInstallmentsLoading } =
     useInvestInstallment(selectedCardId);
 
-  const currentCard = investInstallmentCards.filter(
+  const currentCard = investInstallmentCards?.filter(
     (card) => card.investor_id === runningUser?.id
   );
 

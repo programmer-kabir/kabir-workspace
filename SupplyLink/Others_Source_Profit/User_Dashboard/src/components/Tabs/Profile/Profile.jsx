@@ -9,9 +9,10 @@ import PaymentMethodShow from "./PaymentMethodShow";
 const Profile = () => {
   const { investInstallmentCards } = useInvestInstallmentCards();
   const runningUser = currentUser();
+  console.log(runningUser)
   const { paymentMethods, isPaymentMethodsLoading, isPaymentMethodsError } =
     usePaymentMethod(runningUser?.id);
-  const userInstallmentsCards = investInstallmentCards.filter(
+  const userInstallmentsCards = investInstallmentCards?.filter(
     (userCard) => userCard.investor_id === runningUser?.id,
   );
   const totalAmount = userInstallmentsCards.reduce(

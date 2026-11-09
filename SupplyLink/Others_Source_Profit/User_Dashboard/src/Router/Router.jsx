@@ -5,29 +5,6 @@ import LoginForm from "../Pages/Authencation/Login";
 import InvoicePage from "../Pages/InvoicePage";
 import ProtectedRoute from "./ProtectedRoute";
 
-// const routes = createBrowserRouter([
-//   {
-//     path: "/",
-//     element: (
-
-//       <MainLayout />
-//     ),
-//     children: [
-//       {
-//         path: "/",
-//         element: <HomePage />,
-//       },
-//       {
-//         path: "/login",
-//         element: <LoginForm />,
-//       },
-//       {
-//         path:"/invoice/:id",
-//         element:<InvoicePage />
-//       }
-//     ],
-//   },
-// ]);
 const routes = createBrowserRouter([
   {
     path: "/",

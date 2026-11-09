@@ -90,7 +90,7 @@ const HomeReport = () => {
   const { users, isUsersLoading, isUsersError } = useUsers();
   const runningUser = currentUser();
   const isLoading = isInvestInstallmentsCardsLoading || isUsersLoading;
-const runningCards = investInstallmentCards.filter(iv=>iv.status==='running')
+const runningCards = investInstallmentCards?.filter(iv=>iv.status==='running')
 
 
   const sortedTop5 = [...(runningCards || [])]

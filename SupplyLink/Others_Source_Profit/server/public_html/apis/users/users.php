@@ -1,29 +1,11 @@
 <?php
-
-$host = $_SERVER['HTTP_HOST'] ?? '';
-$isLocal = (strpos($host, 'localhost') !== false) || (strpos($host, '127.0.0.1') !== false);
-
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => $isLocal ? '' : '.supplylinkbd.com',
-    'secure' => $isLocal ? false : true,
-    'httponly' => true,
-    'samesite' => $isLocal ? 'Lax' : 'None',
-]);
-
-session_start();
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
-guardAdminOnly();
+requireAuth();
+
+$isAdminOrStaff = hasRole(['admin', 'developer', 'manager', 'staff', 'data_entry']);
 
 header("Content-Type: application/json");
-
-// ================= TEMP DEBUG (production এ OFF করবেন) =================
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-// =======================================================================
 
 // ================= ERROR HANDLER =================
 function apiError($message, $debug = null, $code = 500) {
@@ -43,32 +25,50 @@ function apiError($message, $debug = null, $code = 500) {
 }
 // =================================================
 
-
-$sql = "
-    SELECT 
-        u.id,
-        u.name,
-        u.mobile,
-        u.email,
-        u.id_number,
-        u.address,
-        u.password,
-        u.photo,
-        GROUP_CONCAT(DISTINCT ur.role) AS roles
-    FROM users u
-    LEFT JOIN user_roles ur 
-        ON ur.user_id = u.id
-    GROUP BY 
-        u.id,
-        u.name,
-        u.mobile,
-        u.email,
-        u.id_number,
-        u.address,
-        u.password,
-        u.photo
-    ORDER BY u.id ASC
-";
+if ($isAdminOrStaff) {
+    $sql = "
+        SELECT 
+            u.id,
+            u.name,
+            u.mobile,
+            u.email,
+            u.id_number,
+            u.address,
+            u.password,
+            u.photo,
+            GROUP_CONCAT(DISTINCT ur.role) AS roles
+        FROM users u
+        LEFT JOIN user_roles ur 
+            ON ur.user_id = u.id
+        GROUP BY 
+            u.id,
+            u.name,
+            u.mobile,
+            u.email,
+            u.id_number,
+            u.address,
+            u.password,
+            u.photo
+        ORDER BY u.id ASC
+    ";
+} else {
+    // Non-admin (Investors): Only return safe public info (id, name, photo) for leaderboard/cards, NO PASSWORDS/SENSITIVE DATA!
+    $sql = "
+        SELECT 
+            u.id,
+            u.name,
+            u.photo,
+            GROUP_CONCAT(DISTINCT ur.role) AS roles
+        FROM users u
+        LEFT JOIN user_roles ur 
+            ON ur.user_id = u.id
+        GROUP BY 
+            u.id,
+            u.name,
+            u.photo
+        ORDER BY u.id ASC
+    ";
+}
 
 $result = $mysqli->query($sql);
 
@@ -117,7 +117,7 @@ try {
         );
     }
 } catch (Throwable $e) {
-    // silently ignore — view log fail হলেও API break হবে না
+    // silently ignore
 }
 
 echo json_encode([

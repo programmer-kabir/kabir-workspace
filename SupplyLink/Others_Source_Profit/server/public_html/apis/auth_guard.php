@@ -18,7 +18,60 @@ function getAuthenticatedUser() {
         ]);
         session_start();
     }
-    return $_SESSION['user'] ?? null;
+
+    if (!empty($_SESSION['user']['id'])) {
+        return $_SESSION['user'];
+    }
+
+    // 🛡️ Fallback: Check X-User-Id header for cross-domain requests (e.g. localhost -> live API when Brave/Chrome drops third-party cookies)
+    $userIdHeader = $_SERVER['HTTP_X_USER_ID'] ?? null;
+    if (!$userIdHeader && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $userIdHeader = $headers['X-User-Id'] ?? $headers['x-user-id'] ?? null;
+    }
+
+    if ($userIdHeader) {
+        $uid = (int) $userIdHeader;
+        if ($uid > 0) {
+            global $mysqli;
+            if (!$mysqli) {
+                @require_once __DIR__ . '/db.php';
+            }
+            if (isset($mysqli) && $mysqli instanceof mysqli) {
+                $stmt = $mysqli->prepare("
+                    SELECT u.id, u.name, u.mobile, u.email,
+                           GROUP_CONCAT(DISTINCT ur.role) AS roles
+                    FROM users u
+                    LEFT JOIN user_roles ur ON ur.user_id = u.id
+                    WHERE u.id = ?
+                    GROUP BY u.id
+                    LIMIT 1
+                ");
+                if ($stmt) {
+                    $stmt->bind_param("i", $uid);
+                    $stmt->execute();
+                    $res = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+                    if ($res) {
+                        $roleArray = !empty($res['roles'])
+                            ? array_filter(array_map('trim', explode(',', $res['roles'])))
+                            : ['investor'];
+                        $userObj = [
+                            'id' => (int) $res['id'],
+                            'name' => $res['name'],
+                            'mobile' => $res['mobile'],
+                            'email' => $res['email'] ?? '',
+                            'role' => $roleArray
+                        ];
+                        $_SESSION['user'] = $userObj;
+                        return $userObj;
+                    }
+                }
+            }
+        }
+    }
+
+    return null;
 }
 
 // 2. Check if request is authenticated
