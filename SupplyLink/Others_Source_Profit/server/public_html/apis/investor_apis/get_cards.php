@@ -38,3 +38,4 @@ echo json_encode([
     "cards"       => $cards,
     "data"        => $cards
 ], JSON_UNESCAPED_UNICODE);
+

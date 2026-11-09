@@ -46,3 +46,4 @@ echo json_encode([
     "count"       => count($data),
     "data"        => $data
 ], JSON_UNESCAPED_UNICODE);
+
