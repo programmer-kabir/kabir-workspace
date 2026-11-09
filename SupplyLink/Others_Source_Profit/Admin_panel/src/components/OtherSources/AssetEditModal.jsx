@@ -22,6 +22,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "../../Provider/AuthProvider";
 
 const categoryLabels = {
+  bondok: "ঘর/সম্পদ বন্ধক",
   bike: "বাইক লিজ",
   shop: "দোকান ভাড়া",
   house: "বাসা/ঘর ভাড়া",

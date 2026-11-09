@@ -23,6 +23,14 @@ $reg_no             = trim($data['reg_no'] ?? '');
 $contact_person     = trim($data['contact_person'] ?? '');
 $dividend_frequency = trim($data['dividend_frequency'] ?? 'on_demand');
 
+// Bondok specific fields
+$owner_name         = trim($data['owner_name'] ?? '');
+$owner_mobile       = trim($data['owner_mobile'] ?? '');
+$owner_nid          = trim($data['owner_nid'] ?? '');
+$property_address   = trim($data['property_address'] ?? '');
+$deed_no            = trim($data['deed_no'] ?? '');
+$is_bondok          = ($category === 'bondok' || !empty($data['is_bondok'])) ? 1 : 0;
+
 if ($asset_name === '' || $purchase_price <= 0) {
     echo json_encode([
         "success" => false,
@@ -31,7 +39,7 @@ if ($asset_name === '' || $purchase_price <= 0) {
     exit;
 }
 
-$validCategories = ['bike', 'shop', 'house', 'equipment', 'project', 'other', 'company_share'];
+$validCategories = ['bike', 'shop', 'house', 'equipment', 'project', 'other', 'company_share', 'bondok'];
 if (!in_array($category, $validCategories)) {
     $category = 'other';
 }
@@ -40,14 +48,22 @@ $cash_id = null;
 
 // 💸 ১. স্বয়ংক্রিয় Cash Out এন্ট্রি (সরাসরি Approved হিসেবে ক্যাশে যুক্ত হবে)
 if ($create_cash_out) {
-    $purpose = ($category === 'company_share')
-        ? ("কোম্পানি শেয়ারে বিনিয়োগ: " . $asset_name . ($share_percentage ? " (" . $share_percentage . "%)" : ""))
-        : ("অ্যাসেট ক্রয়: " . $asset_name . ($vendor_info ? " (" . $vendor_info . ")" : ""));
+    if ($category === 'company_share') {
+        $purpose = "কোম্পানি শেয়ারে বিনিয়োগ: " . $asset_name . ($share_percentage ? " (" . $share_percentage . "%)" : "");
+        $cashCategory = 'share_investment';
+        $cashSource   = $vendor_info !== '' ? $vendor_info : 'কোম্পানি শেয়ার ক্রয়';
+    } elseif ($category === 'bondok') {
+        $purpose = "ঘর/সম্পদ বন্ধক গ্রহণ ও মূলধন প্রদান: " . $asset_name . ($owner_name ? " (মালিক: " . $owner_name . ")" : "");
+        $cashCategory = 'bondok_capital_out';
+        $cashSource   = $owner_name !== '' ? ("মালিক: " . $owner_name) : 'বন্ধক গ্রহীতা';
+    } else {
+        $purpose = "অ্যাসেট ক্রয়: " . $asset_name . ($vendor_info ? " (" . $vendor_info . ")" : "");
+        $cashCategory = 'asset_purchase';
+        $cashSource   = $vendor_info !== '' ? $vendor_info : 'অ্যাসেট ক্রয়';
+    }
 
-    $cashCategory = ($category === 'company_share') ? 'share_investment' : 'asset_purchase';
-    $cashSource   = $vendor_info !== '' ? $vendor_info : ($category === 'company_share' ? 'কোম্পানি শেয়ার ক্রয়' : 'অ্যাসেট ক্রয়');
     $cashRefId    = 'asset_out_' . time();
-    $cashRemarks  = $remarks !== '' ? $remarks : 'স্বয়ংক্রিয় অ্যাসেট ক্রয় ক্যাশ আউট (সরাসরি অনুমোদিত)';
+    $cashRemarks  = $remarks !== '' ? $remarks : ($category === 'bondok' ? 'বন্ধকি মূলধন প্রদান (সরাসরি অনুমোদিত)' : 'স্বয়ংক্রিয় অ্যাসেট ক্রয় ক্যাশ আউট (সরাসরি অনুমোদিত)');
     $approvedBy   = isset($data['approved_by']) && intval($data['approved_by']) > 0 
         ? intval($data['approved_by']) 
         : (isset($data['user_id']) && intval($data['user_id']) > 0 ? intval($data['user_id']) : 290);
@@ -73,9 +89,10 @@ $stmt = $mysqli->prepare("
     INSERT INTO other_assets (
         asset_name, category, share_percentage, share_units, business_type, 
         reg_no, contact_person, dividend_frequency, purchase_price, purchase_date, 
-        vendor_info, cash_id, status, remarks, created_at
+        vendor_info, owner_name, owner_mobile, owner_nid, property_address, deed_no, is_bondok,
+        cash_id, status, remarks, created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())
 ");
 
 if (!$stmt) {
@@ -87,7 +104,7 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    "ssdisssssssis",
+    "ssdissssssssssssiis",
     $asset_name,
     $category,
     $share_percentage,
@@ -99,6 +116,12 @@ $stmt->bind_param(
     $purchase_price,
     $purchase_date,
     $vendor_info,
+    $owner_name,
+    $owner_mobile,
+    $owner_nid,
+    $property_address,
+    $deed_no,
+    $is_bondok,
     $cash_id,
     $remarks
 );

@@ -14,10 +14,14 @@ $lessee_mobile   = trim($data['lessee_mobile'] ?? '');
 $lessee_nid      = trim($data['lessee_nid'] ?? '');
 $lessee_address  = trim($data['lessee_address'] ?? '');
 $agreement_type  = trim($data['agreement_type'] ?? 'rental');
+$agreement_nature= trim($data['agreement_nature'] ?? 'owner_leaseback');
+$tenure_type     = trim($data['tenure_type'] ?? 'until_refund');
+$min_lockin_months= intval($data['min_lockin_months'] ?? 12);
+$notice_days     = intval($data['notice_days'] ?? 30);
 $monthly_rent    = floatval($data['monthly_rent'] ?? 0);
 $due_day         = intval($data['due_day'] ?? 5);
 $start_date      = trim($data['start_date'] ?? date('Y-m-d'));
-$end_date        = !empty($data['end_date']) ? trim($data['end_date']) : null;
+$end_date        = ($tenure_type === 'fixed_term' && !empty($data['end_date'])) ? trim($data['end_date']) : null;
 $security_deposit= floatval($data['security_deposit'] ?? 0);
 $record_deposit_cash = true; // জামানতের টাকা থাকলে সর্বদাই সরাসরি অফিসে অনুমোদিত ক্যাশ ইন হবে
 
@@ -62,8 +66,8 @@ if ($security_deposit > 0 && $record_deposit_cash) {
 // 3. নতুন চুক্তি তৈরি
 $stmt = $mysqli->prepare("
     INSERT INTO other_asset_agreements 
-    (asset_id, lessee_name, lessee_mobile, lessee_nid, lessee_address, agreement_type, monthly_rent, due_day, start_date, end_date, security_deposit, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+    (asset_id, lessee_name, lessee_mobile, lessee_nid, lessee_address, agreement_type, agreement_nature, tenure_type, min_lockin_months, notice_days, monthly_rent, due_day, start_date, end_date, security_deposit, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
 ");
 
 if (!$stmt) {
@@ -72,13 +76,17 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    "isssssdisds",
+    "isssssssiidissd",
     $asset_id,
     $lessee_name,
     $lessee_mobile,
     $lessee_nid,
     $lessee_address,
     $agreement_type,
+    $agreement_nature,
+    $tenure_type,
+    $min_lockin_months,
+    $notice_days,
     $monthly_rent,
     $due_day,
     $start_date,

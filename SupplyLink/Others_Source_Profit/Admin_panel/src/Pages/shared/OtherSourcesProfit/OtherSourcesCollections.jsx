@@ -21,6 +21,7 @@ import {
   FaHandHoldingUsd,
   FaBuilding,
   FaCoins,
+  FaLock,
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
@@ -30,6 +31,7 @@ import { useAuth } from "../../../Provider/AuthProvider";
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
 const categoryIcons = {
+  bondok: <FaLock className="text-amber-400" size={15} />,
   bike: <FaMotorcycle className="text-orange-400" size={15} />,
   shop: <FaStore className="text-blue-400" size={15} />,
   house: <FaHome className="text-emerald-400" size={15} />,

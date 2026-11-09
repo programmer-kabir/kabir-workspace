@@ -30,7 +30,11 @@ import {
   FaBriefcase,
   FaFileContract,
   FaEdit,
-  FaChevronDown 
+  FaChevronDown,
+  FaLock,
+  FaUnlock,
+  FaKey,
+  FaMapMarkerAlt
 } from "react-icons/fa";
 import Loader from "../../../components/Loader/Loader";
 import BackButton from "../../../components/BackButton/BackButton";
@@ -41,6 +45,7 @@ import { useAuth } from "../../../Provider/AuthProvider";
 const API = import.meta.env.VITE_LOCALHOST_KEY;
 
 const categoryIcons = {
+  bondok: <FaLock className="text-amber-400" size={18} />,
   bike: <FaMotorcycle className="text-orange-400" size={18} />,
   shop: <FaStore className="text-blue-400" size={18} />,
   house: <FaHome className="text-emerald-400" size={18} />,
@@ -51,6 +56,7 @@ const categoryIcons = {
 };
 
 const categoryLabels = {
+  bondok: "ঘর/সম্পদ বন্ধক",
   bike: "বাইক লিজ",
   shop: "দোকান ভাড়া",
   house: "বাসা/ঘর ভাড়া",
@@ -61,6 +67,7 @@ const categoryLabels = {
 };
 
 const categorySubtitles = {
+  bondok: "ঘর, দোকান বা সম্পদ বন্ধক ও ভাড়া আদায় (মূলধন ফেরতযোগ্য)",
   bike: "মোটরসাইকেল বা স্কুটার লিজ ও নিয়মিত কিস্তি",
   shop: "দোকান ও বাণিজ্যিক স্পেস ভাড়া",
   house: "আবাসিক ফ্ল্যাট, মেস বা ঘর ভাড়া",
@@ -71,6 +78,13 @@ const categorySubtitles = {
 };
 
 const categoryThemes = {
+  bondok: {
+    bg: "from-amber-500/20 to-yellow-500/10",
+    border: "border-amber-500/30",
+    text: "text-amber-400",
+    badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    tag: "বন্ধকি সম্পদ",
+  },
   bike: {
     bg: "from-orange-500/20 to-amber-500/10",
     border: "border-orange-500/30",
@@ -186,10 +200,22 @@ const OtherSourcesAssets = () => {
   });
   const [submittingTerminate, setSubmittingTerminate] = useState(false);
 
+  // Release Bondok (খালাস) Modal
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [selectedAssetForRelease, setSelectedAssetForRelease] = useState(null);
+  const [releaseForm, setReleaseForm] = useState({
+    refund_amount: "",
+    release_date: new Date().toISOString().split("T")[0],
+    payment_method: "Cash",
+    remarks: "",
+    create_cash_in: true,
+  });
+  const [submittingRelease, setSubmittingRelease] = useState(false);
+
   // Add Asset Form
   const [newAsset, setNewAsset] = useState({
     asset_name: "",
-    category: "bike",
+    category: "bondok",
     purchase_price: "",
     purchase_date: new Date().toISOString().split("T")[0],
     share_percentage: "",
@@ -201,6 +227,11 @@ const OtherSourcesAssets = () => {
     vendor_info: "",
     remarks: "",
     create_cash_out: true,
+    owner_name: "",
+    owner_mobile: "",
+    owner_nid: "",
+    property_address: "",
+    deed_no: "",
   });
   const [submittingAsset, setSubmittingAsset] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -218,6 +249,10 @@ const OtherSourcesAssets = () => {
     end_date: "",
     security_deposit: "",
     record_deposit_cash: false,
+    agreement_nature: "owner_leaseback",
+    tenure_type: "until_refund",
+    min_lockin_months: 12,
+    notice_days: 30,
   });
   const [submittingAgreement, setSubmittingAgreement] = useState(false);
 
@@ -257,6 +292,10 @@ const OtherSourcesAssets = () => {
         asset.asset_name?.toLowerCase().includes(search.toLowerCase()) ||
         asset.lessee_name?.toLowerCase().includes(search.toLowerCase()) ||
         asset.lessee_mobile?.includes(search) ||
+        asset.owner_name?.toLowerCase().includes(search.toLowerCase()) ||
+        asset.owner_mobile?.includes(search) ||
+        asset.property_address?.toLowerCase().includes(search.toLowerCase()) ||
+        asset.deed_no?.toLowerCase().includes(search.toLowerCase()) ||
         asset.vendor_info?.toLowerCase().includes(search.toLowerCase()) ||
         asset.business_type?.toLowerCase().includes(search.toLowerCase()) ||
         asset.contact_person?.toLowerCase().includes(search.toLowerCase()) ||
@@ -305,7 +344,7 @@ const OtherSourcesAssets = () => {
         setShowAddModal(false);
         setNewAsset({
           asset_name: "",
-          category: "bike",
+          category: "bondok",
           purchase_price: "",
           purchase_date: new Date().toISOString().split("T")[0],
           share_percentage: "",
@@ -317,6 +356,11 @@ const OtherSourcesAssets = () => {
           vendor_info: "",
           remarks: "",
           create_cash_out: true,
+          owner_name: "",
+          owner_mobile: "",
+          owner_nid: "",
+          property_address: "",
+          deed_no: "",
         });
         fetchAssets();
       } else {
@@ -438,20 +482,93 @@ const OtherSourcesAssets = () => {
   // Open Agreement Modal
   const handleOpenAgreementModal = (asset) => {
     setSelectedAssetForAgreement(asset);
+    const isBondok = asset.category === "bondok" || asset.is_bondok == 1;
+    const defaultNature = asset.agreement_nature || "owner_leaseback";
+
     setNewAgreement({
-      lessee_name: asset.lessee_name || "",
-      lessee_mobile: asset.lessee_mobile || "",
-      lessee_nid: asset.lessee_nid || "",
-      lessee_address: "",
+      lessee_name: asset.lessee_name || (isBondok && defaultNature === "owner_leaseback" ? asset.owner_name || "" : ""),
+      lessee_mobile: asset.lessee_mobile || (isBondok && defaultNature === "owner_leaseback" ? asset.owner_mobile || "" : ""),
+      lessee_nid: asset.lessee_nid || (isBondok && defaultNature === "owner_leaseback" ? asset.owner_nid || "" : ""),
+      lessee_address: isBondok && defaultNature === "owner_leaseback" ? asset.property_address || "" : "",
       agreement_type: asset.agreement_type || "rental",
       monthly_rent: asset.monthly_rent || "",
       due_day: asset.due_day || 5,
       start_date: new Date().toISOString().split("T")[0],
-      end_date: "",
+      end_date: asset.end_date || "",
       security_deposit: asset.security_deposit || "",
       record_deposit_cash: false,
+      agreement_nature: defaultNature,
+      tenure_type: asset.tenure_type || (isBondok ? "until_refund" : "fixed_term"),
+      min_lockin_months: asset.min_lockin_months || 12,
+      notice_days: asset.notice_days || 30,
     });
     setShowAgreementModal(true);
+  };
+
+  // Open Release Bondok Modal
+  const handleOpenReleaseModal = (asset) => {
+    setSelectedAssetForRelease(asset);
+    setReleaseForm({
+      refund_amount: asset.purchase_price || "",
+      release_date: new Date().toISOString().split("T")[0],
+      payment_method: "Cash",
+      remarks: `ঘর/সম্পদ বন্ধক খালাস ও মূলধন ফেরত গ্রহণ - ${asset.asset_name} (মূল মালিক: ${asset.owner_name || "N/A"})`,
+      create_cash_in: true,
+    });
+    setShowReleaseModal(true);
+  };
+
+  // Submit Release Bondok
+  const handleReleaseSubmit = async (e) => {
+    e.preventDefault();
+    if (Number(releaseForm.refund_amount) <= 0) {
+      return setLuxuryToast({
+        title: "তথ্য অসম্পূর্ণ ⚠️",
+        message: "সঠিক ফেরত মূলধনের পরিমাণ প্রদান করুন।",
+        type: "warning",
+      });
+    }
+
+    try {
+      setSubmittingRelease(true);
+      const res = await fetch(`${API}/other_sources/release_bondok.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...releaseForm,
+          asset_id: selectedAssetForRelease.id,
+          refund_amount: Number(releaseForm.refund_amount),
+          user_id: user?.id || null,
+          approved_by: user?.id || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLuxuryToast({
+          title: "বন্ধক খালাস সম্পন্ন 🎉",
+          message: `${selectedAssetForRelease?.asset_name || "বন্ধকি সম্পদ"} এর খালাস সম্পন্ন হয়েছে এবং ৳${Number(releaseForm.refund_amount).toLocaleString()} ক্যাশ ইন জমা হয়েছে।`,
+          tag: `খালাস: ${selectedAssetForRelease?.asset_name}`,
+          amount: Number(releaseForm.refund_amount),
+          type: "success",
+        });
+        setShowReleaseModal(false);
+        fetchAssets();
+      } else {
+        setLuxuryToast({
+          title: "খালাস ব্যর্থ ❌",
+          message: data.message || "বন্ধক খালাস সম্পন্ন করা যায়নি।",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      setLuxuryToast({
+        title: "সার্ভারে সমস্যা ❌",
+        message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।",
+        type: "error",
+      });
+    } finally {
+      setSubmittingRelease(false);
+    }
   };
 
   // Handle Agreement Submit
@@ -788,6 +905,7 @@ const OtherSourcesAssets = () => {
           {filteredAssets.map((asset) => {
             const hasAgreement = !!asset.agreement_id;
             const isShare = asset.category === "company_share";
+            const isBondok = asset.category === "bondok" || asset.is_bondok == 1;
 
             // 🏢 1. COMPANY SHARE / EQUITY CARD
             if (isShare) {
@@ -1014,7 +1132,236 @@ const OtherSourcesAssets = () => {
               );
             }
 
-            // 📦 2. REGULAR ASSET CARD (Bike, Shop, House, Equipment, etc.)
+            // 🏠 2. BONDOK / MORTGAGE ASSET CARD (ঘর/সম্পদ বন্ধক ও ভাড়া আদায়)
+            if (isBondok) {
+              const isReleased = asset.status === "released";
+              const isOwnerOccupied = asset.agreement_nature === "owner_leaseback";
+
+              return (
+                <div
+                  key={asset.id}
+                  className="bg-[#0f1b2d] border border-amber-500/25 hover:border-amber-400/50 rounded-2xl p-5 shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
+                >
+                  <div>
+                    {/* Top Bar */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center shrink-0 text-amber-400 shadow-inner">
+                          {isReleased ? <FaUnlock size={18} /> : <FaLock size={18} />}
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
+                            {asset.asset_name}
+                          </h3>
+                          <span className="text-[11px] text-amber-400 font-medium flex items-center gap-1">
+                            <FaFileContract size={10} />
+                            <span>ঘর/সম্পদ বন্ধক (Mortgage)</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
+                            isReleased
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold"
+                              : hasAgreement
+                              ? "bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold"
+                              : "bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold"
+                          }`}
+                        >
+                          {isReleased
+                            ? "খালাস সম্পন্ন (Released)"
+                            : hasAgreement
+                            ? "ভাড়া চালু (Active Rent)"
+                            : "চুক্তির অপেক্ষায়"}
+                        </span>
+                        {asset.pending_edit_id && (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/35 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                            ⏳ সংশোধনাধীন (৳{Number(asset.pending_new_price || 0).toLocaleString()})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bondok Capital & Owner Details */}
+                    <div className="bg-[#071025]/80 border border-amber-500/15 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs mb-3">
+                      <div>
+                        <span className="text-slate-400 block">বন্ধকি মূলধন (Cash Out):</span>
+                        <span className="font-bold text-red-400 font-mono text-sm">
+                          ৳ {asset.purchase_price.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">বন্ধক গ্রহণের তারিখ:</span>
+                        <span className="text-slate-200 font-mono">
+                          {asset.purchase_date}
+                        </span>
+                      </div>
+
+                      <div className="col-span-2 pt-1.5 border-t border-white/5 space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <FaUser size={10} className="text-amber-400" />
+                            মূল মালিক:
+                          </span>
+                          <span className="font-semibold text-white">
+                            {asset.owner_name || "N/A"}{" "}
+                            {asset.owner_mobile && (
+                              <span className="text-slate-400 font-mono font-normal">({asset.owner_mobile})</span>
+                            )}
+                          </span>
+                        </div>
+
+                        {asset.property_address && (
+                          <div className="text-[11px] text-slate-400 flex items-start gap-1">
+                            <FaMapMarkerAlt size={10} className="text-slate-500 mt-0.5 shrink-0" />
+                            <span className="text-slate-300 line-clamp-1">{asset.property_address}</span>
+                          </div>
+                        )}
+
+                        {asset.deed_no && (
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            দলিল/বায়না নং: <span className="text-slate-200">{asset.deed_no}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Agreement & Occupant Section */}
+                    {isReleased ? (
+                      <div className="bg-emerald-950/25 border border-emerald-500/25 rounded-xl p-3 text-xs mb-4 space-y-1 text-center">
+                        <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold">
+                          <FaCheckCircle size={13} />
+                          <span>বন্ধক খালাস সম্পন্ন হয়েছে</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300">
+                          মালিক মূলধন ৳ {asset.purchase_price.toLocaleString()} সম্পূর্ণ ফেরত দিয়েছেন।
+                        </p>
+                      </div>
+                    ) : hasAgreement ? (
+                      <div className="bg-[#071025]/60 border border-white/5 rounded-xl p-3 text-xs mb-3 space-y-2">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-1.5 text-[11px]">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <FaFileContract size={10} className="text-amber-400" />
+                            চুক্তি ধরন:
+                          </span>
+                          <span className="text-amber-300 font-semibold">
+                            {isOwnerOccupied ? "মালিক নিজে (Lease-back)" : "৩য় পক্ষ ভাড়াটিয়া (Sub-Lease)"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">বর্তমান ভাড়াটিয়া/ব্যবহারকারী:</span>
+                            <span className="text-white font-bold flex items-center gap-1">
+                              <FaUser size={10} className="text-slate-400" />
+                              {asset.lessee_name}
+                            </span>
+                            {asset.lessee_mobile && (
+                              <span className="text-slate-400 font-mono text-[11px] block">{asset.lessee_mobile}</span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-400 block text-[10px]">মাসিক ভাড়া:</span>
+                            <span className="text-emerald-400 font-mono font-bold text-sm">
+                              ৳ {Number(asset.monthly_rent || 0).toLocaleString()}
+                            </span>
+                            <span className="text-slate-500 text-[10px] block">প্রতি মাসের {asset.due_day} তারিখ</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-400">
+                          <span>মেয়াদ:</span>
+                          <span className="text-slate-300 font-medium">
+                            {asset.tenure_type === "until_refund"
+                              ? "টাকা ফেরত পর্যন্ত (উন্মুক্ত)"
+                              : asset.tenure_type === "min_1_year"
+                              ? "নূন্যতম ১ বছর লক-ইন"
+                              : asset.end_date || "নির্দিষ্ট মেয়াদ"}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-[#071025]/40 border border-white/5 rounded-xl p-3 text-xs mb-3 text-center py-3">
+                        <p className="text-amber-400 text-xs font-medium mb-1">
+                          🔒 কোনো ভাড়া চুক্তি সক্রিয় নেই
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          মালিকের সাথে অথবা ৩য় পক্ষের সাথে মাসিক ভাড়ার চুক্তি সম্পন্ন করুন।
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Rental Earnings / Pure Profit Stat */}
+                    <div className="bg-[#071025]/60 border border-emerald-500/15 rounded-xl p-2.5 mb-4 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">মোট সংগৃহীত ভাড়া (কোম্পানির মুনাফা):</span>
+                        <span className="font-bold text-emerald-400 font-mono text-sm">
+                          ৳ {Number(asset.total_collected || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] text-slate-400 block">অক্ষত মূলধন (ফেরতযোগ্য):</span>
+                        <span className="font-bold text-amber-300 font-mono text-xs">
+                          ৳ {Number(asset.purchase_price || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bondok Card Actions */}
+                  <div className="pt-3 border-t border-white/10 flex items-center gap-2">
+                    {isReleased ? (
+                      <div className="w-full py-2 px-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                        <FaCheckCircle size={12} className="text-emerald-400" />
+                        <span>বন্ধক খালাস ও মূলধন ফেরত সম্পন্ন</span>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleOpenAgreementModal(asset)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        >
+                          <FaHandshake size={12} className="text-amber-400" />
+                          <span>{hasAgreement ? "চুক্তি বদলান" : "ভাড়া চুক্তি"}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenEditModal(asset)}
+                          className="py-2 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                          title="বন্ধকি সম্পদের তথ্য ও মূলধন সংশোধন"
+                        >
+                          <FaEdit size={11} />
+                          <span>সংশোধন</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate("/other-sources/collections")}
+                          className="py-2 px-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                          title="মাসিক ভাড়া কালেকশন দেখুন"
+                        >
+                          <FaReceipt size={12} />
+                          <span>কালেকশন</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenReleaseModal(asset)}
+                          className="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold text-xs shadow-md shadow-amber-950/40 flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
+                          title="মালিক টাকা ফেরত দিলে বন্ধক খালাস করুন (ক্যাশ ইন জমা হবে)"
+                        >
+                          <FaUnlock size={11} />
+                          <span>বন্ধক খালাস</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            // 📦 3. REGULAR ASSET CARD (Bike, Shop, House, Equipment, etc.)
             return (
               <div
                 key={asset.id}
@@ -1302,12 +1649,16 @@ const OtherSourcesAssets = () => {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                    {newAsset.category === "company_share"
+                    {newAsset.category === "bondok"
+                      ? "ঘর/সম্পদ বন্ধক গ্রহণ এন্ট্রি"
+                      : newAsset.category === "company_share"
                       ? "কোম্পানি শেয়ার / ইকুইটি বিনিয়োগ এন্ট্রি"
                       : "নতুন অ্যাসেট ক্রয় এন্ট্রি"}
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {newAsset.category === "company_share"
+                    {newAsset.category === "bondok"
+                      ? "ঘর, দোকান বা জমি বন্ধক রেখে মূলধন প্রদান (ক্যাশ আউট) ও রেকর্ড"
+                      : newAsset.category === "company_share"
                       ? "অন্যান্য কোম্পানিতে শেয়ার ক্রয় বাবদ মূলধন বিনিয়োগ (ক্যাশ আউট) ও রেকর্ড"
                       : "প্রোডাক্ট কেনা বাবদ খরচ (ক্যাশ আউট) ও রেকর্ড"}
                   </p>
@@ -1450,7 +1801,169 @@ const OtherSourcesAssets = () => {
                 </div>
               </div>
 
-              {newAsset.category === "company_share" ? (
+              {newAsset.category === "bondok" ? (
+                /* 🏠 BONDOK / MORTGAGE ASSET FIELDS */
+                <>
+                  <div>
+                    <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                      <FaHome className="text-amber-400" size={12} />
+                      সম্পদ / ঘরের বিবরণ বা পরিচিতি <span className="text-amber-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="যেমন: মিরপুর ২য় তলা ৪ রুমের বাসা বা ধানমন্ডি দোকান বন্ধক"
+                      value={newAsset.asset_name}
+                      onChange={(e) =>
+                        setNewAsset({ ...newAsset, asset_name: e.target.value })
+                      }
+                      className="w-full bg-[#050b17] border border-amber-500/35 rounded-xl px-3.5 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                        <FaMoneyBillWave className="text-emerald-400" size={12} />
+                        প্রদত্ত বন্ধকি মূলধন (Cash Out) <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">৳</span>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="যেমন: ৫,০০,০০০"
+                          value={newAsset.purchase_price}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, purchase_price: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-rose-500/30 rounded-xl pl-7 pr-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 font-mono font-bold transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                        <FaCalendarAlt className="text-cyan-400" size={11} />
+                        বন্ধক গ্রহণের তারিখ <span className="text-amber-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newAsset.purchase_date}
+                        onChange={(e) =>
+                          setNewAsset({ ...newAsset, purchase_date: e.target.value })
+                        }
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 font-mono transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Owner Details */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#060c18] to-[#060c18] border border-amber-500/25 space-y-2.5">
+                    <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <FaUser size={10} /> মূল মালিকের তথ্য (Owner Details)
+                    </span>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-slate-300 font-semibold mb-1 block text-[11px]">
+                          মালিকের নাম <span className="text-amber-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="যেমন: হাজী রফিকুল ইসলাম"
+                          value={newAsset.owner_name}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, owner_name: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-300 font-semibold mb-1 block text-[11px]">
+                          মালিকের মোবাইল <span className="text-amber-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="০১৭১১-XXXXXX"
+                          value={newAsset.owner_mobile}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, owner_mobile: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 font-mono font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-slate-300 font-semibold mb-1 block text-[11px]">
+                          মালিকের জাতীয় পরিচয়পত্র (NID)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="NID নম্বর..."
+                          value={newAsset.owner_nid}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, owner_nid: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-300 font-semibold mb-1 block text-[11px]">
+                          দলিল / বায়নানামা নং
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: Deed-84920/2026"
+                          value={newAsset.deed_no}
+                          onChange={(e) =>
+                            setNewAsset({ ...newAsset, deed_no: e.target.value })
+                          }
+                          className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 font-semibold mb-1 block text-[11px]">
+                        সম্পদ / ঘরের সম্পূর্ণ ঠিকানা
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="বাসা নং, রোড নং, এলাকা, থানা, জেলা..."
+                        value={newAsset.property_address}
+                        onChange={(e) =>
+                          setNewAsset({ ...newAsset, property_address: e.target.value })
+                        }
+                        className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 font-semibold mb-1 block">
+                      শর্তাবলী / বিশেষ মন্তব্য
+                    </label>
+                    <textarea
+                      rows="2"
+                      placeholder="টাকা ফেরত ও দখল সংক্রান্ত শর্তাবলী..."
+                      value={newAsset.remarks}
+                      onChange={(e) =>
+                        setNewAsset({ ...newAsset, remarks: e.target.value })
+                      }
+                      className="w-full bg-[#050b17] border border-slate-700/70 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400 resize-none"
+                    />
+                  </div>
+                </>
+              ) : newAsset.category === "company_share" ? (
                 /* 🏢 COMPANY SHARE FIELDS */
                 <>
                   <div className="grid grid-cols-2 gap-3">
@@ -1744,7 +2257,9 @@ const OtherSourcesAssets = () => {
                     </span>
                   </div>
                   <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                    {newAsset.category === "company_share"
+                    {newAsset.category === "bondok"
+                      ? 'ঘর/সম্পদ বন্ধক নেওয়ার সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "ঘর/সম্পদ বন্ধক গ্রহণ ও মূলধন প্রদান" হিসেবে Approved ক্যাশ আউট রেকর্ড হবে।'
+                      : newAsset.category === "company_share"
                       ? 'অ্যাসেট যুক্ত করার সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "কোম্পানি শেয়ারে বিনিয়োগ" হিসেবে Approved ক্যাশ আউট রেকর্ড হবে (ম্যানুয়াল অনুমোদনের প্রয়োজন নেই)।'
                       : 'অ্যাসেট যুক্ত করার সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "অ্যাসেট ক্রয়" হিসেবে Approved ক্যাশ আউট রেকর্ড হবে (ম্যানুয়াল অনুমোদনের প্রয়োজন নেই)।'}
                   </p>
@@ -1815,6 +2330,116 @@ const OtherSourcesAssets = () => {
             </div>
 
             <form onSubmit={handleAgreementSubmit} className="space-y-4 text-xs">
+              {/* If Bondok: Show Agreement Nature & Tenure Type */}
+              {(selectedAssetForAgreement.category === "bondok" || selectedAssetForAgreement.is_bondok == 1) && (
+                <div className="bg-gradient-to-r from-amber-500/10 via-[#060c18] to-[#060c18] border border-amber-500/30 rounded-2xl p-3.5 space-y-3">
+                  <div>
+                    <label className="text-amber-300 font-bold block mb-1.5 flex items-center gap-1.5">
+                      <FaHandshake size={12} />
+                      চুক্তি কার সাথে হবে? (Agreement Nature) *
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewAgreement({
+                            ...newAgreement,
+                            agreement_nature: "owner_leaseback",
+                            lessee_name: selectedAssetForAgreement.owner_name || "",
+                            lessee_mobile: selectedAssetForAgreement.owner_mobile || "",
+                            lessee_nid: selectedAssetForAgreement.owner_nid || "",
+                            lessee_address: selectedAssetForAgreement.property_address || "",
+                          });
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          newAgreement.agreement_nature === "owner_leaseback"
+                            ? "bg-amber-500/20 border-amber-500/60 text-white font-bold"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span className="block font-semibold text-xs">১. মালিক নিজে (Lease-back)</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">মালিক নিজে থাকবেন ও ভাড়া দিবেন</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewAgreement({
+                            ...newAgreement,
+                            agreement_nature: "third_party_tenant",
+                            lessee_name: "",
+                            lessee_mobile: "",
+                            lessee_nid: "",
+                            lessee_address: "",
+                          });
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          newAgreement.agreement_nature === "third_party_tenant"
+                            ? "bg-amber-500/20 border-amber-500/60 text-white font-bold"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span className="block font-semibold text-xs">২. ৩য় পক্ষ ভাড়াটিয়া (Sub-Lease)</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">মালিক চাবি দিবে, ৩য় পক্ষ ভাড়া দিবে</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-amber-300 font-bold block mb-1.5 flex items-center gap-1.5">
+                      <FaClock size={12} />
+                      চুক্তির মেয়াদের ধরন (Tenure Rule) *
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewAgreement({ ...newAgreement, tenure_type: "until_refund", end_date: "" })}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer ${
+                          newAgreement.tenure_type === "until_refund"
+                            ? "bg-amber-500/25 border-amber-400 text-white font-bold"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span className="block font-semibold text-[11px]">টাকা ফেরত পর্যন্ত</span>
+                        <span className="text-[9px] text-slate-400 block mt-0.5">উন্মুক্ত মেয়াদ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNewAgreement({ ...newAgreement, tenure_type: "min_1_year", end_date: "" })}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer ${
+                          newAgreement.tenure_type === "min_1_year"
+                            ? "bg-amber-500/25 border-amber-400 text-white font-bold"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span className="block font-semibold text-[11px]">নূন্যতম ১ বছর</span>
+                        <span className="text-[9px] text-slate-400 block mt-0.5">১ বছরের লক-ইন</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNewAgreement({ ...newAgreement, tenure_type: "fixed_term" })}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer ${
+                          newAgreement.tenure_type === "fixed_term"
+                            ? "bg-amber-500/25 border-amber-400 text-white font-bold"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span className="block font-semibold text-[11px]">নির্দিষ্ট মেয়াদ</span>
+                        <span className="text-[9px] text-slate-400 block mt-0.5">মেয়াদ তারিখ দিন</span>
+                      </button>
+                    </div>
+
+                    {newAgreement.tenure_type === "min_1_year" && (
+                      <p className="text-[10px] text-amber-300 mt-1.5 bg-amber-500/10 p-1.5 rounded-lg border border-amber-500/20">
+                        ℹ️ <strong>শর্ত:</strong> নূন্যতম ১ বছর সম্পত্তি আমাদের দায়িত্বে থাকবে। ১ বছর পূর্ণ হওয়ার আগে টাকা ফেরত দিতে চাইলে ১ মাসের অগ্রিম নোটিশ দিতে হবে।
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-300 font-semibold mb-1 block">
@@ -1971,6 +2596,27 @@ const OtherSourcesAssets = () => {
                   className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-orange-500"
                 />
               </div>
+
+              {/* End Date (Only for Fixed Term) */}
+              {newAgreement.tenure_type === "fixed_term" && (
+                <div>
+                  <label className="text-slate-300 font-semibold mb-1 block">
+                    চুক্তির মেয়াদ সমাপ্তির তারিখ (End Date) *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newAgreement.end_date}
+                    onChange={(e) =>
+                      setNewAgreement({
+                        ...newAgreement,
+                        end_date: e.target.value,
+                      })
+                    }
+                    className="w-full bg-[#071025] border border-amber-500/40 rounded-xl px-3 py-2 text-white outline-none focus:border-amber-400 font-mono"
+                  />
+                </div>
+              )}
 
               {/* Security Deposit Auto Cash In Card */}
               {Number(newAgreement.security_deposit) > 0 && (
@@ -2616,6 +3262,169 @@ const OtherSourcesAssets = () => {
           </div>
         </div>
       )}
+
+      {/* ======================================================================= */}
+      {/* 🔓 RELEASE BONDOK MODAL (বন্ধক খালাস ও মূলধন ফেরত গ্রহণ)                 */}
+      {/* ======================================================================= */}
+      {showReleaseModal && selectedAssetForRelease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#0f1b2d] border border-amber-500/30 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center">
+                  <FaUnlock size={16} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">ঘর/সম্পদ বন্ধক খালাস</h3>
+                  <p className="text-xs text-amber-300">
+                    মালিকের নিকট থেকে মূলধন ফেরত গ্রহণ ও ক্যাশ ইন রেকর্ড
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowReleaseModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <FaTimes size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleReleaseSubmit} className="space-y-4 text-xs">
+              {/* Asset & Capital Summary */}
+              <div className="bg-[#071025] border border-white/10 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">সম্পদ / ঘর:</span>
+                  <span className="font-bold text-white text-sm">{selectedAssetForRelease.asset_name}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                  <span className="text-slate-400">মূল মালিক (Owner):</span>
+                  <span className="font-semibold text-slate-200">
+                    {selectedAssetForRelease.owner_name || "N/A"}{" "}
+                    {selectedAssetForRelease.owner_mobile && `(${selectedAssetForRelease.owner_mobile})`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                  <span className="text-slate-400">প্রদত্ত বন্ধকি মূলধন (Cash Out):</span>
+                  <span className="font-bold text-red-400 font-mono text-sm">
+                    ৳ {Number(selectedAssetForRelease.purchase_price || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                  <span className="text-slate-400">এখন পর্যন্ত সংগৃহীত মোট ভাড়া (মুনাফা):</span>
+                  <span className="font-bold text-emerald-400 font-mono text-sm">
+                    ৳ {Number(selectedAssetForRelease.total_collected || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-200">
+                💡 <strong>খালাস নীতিমালা:</strong> মালিক কর্তৃক মূলধন ফেরত পাওয়ার পর এই খালাস নিশ্চিত করুন। চুক্তি সমাপ্ত হবে এবং সম্পূর্ণ ফেরত মূলধনটি ক্যাশ ম্যানেজমেন্টে সরাসরি Approved ক্যাশ ইন হিসেবে যুক্ত হবে।
+              </div>
+
+              {/* Refund Capital Input */}
+              <div className="space-y-1.5">
+                <label className="text-slate-300 font-semibold block">
+                  ফেরত পাওয়া মূলধনের পরিমাণ (টাকা) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="যেমন: ৫,০০,০০০"
+                  value={releaseForm.refund_amount}
+                  onChange={(e) => setReleaseForm({ ...releaseForm, refund_amount: e.target.value })}
+                  className="w-full bg-[#071025] border border-amber-500/40 rounded-xl px-3 py-2.5 text-white font-mono font-bold text-base outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold mb-1 block">
+                    খালাসের তারিখ *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={releaseForm.release_date}
+                    onChange={(e) => setReleaseForm({ ...releaseForm, release_date: e.target.value })}
+                    className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-amber-400 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold mb-1 block">
+                    পেমেন্ট মেথড
+                  </label>
+                  <select
+                    value={releaseForm.payment_method}
+                    onChange={(e) => setReleaseForm({ ...releaseForm, payment_method: e.target.value })}
+                    className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-amber-400"
+                  >
+                    <option value="Cash">ক্যাশ (Cash)</option>
+                    <option value="Bank Transfer">ব্যাংক ট্রান্সফার (Bank Transfer)</option>
+                    <option value="Cheque">চেক (Cheque)</option>
+                    <option value="bKash">বিকাশ (bKash)</option>
+                    <option value="Nagad">নগদ (Nagad)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-semibold mb-1 block">
+                  খালাস বিবরণ / দলিল হস্তান্তরের নোট
+                </label>
+                <input
+                  type="text"
+                  placeholder="যেমন: মূলধন নগদ বুঝে পেয়ে দখল ও মূল দলিল মালিককে হস্তান্তর করা হলো..."
+                  value={releaseForm.remarks}
+                  onChange={(e) => setReleaseForm({ ...releaseForm, remarks: e.target.value })}
+                  className="w-full bg-[#071025] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* Automatic Cash In Status Card (Directly Approved) */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/25 via-[#060c18] to-[#060c18] border border-emerald-500/30 p-2.5 px-3 flex items-start gap-3 shadow-inner">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                  <FaCoins size={13} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      স্বয়ংক্রিয় Cash In (সরাসরি Approved)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-sm shrink-0">
+                      <FaCheckCircle size={10} className="text-emerald-400" />
+                      অটো অনুমোদিত
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                    বন্ধক খালাসের সাথে সাথে ক্যাশ ম্যানেজমেন্টে সরাসরি "বন্ধক খালাস ও মূলধন ফেরত গ্রহণ" হিসেবে Approved ক্যাশ ইন জমা হবে।
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReleaseModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-medium cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRelease}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold cursor-pointer disabled:opacity-50 shadow-lg shadow-amber-950/30"
+                >
+                  {submittingRelease ? "খালাস হচ্ছে..." : "বন্ধক খালাস নিশ্চিত করুন"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Asset Edit Request Modal */}
       <AssetEditModal
         isOpen={showEditModal}

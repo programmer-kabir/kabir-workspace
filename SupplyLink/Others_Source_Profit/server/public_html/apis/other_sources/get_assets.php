@@ -22,6 +22,12 @@ $query = "
         a.purchase_date,
         a.sale_date,
         a.vendor_info,
+        a.owner_name,
+        a.owner_mobile,
+        a.owner_nid,
+        a.property_address,
+        a.deed_no,
+        a.is_bondok,
         a.buyer_name,
         a.buyer_mobile,
         a.cash_id,
@@ -35,9 +41,14 @@ $query = "
         ag.lessee_mobile,
         ag.lessee_nid,
         ag.agreement_type,
+        ag.agreement_nature,
+        ag.tenure_type,
+        ag.min_lockin_months,
+        ag.notice_days,
         ag.monthly_rent,
         ag.due_day,
         ag.start_date AS agreement_start_date,
+        ag.end_date AS agreement_end_date,
         ag.security_deposit,
         ag.status AS agreement_status,
         
@@ -86,14 +97,17 @@ while ($row = $result->fetch_assoc()) {
     $remaining = max(0, $price - $collected);
     $recovery_pct = $price > 0 ? min(100, round(($collected / $price) * 100, 1)) : 0;
 
+    $isBondok = ($row['category'] === 'bondok' || intval($row['is_bondok'] ?? 0) === 1);
+    $row['is_bondok']          = $isBondok ? 1 : 0;
     $row['purchase_price']     = $price;
     $row['share_percentage']   = ($row['share_percentage'] !== null) ? floatval($row['share_percentage']) : null;
     $row['share_units']        = ($row['share_units'] !== null) ? intval($row['share_units']) : null;
     $row['selling_price']      = ($row['selling_price'] !== null) ? floatval($row['selling_price']) : null;
     $row['sale_profit']        = ($row['sale_profit'] !== null) ? floatval($row['sale_profit']) : null;
     $row['total_collected']    = $collected;
-    $row['remaining_capital']  = $remaining;
-    $row['recovery_percentage']= $recovery_pct;
+    $row['remaining_capital']  = $isBondok ? $price : $remaining;
+    $row['recovery_percentage']= $isBondok ? ($price > 0 ? round(($collected / $price) * 100, 1) : 0) : $recovery_pct;
+    $row['total_profit_earned']= $isBondok ? $collected : 0;
     $row['monthly_rent']       = floatval($row['monthly_rent'] ?? 0);
     $row['collections_count']  = intval($row['collections_count'] ?? 0);
 
