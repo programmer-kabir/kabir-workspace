@@ -40,141 +40,155 @@ const DashboardReport = () => {
 
   const activeDate = selectedDate || getDhakaToday();
 
-  // ক্যাশ রিপোর্ট লিস্ট (সার্ভার সামারি লিস্ট অগ্রাধিকার পাবে)
-  const allCash = (cashSummary && Array.isArray(cashSummary.cash_in_list) && Array.isArray(cashSummary.cash_out_list))
-    ? [...cashSummary.cash_in_list, ...cashSummary.cash_out_list]
-    : (approvedCashReports || cashReports || []);
+  // ক্যাশ রিপোর্ট লিস্ট (সার্ভার সামারি লিস্ট ১০০% অগ্রাধিকার পাবে)
+  const allCashIn = (cashSummary && Array.isArray(cashSummary.cash_in_list))
+    ? cashSummary.cash_in_list
+    : (approvedCashReports || cashReports || []).filter((item) => {
+        const itemDate = (item.date?.split(" ")[0] || item.date);
+        return itemDate === activeDate && item.type === "in";
+      });
 
-  // 🔹 ফিল্টার্ড ট্রানজেকশন তালিকা
-  const monthlyInstallments = customerInstallmentPayments?.filter((item) => {
-    const card = customerInstallmentCards?.find(
-      (c) => Number(c.card_id) === Number(item.card_id)
-    );
-    const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
+  const allCashOut = (cashSummary && Array.isArray(cashSummary.cash_out_list))
+    ? cashSummary.cash_out_list
+    : (approvedCashReports || cashReports || []).filter((item) => {
+        const itemDate = (item.date?.split(" ")[0] || item.date);
+        return itemDate === activeDate && item.type === "out";
+      });
+
+  // 🔹 ক্যাশ ইন (Cash In) ক্যাটাগরি ভিত্তিক গ্রুপ - ১০০% ক্যাশ টেবিল থেকে
+  const todayDownpayments = allCashIn.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    return cat === "downpayment" || src.includes("down payment") || src.includes("ডাউন পেমেন্ট");
+  });
+
+  const todayDailyInstallments = allCashIn.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    const isDP = cat === "downpayment" || src.includes("down payment") || src.includes("ডাউন পেমেন্ট");
+    return !isDP && (cat === "daily-installment" || src.includes("daily"));
+  });
+
+  const todayMonthlyInstallments = allCashIn.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    const isDP = cat === "downpayment" || src.includes("down payment") || src.includes("ডাউন পেমেন্ট");
+    const isDaily = cat === "daily-installment" || src.includes("daily");
+    return !isDP && !isDaily && (cat === "installment" || src.includes("installment") || src.includes("কিস্তি"));
+  });
+
+  const todayInvestments = allCashIn.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    return cat === "invest" || src.includes("investment") || src.includes("বিনিয়োগ");
+  });
+
+  const todayLoansTaken = allCashIn.filter((item) => {
+    return item.category?.toLowerCase()?.trim() === "loan";
+  });
+
+  const todayLoanReturns = allCashIn.filter((item) => {
+    return item.category?.toLowerCase()?.trim() === "loan-return";
+  });
+
+  const todayOtherCashIn = allCashIn.filter((item) => {
+    const isKnown = 
+      todayDownpayments.some((i) => i.id === item.id) ||
+      todayDailyInstallments.some((i) => i.id === item.id) ||
+      todayMonthlyInstallments.some((i) => i.id === item.id) ||
+      todayInvestments.some((i) => i.id === item.id) ||
+      todayLoansTaken.some((i) => i.id === item.id) ||
+      todayLoanReturns.some((i) => i.id === item.id);
+    return !isKnown;
+  });
+
+  // 🔹 ক্যাশ আউট (Cash Out) ক্যাটাগরি ভিত্তিক গ্রুপ - ১০০% ক্যাশ টেবিল থেকে
+  const todayProductPurchases = allCashOut.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    return cat === "purchase" || cat === "product-purchase" || src === "purchase" || src === "product-purchase";
+  });
+
+  const todayExpenses = allCashOut.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    const isPurchase = cat === "purchase" || cat === "product-purchase" || src === "purchase" || src === "product-purchase";
+    if (isPurchase) return false;
     return (
-      item.status === "Paid" &&
-      item.paid_date?.split(" ")[0] === activeDate &&
-      !isDaily
+      src === "company-expense" ||
+      ["salary", "rent", "bill", "office-expense", "maintenance", "utility", "marketing", "transport", "food", "internet", "expense"].includes(cat)
     );
-  }) || [];
+  });
 
-  const todayInvestments = investInstallments?.filter(
-    (item) => item.investment_date?.split(" ")[0] === activeDate
-  ) || [];
+  const todayLoansGiven = allCashOut.filter((item) => {
+    return item.category?.toLowerCase()?.trim() === "loan-given";
+  });
 
-  const todayDailyInstallments = dailyInstallments?.filter(
-    (item) => item.date?.split(" ")[0] === activeDate
-  ) || [];
+  const todayLoanRepayments = allCashOut.filter((item) => {
+    return item.category?.toLowerCase()?.trim() === "loan-repayment";
+  });
 
-  const todayExpenses = companyExpenses?.filter(
-    (item) => item.date?.split(" ")[0] === activeDate
-  ) || [];
+  const todayInvestorWithdraw = allCashOut.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    const src = item.source?.toLowerCase()?.trim() || "";
+    return cat === "investor-withdraw" || cat === "investor-return" || src === "investor-withdraw";
+  });
 
-  const todayProductPurchase = customerInstallmentCards?.filter(
-    (item) => item.delivery_date?.split(" ")[0] === activeDate
-  ) || [];
+  const todayProfitWithdrawals = allCashOut.filter((item) => {
+    const cat = item.category?.toLowerCase()?.trim() || "";
+    return cat === "profit-withdraw" || cat === "profit-payout";
+  });
 
-  const todayCompleteInvestorReturnAmount = investorWithdrawApplications?.filter(
-    (item) => item.reviewed_at?.split(" ")[0] === activeDate
-  ) || [];
+  const todayOtherCashOut = allCashOut.filter((item) => {
+    const isKnown =
+      todayProductPurchases.some((i) => i.id === item.id) ||
+      todayExpenses.some((i) => i.id === item.id) ||
+      todayLoansGiven.some((i) => i.id === item.id) ||
+      todayLoanRepayments.some((i) => i.id === item.id) ||
+      todayInvestorWithdraw.some((i) => i.id === item.id) ||
+      todayProfitWithdrawals.some((i) => i.id === item.id);
+    return !isKnown;
+  });
 
-  // Loan & Cash In/Out Filters
-  const todayLoansTaken = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "in" &&
-      item.category?.toLowerCase()?.trim() === "loan"
-  );
-
-  const todayLoanReturns = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "in" &&
-      item.category?.toLowerCase()?.trim() === "loan-return"
-  );
-
-  const todayLoansGiven = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "out" &&
-      item.category?.toLowerCase()?.trim() === "loan-given"
-  );
-
-  const todayLoanRepayments = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "out" &&
-      item.category?.toLowerCase()?.trim() === "loan-repayment"
-  );
-
-  const todayOtherCashIn = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "in" &&
-      !["invest", "installment", "downpayment", "daily-installment", "loan", "loan-return"].includes(
-        item.category?.toLowerCase()?.trim()
-      )
-  );
-
-  const todayProfitWithdrawals = allCash.filter(
-    (item) =>
-      (item.date?.split(" ")[0] === activeDate || item.date === activeDate) &&
-      item.type === "out" &&
-      (item.category?.toLowerCase()?.trim() === "profit-withdraw" ||
-        item.category?.toLowerCase()?.trim() === "profit-payout")
-  );
-
-  const dailyMonthlyInstallments = customerInstallmentPayments?.filter((item) => {
-    const card = customerInstallmentCards?.find(
-      (c) => Number(c.card_id) === Number(item.card_id)
-    );
-    const isDaily = (card?.installment_type || card?.remarks || "").trim().toLowerCase() === "daily";
-    return (
-      item.status === "Paid" &&
-      item.paid_date?.split(" ")[0] === activeDate &&
-      isDaily
-    );
-  }) || [];
-
-  // 🔹 মোট যোগফল হিসাব
-  const totalInstallmentCollection = monthlyInstallments.reduce(
-    (sum, item) => sum + Number(item.due_amount || item.paid_amount || 0), 0
-  );
-  const totalInvestment = todayInvestments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  // 🔹 মোট যোগফল হিসাব (সরাসরি ক্যাশ টেবিল থেকে)
+  const totalDownpayment = todayDownpayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalMonthlyInstallment = todayMonthlyInstallments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalDailyCollection = todayDailyInstallments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalDailyMonthlyInstallmentCollection = dailyMonthlyInstallments.reduce(
-    (sum, item) => sum + Number(item.due_amount || 0), 0
-  );
-  const totalExpense = todayExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalProductPurchase = todayProductPurchase.reduce((sum, item) => sum + Number(item.cost_price || 0), 0);
-  const totalInvestorWithdraw = todayCompleteInvestorReturnAmount.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
+  const totalInvestment = todayInvestments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalLoanTaken = todayLoansTaken.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalLoanReturn = todayLoanReturns.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalOtherCashIn = todayOtherCashIn.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  const totalProductPurchase = todayProductPurchases.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalExpense = todayExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalLoanGiven = todayLoansGiven.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalLoanRepaid = todayLoanRepayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalInvestorWithdraw = todayInvestorWithdraw.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalProfitWithdraw = todayProfitWithdrawals.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalOtherCashIn = todayOtherCashIn.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalOtherCashOut = todayOtherCashOut.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  const calculatedCashIn =
+    totalDownpayment +
+    totalMonthlyInstallment +
+    totalDailyCollection +
+    totalInvestment +
+    totalLoanTaken +
+    totalLoanReturn +
+    totalOtherCashIn;
+
+  const calculatedCashOut =
+    totalProductPurchase +
+    totalExpense +
+    totalLoanGiven +
+    totalLoanRepaid +
+    totalInvestorWithdraw +
+    totalProfitWithdraw +
+    totalOtherCashOut;
 
   // 🔹 ক্যাশ সামারি (সার্ভার রেসপন্স সরাসরি ব্যবহৃত হবে)
   const openingCash = cashSummary?.opening_cash ?? 0;
-  const cashIn = cashSummary?.today_in ?? (
-    totalInstallmentCollection +
-    totalInvestment +
-    totalDailyCollection +
-    totalDailyMonthlyInstallmentCollection +
-    totalLoanTaken +
-    totalLoanReturn +
-    totalOtherCashIn
-  );
-  const cashOut = cashSummary?.today_out ?? (
-    totalExpense +
-    totalProductPurchase +
-    totalInvestorWithdraw +
-    totalLoanGiven +
-    totalLoanRepaid +
-    totalProfitWithdraw
-  );
+  const cashIn = cashSummary?.today_in ?? calculatedCashIn;
+  const cashOut = cashSummary?.today_out ?? calculatedCashOut;
   const totalCash = cashSummary?.net_cash ?? (openingCash + cashIn - cashOut);
 
   // 🔹 তারিখ ফরম্যাটিং
@@ -234,13 +248,13 @@ const DashboardReport = () => {
               <FaChevronLeft className="text-xs" /> আগের দিন
             </button>
 
-            <div className="relative flex items-center">
-              <FaCalendarAlt className="absolute left-3 text-indigo-400 text-sm pointer-events-none" />
+            <div className="relative flex items-center shadow-lg rounded-xl">
+              <FaCalendarAlt className="absolute left-3 text-indigo-600 text-sm pointer-events-none z-10" />
               <input
                 type="date"
                 value={activeDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                className="bg-white text-slate-900 border-2 border-indigo-400 hover:border-indigo-600 focus:border-indigo-600 rounded-xl pl-9 pr-3 py-1.5 text-sm font-bold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md cursor-pointer transition"
               />
             </div>
 
@@ -338,247 +352,259 @@ const DashboardReport = () => {
             </div>
           </div>
 
-          {/* বিস্তারিত টেবিলসমূহ */}
+          {/* বিস্তারিত টেবিলসমূহ (১০০% ক্যাশ লেজার ভাউচার ভিত্তিক) */}
           <div className="report-tables-container space-y-6">
 
-
-            {/* Investment Collection */}
-            <ReportTable
-              title="Today's Investment Collection Report"
-              columns={["#", "Investor", "Investor Id", "Card No", "Amount"]}
-              data={todayInvestments}
-              total={totalInvestment}
-              totalColSpan={4}
-              renderRow={(item, index) => {
-                const user = users.find(
-                  (u) => Number(u.id) === Number(item.investor_id) || Number(u.user_id) === Number(item.investor_id)
-                );
-                return [
+            {/* 1. Down Payment Collection */}
+            {todayDownpayments.length > 0 && (
+              <ReportTable
+                title="Today's Down Payment Collection Report (ডাউন পেমেন্ট আদায়)"
+                columns={["#", "উৎস / গ্রাহক (Source / Customer)",  "উদ্দেশ্য (Purpose)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayDownpayments}
+                total={totalDownpayment}
+                totalColSpan={4}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.user_id || user?.id || item.investor_id || "-",
-                  item.investment_card_no,
-                  Number(item.amount).toLocaleString(),
-                ];
-              }}
-            />
+                  item?.source || "-",
+                  
+                  item?.purpose || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Daily Installment Collection */}
-            <ReportTable
-              title="Today's Daily Installment Collection Report"
-              columns={["#", "Customer", "Customer Id", "Card No", "Amount"]}
-              data={todayDailyInstallments}
-              total={totalDailyCollection}
-              totalColSpan={4}
-              renderRow={(item, index) => {
-                const user = users.find(
-                  (u) => Number(u.id) === Number(item.userId) || Number(u.user_id) === Number(item.userId)
-                );
-                return [
+            {/* 2. Monthly Installment Collection */}
+            {todayMonthlyInstallments.length > 0 && (
+              <ReportTable
+                title="Today's Monthly Installment Collection Report (মাসিক কিস্তি আদায়)"
+                columns={["#", "উৎস / গ্রাহক (Customer / Source)",  "উদ্দেশ্য (Purpose)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayMonthlyInstallments}
+                total={totalMonthlyInstallment}
+                totalColSpan={4}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.user_id || user?.id || item.userId || "-",
-                  item.cardId,
-                  Number(item.amount).toLocaleString(),
-                ];
-              }}
-            />
+                  item?.source || "-",
+                 
+                  item?.purpose || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Daily Installment Complete Monthly */}
-            <ReportTable
-              title="Today's Daily Card Installment Collection Report"
-              columns={["#", "Customer", "Customer Id", "Card No", "Installment", "Amount"]}
-              data={dailyMonthlyInstallments}
-              total={totalDailyMonthlyInstallmentCollection}
-              totalColSpan={5}
-              renderRow={(item, index) => {
-                const card = customerInstallmentCards?.find(
-                  (c) => Number(c.card_id) === Number(item.card_id)
-                );
-                const user = users?.find((u) => Number(u.user_id) === Number(card?.user_id));
-                return [
+            {/* 3. Daily Installment Collection */}
+            {todayDailyInstallments.length > 0 && (
+              <ReportTable
+                title="Today's Daily Installment Collection Report (দৈনিক কিস্তি আদায়)"
+                columns={["#", "উৎস / গ্রাহক (Customer / Source)", "উদ্দেশ্য (Purpose)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayDailyInstallments}
+                total={totalDailyCollection}
+                totalColSpan={4}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.user_id || card?.user_id || "-",
-                  card?.card_id || item.card_id || "-",
-                  item?.tag || "-",
-                  Number(item.due_amount).toLocaleString(),
-                ];
-              }}
-            />
+                  item?.source || "-",
+                
+                  item?.purpose || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Monthly Installment Report */}
-            <ReportTable
-              title="Today's Monthly Installment Collection Report"
-              columns={["#", "Customer", "Customer Id", "Card No", "Installment", "Method", "Amount"]}
-              data={monthlyInstallments}
-              total={totalInstallmentCollection}
-              totalColSpan={6}
-              renderRow={(item, index) => {
-                const card = customerInstallmentCards?.find(
-                  (c) => Number(c.card_id) === Number(item.card_id)
-                );
-                const user = users?.find((u) => Number(u.user_id) === Number(card?.user_id));
-                return [
+            {/* 4. Investment Collection */}
+            {todayInvestments.length > 0 && (
+              <ReportTable
+                title="Today's Investment Collection Report (বিনিয়োগ জমা)"
+                columns={["#", "বিনিয়োগকারী / উৎস (Investor)",  "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayInvestments}
+                total={totalInvestment}
+                totalColSpan={3}
+                renderRow={(item, index) => [
                   index + 1,
-                  user?.name || "-",
-                  user?.user_id || card?.user_id || "-",
-                  card?.card_id || item.card_id || "-",
-                  item?.tag || "-",
-                  item?.payment_method || "-",
-                  Number(item.due_amount).toLocaleString(),
-                ];
-              }}
-            />
+                  item?.source || "-",
+                  
+                  item?.remarks || item?.purpose || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Loan Taken Report */}
-            <ReportTable
-              title="Today's Loan Taken Report (ঋণ গ্রহণ)"
-              columns={["#", "Date", "Source / কার থেকে নেওয়া", "Ref ID", "Remarks / বিবরণ", "Amount"]}
-              data={todayLoansTaken}
-              total={totalLoanTaken}
-              totalColSpan={5}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.source || "-",
-                item?.refId || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 5. Loan Taken Report */}
+            {todayLoansTaken.length > 0 && (
+              <ReportTable
+                title="Today's Loan Taken Report (ঋণ গ্রহণ)"
+                columns={["#", "কার থেকে নেওয়া (Source)",  "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayLoansTaken}
+                total={totalLoanTaken}
+                totalColSpan={3}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.source || "-",
+                 
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Loan Return Received Report */}
-            <ReportTable
-              title="Today's Loan Return Report (ঋণ ফেরত আদায়)"
-              columns={["#", "Date", "Source / কে ফেরত দিয়েছে", "Ref ID", "Remarks / বিবরণ", "Amount"]}
-              data={todayLoanReturns}
-              total={totalLoanReturn}
-              totalColSpan={5}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.source || "-",
-                item?.refId || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 6. Loan Return Received Report */}
+            {todayLoanReturns.length > 0 && (
+              <ReportTable
+                title="Today's Loan Return Report (ঋণ ফেরত আদায়)"
+                columns={["#", "কে ফেরত দিয়েছে (Source)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayLoanReturns}
+                total={totalLoanReturn}
+                totalColSpan={3}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.source || "-",
+                  
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Other Cash In */}
-            <ReportTable
-              title="Today's Other Cash In Report (অন্যান্য ক্যাশ ইন)"
-              columns={["#", "Date", "Source / উৎস", "Category", "Remarks / বিবরণ", "Amount"]}
-              data={todayOtherCashIn}
-              total={totalOtherCashIn}
-              totalColSpan={5}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.source || "-",
-                item?.category || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 7. Other Cash In */}
+            {todayOtherCashIn.length > 0 && (
+              <ReportTable
+                title="Today's Other Cash In Report (অন্যান্য ক্যাশ ইন)"
+                columns={["#", "উৎস (Source)", "খাত (Category)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayOtherCashIn}
+                total={totalOtherCashIn}
+                totalColSpan={4}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.source || "-",
+                  item?.category || "-",
+                  item?.remarks || item?.purpose || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Company Expenses */}
-            <ReportTable
-              title="Today's Expenses Report (কোম্পানি ও অফিস খরচ)"
-              columns={["#", "Date", "Purpose", "Remarks", "Amount"]}
-              data={todayExpenses}
-              total={totalExpense}
-              totalColSpan={4}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.purpose || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 8. Product Purchase & Supplier Payment */}
+            {todayProductPurchases.length > 0 && (
+              <ReportTable
+                title="Today's Product Purchase Report (পণ্য ক্রয় ও মহাজন পেমেন্ট)"
+                columns={["#", "পণ্য / উদ্দেশ্য (Product / Purpose)", "মহাজন / মাধ্যম (Source)",  "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayProductPurchases}
+                total={totalProductPurchase}
+                totalColSpan={4}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.purpose || item?.remarks || "পণ্য ক্রয়",
+                  item?.source || "-",
+                  
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Product Purchase */}
-            <ReportTable
-              title="Today's Product Purchase Report (পণ্য ক্রয় / ডেলিভারি)"
-              columns={["#", "Date", "Product Name", "Amount"]}
-              data={todayProductPurchase}
-              total={totalProductPurchase}
-              totalColSpan={3}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.delivery_date || "-",
-                item?.product_name || "-",
-                Number(item.cost_price).toLocaleString(),
-              ]}
-            />
+            {/* 9. Company Expenses */}
+            {todayExpenses.length > 0 && (
+              <ReportTable
+                title="Today's Expenses Report (কোম্পানি ও অফিস খরচ)"
+                columns={["#", "খরচের খাত / উদ্দেশ্য (Purpose)", "ক্যাটাগরি (Category)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayExpenses}
+                total={totalExpense}
+                totalColSpan={4}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.purpose || item?.remarks || "-",
+                  item?.category || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Loan Given */}
-            <ReportTable
-              title="Today's Loan Given Report (ঋণ প্রদান)"
-              columns={["#", "Date", "Recipient / কাকে দেওয়া হয়েছে", "Remarks / বিবরণ", "Amount"]}
-              data={todayLoansGiven}
-              total={totalLoanGiven}
-              totalColSpan={4}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.purpose || item?.source || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 10. Loan Given */}
+            {todayLoansGiven.length > 0 && (
+              <ReportTable
+                title="Today's Loan Given Report (ঋণ প্রদান)"
+                columns={["#", "কাকে দেওয়া হয়েছে (Recipient)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayLoansGiven}
+                total={totalLoanGiven}
+                totalColSpan={3}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.purpose || item?.source || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Loan Repayments */}
-            <ReportTable
-              title="Today's Loan Repayment Report (ঋণ পরিশোধ)"
-              columns={["#", "Date", "Paid To / কার ঋণ ক্লিয়ার করা হয়েছে", "Remarks / বিবরণ", "Amount"]}
-              data={todayLoanRepayments}
-              total={totalLoanRepaid}
-              totalColSpan={4}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.date || "-",
-                item?.purpose || item?.source || "-",
-                item?.remarks || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 11. Loan Repayments */}
+            {todayLoanRepayments.length > 0 && (
+              <ReportTable
+                title="Today's Loan Repayment Report (ঋণ পরিশোধ)"
+                columns={["#", "কার ঋণ ক্লিয়ার করা হয়েছে (Paid To)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayLoanRepayments}
+                total={totalLoanRepaid}
+                totalColSpan={3}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.purpose || item?.source || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Investor Amount Withdraw */}
-            <ReportTable
-              title="Today's Investor Amount Withdraw Report"
-              columns={["#", "Name", "User Id", "Card Id", "Request Date", "Approved Date", "Reason", "Amount"]}
-              data={todayCompleteInvestorReturnAmount}
-              total={totalInvestorWithdraw}
-              totalColSpan={7}
-              renderRow={(item, index) => [
-                index + 1,
-                item?.investor_name || "-",
-                item?.investor_id || "-",
-                item?.card_id || "-",
-                item?.requested_at?.split(" ")[0] || "-",
-                item?.reviewed_at?.split(" ")[0] || "-",
-                item.reason || "-",
-                Number(item.amount).toLocaleString(),
-              ]}
-            />
+            {/* 12. Investor Amount Withdraw */}
+            {todayInvestorWithdraw.length > 0 && (
+              <ReportTable
+                title="Today's Investor Amount Withdraw Report (বিনিয়োগকারী উত্তোলন)"
+                columns={["#", "বিনিয়োগকারী (Investor)", "উদ্দেশ্য (Purpose)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayInvestorWithdraw}
+                total={totalInvestorWithdraw}
+                totalColSpan={4}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.source || item?.purpose || "-",
+                  item?.purpose || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
 
-            {/* Profit Withdrawals */}
+            {/* 13. Profit Withdrawals */}
             {todayProfitWithdrawals.length > 0 && (
               <ReportTable
                 title="Today's Profit Withdraw Report (লভ্যাংশ উত্তোলন)"
-                columns={["#", "Date", "Purpose", "Source", "Remarks", "Amount"]}
+                columns={["#", "উদ্দেশ্য (Purpose)", "মাধ্যম / প্রাপক (Source)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
                 data={todayProfitWithdrawals}
                 total={totalProfitWithdraw}
-                totalColSpan={5}
+                totalColSpan={4}
                 renderRow={(item, index) => [
                   index + 1,
-                  item?.date || "-",
                   item?.purpose || "-",
                   item?.source || "-",
                   item?.remarks || "-",
-                  Number(item.amount).toLocaleString(),
+                  Number(item?.amount || 0).toLocaleString(),
+                ]}
+              />
+            )}
+
+            {/* 14. Other Cash Out */}
+            {todayOtherCashOut.length > 0 && (
+              <ReportTable
+                title="Today's Other Cash Out Report (অন্যান্য ক্যাশ আউট)"
+                columns={["#", "খরচের উদ্দেশ্য (Purpose)", "ক্যাটাগরি (Category)", "বিবরণ (Remarks)", "পরিমাণ (Amount)"]}
+                data={todayOtherCashOut}
+                total={totalOtherCashOut}
+                totalColSpan={4}
+                renderRow={(item, index) => [
+                  index + 1,
+                  item?.purpose || item?.remarks || "অন্যান্য ব্যয়",
+                  item?.category || "-",
+                  item?.remarks || "-",
+                  Number(item?.amount || 0).toLocaleString(),
                 ]}
               />
             )}
@@ -586,8 +612,19 @@ const DashboardReport = () => {
         </div>
       </div>
 
-      {/* 🔹 প্রিন্ট স্টাইল */}
+      {/* 🔹 প্রিন্ট ও ডেটপিকার স্টাইল */}
       <style>{`
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          cursor: pointer;
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+          opacity: 0.85;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+          opacity: 1;
+          transform: scale(1.15);
+        }
+
         .dashboard-report-print {
           background: #fff;
           color: #000;

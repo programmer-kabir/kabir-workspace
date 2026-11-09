@@ -49,20 +49,16 @@ export const AppProvider = ({ children }) => {
   const [activeAdminTab, setActiveAdminTab] = useState('overview'); // overview, users, orders, products, payments, notice, reports, settings
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-  // Theme Management (Default: White / Light Mode)
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('topup_bd_theme') || 'light';
-  });
+  // Theme Management (Pure White / Light Mode Only as per user instruction)
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('topup_bd_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    try { localStorage.setItem('topup_bd_theme', 'light'); } catch {}
+  }, []);
 
-  const toggleTheme = () => {
-    sounds.playClick();
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const toggleTheme = () => {};
 
   useEffect(() => {
     const handlePopState = () => {
@@ -239,7 +235,26 @@ export const AppProvider = ({ children }) => {
       }
     }
 
-    const newOrderId = 'TOP-' + Math.floor(10000 + Math.random() * 90000);
+    // 1. Submit order to local PHP + MySQL backend API
+    const serverResult = await submitOrderToServer({
+      uid,
+      playerNickname: playerNickname || 'BD_WARRIOR',
+      server: server || 'BD Server',
+      packageId: pkg.id,
+      amount: pkg.price,
+      method,
+      senderNumber: senderNumber || '',
+      trxId: trxId || ('WLT-' + Math.floor(100000 + Math.random() * 900000)),
+      userId: currentUser ? currentUser.uid : 'guest'
+    });
+
+    if (serverResult && !serverResult.success && serverResult.reason === 'duplicate_trx') {
+      sounds.playError();
+      showToast(serverResult.message || 'এই TrxID দিয়ে ইতিমধ্যে একটি অর্ডার রয়েছে!', 'error');
+      return { success: false, reason: 'duplicate_trx' };
+    }
+
+    const newOrderId = serverResult?.order?.id || ('TOP-' + Math.floor(10000 + Math.random() * 90000));
     const orderCost = pkg.costPrice !== undefined ? Number(pkg.costPrice) : Math.round(Number(pkg.price) * 0.9);
     const orderProfit = Math.max(0, Number(pkg.price) - orderCost);
 

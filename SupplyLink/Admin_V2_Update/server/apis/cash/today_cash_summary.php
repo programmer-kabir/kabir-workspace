@@ -107,17 +107,18 @@ try {
 
     // Categorized breakdown buckets for detailed reporting
     $categories = [
-        "investments"      => [], // ইনভেস্টমেন্ট আদায়
-        "dailyInstallments"=> [], // ডেইলি কিস্তি
+        "downpayments"     => [], // ডাউন পেমেন্ট
         "monthlyInstallments" => [], // মাসিক কিস্তি
+        "dailyInstallments"=> [], // ডেইলি কিস্তি
+        "investments"      => [], // ইনভেস্টমেন্ট আদায়
         "loansTaken"       => [], // ঋণ গ্রহণ
         "loanReturns"      => [], // ঋণ ফেরত আদায়
         "otherIn"          => [], // অন্যান্য ক্যাশ ইন
+        "productPurchases" => [], // পণ্য ক্রয় / মহাজন পেমেন্ট
         "expenses"         => [], // অফিস / কোম্পানি খরচ
-        "productPurchases" => [], // পণ্য ক্রয় / ডেলিভারি
-        "investorWithdraw" => [], // ইনভেস্টর উত্তোলন
         "loansGiven"       => [], // ঋণ প্রদান
         "loanRepayments"   => [], // ঋণ পরিশোধ
+        "investorWithdraw" => [], // ইনভেস্টর উত্তোলন
         "profitWithdrawals"=> [], // লাভ উত্তোলন
         "otherOut"         => []  // অন্যান্য ক্যাশ আউট
     ];
@@ -130,12 +131,14 @@ try {
         if ($item['type'] === 'in') {
             $cashInList[] = $item;
 
-            if ($cat === 'invest' || $src === 'investment') {
-                $categories['investments'][] = $item;
+            if ($cat === 'downpayment' || $src === 'downpayment') {
+                $categories['downpayments'][] = $item;
             } elseif ($cat === 'daily-installment' || $src === 'daily-installment') {
                 $categories['dailyInstallments'][] = $item;
             } elseif ($cat === 'installment' || $src === 'installment') {
                 $categories['monthlyInstallments'][] = $item;
+            } elseif ($cat === 'invest' || $src === 'investment') {
+                $categories['investments'][] = $item;
             } elseif ($cat === 'loan') {
                 $categories['loansTaken'][] = $item;
             } elseif ($cat === 'loan-return') {
@@ -146,16 +149,16 @@ try {
         } else {
             $cashOutList[] = $item;
 
-            if ($src === 'company-expense' || in_array($cat, ['salary', 'rent', 'bill', 'office-expense', 'maintenance', 'utility', 'marketing', 'transport', 'food', 'internet', 'others', 'expense'])) {
-                $categories['expenses'][] = $item;
-            } elseif ($cat === 'product-purchase' || $src === 'product-purchase') {
+            if ($cat === 'purchase' || $cat === 'product-purchase' || $src === 'purchase' || $src === 'product-purchase') {
                 $categories['productPurchases'][] = $item;
-            } elseif ($cat === 'investor-withdraw' || $src === 'investor-withdraw') {
-                $categories['investorWithdraw'][] = $item;
+            } elseif ($src === 'company-expense' || in_array($cat, ['salary', 'rent', 'bill', 'office-expense', 'maintenance', 'utility', 'marketing', 'transport', 'food', 'internet', 'expense'])) {
+                $categories['expenses'][] = $item;
             } elseif ($cat === 'loan-given') {
                 $categories['loansGiven'][] = $item;
             } elseif ($cat === 'loan-repayment') {
                 $categories['loanRepayments'][] = $item;
+            } elseif ($cat === 'investor-withdraw' || $src === 'investor-withdraw' || $cat === 'investor-return') {
+                $categories['investorWithdraw'][] = $item;
             } elseif ($cat === 'profit-withdraw' || $cat === 'profit-payout') {
                 $categories['profitWithdrawals'][] = $item;
             } else {

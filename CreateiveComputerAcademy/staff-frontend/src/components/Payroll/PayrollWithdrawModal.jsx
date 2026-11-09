@@ -66,6 +66,18 @@ export const PayrollWithdrawModal = ({
             </div>
           </div>
 
+          {/* Security Deposit Active Note */}
+          {summary?.security_deposit?.has_deposit && !summary?.security_deposit?.is_fulfilled && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-2xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+              <span className="font-semibold">
+                🛡️ জামানত কার্যকর: মাসিক খরচের অংশ (৳ {Number(summary.security_deposit.monthly_living_allowance || 5000).toLocaleString()}) ক্যাশ আউট অনুমোদিত।
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 shrink-0 ml-2">
+                Option A
+              </span>
+            </div>
+          )}
+
           {/* Covered Billing Cycles Detailed Breakdown Box */}
           {coveredCycles.length > 0 && (
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-2.5">

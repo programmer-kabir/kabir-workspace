@@ -59,6 +59,10 @@ class PayrollHelper {
 
             // 4. Update staff_pay_schemes scheme_type to support STAGGERED_CONTRACT
             $pdo->exec("ALTER TABLE `staff_pay_schemes` MODIFY COLUMN `scheme_type` VARCHAR(30) NOT NULL DEFAULT 'MONTHLY'");
+
+            // 5. Staff Security Deposit (জামানত) schema
+            require_once __DIR__ . '/../security_deposit/SecurityDepositHelper.php';
+            SecurityDepositHelper::ensureSchema($pdo);
         } catch (Throwable $e) {
             error_log('PayrollHelper::ensureSchema error: ' . $e->getMessage());
         }
@@ -1400,6 +1404,28 @@ class PayrollHelper {
                 : 'Minimum withdrawal requirement for your scheme is ৳ ' . number_format($minWithdrawalLimit) . '.';
         } else {
             $summary['withdrawal_block_reason'] = null;
+        }
+
+        // Security Deposit (জামানত) Integration (Option A living allowance split)
+        try {
+            require_once __DIR__ . '/../security_deposit/SecurityDepositHelper.php';
+            $thisMonthEarned = floatval($summary['periods']['this_month']['earned'] ?? 0.0);
+            $depositSummary = SecurityDepositHelper::getDepositSummaryForUser($pdo, $userId, $thisMonthEarned, date('Y-m'));
+            $summary['security_deposit'] = $depositSummary;
+
+            // If user has an active, unfulfilled security deposit:
+            // Adjust available_withdrawable according to Option A living allowance threshold
+            if (!empty($depositSummary['has_deposit']) && empty($depositSummary['is_fulfilled'])) {
+                $livingAllowance = floatval($depositSummary['monthly_living_allowance'] ?: 5000.0);
+                $curTakeHome = floatval($depositSummary['current_month_split']['take_home_amount'] ?? $livingAllowance);
+                $allowedTakeHome = min($summary['available_withdrawable_total'], $curTakeHome);
+                $summary['available_withdrawable_total'] = round($allowedTakeHome, 2);
+                $summary['available_withdrawable'] = floor($allowedTakeHome);
+                $summary['min_withdrawal_limit'] = min($summary['min_withdrawal_limit'], $livingAllowance);
+                $summary['can_withdraw'] = ($summary['available_withdrawable'] > 0);
+            }
+        } catch (Throwable $sdEx) {
+            error_log("Error attaching security deposit summary: " . $sdEx->getMessage());
         }
 
         return $summary;

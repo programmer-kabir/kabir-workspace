@@ -463,9 +463,9 @@ class BreakDbHelper {
     }
 
     /**
-     * Get detailed Tiffin efficiency summary for user
+     * Get detailed Tiffin efficiency summary for user (optionally scoped to a date range)
      */
-    public static function getTiffinSummary($db, $user_id) {
+    public static function getTiffinSummary($db, $user_id, $startDate = null, $endDate = null) {
         $data = [
             'total_tiffin_count' => 0,
             'total_target_minutes' => 0,
@@ -479,15 +479,24 @@ class BreakDbHelper {
         if (!$db || !$user_id) return $data;
 
         try {
-            $stmt = $db->prepare("SELECT 
+            $sql = "SELECT 
                 COUNT(*) as t_count,
                 COALESCE(SUM(duration_minutes), 0) as total_duration_taken,
                 COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as total_bonus,
                 COALESCE(SUM(CASE WHEN tiffin_delta_minutes < 0 THEN ABS(tiffin_delta_minutes) ELSE 0 END), 0) as total_penalty,
                 COALESCE(SUM(tiffin_delta_minutes), 0) as net_delta
             FROM user_breaks 
-            WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
-            $stmt->execute([':user_id' => $user_id]);
+            WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'";
+            
+            $params = [':user_id' => $user_id];
+            if ($startDate && $endDate) {
+                $sql .= " AND date BETWEEN :start_d AND :end_d";
+                $params[':start_d'] = $startDate;
+                $params[':end_d'] = $endDate;
+            }
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 $tCount = (int)$row['t_count'];

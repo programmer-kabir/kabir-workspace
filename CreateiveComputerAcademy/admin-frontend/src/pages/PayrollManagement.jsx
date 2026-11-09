@@ -13,6 +13,8 @@ import {
   FiSmartphone, FiCreditCard, FiAward, FiCopy
 } from 'react-icons/fi';
 import { FaCoins, FaGraduationCap } from 'react-icons/fa6';
+import SecurityDepositModal from '../components/SecurityDeposit/SecurityDepositModal';
+import SecurityDepositMasterTab from '../components/SecurityDeposit/SecurityDepositMasterTab';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputeracademy.com/';
 const R2_PUBLIC_BASE = 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev/';
@@ -148,6 +150,30 @@ export default function PayrollManagement() {
   const [dailyFilterMonth, setDailyFilterMonth] = useState('ALL');
   const [dailySearchDate, setDailySearchDate] = useState('');
   const [selectedAdminInvoice, setSelectedAdminInvoice] = useState(null);
+
+  // Modal 5: Security Deposit (জামানত) Management
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [selectedUserForDeposit, setSelectedUserForDeposit] = useState(null);
+
+  // Tab 5: Security Deposits (জামানত) Overview state
+  const [depositsDetailed, setDepositsDetailed] = useState([]);
+  const [depositsMetrics, setDepositsMetrics] = useState(null);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+
+  const fetchDepositsDetailed = async () => {
+    try {
+      setDepositsLoading(true);
+      const res = await axios.get(`${API_BASE}api/security_deposit/get_all_deposits.php?detailed=1`);
+      if (res.data?.status === 'success' && res.data?.data) {
+        setDepositsDetailed(res.data.data?.staff_list || []);
+        setDepositsMetrics(res.data.data?.metrics || null);
+      }
+    } catch (err) {
+      console.error('Error loading security deposits:', err);
+    } finally {
+      setDepositsLoading(false);
+    }
+  };
 
   // Tab 4: Forecast and Analytics states
   const [forecastData, setForecastData] = useState(null);
@@ -304,6 +330,7 @@ export default function PayrollManagement() {
     fetchWithdrawals();
     fetchCycles();
     fetchForecast();
+    fetchDepositsDetailed();
   }, [withdrawalFilter]);
 
   // Click outside to close staff dropdown
@@ -836,6 +863,26 @@ export default function PayrollManagement() {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('deposits');
+            fetchDepositsDetailed();
+          }}
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-200 cursor-pointer ${activeTab === 'deposits'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20 scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-800'
+            }`}
+        >
+          <FiShield className="w-4 h-4" />
+          <span>Security Deposits (জামানত তহবিল)</span>
+          {depositsMetrics?.active_count > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === 'deposits' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+              }`}>
+              {depositsMetrics.active_count} চলমান
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tab 1: Staff & Student Schemes */}
@@ -1059,6 +1106,29 @@ export default function PayrollManagement() {
                       </div>
                     )}
 
+                    {/* Security Deposit Badge */}
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                        <FiShield className="w-3.5 h-3.5 text-amber-500" />
+                        <span>জামানত (Deposit):</span>
+                      </span>
+                      {summary.security_deposit?.has_deposit ? (
+                        summary.security_deposit?.is_fulfilled ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                            ✓ সম্পূর্ণ (৳ {Number(summary.security_deposit.collected_amount).toLocaleString()})
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                            ৳ {Number(summary.security_deposit.collected_amount).toLocaleString()} / ৳ {Number(summary.security_deposit.target_amount).toLocaleString()} ({summary.security_deposit.progress_percent}%)
+                          </span>
+                        )
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          ফুল বেতন (No Deposit)
+                        </span>
+                      )}
+                    </div>
+
                     {/* Available for Cashout */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                       <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Available Cashout:</span>
@@ -1090,6 +1160,17 @@ export default function PayrollManagement() {
                     >
                       <FiEye className="w-4 h-4" />
                       View Full Ledger
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUserForDeposit(user);
+                        setIsDepositModalOpen(true);
+                      }}
+                      className="p-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 border border-amber-200/60 dark:border-amber-800/60"
+                      title="Security Deposit (জামানত) পরিচালনা"
+                    >
+                      <FiShield className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -1727,6 +1808,20 @@ export default function PayrollManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tab 5: Security Deposits (জামানত তহবিল) Master Overview */}
+      {activeTab === 'deposits' && (
+        <SecurityDepositMasterTab
+          depositsList={depositsDetailed}
+          metrics={depositsMetrics}
+          loading={depositsLoading}
+          onRefresh={fetchDepositsDetailed}
+          onManageUser={(user) => {
+            setSelectedUserForDeposit(user);
+            setIsDepositModalOpen(true);
+          }}
+        />
       )}
       {isSchemeModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
@@ -3317,6 +3412,17 @@ export default function PayrollManagement() {
         </div>,
         document.body
       )}
+
+      {/* Security Deposit (জামানত) Management Modal */}
+      <SecurityDepositModal
+        isOpen={isDepositModalOpen}
+        onClose={() => setIsDepositModalOpen(false)}
+        user={selectedUserForDeposit}
+        onSuccess={() => {
+          fetchSchemes();
+          fetchDepositsDetailed();
+        }}
+      />
     </div>
   );
 }

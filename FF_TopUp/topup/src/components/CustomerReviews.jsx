@@ -105,23 +105,25 @@ export const CustomerReviews = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl md:rounded-3xl p-5 sm:p-7 my-6 sm:my-8 shadow-xs">
+    <section className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 my-8 sm:my-12 shadow-sm">
+      
       {/* Header & Overall Rating Summary */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-7 pb-6 border-b border-slate-100">
         <div>
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full text-xs text-amber-600 dark:text-amber-400 font-bold mb-1.5">
-            <ThumbsUp size={14} /> ১০০% সন্তুষ্ট গেমারদের অভিজ্ঞতা
+          <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs text-amber-700 font-bold mb-2">
+            <ThumbsUp size={14} /> 
+            <span>১০০% সন্তুষ্ট গেমারদের অভিজ্ঞতা</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-1">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-1">
             ⭐ গেমারদের রিভিউ ও রেটিং (Customer Reviews)
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
             হাজারো গেমারের বিশ্বাস ও আস্থার প্রমাণ। দেখে নিন অন্য গেমারদের মতামত:
           </p>
         </div>
 
         {/* Rating Score Card */}
-        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xs">
+        <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-xs">
           <div className="text-center">
             <div className="text-2xl sm:text-3xl font-black text-amber-500 leading-none">
               4.9
@@ -131,7 +133,7 @@ export const CustomerReviews = () => {
                 <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />
               ))}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">
+            <div className="text-[10px] text-slate-500 mt-1 font-semibold">
               ১,৪২০+ সফল অর্ডার
             </div>
           </div>
@@ -142,7 +144,7 @@ export const CustomerReviews = () => {
               sounds.playClick();
               setIsModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl px-4 py-2.5 text-xs transition-all cursor-pointer shadow-sm active:scale-95"
           >
             <MessageSquarePlus size={15} />
             <span>রিভিউ দিন</span>
@@ -150,25 +152,25 @@ export const CustomerReviews = () => {
         </div>
       </div>
 
-      {/* Reviews Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      {/* Reviews Grid with Generous Spacing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {reviews.slice(0, 6).map((rev) => (
           <div
             key={rev.id}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:shadow-md hover:border-amber-500/30 transition-all flex flex-col justify-between"
+            className="bg-slate-50/70 border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-300 flex flex-col justify-between"
           >
             <div>
               {/* Header: User name, package, rating */}
-              <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-rose-500 text-white font-black text-xs flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
                     {rev.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">
+                    <div className="text-xs sm:text-sm font-black text-slate-900">
                       {rev.name}
                     </div>
-                    <div className="text-[10px] text-sky-500 font-semibold">
+                    <div className="text-[11px] text-sky-600 font-semibold">
                       {rev.package}
                     </div>
                   </div>
@@ -177,24 +179,24 @@ export const CustomerReviews = () => {
                 <div className="text-right">
                   <div className="flex gap-0.5 text-amber-500 justify-end">
                     {[...Array(rev.rating || 5)].map((_, i) => (
-                      <Star key={i} size={11} fill="#f59e0b" color="#f59e0b" />
+                      <Star key={i} size={13} fill="#f59e0b" color="#f59e0b" />
                     ))}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-slate-400 mt-0.5 font-medium">
                     {rev.time}
                   </div>
                 </div>
               </div>
 
               {/* Comment text */}
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">
+              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium not-italic my-2.5">
                 "{rev.comment}"
               </p>
             </div>
 
             {/* Verified buyer badge */}
-            <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-              <CheckCircle2 size={12} />
+            <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold mt-4 pt-3 border-t border-slate-200">
+              <CheckCircle2 size={13} />
               <span>যাচাইকৃত ক্রেতা (Verified Buyer)</span>
             </div>
           </div>
@@ -203,27 +205,27 @@ export const CustomerReviews = () => {
 
       {/* Review Submission Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
             <button 
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer" 
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 cursor-pointer transition-colors" 
               onClick={() => {
                 sounds.playClick();
                 setIsModalOpen(false);
               }}
             >
-              <X size={18} />
+              <X size={20} />
             </button>
 
-            <div className="flex items-center gap-2 mb-4 text-base font-bold text-slate-900 dark:text-white">
-              <Star size={20} className="text-amber-500 fill-amber-500" />
+            <div className="flex items-center gap-2 mb-5 text-base sm:text-lg font-black text-slate-900">
+              <Star size={22} className="text-amber-500 fill-amber-500" />
               <span>আপনার অভিজ্ঞতা শেয়ার করুন</span>
             </div>
 
             <form onSubmit={handleSubmitReview}>
               {/* Star Rating Selector */}
               <div className="mb-4 text-center">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 font-medium">
+                <div className="text-xs text-slate-500 mb-2 font-medium">
                   রেটিং সিলেক্ট করুন:
                 </div>
                 <div className="flex justify-center gap-2">
@@ -232,7 +234,7 @@ export const CustomerReviews = () => {
                       key={star}
                       size={28}
                       fill={star <= newRating ? '#f59e0b' : 'none'}
-                      color={star <= newRating ? '#f59e0b' : '#94a3b8'}
+                      color={star <= newRating ? '#f59e0b' : '#cbd5e1'}
                       className="cursor-pointer hover:scale-110 active:scale-95 transition-transform"
                       onClick={() => {
                         sounds.playClick();
@@ -244,14 +246,14 @@ export const CustomerReviews = () => {
               </div>
 
               {/* Gamer Name Input */}
-              <div className="mb-3">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <div className="mb-3.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   আপনার গেম নাম বা আসল নাম:
                 </label>
                 <input
                   type="text"
                   placeholder="যেমন: 亗_RAKIB_亗 বা শাকিব"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-sky-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-sky-500 transition-colors shadow-xs"
                   value={gamerName}
                   onChange={(e) => setGamerName(e.target.value)}
                   required
@@ -259,12 +261,12 @@ export const CustomerReviews = () => {
               </div>
 
               {/* Package Bought */}
-              <div className="mb-3">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <div className="mb-3.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   কোন প্যাকেজটি নিয়েছেন?
                 </label>
                 <select
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-sky-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-sky-500 transition-colors shadow-xs"
                   value={pkgBought}
                   onChange={(e) => setPkgBought(e.target.value)}
                 >
@@ -278,14 +280,14 @@ export const CustomerReviews = () => {
               </div>
 
               {/* Comment text */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <div className="mb-5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   আপনার অভিজ্ঞতা ও মন্তব্য:
                 </label>
                 <textarea
                   rows={3}
                   placeholder="ডেলিভারি কেমন লাগলো এবং সার্ভিস সম্পর্কে মতামত লিখুন..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-sky-500 resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-sky-500 resize-none transition-colors shadow-xs"
                   value={userComment}
                   onChange={(e) => setUserComment(e.target.value)}
                   required
@@ -294,7 +296,7 @@ export const CustomerReviews = () => {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl shadow-md shadow-amber-500/25 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm"
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-md shadow-amber-500/25 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm"
               >
                 <Send size={16} />
                 <span>রিভিউ পোস্ট করুন</span>
@@ -303,6 +305,6 @@ export const CustomerReviews = () => {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };

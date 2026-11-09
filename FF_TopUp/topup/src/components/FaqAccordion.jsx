@@ -25,7 +25,7 @@ export const FaqAccordion = () => {
     },
     {
       q: 'টাকা পাঠিয়েছি কিন্তু TrxID দিতে ভুলে গেছি বা পেজ বন্ধ হয়ে গেছে?',
-      a: 'কোনো চিন্তা করবেন না! বিকাশ বা নগদের মেসেজ থেকে TrxID কপি করে সাইটের শীর্ষে থাকা "ট্র্যাক অর্ডার" অপশনে দিন অথবা নিচে থাকা আমাদের WhatsApp হেল্পলাইনে মেসেজ দিন। অ্যাডমিন তাৎক্ষণিক ভেরিফাই করে ডেলিভারি দিয়ে দেবে।'
+      a: 'কোনো চিন্তা করবেন না! বিকাশ বা নগদের মেসেজ থেকে TrxID কপি করে সাইটের শীর্ষে থাকা "অর্ডার ট্র্যাক" অপশনে দিন অথবা নিচে থাকা আমাদের WhatsApp হেল্পলাইনে মেসেজ দিন। অ্যাডমিন তাৎক্ষণিক ভেরিফাই করে ডেলিভারি দিয়ে দেবে।'
     },
     {
       q: 'উইকলি বা মান্থলি মেম্বারশিপ নিলে কীভাবে ডায়মন্ড পাবো?',
@@ -39,48 +39,50 @@ export const FaqAccordion = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl md:rounded-3xl p-5 sm:p-7 my-6 sm:my-8 shadow-xs">
+    <section className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 my-8 sm:my-12 shadow-sm">
+      
       {/* Section Header */}
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-1.5 bg-sky-500/10 border border-sky-500/25 px-3 py-1 rounded-full text-xs text-sky-600 dark:text-sky-400 font-bold mb-2">
-          <HelpCircle size={14} /> সাধারণ জিজ্ঞাসা ও সমাধান
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 bg-sky-50 border border-sky-200 px-3.5 py-1.5 rounded-full text-xs text-sky-700 font-bold mb-3 shadow-xs">
+          <HelpCircle size={15} /> 
+          <span>সাধারণ জিজ্ঞাসা ও সমাধান</span>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-1.5">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-2">
           ❓ সাধারণ প্রশ্নোত্তর (FAQ)
         </h2>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+        <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto font-medium">
           টপ-আপ নিয়ে গেমারদের সচরাচর সব প্রশ্নের উত্তর এক নজরে দেখে নিন:
         </p>
       </div>
 
-      {/* Accordion List */}
-      <div className="flex flex-col gap-2.5 max-w-2xl mx-auto">
+      {/* Accordion List with Generous Spacing */}
+      <div className="flex flex-col gap-3.5 max-w-2xl mx-auto">
         {faqs.map((faq, idx) => {
           const isOpen = openIndex === idx;
           return (
             <div
               key={idx}
-              className={`border rounded-xl overflow-hidden transition-all duration-200 shadow-xs ${
+              className={`border rounded-2xl overflow-hidden transition-all duration-300 ${
                 isOpen 
-                  ? 'bg-sky-500/5 border-sky-500/50 dark:border-sky-500/40' 
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                  ? 'bg-sky-50/40 border-sky-300 shadow-sm' 
+                  : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
               }`}
             >
               <button
                 type="button"
                 onClick={() => toggleFaq(idx)}
-                className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left cursor-pointer"
+                className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left cursor-pointer"
               >
-                <span className={`text-xs sm:text-sm font-bold leading-snug ${isOpen ? 'text-sky-500' : 'text-slate-900 dark:text-white'}`}>
+                <span className={`text-xs sm:text-sm font-bold leading-snug ${isOpen ? 'text-sky-700' : 'text-slate-900'}`}>
                   {faq.q}
                 </span>
-                <span className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-sky-500' : 'text-slate-400'}`}>
+                <span className={`transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-sky-600' : 'text-slate-400'}`}>
                   <ChevronDown size={18} />
                 </span>
               </button>
 
               {isOpen && (
-                <div className="px-4 pb-3.5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800">
+                <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100">
                   {faq.a}
                 </div>
               )}
@@ -90,23 +92,24 @@ export const FaqAccordion = () => {
       </div>
 
       {/* Need More Help WhatsApp Banner */}
-      <div className="mt-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between flex-wrap gap-2.5 max-w-2xl mx-auto">
-        <div className="flex items-center gap-2">
-          <MessageCircle size={18} className="text-emerald-500 shrink-0" />
-          <span className="text-xs text-slate-700 dark:text-slate-300">
-            অন্য কোনো সমস্যা বা প্রশ্ন থাকলে আমাদের সাথে সরাসরি যোগাযোগ করুন:
+      <div className="mt-7 p-4 sm:p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between flex-wrap gap-3 max-w-2xl mx-auto shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <MessageCircle size={20} className="text-emerald-600 shrink-0" />
+          <span className="text-xs sm:text-sm text-slate-700 font-medium">
+            অন্য কোনো সমস্যা বা প্রশ্ন থাকলে সরাসরি কথা বলুন:
           </span>
         </div>
         <a
           href={`https://wa.me/${cleanWaNumber}`}
           target="_blank"
           rel="noreferrer"
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-sm active:scale-95 transition-all"
           onClick={() => sounds.playClick()}
         >
           <span>WhatsApp সাপোর্ট</span>
         </a>
       </div>
-    </div>
+
+    </section>
   );
 };

@@ -16,7 +16,7 @@ export const RecentOrdersFeed = () => {
 
   // If real orders exist, show them; otherwise backfill seamlessly
   const displayList = orders && orders.length >= 4 
-    ? orders.slice(0, 6).map(o => ({
+    ? orders.slice(0, 5).map(o => ({
         id: o.id,
         customerName: o.customerName || 'গেমার',
         packageName: o.packageName || 'Diamonds Pack',
@@ -36,58 +36,72 @@ export const RecentOrdersFeed = () => {
           time: 'এইমাত্র'
         })),
         ...mockBackfills
-      ].slice(0, 6);
+      ].slice(0, 5);
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl md:rounded-3xl p-4 sm:p-6 shadow-xs my-6 sm:my-8">
-      <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0">
-            <ShoppingBag size={18} />
+    <section className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm my-8 sm:my-12">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between pb-5 border-b border-slate-100 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+            <ShoppingBag size={20} />
           </div>
-          <h3 className="text-sm sm:text-base md:text-lg font-black text-slate-900 dark:text-white">
-            লাইভ সাম্প্রতিক অর্ডার ও ডেলিভারি স্ট্রিম
-          </h3>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[11px] font-bold border border-rose-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
-            <span>Live Stream</span>
+          <div>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              লাইভ সাম্প্রতিক অর্ডার ও ডেলিভারি স্ট্রিম
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">প্রতিটি সফল টপ-আপ স্বয়ংক্রিয়ভাবে তালিকাভুক্ত হয়</p>
           </div>
         </div>
 
-        <button 
-          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-sky-500 hover:border-sky-500/30 transition-all cursor-pointer" 
-          title="রিফ্রেশ"
-          onClick={() => {
-            sounds.playClick();
-          }}
-        >
-          <RefreshCw size={14} />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+            <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+            <span>লাইভ স্ট্রিম</span>
+          </div>
+
+          <button 
+            className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:text-sky-600 hover:border-sky-200 transition-all cursor-pointer" 
+            title="রিফ্রেশ"
+            onClick={() => {
+              sounds.playClick();
+            }}
+          >
+            <RefreshCw size={15} />
+          </button>
+        </div>
       </div>
 
-      <div className="divide-y divide-slate-100 dark:divide-slate-800/60 mt-1">
+      {/* Stream Rows */}
+      <div className="divide-y divide-slate-100 mt-2">
         {displayList.map((order) => {
           const maskedUid = order.uid.length >= 6 
             ? `${order.uid.slice(0, 4)}****${order.uid.slice(-2)}` 
             : `${order.uid.slice(0, 3)}***`;
 
           return (
-            <div key={order.id} className="py-2.5 sm:py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 px-2 rounded-xl transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-sky-500/15 to-blue-500/20 text-sky-600 dark:text-sky-400 font-bold flex items-center justify-center shrink-0 text-sm">
+            <div 
+              key={order.id} 
+              className="py-3.5 sm:py-4 px-2 sm:px-3 flex items-center justify-between gap-4 hover:bg-slate-50 rounded-2xl transition-colors"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-100 border border-sky-200 text-sky-700 font-black flex items-center justify-center shrink-0 text-sm">
                   {order.customerName.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{order.customerName}</span>
-                    <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-md font-bold inline-flex items-center gap-0.5 shrink-0">
-                      <ShieldCheck size={10} /> ভেরিফাইড
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                      {order.customerName}
+                    </span>
+                    <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 shrink-0">
+                      <ShieldCheck size={11} /> ভেরিফাইড
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    <span className="text-sky-500 font-bold">{order.packageName}</span>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 truncate">
+                    <span className="text-sky-600 font-bold">{order.packageName}</span>
                     <span>•</span>
-                    <span className="font-mono">UID: {maskedUid}</span>
+                    <span className="font-mono text-slate-600">UID: {maskedUid}</span>
                     {order.time && (
                       <>
                         <span>•</span>
@@ -99,16 +113,19 @@ export const RecentOrdersFeed = () => {
               </div>
 
               <div className="text-right shrink-0">
-                <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">৳{order.amount}</div>
-                <div className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mt-0.5">
-                  <CheckCircle2 size={10} />
-                  <span>{order.status === 'Completed' ? 'ডেলিভারি সম্পন্ন' : order.status}</span>
+                <div className="text-xs sm:text-sm font-black text-slate-900">
+                  ৳{order.amount}
                 </div>
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-bold mt-0.5">
+                  <CheckCircle2 size={12} />
+                  <span>ডেলিভার্ড</span>
+                </span>
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+
+    </section>
   );
 };

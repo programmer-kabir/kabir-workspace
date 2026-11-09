@@ -440,7 +440,9 @@ try {
     } catch (Throwable $e) {}
 
     // 10. Tiffin Efficiency Savings & Penalties
-    $tiffin_summary = BreakDbHelper::getTiffinSummary($db, $user_id);
+    $tfScopeStart = $is_all_time ? null : $month_start;
+    $tfScopeEnd   = $is_all_time ? null : $month_end;
+    $tiffin_summary = BreakDbHelper::getTiffinSummary($db, $user_id, $tfScopeStart, $tfScopeEnd);
     $total_tiffin_bonus_hours = round($tiffin_summary['bonus_minutes'] / 60, 2);
     $total_tiffin_penalty_hours = round($tiffin_summary['penalty_minutes'] / 60, 2);
 
@@ -476,8 +478,19 @@ try {
                 ];
             }
         }
-        $allTfStmt = $db->prepare("SELECT id, date, start_time, end_time, duration_minutes, COALESCE(tiffin_delta_minutes, 0) as tiffin_delta_minutes, status, created_at FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed' ORDER BY date DESC, id DESC LIMIT 50");
-        $allTfStmt->execute([':user_id' => $user_id]);
+
+        $allTfSql = "SELECT id, date, start_time, end_time, duration_minutes, COALESCE(tiffin_delta_minutes, 0) as tiffin_delta_minutes, status, created_at 
+                     FROM user_breaks 
+                     WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'";
+        $allTfParams = [':user_id' => $user_id];
+        if (!$is_all_time) {
+            $allTfSql .= " AND date BETWEEN :m_start AND :m_end";
+            $allTfParams[':m_start'] = $month_start;
+            $allTfParams[':m_end'] = $month_end;
+        }
+        $allTfSql .= " ORDER BY date DESC, id DESC";
+        $allTfStmt = $db->prepare($allTfSql);
+        $allTfStmt->execute($allTfParams);
         $tiffin_history = $allTfStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $etf) {
         $tiffin_history = [];

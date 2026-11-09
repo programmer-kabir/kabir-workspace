@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
+import SecurityDepositVaultCard from '../SecurityDeposit/SecurityDepositVaultCard';
 
 export const PayrollContractRoadmap = ({
   isYearlyContract = false,
@@ -11,14 +12,21 @@ export const PayrollContractRoadmap = ({
   contractRoadmap = null,
   activeTier = null,
 }) => {
-  if (!isYearlyContract && (!isStaggeredContract || !contractRoadmap)) {
+  const hasDeposit = Boolean(summary?.security_deposit?.has_deposit);
+
+  if (!hasDeposit && !isYearlyContract && (!isStaggeredContract || !contractRoadmap)) {
     return null;
   }
 
   return (
     <div className="space-y-6">
-      {/* Yearly Contract Speedometer / Progress Bar */}
-      {isYearlyContract && (
+      {/* 1. Security Deposit Vault Card (If staff has security deposit scheme) */}
+      {hasDeposit && (
+        <SecurityDepositVaultCard securityDeposit={summary.security_deposit} />
+      )}
+
+      {/* Yearly Contract Speedometer / Progress Bar (Only if not already displayed as deposit) */}
+      {isYearlyContract && !hasDeposit && (
         <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>

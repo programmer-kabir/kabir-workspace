@@ -10,17 +10,25 @@ $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
 
-$data = json_decode(file_get_contents("php://input"));
+$rawInput = file_get_contents("php://input");
+$data = json_decode($rawInput);
 
-if(!isset($data->user_id)) {
+$user_id = $data->user_id ?? ($_POST['user_id'] ?? ($_GET['user_id'] ?? null));
+
+if(!$user_id) {
     echo json_encode(["status" => "error", "message" => "User ID is required."]);
     exit;
 }
 
-$user_id = (int)$data->user_id;
-$name = isset($data->name) ? trim($data->name) : null;
-$phone = isset($data->phone) ? trim($data->phone) : null;
-$username = isset($data->username) ? strtolower(trim($data->username)) : null;
+$user_id = (int)$user_id;
+$rawName = $data->name ?? ($_POST['name'] ?? null);
+$name = $rawName !== null ? trim($rawName) : null;
+
+$rawPhone = $data->phone ?? ($_POST['phone'] ?? null);
+$phone = $rawPhone !== null ? trim($rawPhone) : null;
+
+$rawUsername = $data->username ?? ($_POST['username'] ?? null);
+$username = $rawUsername !== null ? strtolower(trim($rawUsername)) : null;
 
 // Validate username if provided
 if ($username !== null && !empty($username)) {

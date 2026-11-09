@@ -12,13 +12,13 @@ $database = new Database();
 $db = $database->getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if(!isset($_POST['user_id']) || !isset($_POST['type'])) {
-        echo json_encode(["status" => "error", "message" => "Missing required fields."]);
+    $user_id = $_POST['user_id'] ?? $_GET['user_id'] ?? null;
+    $type = $_POST['type'] ?? $_GET['type'] ?? null;
+
+    if(!$user_id || !$type) {
+        echo json_encode(["status" => "error", "message" => "Missing required fields (user_id and type)."]);
         exit;
     }
-
-    $user_id = $_POST['user_id'];
-    $type = $_POST['type']; // 'profile' or 'cover'
 
     if (!in_array($type, ['profile', 'cover'])) {
         echo json_encode(["status" => "error", "message" => "Invalid image type."]);

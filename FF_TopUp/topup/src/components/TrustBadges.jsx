@@ -3,72 +3,97 @@ import { ShieldCheck, Zap, Smartphone, Users, Lock, Award, HeartHandshake, Refre
 
 export const TrustBadges = () => {
   return (
-    <div className="my-3 sm:my-4">
+    <section className="my-6 sm:my-8">
+      
       {/* 4 Feature Highlights Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-xs hover:shadow-md hover:border-sky-500/40 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0">
-            <Zap size={20} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        
+        {/* Card 1: Fast Delivery */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-sky-300 hover:-translate-y-0.5 transition-all duration-300 group">
+          <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <Zap size={24} className="fill-current text-sky-600" />
           </div>
-          <div>
-            <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">১ মিনিটে ডেলিভারি</div>
-            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">২৪ ঘন্টা অটোমেটেড সিস্টেম</div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-xs hover:shadow-md hover:border-emerald-500/40 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">১০০% আইডি নিরাপদ</div>
-            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">পাসওয়ার্ড ছাড়াই শুধু UID দিয়ে</div>
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+              ১ মিনিটে ডেলিভারি
+            </div>
+            <div className="text-xs text-slate-500 font-medium mt-1 truncate">
+              ২৪ ঘন্টা অটোমেটেড সিস্টেম
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-xs hover:shadow-md hover:border-pink-500/40 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-pink-500/15 text-[#e2136e] flex items-center justify-center shrink-0">
-            <Smartphone size={20} />
+        {/* Card 2: 100% ID Safe */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-emerald-300 hover:-translate-y-0.5 transition-all duration-300 group">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <ShieldCheck size={24} />
           </div>
-          <div>
-            <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">বিকাশ ও নগদ পেমেন্ট</div>
-            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">সহজ ও বিশ্বস্ত MFS গেটওয়ে</div>
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+              ১০০% আইডি নিরাপদ
+            </div>
+            <div className="text-xs text-slate-500 font-medium mt-1 truncate">
+              পাসওয়ার্ড ছাড়াই শুধু UID দিয়ে
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-xs hover:shadow-md hover:border-amber-500/40 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-            <Users size={20} />
+        {/* Card 3: Instant MFS Payment */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-pink-300 hover:-translate-y-0.5 transition-all duration-300 group">
+          <div className="w-12 h-12 rounded-xl bg-pink-50 border border-pink-100 text-[#e2136e] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <Smartphone size={24} />
           </div>
-          <div>
-            <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">৫০,০০০+ নিয়মিত গেমার</div>
-            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">বাংলাদেশ জুড়ে আস্থা ও ভরসা</div>
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+              বিকাশ ও নগদ পেমেন্ট
+            </div>
+            <div className="text-xs text-slate-500 font-medium mt-1 truncate">
+              সহজ ও বিশ্বস্ত MFS গেটওয়ে
+            </div>
           </div>
         </div>
+
+        {/* Card 4: 50,000+ Gamers Community */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-amber-300 hover:-translate-y-0.5 transition-all duration-300 group">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <Users size={24} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+              ৫০,০০০+ নিয়মিত গেমার
+            </div>
+            <div className="text-xs text-slate-500 font-medium mt-1 truncate flex items-center gap-1">
+              <span className="text-amber-500 font-bold">৪.৯★</span>
+              <span>বাংলাদেশ জুড়ে আস্থা ও ভরসা</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Security & Money Back Guarantee Seal Banner */}
-      <div className="mt-3.5 py-3 px-4 bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-teal-500/10 border border-emerald-500/25 rounded-xl sm:rounded-2xl flex items-center justify-around flex-wrap gap-2 sm:gap-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
-        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-          <Lock size={14} />
-          <span>২৫৬-বিট SSL এনক্রিপ্টেড পেমেন্ট</span>
+      <div className="mt-4 sm:mt-5 py-3 px-5 sm:px-6 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-around flex-wrap gap-3 sm:gap-6 text-xs font-bold text-slate-700 shadow-xs">
+        <div className="flex items-center gap-2 text-emerald-700">
+          <Lock size={15} />
+          <span>২৫৬-বিট SSL সুরক্ষিত পেমেন্ট</span>
         </div>
-        <div className="hidden sm:block text-slate-300 dark:text-slate-700">|</div>
-        <div className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400">
-          <Award size={14} />
+        <div className="hidden sm:block text-slate-300">•</div>
+        <div className="flex items-center gap-2 text-sky-700">
+          <Award size={15} />
           <span>অফিশিয়াল গ্যারেনা টপ-আপ পার্টনার</span>
         </div>
-        <div className="hidden sm:block text-slate-300 dark:text-slate-700">|</div>
-        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-          <RefreshCw size={14} />
+        <div className="hidden sm:block text-slate-300">•</div>
+        <div className="flex items-center gap-2 text-amber-700">
+          <RefreshCw size={15} />
           <span>১০০% মানি-ব্যাক গ্যারান্টি পলিসি</span>
         </div>
-        <div className="hidden sm:block text-slate-300 dark:text-slate-700">|</div>
-        <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
-          <HeartHandshake size={14} />
+        <div className="hidden sm:block text-slate-300">•</div>
+        <div className="flex items-center gap-2 text-rose-700">
+          <HeartHandshake size={15} />
           <span>লাইভ কাস্টমার সাপোর্ট কেয়ার</span>
         </div>
       </div>
-    </div>
+
+    </section>
   );
 };

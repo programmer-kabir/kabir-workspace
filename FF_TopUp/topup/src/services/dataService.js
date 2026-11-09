@@ -67,6 +67,19 @@ export const INITIAL_PRODUCTS = [
 
 export const INITIAL_ORDERS = [];
 
+export const INITIAL_USERS = [
+  {
+    uid: 'admin_jahidul_01',
+    displayName: 'Jahidul Islam (Super Admin)',
+    email: 'jahidulr24@gmail.com',
+    role: 'admin',
+    phone: '01738679399',
+    balance: 0,
+    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    createdAt: '2025-01-01T00:00:00.000Z'
+  }
+];
+
 // Local storage keys
 const STORAGE_ORDERS = 'topup_bd_orders';
 const STORAGE_WALLET = 'topup_bd_wallet_balance';
@@ -116,19 +129,6 @@ export const getStoredProducts = () => {
 export const saveStoredProducts = (products) => {
   localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(products));
 };
-
-export const INITIAL_USERS = [
-  {
-    uid: 'admin_jahidul_01',
-    displayName: 'Jahidul Islam (Super Admin)',
-    email: 'jahidulr24@gmail.com',
-    role: 'admin',
-    phone: '01738679399',
-    balance: 0,
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    createdAt: '2025-01-01T00:00:00.000Z'
-  }
-];
 
 export const getStoredUsers = () => {
   const data = localStorage.getItem(STORAGE_USERS);

@@ -6,8 +6,8 @@ import { PAYMENT_CHANNELS } from '../services/dataService';
 import { sounds } from '../services/soundEffects';
 
 export const WalletModal = () => {
-  const { isWalletOpen, setIsWalletOpen, submitWalletRechargeRequest, paymentChannels, orders, walletRequests, showToast } = useApp();
-  const { currentUser, walletBalance, setIsLoginModalOpen } = useAuth();
+  const { isWalletOpen, setIsWalletOpen, submitWalletRechargeRequest, paymentChannels, orders, walletRequests, showToast, navigate } = useApp();
+  const { currentUser, walletBalance } = useAuth();
 
   const [amount, setAmount] = useState('200');
   const [method, setMethod] = useState('bKash');
@@ -99,7 +99,7 @@ export const WalletModal = () => {
       sounds.playError();
       showToast('ওয়ালেটে টাকা যোগ করতে অনুগ্রহ করে আগে লগইন করুন', 'error');
       setIsWalletOpen(false);
-      setIsLoginModalOpen(true);
+      navigate('/login');
       return;
     }
     if (!amount || Number(amount) < 10) {
@@ -164,7 +164,7 @@ export const WalletModal = () => {
               onClick={() => {
                 sounds.playClick();
                 setIsWalletOpen(false);
-                setIsLoginModalOpen(true);
+                navigate('/login');
               }}
             >
               লগইন করুন
