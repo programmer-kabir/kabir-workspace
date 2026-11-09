@@ -1,15 +1,18 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
-  try {
-    const response = await axios.get(
-      `${import.meta.env.VITE_LOCALHOST_KEY}/users/users.php`
-    );
-    return response.data.data;
-  } catch (error) {
-    return error;
+export const fetchUsers = createAsyncThunk(
+  "users/fetchUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_LOCALHOST_KEY}/users/users.php`
+      );
+      return Array.isArray(response.data?.data) ? response.data.data : [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
   }
-});
+);
 const UsersSlice = createSlice({
   name: "users",
   initialState: {
@@ -23,13 +26,13 @@ const UsersSlice = createSlice({
     });
     builder.addCase(fetchUsers.fulfilled, (state, action) => {
       state.isUsersLoading = false;
-      state.users = action.payload;
+      state.users = Array.isArray(action.payload) ? action.payload : [];
       state.isUsersError = null;
     });
     builder.addCase(fetchUsers.rejected, (state, action) => {
       state.isUsersLoading = false;
       state.users = [];
-      state.isUsersError = action.error.message;
+      state.isUsersError = action.payload || action.error.message;
     });
   },
 });

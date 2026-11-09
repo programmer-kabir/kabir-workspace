@@ -11,7 +11,11 @@ const AuthProvider = ({ children }) => {
     const saved = localStorage.getItem("investorUser");
     if (saved) {
       try {
-        setUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (!parsed.roles || !Array.isArray(parsed.roles) || parsed.roles.length === 0) {
+          parsed.roles = ["investor"];
+        }
+        setUser(parsed);
       } catch {
         localStorage.removeItem("investorUser");
       }
@@ -21,10 +25,16 @@ const AuthProvider = ({ children }) => {
 
   // 🔹 Login user with MySQL data
   const loginUser = (userData) => {
+    const rawRoles = Array.isArray(userData?.roles) && userData.roles.length > 0
+      ? userData.roles
+      : ["investor"];
+
     const loggedUser = {
+      ...userData,
       id: String(userData.id),
       name: userData.name || "",
       mobile: userData.mobile || "",
+      roles: rawRoles,
     };
 
     setUser(loggedUser);

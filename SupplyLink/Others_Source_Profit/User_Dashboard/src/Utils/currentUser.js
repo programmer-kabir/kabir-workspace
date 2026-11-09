@@ -6,13 +6,15 @@ const useCurrentUser = () => {
   const { user } = useAuth();
   const { users } = useUsers();
 
-  if (!user || !users?.length) {
+  if (!user) {
     return null;
   }
 
-  const runningUser = users.find((u) => String(u.id) === String(user.id));
+  const foundUser = Array.isArray(users)
+    ? users.find((u) => String(u.id) === String(user.id))
+    : null;
 
-  return runningUser || null;
+  return foundUser || user;
 };
 
 export default useCurrentUser;
