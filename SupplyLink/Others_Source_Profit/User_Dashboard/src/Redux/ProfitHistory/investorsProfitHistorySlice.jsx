@@ -29,13 +29,13 @@ const investorsProfitHistorySlice = createSlice({
     });
     builder.addCase(fetchInvestProfitHistory.fulfilled, (state, action) => {
       state.isInvestProfitHistoryLoading = false;
-      state.investorProfitHistory = action.payload;
+      state.investorProfitHistory = Array.isArray(action.payload) ? action.payload : [];
       state.isInvestProfitHistoryError = null;
     });
     builder.addCase(fetchInvestProfitHistory.rejected, (state, action) => {
       state.isInvestProfitHistoryLoading = false;
       state.investorProfitHistory = [];
-      state.isInvestProfitHistoryError = action.error.message;
+      state.isInvestProfitHistoryError = action.payload || action.error.message;
     });
   },
 });

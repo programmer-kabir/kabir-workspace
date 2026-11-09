@@ -41,13 +41,13 @@ const paymentMethodSlice = createSlice({
     });
     builder.addCase(fetchAllPaymentMethod.fulfilled, (state, action) => {
       state.isPaymentMethodsLoading = false;
-      state.paymentMethods = action.payload;
+      state.paymentMethods = Array.isArray(action.payload) ? action.payload : [];
       state.isPaymentMethodsError = null;
     });
     builder.addCase(fetchAllPaymentMethod.rejected, (state, action) => {
       state.isPaymentMethodsLoading = false;
       state.paymentMethods = [];
-      state.isPaymentMethodsError = action.error.message;
+      state.isPaymentMethodsError = action.payload || action.error.message;
     });
   },
 });

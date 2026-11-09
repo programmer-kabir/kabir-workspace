@@ -70,13 +70,13 @@ const ProfitAnalyticsSlice = createSlice({
     });
     builder.addCase(fetchProfitAnalytics.fulfilled, (state, action) => {
       state.isProfitAnalyticsLoading = false;
-      state.profitAnalytics = action.payload;
+      state.profitAnalytics = Array.isArray(action.payload) ? action.payload : [];
       state.isUProfitAnalyticsError = null;
     });
     builder.addCase(fetchProfitAnalytics.rejected, (state, action) => {
       state.isProfitAnalyticsLoading = false;
       state.profitAnalytics = [];
-      state.isUProfitAnalyticsError = action.error.message;
+      state.isUProfitAnalyticsError = action.payload || action.error.message;
     });
   },
 });

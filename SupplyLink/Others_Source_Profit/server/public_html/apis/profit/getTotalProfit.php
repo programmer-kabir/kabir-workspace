@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
-guardManagerAdminOnly();
+requireAuth();
 
 header("Content-Type: application/json");
 

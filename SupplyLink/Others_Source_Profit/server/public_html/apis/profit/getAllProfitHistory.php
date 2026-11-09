@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cors.php';
-guardManagerAdminOnly();
+requireAuth();
 
 // ===============================
 // DEBUG (dev only)
@@ -12,12 +12,7 @@ error_reporting(E_ALL);
 
 header("Content-Type: application/json; charset=utf-8");
 
-// timezone
 date_default_timezone_set('Asia/Dhaka');
-
-// ===============================
-// SQL (NO WHERE, NO FILTER)
-// ===============================
 $sql = "
     SELECT
         id,

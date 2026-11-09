@@ -2,16 +2,17 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 export const fetchInstallmentsPayments = createAsyncThunk(
   "customerInstallmentPayments/fetchInstallmentsPayments",
-  async () => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${
           import.meta.env.VITE_LOCALHOST_KEY
         }/customers/get_installment_payments.php`
       );
-      return response.data.data;
+      const data = response.data?.data || [];
+      return Array.isArray(data) ? data : [];
     } catch (error) {
-      return error;
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -28,13 +29,13 @@ const customerInstallmentPaymentsSlice = createSlice({
     });
     builder.addCase(fetchInstallmentsPayments.fulfilled, (state, action) => {
       state.isCustomerInstallmentsPaymentsLoading = false;
-      state.customerInstallmentPayments = action.payload;
+      state.customerInstallmentPayments = Array.isArray(action.payload) ? action.payload : [];
       state.isCustomerInstallmentsPaymentsError = null;
     });
     builder.addCase(fetchInstallmentsPayments.rejected, (state, action) => {
       state.isCustomerInstallmentsPaymentsLoading = false;
       state.customerInstallmentPayments = [];
-      state.isCustomerInstallmentsPaymentsError = action.error.message;
+      state.isCustomerInstallmentsPaymentsError = action.payload || action.error.message;
     });
   },
 });

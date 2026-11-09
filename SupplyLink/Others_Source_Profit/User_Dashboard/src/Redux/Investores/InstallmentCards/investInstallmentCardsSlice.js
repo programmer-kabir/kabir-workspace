@@ -2,17 +2,16 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 export const fetchInstallmentsCards = createAsyncThunk(
   "investInstallmentCards/fetchInstallmentsCards",
-  async (investor_id) => {
+  async (investor_id, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_LOCALHOST_KEY
-        }/investors/getInvestInstallmentsCards.php`
-      );
-      //   console.log(response.data.cards);
-      return response.data.cards;
+      const url = investor_id
+        ? `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php?investor_id=${investor_id}`
+        : `${import.meta.env.VITE_LOCALHOST_KEY}/investors/getInvestInstallmentsCards.php`;
+      const response = await axios.get(url);
+      const cards = response.data?.cards || response.data?.data || [];
+      return Array.isArray(cards) ? cards : [];
     } catch (error) {
-      return error;
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -29,13 +28,13 @@ const investInstallmentCardsSlice = createSlice({
     });
     builder.addCase(fetchInstallmentsCards.fulfilled, (state, action) => {
       state.isInvestInstallmentsCardsLoading = false;
-      state.investInstallmentCards = action.payload;
+      state.investInstallmentCards = Array.isArray(action.payload) ? action.payload : [];
       state.isInvestInstallmentsCardsError = null;
     });
     builder.addCase(fetchInstallmentsCards.rejected, (state, action) => {
       state.isInvestInstallmentsCardsLoading = false;
       state.investInstallmentCards = [];
-      state.isInvestInstallmentsCardsError = action.error.message;
+      state.isInvestInstallmentsCardsError = action.payload || action.error.message;
     });
   },
 });
