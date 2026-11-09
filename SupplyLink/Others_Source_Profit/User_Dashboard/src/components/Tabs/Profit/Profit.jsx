@@ -2,6 +2,21 @@ import { useMemo, useState } from "react";
 import InvestmentCardLayout from "../../InvestmentCardLayout";
 import Loader from "../../Loader/Loader";
 import { FaChevronDown } from "react-icons/fa";
+import { 
+  TrendingUp, 
+  Coins, 
+  Building2, 
+  ArrowUpRight, 
+  Lock, 
+  Clock, 
+  CheckCircle2, 
+  AlertCircle, 
+  Sparkles, 
+  Calendar, 
+  Filter,
+  Layers,
+  Award
+} from "lucide-react";
 import useProfitAnalytics from "../../../Utils/Hooks/useProfitAnalytics";
 import useProfitStatus from "../../../Utils/Hooks/useProfitStatus";
 import usePaymentMethod from "../../../Utils/Hooks/usePaymentMethod";
@@ -360,7 +375,7 @@ const rawTotal = profitAnalytics.reduce((sum, item) => {
       });
 
       const res = await fetch(
-        `${import.meta.env.VITE_LOCALHOST_KEY}/profit/save_profit_action.php`,
+        `${import.meta.env.VITE_LOCALHOST_KEY}/investor_apis/save_profit_action.php`,
         {
           method: "POST",
           body,
@@ -587,31 +602,29 @@ const monthlyTotalWeight = useMemo(() => {
         <div className="flex items-center justify-center"><Loader /> </div>
       ) : (
         <>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
-            {/* LEFT */}
+          {/* 🔍 FILTER TOOLBAR */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
             <div className="flex items-center gap-2">
-              {/* Year */}
-              {/* Year */}
-              <div className="relative">
-                <FaChevronDown
-                  size={12}
-                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform duration-300 ${
-                    yearOpen ? "rotate-180" : "rotate-0"
-                  }`}
-                />
+              <Filter className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                ফিল্টার:
+              </span>
+            </div>
 
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {/* Year Select */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 font-medium">বছর:</span>
                 <select
-                  onFocus={() => setYearOpen(true)}
-                  onBlur={() => setYearOpen(false)}
                   value={filterYear}
                   onChange={(e) =>
                     setFilterYear(
                       e.target.value === "all" ? "all" : Number(e.target.value),
                     )
                   }
-                  className="appearance-none pr-8 bg-white text-slate-700 text-sm px-4 py-2 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
-                  <option value="all">All Year</option>
+                  <option value="all">সকল বছর</option>
                   {yearOptions
                     .filter((y) => y !== "all")
                     .map((y) => (
@@ -622,22 +635,13 @@ const monthlyTotalWeight = useMemo(() => {
                 </select>
               </div>
 
-              {/* Month */}
-              {/* Month */}
-              <div className="relative">
-                <FaChevronDown
-                  size={12}
-                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform duration-300 ${
-                    monthOpen ? "rotate-180" : "rotate-0"
-                  }`}
-                />
-
+              {/* Month Select */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 font-medium">মাস:</span>
                 <select
-                  onFocus={() => setMonthOpen(true)}
-                  onBlur={() => setMonthOpen(false)}
                   value={filterMonth}
                   onChange={(e) => setFilterMonth(e.target.value)}
-                  className="appearance-none pr-8 bg-white text-slate-700 text-sm px-4 py-2 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   {monthOptions.map((m) => (
                     <option key={m.value} value={m.value}>
@@ -649,55 +653,54 @@ const monthlyTotalWeight = useMemo(() => {
 
               {/* Reset */}
               <button
+                type="button"
                 onClick={() => {
                   setFilterMonth("");
                   setFilterYear("all");
                 }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-2 rounded-lg border border-slate-300"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
               >
-                Reset
+                রিসেট
               </button>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6 shadow-sm space-y-5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              {/* ======================= */}
-
-              <div>
-                <h2 className="text-xl md:text-2xl font-semibold text-slate-800 flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-lg">
-                    ৳
-                  </span>
-                  প্রফিট ওভারভিউ
-                </h2>
-                <p className="text-xs md:text-sm text-slate-500 mt-1">
-                  সিলেক্টেড ইনভেস্টমেন্ট কার্ড অনুযায়ী আপনার প্রফিট, ওজন এবং
-                  শেয়ার দেখাবে।
-                </p>
+          {/* 🏛️ HERO PROFIT OVERVIEW & WITHDRAWAL HUB */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_0_rgba(0,0,0,0.04)] space-y-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                    মুনাফা ও উত্তোলন হাব (Profit & Payout Hub)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    নির্বাচিত কার্ড অনুযায়ী আপনার অর্জিত লভ্যাংশ, টাইম-ওয়েটেড মান ও উইথড্রল স্ট্যাটাস
+                  </p>
+                </div>
               </div>
 
               {selectedCardForSummary && (
-                <div className="flex flex-col items-start md:items-end gap-1">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-[11px] font-medium text-slate-700">
-                      হিসাবের সময়কাল:
-                    </span>
-                    <span className="text-[11px] text-slate-600">
-                      {start || "-"} → {end || "-"}
-                    </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200/80 px-3 py-1 text-xs text-slate-600 font-mono">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{start || "-"}</span>
+                    <span className="text-slate-300">→</span>
+                    <span>{end || "-"}</span>
                   </div>
 
                   {canWithdraw ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-medium text-amber-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      Withdraw window active
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      উত্তোলন সক্রিয় (Matured)
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-500">
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                      Withdraw window নেই / শেষ হয়েছে
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                      উত্তোলন সক্রিয় নয় / লকড
                     </span>
                   )}
                 </div>
@@ -705,171 +708,172 @@ const monthlyTotalWeight = useMemo(() => {
             </div>
 
             {!selectedCardForSummary ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center">
                 <p className="text-sm text-slate-500">
-                  উপরে থাকা ইনভেস্টমেন্ট কার্ডগুলোর মধ্য থেকে কোনো একটি সিলেক্ট
-                  করুন, তারপর এখানে প্রফিটের হিসাব দেখতে পারবেন।
+                  উপরে থাকা ইনভেস্টমেন্ট কার্ডগুলোর মধ্য থেকে যেকোনো একটি সিলেক্ট করুন, তারপর এখানে বিস্তারিত প্রফিট ও উত্তোলনের হিসাব দেখতে পারবেন।
                 </p>
               </div>
             ) : (
               <>
-                {/* Metrics */}
+                {/* 📊 3-Bento Profit Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 shadow-sm">
-                    <p className="text-sm text-emerald-700 font-semibold">
-                      আপনার মোট ওজন
-                    </p>
-                    <p className="text-2xl font-bold text-slate-800">
+                  {/* Metric 1: Time-Weighted Value */}
+                  <div className="rounded-2xl bg-slate-50/70 border border-slate-200/80 p-5 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        আপনার মোট ওজন (TWV)
+                      </span>
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <Award className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums">
                       {formatNumber(yourWeight)}
                     </p>
-                    <p className="text-[11px] text-emerald-700/80 mt-1">
+                    <p className="text-xs text-slate-400 mt-1">
                       এই কার্ডে আপনার মোট বিনিয়োগের টাইম-ওয়েটেড মান।
                     </p>
                   </div>
-                  <div className="rounded-xl bg-indigo-50 border border-indigo-200 px-5 py-4 shadow-sm">
-                    <p className="text-sm text-indigo-700 font-semibold">
-                      কোম্পানির লাভ
-                    </p>
-                    <p className="text-2xl font-bold text-slate-800">
-                      ৳{formatNumber(totalCompanyProfit)}
-                    </p>
-                    <p className="text-[11px] text-indigo-700/80 mt-1">
+
+                  {/* Metric 2: Company Profit */}
+                  <div className="rounded-2xl bg-slate-50/70 border border-slate-200/80 p-5 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        কোম্পানির সংগৃহীত লাভ
+                      </span>
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-semibold text-slate-400">৳</span>
+                      <p className="text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                        {formatNumber(totalCompanyProfit)}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
                       এখন পর্যন্ত বিনিয়োগকারীদের মোট আদায়কৃত লাভ
                     </p>
                   </div>
 
-                  {/* Your profit card */}
-                  <div className="rounded-xl bg-teal-50 border border-teal-200 px-5 py-4 shadow-sm xl:col-span-3 md:col-span-2">
-                    <p className="text-sm text-teal-700 font-semibold">
-                      আপনার লাভ
-                    </p>
-                    <p className="text-2xl font-bold text-slate-800">
-                      ৳{formatNumber(yourProfit)}
-                    </p>
-
-                    {/* 🔹 Dual Source Breakdown if Others Profit exists */}
-                    {profitSources.hasOthers && (
-                      <div className="mt-3.5 pt-3 border-t border-teal-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div className="flex items-center justify-between bg-white/80 rounded-xl px-3.5 py-2 border border-teal-100 shadow-xs">
-                          <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
-                            <span className="text-sm">📦</span> পণ্য কিস্তি লাভ:
+                  {/* Metric 3: YOUR PROFIT (HERO CARD WITH WITHDRAWAL HUB) */}
+                  <div className="rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white border border-emerald-200/90 p-5 shadow-xs xl:col-span-3 md:col-span-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                          আপনার প্রাপ্য নিট লাভ (Distributable Profit)
+                        </span>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-base font-bold text-emerald-600">৳</span>
+                          <span className="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight tabular-nums">
+                            {formatNumber(yourProfit)}
                           </span>
-                          <span className="text-sm font-bold text-slate-800">
+                        </div>
+                      </div>
+
+                      {/* Withdrawal Action Button */}
+                      <div className="flex flex-col sm:items-end gap-1">
+                        <button
+                          type="button"
+                          onClick={handleWithdraw}
+                          disabled={!canWithdraw}
+                          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                            canWithdraw
+                              ? "bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 cursor-pointer shadow-emerald-200"
+                              : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60"
+                          }`}
+                        >
+                          <ArrowUpRight className="w-4 h-4" />
+                          মুনাফা উত্তোলন আবেদন করুন
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dual Source Breakdown */}
+                    {profitSources.hasOthers && (
+                      <div className="mt-4 pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-emerald-100 shadow-xs">
+                          <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
+                            <span>📦</span> পণ্য কিস্তি লাভ:
+                          </span>
+                          <span className="text-sm font-bold text-slate-800 font-mono">
                             ৳{formatNumber(profitSources.cardProfit)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between bg-purple-50/90 rounded-xl px-3.5 py-2 border border-purple-200 shadow-xs">
+                        <div className="flex items-center justify-between bg-purple-50/80 rounded-xl px-4 py-2.5 border border-purple-200 shadow-xs">
                           <span className="text-xs text-purple-700 font-medium flex items-center gap-1.5">
-                            <span className="text-sm">🚴</span> সম্পদ লিজ/ভাড়া লাভ:
+                            <span>🚴</span> সম্পদ লিজ/ভাড়া লাভ:
                           </span>
-                          <span className="text-sm font-bold text-purple-800">
+                          <span className="text-sm font-bold text-purple-900 font-mono">
                             ৳{formatNumber(profitSources.othersProfit)}
                           </span>
                         </div>
                       </div>
                     )}
 
-                    {/* Decision status messages */}
+                    {/* Decision Notices */}
                     {decisionStatus === "pending" && (
-                      <p className="text-[11px] text-amber-700 mt-2">
-                        আপনার Withdraw request admin review এ আছে (Pending)।
-                      </p>
+                      <div className="mt-3.5 rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center gap-2 text-xs font-medium text-amber-800">
+                        <Clock className="w-4 h-4 text-amber-600 shrink-0 animate-spin" />
+                        <span>আপনার উত্তোলনের আবেদনটি অ্যাডমিন রিভিউয়ে রয়েছে (Pending Approval)।</span>
+                      </div>
                     )}
 
                     {decisionStatus === "approved" && (
-                      <p className="text-[11px] text-emerald-700 mt-2">
-                        আপনার Withdraw request Approved হয়েছে ✅
-                      </p>
+                      <div className="mt-3.5 rounded-xl bg-emerald-50 border border-emerald-200 p-3 flex items-center gap-2 text-xs font-medium text-emerald-800">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>আপনার উত্তোলনের আবেদনটি অনুমোদিত হয়েছে (Approved) ✅</span>
+                      </div>
                     )}
 
                     {decisionStatus === "rejected" && (
-                      <div className="mt-2">
-                        <p className="text-[11px] text-rose-700">
-                          আপনার Withdraw request Rejected হয়েছে ❌ — আবার
-                          Withdraw করতে পারবেন।
-                        </p>
+                      <div className="mt-3.5 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 space-y-1">
+                        <div className="flex items-center gap-2 font-bold">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>উত্তোলনের আবেদনটি বাতিল করা হয়েছে — আপনি পুনরায় আবেদন করতে পারবেন।</span>
+                        </div>
                         {latestWithdrawRecord?.remarks && (
-                          <p className="text-[11px] text-rose-700/90 mt-1">
-                            Reason: {latestWithdrawRecord.remarks}
-                          </p>
+                          <p className="text-rose-700 pl-6">কারণ: {latestWithdrawRecord.remarks}</p>
                         )}
                       </div>
                     )}
 
-                    {/* Withdraw button */}
-                    <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <p className="text-[11px] text-slate-600 leading-relaxed">
-                        Withdraw window এর মধ্যে আপনি আপনার লাভ উত্তোলন করতে
-                        পারবেন।
-                      </p>
-
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={handleWithdraw}
-                          disabled={!canWithdraw}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition
-                          ${
-                            canWithdraw
-                              ? "border-rose-300 bg-rose-100 text-rose-800 hover:bg-rose-200 active:scale-[0.98]"
-                              : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-80"
-                          }`}
-                        >
-                          Withdraw
-                        </button>
-                      </div>
-                    </div>
-
                     {!isDecisionWindow && (
-                      <p className="text-[11px] text-slate-500 mt-2">
-                        Withdraw window এখনো আসেনি (maturity date হয়নি)।
-                      </p>
-                    )}
-
-                    {(isPending || isApproved) && (
-                      <p className="text-[11px] text-slate-500 mt-2">
-                        Withdraw বাটন বন্ধ আছে কারণ আপনার request{" "}
-                        {decisionStatus} অবস্থায় আছে।
-                      </p>
+                      <div className="mt-3.5 rounded-xl bg-slate-100/80 border border-slate-200 p-3 flex items-center gap-2 text-xs text-slate-500">
+                        <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>১ বছরের ম্যাচুরিটি মেয়াদ পূর্ণ হওয়ার পর এই কার্ড থেকে সরাসরি মূলধন ও মুনাফা উত্তোলনের সুযোগ তৈরি হবে।</span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-5 border-t border-slate-200 mt-2">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">
-                      কার্ড নাম
-                    </p>
-                    <p className="text-base font-semibold text-slate-800 mt-0.5">
+                {/* 📋 Selected Card Details Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-medium">কার্ড নাম</p>
+                    <p className="text-sm font-bold text-slate-800 truncate mt-0.5">
                       {selectedCardForSummary.card_name}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">
-                      Total Weighted Value (এই কার্ড)
-                    </p>
-                    <p className="text-base font-semibold text-emerald-600 mt-0.5">
-                      {formatNumber(
-                        selectedCardForSummary.total_time_wighted_value,
-                      )}
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-medium">টাইম-ওয়েটেড মান</p>
+                    <p className="text-sm font-bold text-emerald-700 mt-0.5 tabular-nums">
+                      {formatNumber(selectedCardForSummary.total_time_wighted_value)}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">
-                      শুরুর তারিখ
-                    </p>
-                    <p className="text-sm text-slate-700 mt-0.5">
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-medium">শুরুর তারিখ</p>
+                    <p className="text-sm font-semibold text-slate-700 font-mono mt-0.5">
                       {selectedCardForSummary.start_date || "-"}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">
-                      মেয়াদ শেষ
-                    </p>
-                    <p className="text-sm text-slate-700 mt-0.5">
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-medium">ম্যাচুরিটি তারিখ</p>
+                    <p className="text-sm font-semibold text-slate-700 font-mono mt-0.5">
                       {selectedCardForSummary.maturity_date || "নির্ধারিত নয়"}
                     </p>
                   </div>

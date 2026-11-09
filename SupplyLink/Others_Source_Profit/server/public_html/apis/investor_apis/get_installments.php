@@ -8,9 +8,11 @@ header("Content-Type: application/json; charset=UTF-8");
 $cardNo = $_GET["investment_card_no"] ?? $_GET["card_id"] ?? "";
 
 if (!empty($cardNo)) {
-    $sql = "SELECT * FROM investment_installments 
-            WHERE investment_card_no = ?
-            ORDER BY id DESC";
+    $sql = "SELECT ii.*, u.name AS signature_by_name 
+            FROM investment_installments ii 
+            LEFT JOIN users u ON u.id = ii.signature_by
+            WHERE ii.investment_card_no = ?
+            ORDER BY ii.id DESC";
     $stmt = $mysqli->prepare($sql);
     if (!$stmt) {
         echo json_encode(["success" => false, "error" => $mysqli->error]);
@@ -23,13 +25,20 @@ if (!empty($cardNo)) {
     $user = getAuthenticatedUser();
     $uid = (int)($user['id'] ?? 0);
     if ($uid > 0) {
-        $sql = "SELECT * FROM investment_installments WHERE investor_id = ? ORDER BY id DESC";
+        $sql = "SELECT ii.*, u.name AS signature_by_name 
+                FROM investment_installments ii 
+                LEFT JOIN users u ON u.id = ii.signature_by
+                WHERE ii.investor_id = ? 
+                ORDER BY ii.id DESC";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param("i", $uid);
         $stmt->execute();
         $result = $stmt->get_result();
     } else {
-        $result = $mysqli->query("SELECT * FROM investment_installments ORDER BY id DESC LIMIT 500");
+        $result = $mysqli->query("SELECT ii.*, u.name AS signature_by_name 
+                                  FROM investment_installments ii 
+                                  LEFT JOIN users u ON u.id = ii.signature_by
+                                  ORDER BY ii.id DESC LIMIT 500");
     }
 }
 
