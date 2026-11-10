@@ -135,7 +135,7 @@ const CompanySettlement = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-7 text-slate-100 print:p-0 print:m-0 print:max-w-full print:text-black">
+    <div className="w-full mx-auto px-4 py-6 space-y-7 text-slate-100 print:p-0 print:m-0 print:max-w-full print:text-black">
       {/* 🧭 Top Header (Dark Theme) */}
       <div className="card-surface p-5 sm:p-6 rounded-2xl border border-white/[0.08] bg-[#0d162b] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl print:hidden">
         <div className="flex items-center gap-3">
@@ -622,16 +622,6 @@ const CompanySettlement = () => {
             ২. কোম্পানির ৩টি কার্ড ({companyCards.length})
           </button>
           <button
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-              activeTab === "overview"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            সার্বিক লাভ-ক্ষতি (P&L)
-          </button>
-          <button
             onClick={() => setActiveTab("expenses")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === "expenses"
@@ -639,7 +629,7 @@ const CompanySettlement = () => {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            অফিস পরিচালন ব্যয়
+            ৩. অফিস পরিচালন ব্যয় ({expenseBreakdown.length} খাত)
           </button>
         </div>
 
@@ -799,88 +789,7 @@ const CompanySettlement = () => {
         </div>
       )}
 
-      {/* TAB 3: OVERALL BUSINESS P&L */}
-      {activeTab === "overview" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="card-surface p-6 rounded-2xl border border-white/[0.08] bg-[#0d162b] shadow-xl space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-3">
-                <span className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl">
-                  <ArrowUpRight className="w-4 h-4" />
-                </span>
-                <h3 className="text-base font-bold text-white">
-                  ১. মোট আয় ও পণ্য বিক্রয়ের গ্রস লাভ
-                </h3>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">মোট বিক্রয় মূল্য (Total Sales)</span>
-                  <span className="font-semibold font-mono text-white">৳{formatCurrency(summary.lifetime_sales)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">পণ্য ক্রয়ের আসল খরচ (Product Cost)</span>
-                  <span className="font-semibold font-mono text-rose-400">- ৳{formatCurrency(summary.lifetime_cost)}</span>
-                </div>
-                <div className="flex justify-between py-2.5 px-3 border border-emerald-500/20 bg-emerald-500/[0.06] rounded-xl font-bold">
-                  <span className="text-emerald-300">পণ্য বিক্রির গ্রস লাভ (Gross Profit)</span>
-                  <span className="text-emerald-400 font-mono">৳{formatCurrency(summary.lifetime_gross_profit)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">অন্যান্য আয় (Other Income)</span>
-                  <span className="font-semibold font-mono text-emerald-400">+ ৳{formatCurrency(summary.lifetime_other_income)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">অফিস পরিচালন ব্যয় (Total Expenses)</span>
-                  <span className="font-semibold font-mono text-rose-400">- ৳{formatCurrency(summary.lifetime_expenses)}</span>
-                </div>
-                <div className="flex justify-between pt-3 border-t border-indigo-500/30 text-base font-bold bg-indigo-500/[0.08] p-3.5 rounded-xl border border-indigo-500/20">
-                  <span className="text-indigo-200">কোম্পানির নিট অপারেটিং লাভ</span>
-                  <span className="text-indigo-400 font-mono">৳{formatCurrency(summary.lifetime_net_operating_profit)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card-surface p-6 rounded-2xl border border-white/[0.08] bg-[#0d162b] shadow-xl space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-3">
-                <span className="p-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl">
-                  <Scale className="w-4 h-4" />
-                </span>
-                <h3 className="text-base font-bold text-white">
-                  ২. নগদ ক্যাশ বনাম ইনভেস্টর দায়দেনা
-                </h3>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">মোট ক্যাশ-ইন</span>
-                  <span className="font-semibold font-mono text-emerald-400">৳{formatCurrency(summary.total_cash_in)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">মোট ক্যাশ-আউট</span>
-                  <span className="font-semibold font-mono text-slate-300">- ৳{formatCurrency(summary.total_cash_out)}</span>
-                </div>
-                <div className="flex justify-between py-2.5 px-3 border border-indigo-500/20 bg-indigo-500/[0.06] rounded-xl font-bold">
-                  <span className="text-indigo-300">হাতে থাকা নগদ তহবিল (Available Pool)</span>
-                  <span className="text-indigo-400 font-mono">৳{formatCurrency(summary.net_cash)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">সাধারণ ইনভেস্টরদের অবশিষ্ট আসল মূলধন</span>
-                  <span className="font-semibold font-mono text-blue-400">৳{formatCurrency(invStages.remaining?.capital)}</span>
-                </div>
-                <div className="flex justify-between pt-3 border-t border-emerald-500/30 text-base font-bold bg-emerald-500/[0.08] p-3.5 rounded-xl border border-emerald-500/20">
-                  <span className="text-emerald-200">ইনভেস্টর আসল বাদে ক্যাশ উদ্বৃত্ত</span>
-                  <span className="text-emerald-400 font-mono">
-                    + ৳{formatCurrency(summary.net_capital_surplus)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: EXPENSE BREAKDOWN */}
+      {/* TAB 3: EXPENSE BREAKDOWN */}
       {activeTab === "expenses" && (
         <div className="card-surface p-6 rounded-2xl border border-white/[0.08] bg-[#0d162b] shadow-xl space-y-4">
           <h3 className="text-base font-bold text-white border-b border-white/[0.08] pb-3">
