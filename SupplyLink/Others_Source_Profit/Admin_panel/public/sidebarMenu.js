@@ -1,5 +1,5 @@
 import {
-  
+
   HiOutlineHome,
   HiOutlineCube,
   HiOutlineUserGroup,
@@ -53,6 +53,12 @@ export const sidebarMenu = [
     icon: MdOutlineDashboard,
     roles: ["admin", "developer", "manager", "staff", "data_entry"],
   },
+  {
+    label: "Company Final Settlement",
+    path: "/company-settlement",
+    icon: TbReceipt,
+    roles: ["admin", "developer", "manager", "data_entry"],
+  },
   // SUPPLYLINK REPORTS (PDF ARCHIVE)
   {
     label: "SupplyLink Reports",
@@ -79,7 +85,7 @@ export const sidebarMenu = [
         path: "/cash/cash_in",
         icon: GiReceiveMoney,
         roles: ["admin", "developer", "manager", "staff", "data_entry"]
-    },
+      },
       {
         label: "Cash Out",
         path: "/cash/cash_out",
@@ -308,12 +314,7 @@ export const sidebarMenu = [
         icon: TbCashBanknote,
         roles: ["admin", "developer", "manager", "data_entry"],
       },
-      {
-        label: "Company Final Settlement",
-        path: "/company-settlement",
-        icon: TbReceipt,
-        roles: ["admin", "developer", "manager", "data_entry"],
-      },
+
     ],
   },
 
@@ -431,12 +432,6 @@ export const sidebarMenu = [
         path: "/finance/company-settlement-simulator",
         icon: BsClipboardData,
         roles: ["admin", "developer", "manager"],
-      },
-      {
-        label: "Company Final Settlement",
-        path: "/company-settlement",
-        icon: TbReceipt,
-        roles: ["admin", "developer", "manager", "audit"],
       },
     ],
   },

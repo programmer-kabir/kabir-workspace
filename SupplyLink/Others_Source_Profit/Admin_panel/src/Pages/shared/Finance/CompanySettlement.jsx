@@ -42,7 +42,7 @@ const CompanySettlement = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("investors"); // 'investors' | 'company_cards' | 'overview' | 'expenses'
+  const [activeTab, setActiveTab] = useState("cards"); // 'cards' | 'company_cards' | 'expenses'
 
   const fetchSettlement = async () => {
     setLoading(true);
@@ -71,7 +71,7 @@ const CompanySettlement = () => {
   const summary = data?.summary || {};
   const invStages = summary.investor_stages || {};
   const compStages = summary.company_stages || {};
-  const investorList = data?.investor_breakdown || [];
+  const cardList = data?.card_breakdown || [];
   const companyCards = data?.company_cards || [];
   const expenseBreakdown = data?.expense_breakdown || [];
 
@@ -92,33 +92,36 @@ const CompanySettlement = () => {
     expense_covered_by_company: summary.lifetime_expenses || 0
   };
 
-  // Filtered Investors (যাদের এখনো পাওনা বা ব্যালেন্স বাকি আছে শুধুমাত্র তাদের লিস্ট)
-  const filteredInvestors = useMemo(() => {
-    const activeInvestors = investorList.filter((inv) => Number(inv.total_balance || 0) > 0.001);
-    if (!searchTerm.trim()) return activeInvestors;
-    const term = searchTerm.toLowerCase();
-    return activeInvestors.filter((inv) =>
-      inv.investor_name?.toLowerCase().includes(term) ||
-      inv.investor_mobile?.toLowerCase().includes(term) ||
-      inv.investor_id?.toString().includes(term)
-    );
-  }, [investorList, searchTerm]);
+  // Filtered Cards (শুধুমাত্র যাদের টাকা বকেয়া বা ব্যালেন্স বাকি আছে, ব্যালেন্স ০ বাদে)
+  const filteredCards = useMemo(() => {
+    const activeCards = cardList.filter((c) => Number(c.total_balance || 0) > 0.001);
 
-  // Dynamic Total Sum of Filtered Investors Table
-  const tableTotals = useMemo(() => {
-    return filteredInvestors.reduce(
-      (acc, inv) => {
-        acc.cards += Number(inv.total_cards || 0);
-        acc.capital += Number(inv.total_capital || 0);
-        acc.profit += Number(inv.total_all_time_profit || 0);
-        acc.withdrawn += Number(inv.total_withdrawn || 0);
-        acc.unwithdrawn += Number(inv.unwithdrawn_profit || 0);
-        acc.balance += Number(inv.total_balance || 0);
+    if (!searchTerm.trim()) return activeCards;
+    const term = searchTerm.toLowerCase();
+    return activeCards.filter((c) =>
+      c.card_name?.toLowerCase().includes(term) ||
+      c.investor_name?.toLowerCase().includes(term) ||
+      c.investor_mobile?.toLowerCase().includes(term) ||
+      c.card_id?.toString().includes(term) ||
+      c.investor_id?.toString().includes(term)
+    );
+  }, [cardList, searchTerm]);
+
+  // Dynamic Total Sum of Filtered Cards Table
+  const cardTableTotals = useMemo(() => {
+    return filteredCards.reduce(
+      (acc, c) => {
+        acc.count += 1;
+        acc.capital += Number(c.capital || 0);
+        acc.profit += Number(c.total_all_time_profit || 0);
+        acc.withdrawn += Number(c.total_withdrawn || 0);
+        acc.unwithdrawn += Number(c.unwithdrawn_profit || 0);
+        acc.balance += Number(c.total_balance || 0);
         return acc;
       },
-      { cards: 0, capital: 0, profit: 0, withdrawn: 0, unwithdrawn: 0, balance: 0 }
+      { count: 0, capital: 0, profit: 0, withdrawn: 0, unwithdrawn: 0, balance: 0 }
     );
-  }, [filteredInvestors]);
+  }, [filteredCards]);
 
   const handlePrint = () => {
     window.print();
@@ -619,14 +622,15 @@ const CompanySettlement = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3 print:hidden">
         <div className="inline-flex items-center gap-1.5 bg-[#091022] p-1.5 rounded-xl border border-white/[0.08]">
           <button
-            onClick={() => setActiveTab("investors")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-              activeTab === "investors"
+            onClick={() => setActiveTab("cards")}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+              activeTab === "cards"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            ১. সাধারণ ইনভেস্টরদের তালিকা ({investorList.length})
+            <CreditCard className="w-3.5 h-3.5" />
+            ১. ইনভেস্টমেন্ট কার্ডের তালিকা ({filteredCards.length}টি)
           </button>
           <button
             onClick={() => setActiveTab("company_cards")}
@@ -650,12 +654,12 @@ const CompanySettlement = () => {
           </button>
         </div>
 
-        {activeTab === "investors" && (
-          <div className="relative w-full sm:w-72">
+        {activeTab === "cards" && (
+          <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="নাম বা মোবাইল দিয়ে খুঁজুন..."
+              placeholder="কার্ড আইডি, নাম বা মোবাইল দিয়ে খুঁজুন..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3.5 py-2 bg-slate-900/90 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none transition"
@@ -664,20 +668,21 @@ const CompanySettlement = () => {
         )}
       </div>
 
-      {/* TAB 1: GENERAL INVESTORS LIST (Excluding Company Cards 1, 2, 3) */}
-      {activeTab === "investors" && (
+      {/* TAB 1: CARD-WISE LIST (Excluding Company Cards 1, 2, 3) */}
+      {activeTab === "cards" && (
         <div className="card-surface rounded-2xl border border-white/[0.08] bg-[#0d162b] shadow-xl overflow-hidden">
-          <div className="p-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.02]">
+          <div className="p-4 sm:p-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.02]">
             <div>
-              <h3 className="text-base font-bold text-white">
-                সাধারণ ইনভেস্টরদের বিস্তারিত তালিকা (কার্ড ১, ২ ও ৩ বাদে)
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-indigo-400" />
+                বকেয়া ইনভেস্টমেন্ট কার্ড তালিকা (কার্ডভিত্তিক)
               </h3>
-              <p className="text-xs text-slate-400">
-                ১২৬ জন প্রকৃত ইনভেস্টরের মূলধন (আসল), মোট লাভ, উত্তোলিত ও বাকি পাওনার হিসাব
+              <p className="text-xs text-slate-400 mt-0.5">
+                যেসব কার্ডের পাওনা বাকি আছে শুধুমাত্র তাদের হিসাব (কার্ড ১, ২ ও ৩ বাদে)
               </p>
             </div>
-            <span className="text-xs font-semibold px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-full w-fit">
-              মোট: {filteredInvestors.length} জন ইনভেস্টর
+            <span className="text-xs font-semibold px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full w-fit">
+              মোট: {filteredCards.length} টি কার্ড
             </span>
           </div>
 
@@ -685,68 +690,82 @@ const CompanySettlement = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-white/[0.03] text-slate-400 border-b border-white/[0.08] uppercase font-semibold text-[11px]">
-                  <th className="py-3.5 px-4">আইডি ও ইনভেস্টর</th>
-                  <th className="py-3.5 px-4">মোবাইল</th>
-                  <th className="py-3.5 px-4 text-center">কার্ড</th>
-                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">মোট মূলধন (আসল)</th>
+                  <th className="py-3.5 px-3 text-center">ক্রঃ</th>
+                  <th className="py-3.5 px-4">কার্ড আইডি ও নাম</th>
+                  <th className="py-3.5 px-4">ইনভেস্টর (আইডি ও নাম)</th>
+                  <th className="py-3.5 px-4">মোবাইল নম্বর</th>
+                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">কার্ডের আসল (মূলধন)</th>
                   <th className="py-3.5 px-4 text-right text-emerald-400 font-bold">মোট অর্জিত লাভ</th>
                   <th className="py-3.5 px-4 text-right text-rose-400">উত্তোলিত লাভ</th>
-                  <th className="py-3.5 px-4 text-right text-blue-300 font-bold">বাকি থাকা লাভ</th>
+                  <th className="py-3.5 px-4 text-right text-blue-300 font-bold">বাকি লাভ</th>
                   <th className="py-3.5 px-4 text-right text-indigo-300 font-black bg-indigo-500/10 border-l border-indigo-500/20">
                     মোট পাওনা ব্যালেন্স
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                {filteredInvestors.map((inv) => (
-                  <tr key={inv.investor_id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="py-3 px-4">
-                      <p className="font-bold text-white">{inv.investor_name}</p>
-                      <p className="text-[10px] text-slate-400">ID: #{inv.investor_id}</p>
-                    </td>
-                    <td className="py-3 px-4 text-slate-300 font-mono">{inv.investor_mobile || "-"}</td>
-                    <td className="py-3 px-4 text-center font-medium text-slate-300">{inv.total_cards}</td>
-                    <td className="py-3 px-4 text-right font-bold font-mono text-slate-100">
-                      ৳{formatCurrency(inv.total_capital)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-semibold font-mono text-emerald-400">
-                      ৳{formatCurrency(inv.total_all_time_profit)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-rose-400">
-                      ৳{formatCurrency(inv.total_withdrawn)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-bold font-mono text-blue-300">
-                      ৳{formatCurrency(inv.unwithdrawn_profit)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-black font-mono text-indigo-300 bg-indigo-500/10 border-l border-indigo-500/20">
-                      ৳{formatCurrency(inv.total_balance)}
+                {filteredCards.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                      কোনো বকেয়া কার্ড পাওয়া যায়নি
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredCards.map((card, idx) => (
+                    <tr key={card.card_id} className="hover:bg-white/[0.03] transition-colors">
+                      <td className="py-3 px-3 text-center font-mono text-slate-500">{idx + 1}</td>
+                      <td className="py-3 px-4">
+                        <p className="font-bold text-white flex items-center gap-1.5">
+                          <span className="text-indigo-400 font-mono">#{card.card_id}</span>
+                          <span className="text-slate-200">{card.card_name}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-mono">
+                          {card.start_date ? `${card.start_date} → ${card.maturity_date || "চলমান"}` : ""}
+                        </p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="font-bold text-white">{card.investor_name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">ID: #{card.investor_id}</p>
+                      </td>
+                      <td className="py-3 px-4 text-slate-300 font-mono">{card.investor_mobile || "-"}</td>
+                      <td className="py-3 px-4 text-right font-bold font-mono text-slate-100">
+                        ৳{formatCurrency(card.capital)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold font-mono text-emerald-400">
+                        ৳{formatCurrency(card.total_all_time_profit)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-rose-400">
+                        ৳{formatCurrency(card.total_withdrawn)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold font-mono text-blue-300">
+                        ৳{formatCurrency(card.unwithdrawn_profit)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-black font-mono text-indigo-300 bg-indigo-500/10 border-l border-indigo-500/20">
+                        ৳{formatCurrency(card.total_balance)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
               <tfoot>
                 <tr className="bg-blue-950/40 border-t-2 border-blue-500/40 font-bold text-xs text-white">
-                  <td className="py-4 px-4 text-blue-200 uppercase font-black tracking-wider">
-                    সর্বমোট ({filteredInvestors.length} জন ইনভেস্টর):
-                  </td>
-                  <td className="py-4 px-4"></td>
-                  <td className="py-4 px-4 text-center font-mono text-blue-300 font-black">
-                    {tableTotals.cards}
+                  <td colSpan={4} className="py-4 px-4 text-blue-200 uppercase font-black tracking-wider">
+                    সর্বমোট ({filteredCards.length} টি কার্ড):
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-white font-black text-sm">
-                    ৳{formatCurrency(tableTotals.capital)}
+                    ৳{formatCurrency(cardTableTotals.capital)}
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-emerald-400 font-black text-sm">
-                    ৳{formatCurrency(tableTotals.profit)}
+                    ৳{formatCurrency(cardTableTotals.profit)}
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-rose-400 font-black text-sm">
-                    ৳{formatCurrency(tableTotals.withdrawn)}
+                    ৳{formatCurrency(cardTableTotals.withdrawn)}
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-blue-300 font-black text-sm">
-                    ৳{formatCurrency(tableTotals.unwithdrawn)}
+                    ৳{formatCurrency(cardTableTotals.unwithdrawn)}
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-indigo-300 font-black text-base bg-indigo-500/20 border-l border-indigo-500/40">
-                    ৳{formatCurrency(tableTotals.balance)}
+                    ৳{formatCurrency(cardTableTotals.balance)}
                   </td>
                 </tr>
               </tfoot>
