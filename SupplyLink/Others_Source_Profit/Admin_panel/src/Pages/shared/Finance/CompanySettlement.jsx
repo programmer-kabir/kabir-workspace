@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   BadgePercent,
   Sparkles,
-  CreditCard
+  CreditCard,
+  ArrowRightLeft
 } from "lucide-react";
 
 const formatCurrency = (num) => {
@@ -122,14 +123,14 @@ const CompanySettlement = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                ইনভেস্টর বনাম কোম্পানি কার্ড হিসাব বিবরণী
+                ইনভেস্টর বনাম কোম্পানি সামগ্রিক মূলধন ও লাভ বিবরণী
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 স্বতন্ত্র অডিট
               </span>
             </div>
             <p className="text-xs md:text-sm text-slate-400 mt-0.5">
-              সাধারণ ইনভেস্টরদের মূল টাকা ও লাভ এবং কোম্পানির ৩টি নিজস্ব কার্ডের সুনির্দিষ্ট হিসাব
+              মোট বিনিয়োগ (আসল), মোট লাভ, উত্তোলিত অর্থ ও অবশিষ্ট পাওনার স্বচ্ছ হিসাব
             </p>
           </div>
         </div>
@@ -156,12 +157,12 @@ const CompanySettlement = () => {
       <div className="hidden print:block text-center border-b pb-4 mb-4 text-black">
         <h1 className="text-2xl font-bold">SupplyLink Bangladesh Limited</h1>
         <p className="text-sm text-gray-700">Investor vs Company Capital & Profit Audit Statement</p>
-        <p className="text-xs text-gray-600">Cut-off Date: 2026-10-31 | Generated: {new Date().toLocaleDateString('bn-BD')}</p>
+        <p className="text-xs text-gray-600">Generated: {new Date().toLocaleDateString('bn-BD')}</p>
       </div>
 
-      {/* 🌟 2 HERO HIGHLIGHT PANELS: INVESTORS VS COMPANY */}
+      {/* 🌟 2 HERO HIGHLIGHT PANELS: INVESTORS VS COMPANY (SYMMETRIC & DETAILED) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
-        {/* PANEL 1: GENERAL INVESTORS PORTION (Cards 1, 2, 3 Excluded) */}
+        {/* PANEL 1: GENERAL INVESTORS PORTION (126 Investors) */}
         <div className="card-surface p-6 rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#0d162b] via-[#0e1a38] to-[#0a1226] shadow-xl relative overflow-hidden flex flex-col justify-between space-y-5">
           <div className="flex items-center justify-between border-b border-blue-500/20 pb-4">
             <div className="flex items-center gap-2.5">
@@ -172,7 +173,7 @@ const CompanySettlement = () => {
                 <h2 className="text-base font-bold text-white">
                   ১. সাধারণ ইনভেস্টরদের অংশ ({summary.investor_running_count} জন)
                 </h2>
-                <p className="text-[11px] text-slate-400">কোম্পানির ৩টি নিজস্ব কার্ড বাদে প্রকৃত বিনিয়োগকারীদের দায়</p>
+                <p className="text-[11px] text-slate-400">কোম্পানির ৩টি নিজস্ব কার্ড বাদে ১২৬ জন প্রকৃত ইনভেস্টর</p>
               </div>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
@@ -180,9 +181,10 @@ const CompanySettlement = () => {
             </span>
           </div>
 
+          {/* Top 2 Big Numbers: Total Investment vs Total Profit */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">ইনভেস্টরদের মূল টাকা (আসল)</p>
+              <p className="text-xs text-slate-400 uppercase font-semibold">ইনভেস্টরদের মোট বিনিয়োগ (আসল)</p>
               <p className="text-2xl font-black font-mono text-white tracking-tight">
                 ৳{formatCurrency(summary.investor_running_capital)}
               </p>
@@ -194,22 +196,37 @@ const CompanySettlement = () => {
               <p className="text-2xl font-black font-mono text-emerald-400 tracking-tight">
                 ৳{formatCurrency(summary.investor_lifetime_profit)}
               </p>
-              <p className="text-[11px] text-slate-400 font-medium">লাইফটাইম অর্জিত মুনাফা</p>
+              <p className="text-[11px] text-slate-400 font-medium">মোট অর্জিত মুনাফা</p>
             </div>
           </div>
 
-          <div className="space-y-2 text-xs border-t border-white/[0.08] pt-3 text-slate-300">
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">• অক্টোবর ২০২৬ মাসের লাভ:</span>
-              <span className="font-semibold font-mono text-emerald-400">৳{formatCurrency(summary.investor_oct_2026_profit)}</span>
+          {/* Bottom Breakdown: Withdrawals & Remaining Balances */}
+          <div className="space-y-2.5 text-xs border-t border-white/[0.08] pt-4 text-slate-300">
+            <div className="grid grid-cols-2 gap-3 py-1">
+              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-400">উত্তোলিত লাভ:</span>
+                <span className="font-semibold font-mono text-rose-400">৳{formatCurrency(summary.investor_withdrawn_profit)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-400">উত্তোলিত মূলধন:</span>
+                <span className="font-semibold font-mono text-slate-400">৳{formatCurrency(summary.investor_withdrawn_capital)}</span>
+              </div>
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">• ইনভেস্টররা ইতোমধ্যে তুলেছে (Withdrawn):</span>
-              <span className="font-semibold font-mono text-rose-400">৳{formatCurrency(summary.investor_withdrawn_profit)}</span>
+
+            <div className="grid grid-cols-2 gap-3 py-1">
+              <div className="flex justify-between items-center bg-blue-500/[0.06] p-2.5 rounded-lg border border-blue-500/20">
+                <span className="text-blue-300 font-medium">বাকি থাকা নিট লাভ:</span>
+                <span className="font-bold font-mono text-emerald-400">৳{formatCurrency(summary.investor_unwithdrawn_profit)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-blue-500/[0.06] p-2.5 rounded-lg border border-blue-500/20">
+                <span className="text-blue-300 font-medium">বাকি থাকা মূলধন:</span>
+                <span className="font-bold font-mono text-white">৳{formatCurrency(summary.investor_remaining_capital)}</span>
+              </div>
             </div>
-            <div className="flex justify-between py-1.5 px-3 bg-blue-500/10 border border-blue-500/20 rounded-xl font-bold">
-              <span className="text-blue-300">ইনভেস্টরদের বাকি থাকা নিট লাভ:</span>
-              <span className="font-mono text-blue-400">৳{formatCurrency(summary.investor_unwithdrawn_profit)}</span>
+
+            <div className="flex justify-between items-center py-2 px-3 bg-blue-500/15 border border-blue-500/30 rounded-xl font-bold text-sm">
+              <span className="text-blue-200">ইনভেস্টরদের মোট পাওনা ব্যালেন্স (আসল + বাকি লাভ):</span>
+              <span className="font-mono text-blue-300">৳{formatCurrency(summary.investor_total_balance)}</span>
             </div>
           </div>
 
@@ -235,9 +252,10 @@ const CompanySettlement = () => {
             </span>
           </div>
 
+          {/* Top 2 Big Numbers: Total Investment vs Total Profit */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">কোম্পানির মূল টাকা (বিনিয়োগ)</p>
+              <p className="text-xs text-slate-400 uppercase font-semibold">কোম্পানির মোট বিনিয়োগ (আসল)</p>
               <p className="text-2xl font-black font-mono text-white tracking-tight">
                 ৳{formatCurrency(summary.company_total_capital)}
               </p>
@@ -253,18 +271,33 @@ const CompanySettlement = () => {
             </div>
           </div>
 
-          <div className="space-y-2 text-xs border-t border-white/[0.08] pt-3 text-slate-300">
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">• কোম্পানির অক্টোবর ২০২৬ লাভ:</span>
-              <span className="font-semibold font-mono text-purple-400">৳{formatCurrency(summary.company_oct_2026_profit)}</span>
+          {/* Bottom Breakdown: Withdrawals & Remaining Balances */}
+          <div className="space-y-2.5 text-xs border-t border-white/[0.08] pt-4 text-slate-300">
+            <div className="grid grid-cols-2 gap-3 py-1">
+              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-400">উত্তোলিত লাভ:</span>
+                <span className="font-semibold font-mono text-purple-300">৳{formatCurrency(summary.company_withdrawn_profit)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-400">উত্তোলিত মূলধন:</span>
+                <span className="font-semibold font-mono text-slate-400">৳{formatCurrency(summary.company_withdrawn_capital)}</span>
+              </div>
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">• কার্ড ১ (মেয়াদপূর্ব মুনাফা):</span>
-              <span className="font-semibold font-mono text-slate-200">মূলধন ৳৭২,১৬৭.৭৬ | লাভ ৳৫,৯০৬.০১</span>
+
+            <div className="grid grid-cols-2 gap-3 py-1">
+              <div className="flex justify-between items-center bg-purple-500/[0.06] p-2.5 rounded-lg border border-purple-500/20">
+                <span className="text-purple-300 font-medium">বাকি থাকা নিট লাভ:</span>
+                <span className="font-bold font-mono text-purple-400">৳{formatCurrency(summary.company_unwithdrawn_profit)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-purple-500/[0.06] p-2.5 rounded-lg border border-purple-500/20">
+                <span className="text-purple-300 font-medium">বাকি থাকা মূলধন:</span>
+                <span className="font-bold font-mono text-white">৳{formatCurrency(summary.company_remaining_capital)}</span>
+              </div>
             </div>
-            <div className="flex justify-between py-1.5 px-3 bg-purple-500/10 border border-purple-500/20 rounded-xl font-bold">
-              <span className="text-purple-300">কার্ড ২ (অংশীদারি মুনাফা হিসাব):</span>
-              <span className="font-mono text-purple-400">লাভ ৳৭,৭৭,৮৩৫.০৭</span>
+
+            <div className="flex justify-between items-center py-2 px-3 bg-purple-500/15 border border-purple-500/30 rounded-xl font-bold text-sm">
+              <span className="text-purple-200">কোম্পানির মোট পাওনা ব্যালেন্স (আসল + বাকি লাভ):</span>
+              <span className="font-mono text-purple-300">৳{formatCurrency(summary.company_total_balance)}</span>
             </div>
           </div>
 
@@ -382,7 +415,7 @@ const CompanySettlement = () => {
                 সাধারণ ইনভেস্টরদের বিস্তারিত তালিকা (কার্ড ১, ২ ও ৩ বাদে)
               </h3>
               <p className="text-xs text-slate-400">
-                ১২৬ জন প্রকৃত ইনভেস্টরের মূল টাকা (আসল) এবং তাদের অর্জিত লাভের হিসাব
+                ১২৬ জন প্রকৃত ইনভেস্টরের মূলধন (আসল), মোট লাভ, উত্তোলিত ও বাকি পাওনার হিসাব
               </p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-full w-fit">
@@ -396,13 +429,13 @@ const CompanySettlement = () => {
                 <tr className="bg-white/[0.03] text-slate-400 border-b border-white/[0.08] uppercase font-semibold text-[11px]">
                   <th className="py-3.5 px-4">আইডি ও ইনভেস্টর</th>
                   <th className="py-3.5 px-4">মোবাইল</th>
-                  <th className="py-3.5 px-4 text-center">কার্ড সংখ্যা</th>
-                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">মূল টাকা (আসল)</th>
-                  <th className="py-3.5 px-4 text-right text-emerald-400">অক্টোবর ২০২৬ লাভ</th>
-                  <th className="py-3.5 px-4 text-right">মোট অর্জিত লাভ</th>
-                  <th className="py-3.5 px-4 text-right text-rose-400">উত্তোলিত</th>
-                  <th className="py-3.5 px-4 text-right text-blue-300 font-bold bg-blue-500/10 border-l border-blue-500/20">
-                    বাকি লাভ
+                  <th className="py-3.5 px-4 text-center">কার্ড</th>
+                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">মোট মূলধন (আসল)</th>
+                  <th className="py-3.5 px-4 text-right text-emerald-400 font-bold">মোট অর্জিত লাভ</th>
+                  <th className="py-3.5 px-4 text-right text-rose-400">উত্তোলিত লাভ</th>
+                  <th className="py-3.5 px-4 text-right text-blue-300 font-bold">বাকি থাকা লাভ</th>
+                  <th className="py-3.5 px-4 text-right text-indigo-300 font-black bg-indigo-500/10 border-l border-indigo-500/20">
+                    মোট পাওনা ব্যালেন্স
                   </th>
                 </tr>
               </thead>
@@ -419,16 +452,16 @@ const CompanySettlement = () => {
                       ৳{formatCurrency(inv.total_capital)}
                     </td>
                     <td className="py-3 px-4 text-right font-semibold font-mono text-emerald-400">
-                      ৳{formatCurrency(inv.oct_2026_profit)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-300">
                       ৳{formatCurrency(inv.total_all_time_profit)}
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-rose-400">
                       ৳{formatCurrency(inv.total_withdrawn)}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold font-mono text-blue-300 bg-blue-500/10 border-l border-blue-500/20">
+                    <td className="py-3 px-4 text-right font-bold font-mono text-blue-300">
                       ৳{formatCurrency(inv.unwithdrawn_profit)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-black font-mono text-indigo-300 bg-indigo-500/10 border-l border-indigo-500/20">
+                      ৳{formatCurrency(inv.total_balance)}
                     </td>
                   </tr>
                 ))}
@@ -461,10 +494,11 @@ const CompanySettlement = () => {
                 <tr className="bg-white/[0.03] text-slate-400 border-b border-white/[0.08] uppercase font-semibold text-[11px]">
                   <th className="py-3.5 px-4">কার্ড আইডি</th>
                   <th className="py-3.5 px-4">কার্ডের নাম</th>
-                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">মূল টাকা (বিনিয়োগ)</th>
-                  <th className="py-3.5 px-4 text-right text-purple-400">অক্টোবর ২০২৬ লাভ</th>
-                  <th className="py-3.5 px-4 text-right font-bold text-purple-300 bg-purple-500/10 border-l border-purple-500/20">
-                    মোট অর্জিত লাভ
+                  <th className="py-3.5 px-4 text-right font-bold text-slate-200">বিনিয়োগ (আসল)</th>
+                  <th className="py-3.5 px-4 text-right font-bold text-purple-400">মোট অর্জিত লাভ</th>
+                  <th className="py-3.5 px-4 text-right text-slate-400">উত্তোলিত</th>
+                  <th className="py-3.5 px-4 text-right font-black text-purple-300 bg-purple-500/10 border-l border-purple-500/20">
+                    মোট পাওনা ব্যালেন্স
                   </th>
                 </tr>
               </thead>
@@ -481,10 +515,13 @@ const CompanySettlement = () => {
                       ৳{formatCurrency(c.capital)}
                     </td>
                     <td className="py-4 px-4 text-right font-semibold font-mono text-purple-400 text-sm">
-                      ৳{formatCurrency(c.oct_2026_profit)}
+                      ৳{formatCurrency(c.total_all_time_profit)}
+                    </td>
+                    <td className="py-4 px-4 text-right font-mono text-slate-400 text-sm">
+                      ৳{formatCurrency(c.withdrawn_profit)}
                     </td>
                     <td className="py-4 px-4 text-right font-black font-mono text-purple-300 text-base bg-purple-500/10 border-l border-purple-500/20">
-                      ৳{formatCurrency(c.total_all_time_profit)}
+                      ৳{formatCurrency(c.net_balance)}
                     </td>
                   </tr>
                 ))}
@@ -496,10 +533,13 @@ const CompanySettlement = () => {
                     ৳{formatCurrency(summary.company_total_capital)}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono text-purple-300">
-                    ৳{formatCurrency(summary.company_oct_2026_profit)}
+                    ৳{formatCurrency(summary.company_lifetime_profit)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-slate-400">
+                    ৳{formatCurrency(summary.company_withdrawn_profit)}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono text-purple-200 bg-purple-500/20 border-l border-purple-500/30">
-                    ৳{formatCurrency(summary.company_lifetime_profit)}
+                    ৳{formatCurrency(summary.company_total_balance)}
                   </td>
                 </tr>
               </tfoot>
@@ -536,7 +576,7 @@ const CompanySettlement = () => {
                   <span className="text-emerald-400 font-mono">৳{formatCurrency(summary.lifetime_gross_profit)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">বন্ধক ও অন্যান্য আয় (Other Income)</span>
+                  <span className="text-slate-400">অন্যান্য আয় (Other Income)</span>
                   <span className="font-semibold font-mono text-emerald-400">+ ৳{formatCurrency(summary.lifetime_other_income)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/[0.04]">
@@ -562,11 +602,11 @@ const CompanySettlement = () => {
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">মোট ক্যাশ-ইন (কাস্টমার কিস্তি ও বন্ধক ফেরত সহ)</span>
+                  <span className="text-slate-400">মোট ক্যাশ-ইন</span>
                   <span className="font-semibold font-mono text-emerald-400">৳{formatCurrency(summary.total_cash_in)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">মোট ক্যাশ-আউট (ক্রয়, খরচ ও পে-আউট)</span>
+                  <span className="text-slate-400">মোট ক্যাশ-আউট</span>
                   <span className="font-semibold font-mono text-slate-300">- ৳{formatCurrency(summary.total_cash_out)}</span>
                 </div>
                 <div className="flex justify-between py-2.5 px-3 border border-indigo-500/20 bg-indigo-500/[0.06] rounded-xl font-bold">
