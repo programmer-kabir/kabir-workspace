@@ -79,21 +79,80 @@ try {
     $invWithdrawnProfit = (float)($qInvWithdrawnProfit ? $qInvWithdrawnProfit->fetch_assoc()['withdrawn_profit'] : 0);
     $invTotalWithdrawn = $invWithdrawnCapital + $invWithdrawnProfit;
 
-    // Stage 3: Currently Remaining / Running (Active Claims)
-    $qInvRun = $mysqli->query("
+    // Stage 3: Currently Remaining / Running (Active Claims - synced directly with active running card breakdown)
+    $cardBreakdownSql = "
         SELECT 
-            COUNT(*) AS running_cards,
-            COUNT(DISTINCT investor_id) AS running_investors,
-            COALESCE(SUM(investment_amount), 0) AS running_capital
-        FROM investment_cards
-        WHERE id NOT IN (1, 2, 3) AND status = 'running'
-    ");
-    $rInvRun = $qInvRun ? $qInvRun->fetch_assoc() : [];
-    $invRemainingCards = (int)($rInvRun['running_cards'] ?? 0);
-    $invRemainingCount = (int)($rInvRun['running_investors'] ?? 0);
-    $invRemainingCapital = (float)($rInvRun['running_capital'] ?? 0);
+            ic.id AS card_id,
+            ic.card_name,
+            ic.investment_amount AS capital,
+            ic.status,
+            ic.payment_type,
+            ic.start_date,
+            ic.maturity_date,
+            u.id AS investor_id,
+            u.name AS investor_name,
+            u.mobile AS investor_mobile,
+            COALESCE((
+                SELECT SUM(pg.profit_amount) 
+                FROM profit_generator pg 
+                WHERE pg.card_id = ic.id
+            ), 0) AS card_profit,
+            COALESCE((
+                SELECT SUM(ph.amount) 
+                FROM profit_history ph 
+                WHERE ph.card_id = ic.id AND ph.status = 'withdraw'
+            ), 0) AS card_withdrawn
+        FROM investment_cards ic
+        LEFT JOIN users u ON ic.investor_id = u.id
+        WHERE ic.status = 'running' AND ic.id NOT IN (1, 2, 3)
+        ORDER BY ic.investment_amount DESC, ic.id DESC
+    ";
+    $cardRes = $mysqli->query($cardBreakdownSql);
+    $cardList = [];
+    $invRemainingCapital = 0.0;
+    $invRemainingProfit = 0.0;
+    $activeInvestorIds = [];
 
-    $invRemainingProfit = max(0, $invAllProfit - $invWithdrawnProfit);
+    if ($cardRes) {
+        while ($c = $cardRes->fetch_assoc()) {
+            $cap = (float)$c['capital'];
+            $allProf = (float)$c['card_profit'];
+            $withdrawn = (float)$c['card_withdrawn'];
+            $unwithdrawn = max(0, $allProf - $withdrawn);
+            $totalBalance = $cap + $unwithdrawn;
+
+            // যারা সব টাকা তুলে নিয়েছে বা ব্যালেন্স ০, তাদের দেখানো হবে না
+            if ($totalBalance <= 0.001) {
+                continue;
+            }
+
+            $invRemainingCapital += $cap;
+            $invRemainingProfit += $unwithdrawn;
+            if (!empty($c['investor_id'])) {
+                $activeInvestorIds[(int)$c['investor_id']] = true;
+            }
+
+            $cardList[] = [
+                'card_id'               => (int)$c['card_id'],
+                'card_name'             => $c['card_name'] ?: ('কার্ড #' . $c['card_id']),
+                'status'                => $c['status'],
+                'payment_type'          => $c['payment_type'] ?: 'monthly',
+                'start_date'            => $c['start_date'],
+                'maturity_date'         => $c['maturity_date'],
+                'investor_id'           => (int)$c['investor_id'],
+                'investor_name'         => $c['investor_name'] ?: 'অজ্ঞাত ইনভেস্টর',
+                'investor_mobile'       => $c['investor_mobile'] ?: '',
+                'capital'               => $cap,
+                'total_all_time_profit' => $allProf,
+                'total_withdrawn'       => $withdrawn,
+                'unwithdrawn_profit'    => $unwithdrawn,
+                'total_balance'         => $totalBalance
+            ];
+        }
+    }
+
+    $invRemainingCards = count($cardList);
+    $invRemainingCount = count($activeInvestorIds);
     $invTotalRemainingClaim = $invRemainingCapital + $invRemainingProfit;
 
     // Coverage & Surpluses based on current remaining investor claims
@@ -260,67 +319,7 @@ try {
         }
     }
 
-    // 9. Card-Wise Breakdown (Running Investment Cards with Pending Claims)
-    $cardBreakdownSql = "
-        SELECT 
-            ic.id AS card_id,
-            ic.card_name,
-            ic.investment_amount AS capital,
-            ic.status,
-            ic.payment_type,
-            ic.start_date,
-            ic.maturity_date,
-            u.id AS investor_id,
-            u.name AS investor_name,
-            u.mobile AS investor_mobile,
-            COALESCE((
-                SELECT SUM(pg.profit_amount) 
-                FROM profit_generator pg 
-                WHERE pg.card_id = ic.id
-            ), 0) AS card_profit,
-            COALESCE((
-                SELECT SUM(ph.amount) 
-                FROM profit_history ph 
-                WHERE ph.card_id = ic.id AND ph.status = 'withdraw'
-            ), 0) AS card_withdrawn
-        FROM investment_cards ic
-        LEFT JOIN users u ON ic.investor_id = u.id
-        WHERE ic.status = 'running' AND ic.id NOT IN (1, 2, 3)
-        ORDER BY ic.investment_amount DESC, ic.id DESC
-    ";
-    $cardRes = $mysqli->query($cardBreakdownSql);
-    $cardList = [];
-    if ($cardRes) {
-        while ($c = $cardRes->fetch_assoc()) {
-            $cap = (float)$c['capital'];
-            $allProf = (float)$c['card_profit'];
-            $withdrawn = (float)$c['card_withdrawn'];
-            $unwithdrawn = max(0, $allProf - $withdrawn);
-            $totalBalance = $cap + $unwithdrawn;
-
-            // যারা সব টাকা তুলে নিয়েছে বা ব্যালেন্স ০, তাদের দেখানো হবে না
-            if ($totalBalance <= 0.001) {
-                continue;
-            }
-
-            $cardList[] = [
-                'card_id'               => (int)$c['card_id'],
-                'card_name'             => $c['card_name'] ?: ('কার্ড #' . $c['card_id']),
-                'status'                => $c['status'],
-                'payment_type'          => $c['payment_type'] ?: 'monthly',
-                'start_date'            => $c['start_date'],
-                'maturity_date'         => $c['maturity_date'],
-                'investor_id'           => (int)$c['investor_id'],
-                'investor_name'         => $c['investor_name'] ?: 'অজ্ঞাত ইনভেস্টর',
-                'investor_mobile'       => $c['investor_mobile'] ?: '',
-                'capital'               => $cap,
-                'total_all_time_profit' => $allProf,
-                'total_withdrawn'       => $withdrawn,
-                'unwithdrawn_profit'    => $unwithdrawn,
-                'total_balance'         => $totalBalance
-            ];
-        }
-    }
+    // 9. Card-Wise Breakdown is already populated in Stage 3 above
 
     echo json_encode([
         "success" => true,

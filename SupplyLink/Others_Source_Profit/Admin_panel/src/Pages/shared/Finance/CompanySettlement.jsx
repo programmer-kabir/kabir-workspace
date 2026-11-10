@@ -330,7 +330,7 @@ const CompanySettlement = () => {
                 <p className="text-xl lg:text-2xl font-black font-mono text-emerald-400">
                   ৳{formatCurrency(invStages.remaining?.profit)}
                 </p>
-                <p className="text-[10px] text-slate-400">মোট লাভ - উত্তোলিত লাভ</p>
+                <p className="text-[10px] text-slate-400">সক্রিয় রানিং কার্ডের বকেয়া লাভ</p>
               </div>
             </div>
 

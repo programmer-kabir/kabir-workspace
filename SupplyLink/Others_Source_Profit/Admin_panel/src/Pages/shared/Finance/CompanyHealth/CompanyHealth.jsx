@@ -53,6 +53,66 @@ const shortMoney = (n) =>
     maximumFractionDigits: 0,
   })}`;
 
+// Compute exact active investor obligations (capital + unwithdrawn profit on running cards only, excluding company cards 1, 2, 3)
+const computeActiveObligations = (cardsList, profitsList, historyList, cutoffDate = null) => {
+  const activeCards = (cardsList || []).filter((c) => {
+    const cid = Number(c.id);
+    if (cid === 1 || cid === 2 || cid === 3) return false;
+    if (c.status?.toLowerCase() !== "running") return false;
+    if (cutoffDate) {
+      if (c.start_date && c.start_date > cutoffDate) return false;
+      if (c.end_date && c.end_date !== "0000-00-00" && c.end_date <= cutoffDate) return false;
+    }
+    return true;
+  });
+
+  const activeCardSet = new Set(activeCards.map((c) => Number(c.id)));
+  const profitByCard = new Map();
+  (profitsList || []).forEach((p) => {
+    const cid = Number(p.card_id);
+    if (!activeCardSet.has(cid)) return;
+    if (cutoffDate && p.created_at && p.created_at.slice(0, 10) > cutoffDate) return;
+    profitByCard.set(cid, (profitByCard.get(cid) || 0) + Number(p.profit_amount || 0));
+  });
+
+  const withdrawnByCard = new Map();
+  (historyList || []).forEach((ph) => {
+    const cid = Number(ph.card_id);
+    if (!activeCardSet.has(cid)) return;
+    if (ph.status !== "withdraw" || ph.action_name !== "approved") return;
+    const itemDate = ph.decision_at || ph.created_at || "";
+    if (cutoffDate && itemDate && itemDate.slice(0, 10) > cutoffDate) return;
+    withdrawnByCard.set(cid, (withdrawnByCard.get(cid) || 0) + Number(ph.amount || 0));
+  });
+
+  let totalCapital = 0;
+  let totalProfit = 0;
+  const investorMap = new Map();
+
+  for (const card of activeCards) {
+    const cid = Number(card.id);
+    const invId = Number(card.investor_id || card.user_id || 0);
+    const cap = Number(card.investment_amount || 0);
+    const unwithdrawnProfit = Math.max(0, (profitByCard.get(cid) || 0) - (withdrawnByCard.get(cid) || 0));
+    if (cap + unwithdrawnProfit <= 0.001) continue;
+
+    totalCapital += cap;
+    totalProfit += unwithdrawnProfit;
+
+    if (invId) {
+      if (!investorMap.has(invId)) {
+        investorMap.set(invId, { investor_id: invId, cardIds: [], capital: 0, profit: 0 });
+      }
+      const inv = investorMap.get(invId);
+      inv.cardIds.push(card.id);
+      inv.capital += cap;
+      inv.profit += unwithdrawnProfit;
+    }
+  }
+
+  return { totalCapital, totalProfit, investorMap };
+};
+
 // Visual Category Stat Card Component
 const MetricCard = ({ title, value, subtitle, icon: Icon, tone = "emerald", tooltip }) => {
   const toneClasses = {
@@ -283,18 +343,13 @@ const CompanyHealth = ({ initialTab = "overview" }) => {
   /* =========================================================
      3. INVESTOR LIABILITIES
   ========================================================= */
-  const ActiveInvestmentAmount = useMemo(
-    () =>
-      investmentCards
-        .filter(
-          (c) =>
-            c.status?.toLowerCase() === "running" &&
-            Number(c.id) !== 1 &&
-            Number(c.id) !== 2
-        )
-        .reduce((sum, c) => sum + Number(c.investment_amount || 0), 0),
-    [investmentCards]
+  const activeObligations = useMemo(
+    () => computeActiveObligations(investmentCards, profitAnalytics, profitHistory, null),
+    [investmentCards, profitAnalytics, profitHistory]
   );
+
+  const ActiveInvestmentAmount = activeObligations.totalCapital;
+  const InvestorProfitAvailable = activeObligations.totalProfit;
 
   const Card1Investment = useMemo(
     () =>
@@ -315,11 +370,6 @@ const CompanyHealth = ({ initialTab = "overview" }) => {
         .filter((p) => Number(p.card_id) === 1 || Number(p.card_id) === 2)
         .reduce((sum, p) => sum + Number(p.profit_amount || 0), 0),
     [profitAnalytics]
-  );
-
-  const InvestorProfitAvailable = Math.max(
-    0,
-    totalProfitGenerated - CompanyProfit - investorProfitPayout
   );
 
   const TotalInvestorAssets = ActiveInvestmentAmount + InvestorProfitAvailable;
@@ -411,40 +461,12 @@ const CompanyHealth = ({ initialTab = "overview" }) => {
     // Total Liquid & Comprehensive Assets to settle debts
     const simTotalReceivables = simCashBalance + simTotalCustomerDue + simShareAssets + simTangibleAssets;
 
-    // 4) Active Investors Capital to return up to targetDate
-    const activeCards = cardsList.filter((c) => {
-      if (Number(c.id) === 1 || Number(c.id) === 2) return false;
-      const isRunning = c.status?.toLowerCase() === "running";
-      const started = !c.start_date || c.start_date <= targetDate;
-      const notEnded = !c.end_date || c.end_date === "0000-00-00" || c.end_date > targetDate;
-      return isRunning && started && notEnded;
-    });
-
-    const simTotalInvestorCapital = activeCards.reduce(
-      (sum, c) => sum + Number(c.investment_amount || 0),
-      0
-    );
-
-    // 5) Investor Profits accumulated up to targetDate minus payouts up to targetDate
-    const simProfitsGenerated = profitList
-      .filter((p) => {
-        if (Number(p.card_id) === 1 || Number(p.card_id) === 2) return false;
-        if (!p.created_at) return true;
-        return p.created_at.slice(0, 10) <= targetDate;
-      })
-      .reduce((sum, p) => sum + Number(p.profit_amount || 0), 0);
-
-    const simProfitPayouts = cashList
-      .filter(
-        (c) =>
-          c.type === "out" &&
-          c.approval_status === "approved" &&
-          c.category?.toLowerCase() === "profit-payout" &&
-          (!c.date || c.date <= targetDate)
-      )
-      .reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-    const simTotalInvestorProfit = Math.max(0, simProfitsGenerated - simProfitPayouts);
+    // 4 & 5 & 6) Exact Active Investors Obligations & Breakdown up to targetDate (running cards only)
+    const {
+      totalCapital: simTotalInvestorCapital,
+      totalProfit: simTotalInvestorProfit,
+      investorMap,
+    } = computeActiveObligations(cardsList, profitList, profitHistory, targetDate);
 
     // Total Settlement Liabilities
     const simTotalPayables = simTotalInvestorCapital + simTotalInvestorProfit;
@@ -454,71 +476,6 @@ const CompanyHealth = ({ initialTab = "overview" }) => {
     const simCoverage = simTotalPayables > 0
       ? ((simTotalReceivables / simTotalPayables) * 100).toFixed(1)
       : "100.0";
-
-    // 6) Investor-by-Investor Settlement List
-    const investorMap = new Map();
-
-    for (const card of activeCards) {
-      const invId = Number(card.investor_id || card.user_id || 0);
-      if (!invId) continue;
-
-      if (!investorMap.has(invId)) {
-        investorMap.set(invId, {
-          investor_id: invId,
-          cardIds: [],
-          capital: 0,
-          profit: 0,
-        });
-      }
-
-      const inv = investorMap.get(invId);
-      inv.cardIds.push(card.id);
-      inv.capital += Number(card.investment_amount || 0);
-    }
-
-    // Approved profit withdrawals per investor up to targetDate
-    const withdrawnByInvestor = new Map();
-    (profitHistory || []).forEach((ph) => {
-      if (ph.status === "withdraw" && ph.action_name === "approved") {
-        const invId = Number(ph.investor_id);
-        const itemDate = ph.decision_at || ph.created_at || "";
-        if (!itemDate || itemDate.slice(0, 10) <= targetDate) {
-          withdrawnByInvestor.set(
-            invId,
-            (withdrawnByInvestor.get(invId) || 0) + Number(ph.amount || 0)
-          );
-        }
-      }
-    });
-
-    // Distribute remaining active profit across investors
-    for (const p of profitList) {
-      if (Number(p.card_id) === 1 || Number(p.card_id) === 2) continue;
-      if (p.created_at && p.created_at.slice(0, 10) > targetDate) continue;
-      const invId = Number(p.investor_id);
-      if (!invId) continue;
-
-      if (!investorMap.has(invId)) {
-        investorMap.set(invId, {
-          investor_id: invId,
-          cardIds: p.card_id ? [p.card_id] : [],
-          capital: 0,
-          profit: 0,
-        });
-      }
-
-      const inv = investorMap.get(invId);
-      inv.profit += Number(p.profit_amount || 0);
-      if (p.card_id && !inv.cardIds.includes(p.card_id)) {
-        inv.cardIds.push(p.card_id);
-      }
-    }
-
-    // Deduct approved withdrawals to get exact net remaining profit
-    for (const inv of investorMap.values()) {
-      const w = withdrawnByInvestor.get(inv.investor_id) || 0;
-      inv.profit = Math.max(0, inv.profit - w);
-    }
 
     const investorList = Array.from(investorMap.values())
       .map((inv) => ({
