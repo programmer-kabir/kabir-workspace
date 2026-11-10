@@ -225,8 +225,15 @@ const LeaveApplyForm = ({ currentUser, studentQuota, onSuccess }) => {
             </select>
 
             {type === 'Student Academic Leave' && (
-              <div className="mt-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed shadow-xs">
-                <p className="font-bold">🎓 স্টুডেন্ট একাডেমিক ছুটি:</p>
+              <div className="mt-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed shadow-xs space-y-1">
+                <p className="font-bold flex items-center justify-between">
+                  <span>🎓 স্টুডেন্ট একাডেমিক ছুটি:</span>
+                  {studentQuota?.institution && (
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded-md">
+                      🏛️ {studentQuota.institution} {studentQuota.student_level ? `(${studentQuota.student_level})` : ''}
+                    </span>
+                  )}
+                </p>
                 <p className="mt-0.5">এই ছুটির জন্য কোনো বেতন প্রদান হবে না (Unpaid Day), তবে আপনার জমানো ম্যাঙ্গো (ওভারটাইম) ব্যালেন্স থেকে ১ মিনিটও কাটা হবে না এবং কোনো জরিমানা হবে না। চলতি মাসের অবশিষ্ট কোটা: <strong>{remainingStudentQuota} দিন</strong>।</p>
               </div>
             )}

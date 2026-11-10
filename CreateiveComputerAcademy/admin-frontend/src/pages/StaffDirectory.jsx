@@ -17,6 +17,7 @@ const EMPTY_FORM = {
   shift_start: '09:00:00', shift_end: '17:00:00', allocated_break_minutes: 60,
   has_tiffin_break: 1, tiffin_start_time: '13:20', tiffin_end_time: '14:00', tiffin_duration_minutes: 40,
   is_student: 0, student_leave_quota: 3, student_institution: '',
+  institution_type: 'College', student_level: '',
 };
 
 // ── Role badge ───────────────────────────────────────────────────────────────
@@ -351,22 +352,47 @@ const StaffModal = ({ mode, formData, setFormData, departments, onClose, onSubmi
 
             {Boolean(formData.is_student) && (
               <>
+                <Field label="Institution Type">
+                  <select
+                    value={formData.institution_type || 'College'}
+                    onChange={e => setFormData({ ...formData, institution_type: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  >
+                    <option value="College">College (কলেজ)</option>
+                    <option value="School">School (স্কুল)</option>
+                    <option value="University">University (বিশ্ববিদ্যালয়)</option>
+                    <option value="Polytechnic">Polytechnic Institute (পলিটেকনিক)</option>
+                    <option value="Madrasa">Madrasa (মাদ্রাসা)</option>
+                    <option value="Other">Other (অন্যান্য)</option>
+                  </select>
+                </Field>
+
+                <Field label={`${formData.institution_type || 'Institution'} Name`}>
+                  <input
+                    type="text"
+                    value={formData.student_institution || ''}
+                    onChange={e => setFormData({ ...formData, student_institution: e.target.value })}
+                    placeholder="e.g. Dhaka College / MC College"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                </Field>
+
+                <Field label="Class / Year / Semester">
+                  <input
+                    type="text"
+                    value={formData.student_level || ''}
+                    onChange={e => setFormData({ ...formData, student_level: e.target.value })}
+                    placeholder="e.g. Class 10 / HSC 2nd Year / 5th Sem"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                </Field>
+
                 <Field label="Monthly Student Leave Quota (Days)">
                   <input
                     type="number" min="1" max="15"
                     value={formData.student_leave_quota}
                     onChange={e => setFormData({ ...formData, student_leave_quota: parseInt(e.target.value) || 3 })}
                     placeholder="e.g. 3 or 4"
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  />
-                </Field>
-
-                <Field label="College / University Name">
-                  <input
-                    type="text"
-                    value={formData.student_institution || ''}
-                    onChange={e => setFormData({ ...formData, student_institution: e.target.value })}
-                    placeholder="e.g. MC College, Sylhet"
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                   />
                 </Field>
@@ -534,6 +560,8 @@ const StaffDirectory = () => {
       is_student: staff.is_student ? 1 : 0,
       student_leave_quota: staff.student_leave_quota !== undefined ? staff.student_leave_quota : 3,
       student_institution: staff.student_institution || '',
+      institution_type: staff.institution_type || 'College',
+      student_level: staff.student_level || '',
     });
     setFormError('');
     setEditOpen(true);
@@ -710,9 +738,16 @@ const StaffDirectory = () => {
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <RoleBadge role={staff.role} />
                       {Boolean(staff.is_student) && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 shadow-xs">
-                          <span>🎓 Student</span>
-                          <span>({staff.student_leave_quota || 3}d/mo)</span>
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 shadow-xs"
+                          title={`${staff.institution_type || 'Institution'}: ${staff.student_institution || 'Not set'}${staff.student_level ? ` • ${staff.student_level}` : ''}`}
+                        >
+                          <span>🎓 {staff.institution_type || 'Student'}</span>
+                          {staff.student_institution ? (
+                            <span className="max-w-[110px] truncate">• {staff.student_institution}</span>
+                          ) : (
+                            <span>({staff.student_leave_quota || 3}d/mo)</span>
+                          )}
                         </span>
                       )}
                       {staff.status === 'inactive' && (

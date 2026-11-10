@@ -20,6 +20,14 @@ export default function ProfileSettingsModal({
   setPhone,
   username,
   setUsername,
+  isStudent,
+  setIsStudent,
+  institutionType,
+  setInstitutionType,
+  studentInstitution,
+  setStudentInstitution,
+  studentLevel,
+  setStudentLevel,
   profileLoading,
   profileMessage,
   onProfileUpdate,
@@ -47,8 +55,8 @@ export default function ProfileSettingsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full border border-slate-200 dark:border-slate-700 shadow-2xl z-10 relative overflow-hidden animate-in zoom-in-95 duration-250 max-h-[90vh] overflow-y-auto">
-        
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full border border-slate-200 dark:border-slate-700 shadow-2xl z-10 relative overflow-hidden animate-in zoom-in-95 duration-250 max-h-[90vh] overflow-y-auto">
+
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
@@ -76,33 +84,30 @@ export default function ProfileSettingsModal({
           <button
             type="button"
             onClick={() => setModalTab('profile')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              modalTab === 'profile'
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${modalTab === 'profile'
                 ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+              }`}
           >
             Profile
           </button>
           <button
             type="button"
             onClick={() => setModalTab('payout')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              modalTab === 'payout'
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${modalTab === 'payout'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+              }`}
           >
             💳 Payout Setup
           </button>
           <button
             type="button"
             onClick={() => setModalTab('security')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              modalTab === 'security'
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${modalTab === 'security'
                 ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+              }`}
           >
             Security
           </button>
@@ -119,6 +124,14 @@ export default function ProfileSettingsModal({
             setName={setName}
             phone={phone}
             setPhone={setPhone}
+            isStudent={isStudent}
+            setIsStudent={setIsStudent}
+            institutionType={institutionType}
+            setInstitutionType={setInstitutionType}
+            studentInstitution={studentInstitution}
+            setStudentInstitution={setStudentInstitution}
+            studentLevel={studentLevel}
+            setStudentLevel={setStudentLevel}
             profileLoading={profileLoading}
             onProfileUpdate={onProfileUpdate}
           />

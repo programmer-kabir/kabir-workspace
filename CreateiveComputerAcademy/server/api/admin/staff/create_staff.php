@@ -1,8 +1,10 @@
 <?php
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
+require_once '../../leave/StudentLeaveHelper.php';
 $database = new Database();
 $db = $database->getConnection();
+StudentLeaveHelper::ensureSchema($db);
 
 $data = json_decode(file_get_contents("php://input"));
 
@@ -30,6 +32,11 @@ $resignation_date = isset($data->resignation_date) && trim($data->resignation_da
 $shift_start     = isset($data->shift_start) && trim($data->shift_start) !== '' ? trim($data->shift_start) : '09:00:00';
 $shift_end       = isset($data->shift_end) && trim($data->shift_end) !== '' ? trim($data->shift_end) : '17:00:00';
 $allocated_break_minutes = isset($data->allocated_break_minutes) ? intval($data->allocated_break_minutes) : 60;
+$is_student      = !empty($data->is_student) ? 1 : 0;
+$student_leave_quota = isset($data->student_leave_quota) ? max(0, intval($data->student_leave_quota)) : 3;
+$student_institution = isset($data->student_institution) && trim($data->student_institution) !== '' ? trim($data->student_institution) : null;
+$institution_type = isset($data->institution_type) && trim($data->institution_type) !== '' ? trim($data->institution_type) : 'College';
+$student_level   = isset($data->student_level) && trim($data->student_level) !== '' ? trim($data->student_level) : null;
 
 try {
     // Ensure column existence safely
@@ -99,8 +106,8 @@ try {
 
     // ── 4. Create employee record (Insert first with temporary code) ──────────
     $emp_stmt = $db->prepare(
-        "INSERT INTO employees (user_id, employee_code, designation, department_id, employment_type, employment_status, joining_date, resignation_date, shift_start, shift_end, allocated_break_minutes)
-         VALUES (:user_id, 'TEMP', :designation, :department_id, :employment_type, :employment_status, :joining_date, :resignation_date, :shift_start, :shift_end, :allocated_break_minutes)"
+        "INSERT INTO employees (user_id, employee_code, designation, department_id, employment_type, employment_status, joining_date, resignation_date, shift_start, shift_end, allocated_break_minutes, is_student, student_leave_quota, student_institution, institution_type, student_level)
+         VALUES (:user_id, 'TEMP', :designation, :department_id, :employment_type, :employment_status, :joining_date, :resignation_date, :shift_start, :shift_end, :allocated_break_minutes, :is_student, :student_leave_quota, :student_institution, :institution_type, :student_level)"
     );
     $emp_stmt->execute([
         ':user_id'          => $user_id,
@@ -113,6 +120,11 @@ try {
         ':shift_start'      => $shift_start,
         ':shift_end'        => $shift_end,
         ':allocated_break_minutes' => $allocated_break_minutes,
+        ':is_student'       => $is_student,
+        ':student_leave_quota' => $student_leave_quota,
+        ':student_institution' => $student_institution,
+        ':institution_type' => $institution_type,
+        ':student_level'    => $student_level,
     ]);
 
     // Retrieve the newly created auto-increment primary key ID

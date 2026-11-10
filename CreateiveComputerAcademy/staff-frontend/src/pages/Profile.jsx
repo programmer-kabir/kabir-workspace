@@ -21,6 +21,14 @@ export default function Profile() {
     setPhone,
     username,
     setUsername,
+    isStudent,
+    setIsStudent,
+    institutionType,
+    setInstitutionType,
+    studentInstitution,
+    setStudentInstitution,
+    studentLevel,
+    setStudentLevel,
     profileLoading,
     profileMessage,
     handleProfileUpdate,
@@ -122,6 +130,14 @@ export default function Profile() {
           setPhone={setPhone}
           username={username}
           setUsername={setUsername}
+          isStudent={isStudent}
+          setIsStudent={setIsStudent}
+          institutionType={institutionType}
+          setInstitutionType={setInstitutionType}
+          studentInstitution={studentInstitution}
+          setStudentInstitution={setStudentInstitution}
+          studentLevel={studentLevel}
+          setStudentLevel={setStudentLevel}
           profileLoading={profileLoading}
           profileMessage={profileMessage}
           onProfileUpdate={handleProfileUpdate}

@@ -17,6 +17,12 @@ class StudentLeaveHelper {
             if (!in_array('student_institution', $cols)) {
                 $db->exec("ALTER TABLE `employees` ADD COLUMN `student_institution` VARCHAR(150) NULL");
             }
+            if (!in_array('institution_type', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `institution_type` VARCHAR(50) DEFAULT 'College'");
+            }
+            if (!in_array('student_level', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `student_level` VARCHAR(100) NULL");
+            }
 
             // Ensure leave_requests.type allows 'Student Academic Leave' (widen ENUM to VARCHAR)
             $lrType = $db->query("SHOW COLUMNS FROM `leave_requests` LIKE 'type'")->fetch(PDO::FETCH_ASSOC);
@@ -55,7 +61,7 @@ class StudentLeaveHelper {
 
         if (in_array('is_student', $cols)) {
             $empStmt = $db->prepare("
-                SELECT is_student, student_leave_quota, student_institution 
+                SELECT is_student, student_leave_quota, student_institution, institution_type, student_level 
                 FROM employees 
                 WHERE user_id = :uid 
                 LIMIT 1
@@ -63,17 +69,27 @@ class StudentLeaveHelper {
             $empStmt->execute([':uid' => $userId]);
             $emp = $empStmt->fetch(PDO::FETCH_ASSOC);
         } else {
-            $emp = ['is_student' => 0, 'student_leave_quota' => 3, 'student_institution' => null];
+            $emp = [
+                'is_student' => 0, 
+                'student_leave_quota' => 3, 
+                'student_institution' => null,
+                'institution_type' => 'College',
+                'student_level' => null
+            ];
         }
 
         $isStudent = !empty($emp['is_student']);
         $monthlyQuota = !empty($emp['student_leave_quota']) ? intval($emp['student_leave_quota']) : 3;
         $institution = $emp['student_institution'] ?? '';
+        $institutionType = $emp['institution_type'] ?? 'College';
+        $studentLevel = $emp['student_level'] ?? '';
 
         if (!$isStudent) {
             return [
                 'is_student'       => false,
                 'institution'      => '',
+                'institution_type' => '',
+                'student_level'    => '',
                 'monthly_quota'    => 0,
                 'approved_days'    => 0,
                 'pending_days'     => 0,
@@ -129,6 +145,8 @@ class StudentLeaveHelper {
         return [
             'is_student'       => true,
             'institution'      => $institution,
+            'institution_type' => $institutionType,
+            'student_level'    => $studentLevel,
             'monthly_quota'    => $monthlyQuota,
             'approved_days'    => $approvedCount,
             'pending_days'     => $pendingCount,

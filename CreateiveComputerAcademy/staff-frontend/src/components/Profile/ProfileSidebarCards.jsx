@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   FiUser, FiMail, FiPhone, FiHash, FiBriefcase, 
-  FiClock, FiCalendar, FiCreditCard, FiEdit 
+  FiClock, FiCalendar, FiCreditCard, FiEdit, FiBookOpen, FiAward 
 } from 'react-icons/fi';
 
 /**
@@ -118,6 +118,54 @@ export default function ProfileSidebarCards({
           </div>
         </div>
       </div>
+
+      {/* Academic Status Card (if student) */}
+      {Boolean(currentUser?.is_student) && (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
+          <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2.5 mb-6">
+            <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <FiBookOpen size={14} />
+            </span>
+            Academic Information
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-700/50">
+              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
+                <FiBookOpen className="text-slate-400 dark:text-slate-500" /> Institution Type
+              </div>
+              <span className="font-bold text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2.5 py-0.5 rounded-md">
+                {currentUser?.institution_type || 'College'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-700/50">
+              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
+                <FiAward className="text-slate-400 dark:text-slate-500" /> Institution
+              </div>
+              <span className="font-bold text-sm text-slate-800 dark:text-slate-200 text-right truncate max-w-[180px]">
+                {currentUser?.student_institution || 'Not specified'}
+              </span>
+            </div>
+            {currentUser?.student_level && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-700/50">
+                <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
+                  Class / Year
+                </div>
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-200 text-right">
+                  {currentUser.student_level}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
+                Monthly Quota
+              </div>
+              <span className="font-bold text-xs bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md">
+                {currentUser?.student_leave_quota || 3} Days / Month
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payout & Payment Method Setup Card */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all space-y-4">

@@ -5,10 +5,14 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 require_once '../../config/database.php';
+require_once '../leave/StudentLeaveHelper.php';
 
 $database = new Database();
 $db = $database->getConnection();
 date_default_timezone_set('Asia/Dhaka');
+
+// Ensure self-healing DB schema for student attributes
+StudentLeaveHelper::ensureSchema($db);
 
 $rawInput = file_get_contents("php://input");
 $data = json_decode($rawInput);
@@ -71,28 +75,97 @@ if ($username !== null) {
     $params[':username'] = !empty($username) ? $username : null;
 }
 
-if (empty($fields)) {
+// Student & Academic fields
+$is_student_val = null;
+if (isset($data->is_student) || isset($_POST['is_student'])) {
+    $rawIsStudent = $data->is_student ?? $_POST['is_student'];
+    $is_student_val = (!empty($rawIsStudent) && $rawIsStudent !== 'false' && $rawIsStudent !== '0') ? 1 : 0;
+}
+
+$institution_type_val = null;
+if (isset($data->institution_type) || isset($_POST['institution_type'])) {
+    $institution_type_val = trim($data->institution_type ?? $_POST['institution_type']);
+}
+
+$student_institution_val = null;
+if (isset($data->student_institution) || isset($_POST['student_institution'])) {
+    $student_institution_val = trim($data->student_institution ?? $_POST['student_institution']);
+}
+
+$student_level_val = null;
+if (isset($data->student_level) || isset($_POST['student_level'])) {
+    $student_level_val = trim($data->student_level ?? $_POST['student_level']);
+}
+
+$empUpdates = [];
+$empParams = [':uid' => $user_id];
+
+if ($is_student_val !== null) {
+    $empUpdates[] = "is_student = :is_student";
+    $empParams[':is_student'] = $is_student_val;
+}
+if ($institution_type_val !== null) {
+    $empUpdates[] = "institution_type = :institution_type";
+    $empParams[':institution_type'] = $institution_type_val;
+}
+if ($student_institution_val !== null) {
+    $empUpdates[] = "student_institution = :student_institution";
+    $empParams[':student_institution'] = $student_institution_val;
+}
+if ($student_level_val !== null) {
+    $empUpdates[] = "student_level = :student_level";
+    $empParams[':student_level'] = $student_level_val;
+}
+
+if (empty($fields) && empty($empUpdates)) {
     echo json_encode(["status" => "error", "message" => "No profile fields to update."]);
     exit;
 }
 
 try {
-    $query = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :user_id";
-    $stmt = $db->prepare($query);
-    
-    if($stmt->execute($params)) {
-        echo json_encode([
-            "status" => "success", 
-            "message" => "Profile updated successfully.",
-            "data" => [
-                "name" => $name,
-                "phone" => $phone,
-                "username" => $username
-            ]
-        ]);
-    } else {
-        echo json_encode(["status" => "error", "message" => "Failed to update profile."]);
+    if (!empty($fields)) {
+        $query = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :user_id";
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
     }
+    
+    // Update employee table for student details
+    if (!empty($empUpdates)) {
+        $chkEmp = $db->prepare("SELECT id FROM employees WHERE user_id = :uid LIMIT 1");
+        $chkEmp->execute([':uid' => $user_id]);
+        $empRow = $chkEmp->fetch(PDO::FETCH_ASSOC);
+
+        if ($empRow) {
+            $empSql = "UPDATE employees SET " . implode(', ', $empUpdates) . " WHERE user_id = :uid";
+            $empStmt = $db->prepare($empSql);
+            $empStmt->execute($empParams);
+        } else {
+            $insCols = ['user_id'];
+            $insVals = [':uid'];
+            foreach ($empParams as $pKey => $pVal) {
+                if ($pKey === ':uid') continue;
+                $insCols[] = substr($pKey, 1);
+                $insVals[] = $pKey;
+            }
+            $insSql = "INSERT INTO employees (" . implode(', ', $insCols) . ") VALUES (" . implode(', ', $insVals) . ")";
+            $insStmt = $db->prepare($insSql);
+            $insStmt->execute($empParams);
+        }
+    }
+
+    echo json_encode([
+        "status" => "success", 
+        "message" => "Profile updated successfully.",
+        "data" => [
+            "name" => $name,
+            "phone" => $phone,
+            "username" => $username,
+            "is_student" => $is_student_val,
+            "institution_type" => $institution_type_val,
+            "student_institution" => $student_institution_val,
+            "student_level" => $student_level_val
+        ]
+    ]);
 } catch(PDOException $e) {
     echo json_encode(["status" => "error", "message" => "Database error: " . $e->getMessage()]);
 }

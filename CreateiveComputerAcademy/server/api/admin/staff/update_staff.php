@@ -2,8 +2,10 @@
 require_once '../../../config/cors.php';
 
 require_once '../../../config/database.php';
+require_once '../../leave/StudentLeaveHelper.php';
 $database = new Database();
 $db = $database->getConnection();
+StudentLeaveHelper::ensureSchema($db);
 
 $data = json_decode(file_get_contents("php://input"));
 
@@ -215,6 +217,14 @@ try {
     if (isset($data->student_institution)) {
         $emp_fields[] = 'student_institution = :student_institution';
         $emp_params[':student_institution'] = trim($data->student_institution) !== '' ? trim($data->student_institution) : null;
+    }
+    if (isset($data->institution_type)) {
+        $emp_fields[] = 'institution_type = :institution_type';
+        $emp_params[':institution_type'] = trim($data->institution_type) !== '' ? trim($data->institution_type) : 'College';
+    }
+    if (isset($data->student_level)) {
+        $emp_fields[] = 'student_level = :student_level';
+        $emp_params[':student_level'] = trim($data->student_level) !== '' ? trim($data->student_level) : null;
     }
 
     if (!empty($emp_fields)) {

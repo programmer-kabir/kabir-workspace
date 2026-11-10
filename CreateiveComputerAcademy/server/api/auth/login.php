@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
+require_once '../leave/StudentLeaveHelper.php';
 $database = new Database();
 $db = $database->getConnection();
 
@@ -154,8 +155,10 @@ try {
 
         $emp = ['employee_code' => null, 'designation' => 'Student', 'department_name' => $student_info['course_name'] ?? 'General'];
     } else {
+        StudentLeaveHelper::ensureSchema($db);
         $emp_stmt = $db->prepare(
-            "SELECT e.employee_code, e.designation, d.name AS department_name, e.shift_start, e.shift_end, e.joining_date, e.has_tiffin_break, e.allocated_break_minutes
+            "SELECT e.employee_code, e.designation, d.name AS department_name, e.shift_start, e.shift_end, e.joining_date, e.has_tiffin_break, e.allocated_break_minutes,
+                    e.is_student, e.institution_type, e.student_institution, e.student_level, e.student_leave_quota
              FROM employees e
              LEFT JOIN departments d ON e.department_id = d.id
              WHERE e.user_id = :user_id LIMIT 1"
@@ -190,6 +193,12 @@ try {
     $user['has_tiffin_break']        = $hasTiffin;
     $user['allocated_break_minutes'] = $allocBreak;
     $user['is_manual_break']         = ($hasTiffin === 0 || ($allocBreak > 0 && $hasTiffin === 0));
+
+    $user['is_student']          = isset($emp['is_student']) ? (int)$emp['is_student'] : 0;
+    $user['institution_type']    = $emp['institution_type'] ?? 'College';
+    $user['student_institution'] = $emp['student_institution'] ?? '';
+    $user['student_level']       = $emp['student_level'] ?? '';
+    $user['student_leave_quota'] = isset($emp['student_leave_quota']) ? (int)$emp['student_leave_quota'] : 3;
 
     echo json_encode(["status" => "success", "token" => $token, "user" => $user]);
 

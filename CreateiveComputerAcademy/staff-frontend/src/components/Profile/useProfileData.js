@@ -14,6 +14,10 @@ export default function useProfileData() {
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [username, setUsername] = useState(currentUser?.username || '');
+  const [isStudent, setIsStudent] = useState(Boolean(currentUser?.is_student));
+  const [institutionType, setInstitutionType] = useState(currentUser?.institution_type || 'College');
+  const [studentInstitution, setStudentInstitution] = useState(currentUser?.student_institution || '');
+  const [studentLevel, setStudentLevel] = useState(currentUser?.student_level || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState(null);
 
@@ -57,6 +61,10 @@ export default function useProfileData() {
       setName(currentUser.name || '');
       setPhone(currentUser.phone || '');
       setUsername(currentUser.username || '');
+      setIsStudent(Boolean(currentUser.is_student));
+      setInstitutionType(currentUser.institution_type || 'College');
+      setStudentInstitution(currentUser.student_institution || '');
+      setStudentLevel(currentUser.student_level || '');
     }
   }, [currentUser]);
 
@@ -176,16 +184,29 @@ export default function useProfileData() {
     setProfileLoading(true);
     setProfileMessage(null);
     try {
+      const studentPayload = {
+        is_student: isStudent ? 1 : 0,
+        institution_type: isStudent ? institutionType : '',
+        student_institution: isStudent ? studentInstitution : '',
+        student_level: isStudent ? studentLevel : '',
+      };
+
       const res = await axios.post(`${API_URL}api/profile/update_profile.php`, {
         user_id: currentUser.id,
         name,
         phone,
         username,
+        ...studentPayload,
       });
 
       if (res.data.status === 'success') {
         setProfileMessage({ text: 'Profile updated successfully!', type: 'success' });
-        updateUser({ name, phone, username });
+        updateUser({
+          name,
+          phone,
+          username,
+          ...studentPayload,
+        });
         setTimeout(() => {
           setIsModalOpen(false);
           setProfileMessage(null);
@@ -248,6 +269,10 @@ export default function useProfileData() {
     setName(currentUser.name || '');
     setPhone(currentUser.phone || '');
     setUsername(currentUser.username || '');
+    setIsStudent(Boolean(currentUser.is_student));
+    setInstitutionType(currentUser.institution_type || 'College');
+    setStudentInstitution(currentUser.student_institution || '');
+    setStudentLevel(currentUser.student_level || '');
     setModalTab(tab);
     setIsModalOpen(true);
   };
@@ -262,6 +287,14 @@ export default function useProfileData() {
     setPhone,
     username,
     setUsername,
+    isStudent,
+    setIsStudent,
+    institutionType,
+    setInstitutionType,
+    studentInstitution,
+    setStudentInstitution,
+    studentLevel,
+    setStudentLevel,
     profileLoading,
     profileMessage,
     handleProfileUpdate,
