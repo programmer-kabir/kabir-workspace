@@ -30,49 +30,100 @@ try {
     $instRow = $instQuery ? $instQuery->fetch_assoc() : [];
     $unpaidAmount = (float)($instRow['unpaid_amount'] ?? 0);
     $unpaidCount = (int)($instRow['unpaid_count'] ?? 0);
-
-    // Liquid Pool
     $totalLiquidPool = $netCash + $unpaidAmount;
 
-    // 3. Running Investors Capital
+    // 3. COMPANY 3 CARDS SPECIFICALLY (Cards 1, 2, 3)
+    $compCardsRes = $mysqli->query("
+        SELECT 
+            ic.id AS card_id,
+            ic.card_name,
+            ic.investment_amount AS capital,
+            COALESCE((
+                SELECT SUM(pg.profit_amount) 
+                FROM profit_generator pg 
+                WHERE pg.card_id = ic.id AND pg.profit_year = 2026 AND pg.profit_month = 10
+            ), 0) AS oct_2026_profit,
+            COALESCE((
+                SELECT SUM(pg_all.profit_amount) 
+                FROM profit_generator pg_all 
+                WHERE pg_all.card_id = ic.id
+            ), 0) AS total_all_time_profit
+        FROM investment_cards ic
+        WHERE ic.id IN (1, 2, 3)
+        ORDER BY ic.id ASC
+    ");
+    $companyCards = [];
+    $companyTotalCapital = 0.0;
+    $companyTotalOctProfit = 0.0;
+    $companyTotalLifetimeProfit = 0.0;
+    if ($compCardsRes) {
+        while ($c = $compCardsRes->fetch_assoc()) {
+            $cap = (float)$c['capital'];
+            $oct = (float)$c['oct_2026_profit'];
+            $all = (float)$c['total_all_time_profit'];
+            $companyTotalCapital += $cap;
+            $companyTotalOctProfit += $oct;
+            $companyTotalLifetimeProfit += $all;
+            $companyCards[] = [
+                'card_id'               => (int)$c['card_id'],
+                'card_name'             => $c['card_name'],
+                'capital'               => $cap,
+                'oct_2026_profit'       => $oct,
+                'total_all_time_profit' => $all
+            ];
+        }
+    }
+
+    // 4. GENERAL INVESTORS (Running Cards excluding 1, 2, 3)
     $invCardQuery = $mysqli->query("
         SELECT 
-            COUNT(*) AS running_card_count,
-            COUNT(DISTINCT investor_id) AS running_investor_count,
-            COALESCE(SUM(investment_amount), 0) AS total_running_capital,
-            COALESCE(SUM(total_time_wighted_value), 0) AS total_twv
-        FROM investment_cards 
-        WHERE status = 'running'
+            COUNT(DISTINCT ic.id) AS running_cards_count,
+            COUNT(DISTINCT ic.investor_id) AS running_investor_count,
+            COALESCE(SUM(ic.investment_amount), 0) AS running_capital
+        FROM investment_cards ic
+        WHERE ic.status = 'running' AND ic.id NOT IN (1, 2, 3)
     ");
     $invCardRow = $invCardQuery ? $invCardQuery->fetch_assoc() : [];
-    $totalRunningCapital = (float)($invCardRow['total_running_capital'] ?? 0);
-    $runningCardCount = (int)($invCardRow['running_card_count'] ?? 0);
-    $runningInvestorCount = (int)($invCardRow['running_investor_count'] ?? 0);
+    $investorRunningCapital = (float)($invCardRow['running_capital'] ?? 0);
+    $investorRunningCardsCount = (int)($invCardRow['running_cards_count'] ?? 0);
+    $investorRunningCount = (int)($invCardRow['running_investor_count'] ?? 0);
 
-    // 4. Investor Profit Overview
-    $profitGenQuery = $mysqli->query("
-        SELECT COALESCE(SUM(profit_amount), 0) AS total_generated_profit 
+    // General Investors Profit
+    $genProfQuery = $mysqli->query("
+        SELECT COALESCE(SUM(profit_amount), 0) AS total_profit
         FROM profit_generator
+        WHERE card_id NOT IN (1, 2, 3)
     ");
-    $totalGeneratedProfit = (float)($profitGenQuery->fetch_assoc()['total_generated_profit'] ?? 0);
+    $investorLifetimeProfit = (float)($genProfQuery->fetch_assoc()['total_profit'] ?? 0);
 
-    $profitWithdrawnQuery = $mysqli->query("
+    $genOctProfQuery = $mysqli->query("
+        SELECT COALESCE(SUM(profit_amount), 0) AS oct_profit
+        FROM profit_generator
+        WHERE profit_year = 2026 AND profit_month = 10 AND card_id NOT IN (1, 2, 3)
+    ");
+    $investorOctProfit = (float)($genOctProfQuery->fetch_assoc()['oct_profit'] ?? 0);
+
+    $genWithdrawnQuery = $mysqli->query("
         SELECT COALESCE(SUM(amount), 0) AS total_withdrawn 
         FROM profit_history 
-        WHERE status = 'withdraw'
+        WHERE status = 'withdraw' AND investor_id != 1
     ");
-    $totalProfitWithdrawn = (float)($profitWithdrawnQuery->fetch_assoc()['total_withdrawn'] ?? 0);
+    $investorWithdrawnProfit = (float)($genWithdrawnQuery->fetch_assoc()['total_withdrawn'] ?? 0);
+    $investorUnwithdrawnProfit = max(0, $investorLifetimeProfit - $investorWithdrawnProfit);
+    $investorTotalClaim = $investorRunningCapital + $investorUnwithdrawnProfit;
 
-    $investorUnwithdrawnProfit = max(0, $totalGeneratedProfit - $totalProfitWithdrawn);
-    $investorTotalClaim = $totalRunningCapital + $investorUnwithdrawnProfit;
+    // Combined Totals (All 129 Running Cards: Investors + Company)
+    $totalCombinedCapital = $investorRunningCapital + $companyTotalCapital;
+    $totalCombinedOctProfit = $investorOctProfit + $companyTotalOctProfit;
+    $totalCombinedLifetimeProfit = $investorLifetimeProfit + $companyTotalLifetimeProfit;
 
-    // 5. Capital Coverage & Deficit
-    $netCapitalSurplus = $totalLiquidPool - $totalRunningCapital;
-    $capitalCoveragePercent = $totalRunningCapital > 0 
-        ? min(100.0, round(($totalLiquidPool / $totalRunningCapital) * 100, 2)) 
+    // Coverage & Surpluses
+    $netCapitalSurplus = $totalLiquidPool - $investorRunningCapital;
+    $capitalCoveragePercent = $investorRunningCapital > 0 
+        ? min(100.0, round(($totalLiquidPool / $investorRunningCapital) * 100, 2)) 
         : 100.0;
 
-    // 6. Product Sales and Gross Profits
+    // 5. Product Sales and Gross Profits
     $saleQuery = $mysqli->query("
         SELECT 
             COUNT(*) AS total_sale_cards,
@@ -87,7 +138,7 @@ try {
     $lifetimeSales = (float)($saleRow['total_sales'] ?? 0);
     $lifetimeCost = (float)($saleRow['total_costs'] ?? 0);
 
-    // 7. Other Incomes (Rental, Bondok profit)
+    // 6. Other Incomes (Rental, Bondok profit)
     $otherIncQuery = $mysqli->query("
         SELECT COALESCE(SUM(amount), 0) AS total_other_income 
         FROM cash 
@@ -95,7 +146,7 @@ try {
     ");
     $lifetimeOtherIncome = (float)($otherIncQuery->fetch_assoc()['total_other_income'] ?? 0);
 
-    // 8. Office Operational Expenses
+    // 7. Office Operational Expenses
     $expQuery = $mysqli->query("
         SELECT 
             category,
@@ -120,21 +171,9 @@ try {
     }
 
     $netOperatingProfit = ($lifetimeGrossProfit + $lifetimeOtherIncome) - $totalExpenses;
-    $companyLifetimeRetainedProfit = $netOperatingProfit - $totalProfitWithdrawn;
+    $companyLifetimeRetainedProfit = $netOperatingProfit - $investorWithdrawnProfit;
 
-    // 9. October 2026 Specific Month Metrics
-    $octProfitQuery = $mysqli->query("
-        SELECT 
-            COUNT(*) as oct_records,
-            COALESCE(SUM(profit_amount), 0) as oct_total_profit
-        FROM profit_generator 
-        WHERE profit_year = 2026 AND profit_month = 10
-    ");
-    $octRow = $octProfitQuery ? $octProfitQuery->fetch_assoc() : [];
-    $october2026Profit = (float)($octRow['oct_total_profit'] ?? 0);
-    $october2026Records = (int)($octRow['oct_records'] ?? 0);
-
-    // 10. Investor by Investor Detailed Settlement Breakdown
+    // 8. General Investor by Investor Breakdown (Cards 1, 2, 3 excluded)
     $investorBreakdownSql = "
         SELECT 
             u.id AS investor_id,
@@ -142,16 +181,15 @@ try {
             u.mobile AS investor_mobile,
             COUNT(ic.id) AS total_cards,
             COALESCE(SUM(ic.investment_amount), 0) AS total_capital,
-            COALESCE(SUM(ic.total_time_wighted_value), 0) AS total_twv,
             COALESCE((
                 SELECT SUM(pg.profit_amount) 
                 FROM profit_generator pg 
-                WHERE pg.investor_id = u.id AND pg.profit_year = 2026 AND pg.profit_month = 10
+                WHERE pg.investor_id = u.id AND pg.profit_year = 2026 AND pg.profit_month = 10 AND pg.card_id NOT IN (1, 2, 3)
             ), 0) AS oct_2026_profit,
             COALESCE((
                 SELECT SUM(pg_all.profit_amount) 
                 FROM profit_generator pg_all 
-                WHERE pg_all.investor_id = u.id
+                WHERE pg_all.investor_id = u.id AND pg_all.card_id NOT IN (1, 2, 3)
             ), 0) AS total_all_time_profit,
             COALESCE((
                 SELECT SUM(ph.amount) 
@@ -160,7 +198,7 @@ try {
             ), 0) AS total_withdrawn
         FROM investment_cards ic
         LEFT JOIN users u ON ic.investor_id = u.id
-        WHERE ic.status = 'running'
+        WHERE ic.status = 'running' AND ic.id NOT IN (1, 2, 3)
         GROUP BY u.id, u.name, u.mobile
         ORDER BY total_capital DESC
     ";
@@ -192,43 +230,52 @@ try {
     echo json_encode([
         "success" => true,
         "summary" => [
-            "net_cash"                               => $netCash,
-            "total_cash_in"                          => (float)($cashRow['total_cash_in'] ?? 0),
-            "total_cash_out"                         => (float)($cashRow['total_cash_out'] ?? 0),
-            "unpaid_installments_count"              => $unpaidCount,
-            "unpaid_installments_amount"             => $unpaidAmount,
-            "total_liquid_pool"                      => $totalLiquidPool,
+            "net_cash"                       => $netCash,
+            "total_cash_in"                  => (float)($cashRow['total_cash_in'] ?? 0),
+            "total_cash_out"                 => (float)($cashRow['total_cash_out'] ?? 0),
+            "total_liquid_pool"              => $totalLiquidPool,
+            
+            // Investor Specific
+            "investor_running_capital"       => $investorRunningCapital,
+            "investor_running_count"         => $investorRunningCount,
+            "investor_running_cards_count"   => $investorRunningCardsCount,
+            "investor_oct_2026_profit"       => $investorOctProfit,
+            "investor_lifetime_profit"       => $investorLifetimeProfit,
+            "investor_withdrawn_profit"      => $investorWithdrawnProfit,
+            "investor_unwithdrawn_profit"    => $investorUnwithdrawnProfit,
+            "investor_total_claim"           => $investorTotalClaim,
+            "capital_coverage_percent"       => $capitalCoveragePercent,
+            "net_capital_surplus"            => $netCapitalSurplus,
 
-            "investor_running_cards_count"           => $runningCardCount,
-            "investor_running_count"                 => $runningInvestorCount,
-            "investor_principal_payable"             => $totalRunningCapital,
-            "investor_total_generated_profit"        => $totalGeneratedProfit,
-            "investor_total_withdrawn_profit"        => $totalProfitWithdrawn,
-            "investor_unwithdrawn_profit"            => $investorUnwithdrawnProfit,
-            "investor_total_claim"                   => $investorTotalClaim,
+            // Company 3 Cards Specific
+            "company_total_capital"          => $companyTotalCapital,
+            "company_oct_2026_profit"        => $companyTotalOctProfit,
+            "company_lifetime_profit"        => $companyTotalLifetimeProfit,
+            "company_cards"                  => $companyCards,
 
-            "net_capital_surplus"                    => $netCapitalSurplus,
-            "capital_coverage_percent"               => $capitalCoveragePercent,
+            // Combined
+            "total_combined_capital"         => $totalCombinedCapital,
+            "total_combined_oct_profit"      => $totalCombinedOctProfit,
+            "total_combined_lifetime_profit" => $totalCombinedLifetimeProfit,
 
-            "lifetime_sales"                         => $lifetimeSales,
-            "lifetime_cost"                          => $lifetimeCost,
-            "lifetime_gross_profit"                  => $lifetimeGrossProfit,
-            "lifetime_other_income"                  => $lifetimeOtherIncome,
-            "lifetime_expenses"                      => $totalExpenses,
-            "lifetime_net_operating_profit"          => $netOperatingProfit,
-            "company_lifetime_retained_profit"       => $companyLifetimeRetainedProfit,
-
-            "october_2026_profit"                    => $october2026Profit,
-            "october_2026_records"                   => $october2026Records
+            // P&L
+            "lifetime_sales"                 => $lifetimeSales,
+            "lifetime_cost"                  => $lifetimeCost,
+            "lifetime_gross_profit"          => $lifetimeGrossProfit,
+            "lifetime_other_income"          => $lifetimeOtherIncome,
+            "lifetime_expenses"              => $totalExpenses,
+            "lifetime_net_operating_profit"  => $netOperatingProfit,
+            "company_lifetime_retained_profit" => $companyLifetimeRetainedProfit
         ],
-        "expense_breakdown" => $expenseBreakdown,
-        "investor_breakdown" => $investorsList
+        "investor_breakdown" => $investorsList,
+        "company_cards"      => $companyCards,
+        "expense_breakdown"  => $expenseBreakdown
     ], JSON_UNESCAPED_UNICODE);
 
-} catch (Throwable $e) {
+} catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "error"   => $e->getMessage()
+        "message" => "সার্ভার এরর: " . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE);
 }
