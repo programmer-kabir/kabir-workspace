@@ -25,7 +25,8 @@ import {
   ArrowRightLeft,
   CheckCircle,
   HelpCircle,
-  History
+  History,
+  Info
 } from "lucide-react";
 
 const formatCurrency = (num) => {
@@ -73,6 +74,23 @@ const CompanySettlement = () => {
   const investorList = data?.investor_breakdown || [];
   const companyCards = data?.company_cards || [];
   const expenseBreakdown = data?.expense_breakdown || [];
+
+  // 100% Dynamic Decision Scenarios from Server Data
+  const scenarios = summary.scenarios || {};
+  const s1 = scenarios.scenario_1 || {
+    expense_injected: summary.lifetime_expenses || 0,
+    new_total_cash: (summary.net_cash || 0) + (summary.lifetime_expenses || 0),
+    investor_claim: invStages.remaining?.total_claim || 0,
+    company_claim: compStages.remaining?.total_claim || 0,
+    admin_surplus_cash: ((summary.net_cash || 0) + (summary.lifetime_expenses || 0)) - ((invStages.remaining?.total_claim || 0) + (compStages.remaining?.total_claim || 0))
+  };
+  const s2 = scenarios.scenario_2 || {
+    current_cash: summary.net_cash || 0,
+    investor_claim: invStages.remaining?.total_claim || 0,
+    admin_remaining_cash: summary.cash_surplus_after_all_claims || 0,
+    company_claims_on_paper: compStages.remaining?.total_claim || 0,
+    expense_covered_by_company: summary.lifetime_expenses || 0
+  };
 
   // Filtered Investors
   const filteredInvestors = useMemo(() => {
@@ -178,7 +196,7 @@ const CompanySettlement = () => {
             </h2>
           </div>
           <span className="text-xs text-slate-400">
-            সর্বমোট ৩৪৮টি কার্ডের পূর্ণাঙ্গ ৩-ধাপের গতিধারা
+            সর্বমোট {invStages.all_time?.cards || 0}টি কার্ডের পূর্ণাঙ্গ ৩-ধাপের গতিধারা
           </span>
         </div>
 
@@ -244,7 +262,7 @@ const CompanySettlement = () => {
                 <p className="text-xl lg:text-2xl font-black font-mono text-rose-300">
                   ৳{formatCurrency(invStages.withdrawn?.capital)}
                 </p>
-                <p className="text-[10px] text-slate-400">২২২টি সমাপ্ত কার্ডের আসল ফেরত</p>
+                <p className="text-[10px] text-slate-400">{invStages.withdrawn?.cards || 0}টি সমাপ্ত কার্ডের আসল ফেরত</p>
               </div>
 
               <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
@@ -458,6 +476,123 @@ const CompanySettlement = () => {
                 + ৳{formatCurrency(summary.cash_surplus_after_all_claims)}
               </p>
               <p className="text-[10px] text-emerald-300 font-semibold">১০০% ক্যাশ কভারেজ সুরক্ষিত</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          SECTION 4: এক্সিকিউটিভ সিদ্ধান্ত ও সম্পূর্ণ ডাইনামিক অডিট রোডম্যাপ
+          (১০০% সার্ভারের লাইভ ডাটা দিয়ে কম-বেশি ক্যালকুলেট হবে)
+          ========================================================================= */}
+      <div className="card-surface p-6 rounded-2xl border border-indigo-500/30 bg-[#0d162b] shadow-2xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
+              <Scale className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                কোম্পানি ক্লোজিং ও আর্থিক সিদ্ধান্ত নির্দেশিকা (Executive Decision Guide)
+              </h2>
+              <p className="text-xs text-slate-400">
+                অফিস খরচ কোম্পানি বহন করলে বনাম বর্তমান ক্যাশ দিয়ে চূড়ান্ত নিষ্পত্তি করলে কী ঘটবে
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 w-fit">
+            ডাইনামিক অডিট গাইডলাইন
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* SCENARIO 1: কোম্পানি যদি নিজ থেকে অফিস খরচ ক্যাশে রিফান্ড করে */}
+          <div className="p-5 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/30 via-slate-900/60 to-[#0a1226] space-y-4">
+            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
+                <h3 className="text-sm font-bold text-indigo-300">
+                  পরিস্থিতি ১: কোম্পানি নিজ থেকে অফিস খরচ বহন করলে
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200">
+                +৳{formatCurrency(s1.expense_injected)} যুক্ত হবে
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              যদি কোম্পানি/মালিক বিগত মাসগুলোর অফিস পরিচালন ব্যয় (বেতন, ভাড়া ও বিল বাবদ মোট ৳{formatCurrency(s1.expense_injected)}) নিজ থেকে ক্যাশে রিফান্ড করে:
+            </p>
+
+            <div className="space-y-2 text-xs text-slate-300 bg-slate-950/60 p-3.5 rounded-xl border border-white/[0.05]">
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• নতুন মোট ক্যাশ তহবিল:</span>
+                <span className="font-bold font-mono text-white">৳{formatCurrency(s1.new_total_cash)}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• সাধারণ ইনভেস্টরদের পাওনা মিটিয়ে দিতে লাগবে:</span>
+                <span className="font-semibold font-mono text-rose-400">- ৳{formatCurrency(s1.investor_claim)}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• কোম্পানির ৩টি কার্ডের সম্পূর্ণ বিনিয়োগ ও লাভ:</span>
+                <span className="font-semibold font-mono text-purple-400">- ৳{formatCurrency(s1.company_claim)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 px-2.5 bg-indigo-500/15 border border-indigo-500/30 rounded-lg font-bold text-indigo-200 mt-2">
+                <span>সব পরিশোধের পর ক্যাশ উদ্বৃত্ত থাকবে:</span>
+                <span className="font-mono text-emerald-400 text-sm">+ ৳{formatCurrency(s1.admin_surplus_cash)}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-500/[0.08] border border-emerald-500/20 rounded-xl text-xs space-y-1">
+              <p className="font-bold text-emerald-300">💡 বাকি ৳{formatCurrency(s1.admin_surplus_cash)} টাকা কে নিবে?</p>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                ইনভেস্টর ও কোম্পানি কার্ডের সব টাকা পরিশোধের পর এই অতিরিক্ত ৳{formatCurrency(s1.admin_surplus_cash)} সম্পূর্ণ <strong>এডমিন / কোম্পানির মালিকের ব্যক্তিগত লাভ</strong> হিসেবে থাকবে। কারণ কাস্টমারদের পণ্যের আসল মুনাফা থেকে এটি অবণ্টিত রয়ে গিয়েছিল।
+              </p>
+            </div>
+          </div>
+
+          {/* SCENARIO 2: কোম্পানি যদি নিজ থেকে কোনো টাকা না দেয় (বর্তমান ক্যাশে ক্লোজ করলে) */}
+          <div className="p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 via-slate-900/60 to-[#0a1226] space-y-4">
+            <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                <h3 className="text-sm font-bold text-amber-300">
+                  পরিস্থিতি ২: কোম্পানি বাড়তি টাকা না দিলে (বর্তমান ক্যাশে নিষ্পত্তি)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200">
+                বর্তমান ক্যাশ ৳{formatCurrency(s2.current_cash)}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              যদি কোম্পানি নিজ থেকে কোনো বাড়তি টাকা না দেয় এবং বর্তমানে ক্যাশে থাকা ৳{formatCurrency(s2.current_cash)} দিয়েই সব ক্লোজ করে দেওয়া হয়:
+            </p>
+
+            <div className="space-y-2 text-xs text-slate-300 bg-slate-950/60 p-3.5 rounded-xl border border-white/[0.05]">
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• বর্তমান মোট ক্যাশ তহবিল:</span>
+                <span className="font-bold font-mono text-white">৳{formatCurrency(s2.current_cash)}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• সাধারণ ইনভেস্টরদের সম্পূর্ণ পাওনা (আসল + লাভ):</span>
+                <span className="font-semibold font-mono text-rose-400">- ৳{formatCurrency(s2.investor_claim)}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">• ইনভেস্টরদের পরিশোধের পর ক্যাশে অবশিষ্ট থাকে:</span>
+                <span className="font-bold font-mono text-emerald-400">+ ৳{formatCurrency(s2.admin_remaining_cash)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 px-2.5 bg-amber-500/15 border border-amber-500/30 rounded-lg font-bold text-amber-200 mt-2">
+                <span>কোম্পানির পাওনা বাবদ ক্যাশ তুলে নেওয়া হবে:</span>
+                <span className="font-mono text-amber-300 text-sm">৳{formatCurrency(s2.admin_remaining_cash)} (ক্যাশ উদ্বৃত্ত)</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl text-xs space-y-1">
+              <p className="font-bold text-amber-300">💡 কোম্পানির ৳{formatCurrency(s2.company_claims_on_paper)} টাকার কী হবে?</p>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                কোম্পানির নিজস্ব মূলধন ও লাভ (৳{formatCurrency(s2.company_claims_on_paper)}) দিয়ে মূলত অতীতে অফিসের বেতন, ভাড়া ও বিল (৳{formatCurrency(s2.expense_covered_by_company)}) পরিশোধ হয়ে গেছে। তাই সাধারণ ইনভেস্টরদের ১০০% পাওনা মিটিয়ে দিয়ে ক্যাশের অবশিষ্ট ৳{formatCurrency(s2.admin_remaining_cash)} এডমিন নিবে এবং কোম্পানি সম্পূর্ণ দায়মুক্তভাবে ক্লোজ হবে।
+              </p>
             </div>
           </div>
         </div>

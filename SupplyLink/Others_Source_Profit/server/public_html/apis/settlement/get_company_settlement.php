@@ -196,6 +196,17 @@ try {
     $netOperatingProfit = ($lifetimeGrossProfit + $lifetimeOtherIncome) - $totalExpenses;
     $companyLifetimeRetainedProfit = $netOperatingProfit - $invWithdrawnProfit;
 
+    // =========================================================================
+    // DYNAMIC DECISION ROADMAP SCENARIOS
+    // =========================================================================
+    // Scenario 1: Company injects/reimburses office expenses
+    $s1NewCash = $netCash + $totalExpenses;
+    $s1SurplusForAdmin = $s1NewCash - ($invTotalRemainingClaim + $companyTotalRemainingClaim);
+
+    // Scenario 2: Settled as-is with current cash
+    $s2RemainingCashForAdmin = $netCash - $invTotalRemainingClaim;
+    $s2ExpenseCoveredByCompany = $totalExpenses;
+
     // 8. General Investor by Investor Breakdown (Cards 1, 2, 3 excluded)
     $investorBreakdownSql = "
         SELECT 
@@ -254,6 +265,24 @@ try {
             "capital_coverage_percent"       => $capitalCoveragePercent,
             "net_capital_surplus"            => $netCapitalSurplus,
 
+            // DYNAMIC SCENARIOS
+            "scenarios" => [
+                "scenario_1" => [
+                    "expense_injected"          => $totalExpenses,
+                    "new_total_cash"            => $s1NewCash,
+                    "investor_claim"            => $invTotalRemainingClaim,
+                    "company_claim"             => $companyTotalRemainingClaim,
+                    "admin_surplus_cash"        => $s1SurplusForAdmin
+                ],
+                "scenario_2" => [
+                    "current_cash"              => $netCash,
+                    "investor_claim"            => $invTotalRemainingClaim,
+                    "admin_remaining_cash"      => $s2RemainingCashForAdmin,
+                    "company_claims_on_paper"   => $companyTotalRemainingClaim,
+                    "expense_covered_by_company"=> $s2ExpenseCoveredByCompany
+                ]
+            ],
+
             // INVESTORS 3 STAGES
             "investor_stages" => [
                 "all_time" => [
@@ -298,21 +327,6 @@ try {
                     "total_claim" => $companyTotalRemainingClaim
                 ]
             ],
-
-            // Legacy quick access fields
-            "investor_running_capital"       => $invRemainingCapital,
-            "investor_running_count"         => $invRemainingCount,
-            "investor_running_cards_count"   => $invRemainingCards,
-            "investor_lifetime_profit"       => $invAllProfit,
-            "investor_withdrawn_profit"      => $invWithdrawnProfit,
-            "investor_unwithdrawn_profit"    => $invRemainingProfit,
-            "investor_total_balance"         => $invTotalRemainingClaim,
-
-            "company_total_capital"          => $companyRemainingCapital,
-            "company_lifetime_profit"        => $companyRemainingProfit,
-            "company_withdrawn_profit"       => 0.0,
-            "company_unwithdrawn_profit"     => $companyRemainingProfit,
-            "company_total_balance"          => $companyTotalRemainingClaim,
 
             // P&L
             "lifetime_sales"                 => $lifetimeSales,
