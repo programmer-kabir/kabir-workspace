@@ -69,6 +69,7 @@ import InvestmentCashAudit from "../Pages/shared/Audit/InvestmentCashAudit";
 import CustomerKhataReconciliation from "../Pages/shared/Audit/CustomerKhataReconciliation";
 import FinanceOverview from "../Pages/shared/Finance/Finance_Overview/FinanceOverview";
 import CompanyHealth from "../Pages/shared/Finance/CompanyHealth/CompanyHealth";
+import CompanySettlement from "../Pages/shared/Finance/CompanySettlement";
 import InstallmentFiles from "../Pages/shared/InstallmentFiles/InstallmentFiles";
 import AddNewInstallmentFiles from "../Pages/shared/InstallmentFiles/AddNewInstallmentFiles";
 import DailyInstallmentReportPrint from "../Pages/shared/DailyInstallments/DailyInstallmentReportPrint";
@@ -199,6 +200,14 @@ const routes = createBrowserRouter([
           {
             path: "/finance/company-settlement-simulator",
             element: <CompanyHealth initialTab="simulator" />,
+          },
+          {
+            path: "/company-settlement",
+            element: <CompanySettlement />,
+          },
+          {
+            path: "/finance/company-settlement",
+            element: <CompanySettlement />,
           },
           { path: "/add_user", element: <AddUser /> },
           {

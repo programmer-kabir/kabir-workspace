@@ -1,4 +1,5 @@
 import {
+  
   HiOutlineHome,
   HiOutlineCube,
   HiOutlineUserGroup,
@@ -307,6 +308,12 @@ export const sidebarMenu = [
         icon: TbCashBanknote,
         roles: ["admin", "developer", "manager", "data_entry"],
       },
+      {
+        label: "Company Final Settlement",
+        path: "/company-settlement",
+        icon: TbReceipt,
+        roles: ["admin", "developer", "manager", "data_entry"],
+      },
     ],
   },
 
@@ -424,6 +431,12 @@ export const sidebarMenu = [
         path: "/finance/company-settlement-simulator",
         icon: BsClipboardData,
         roles: ["admin", "developer", "manager"],
+      },
+      {
+        label: "Company Final Settlement",
+        path: "/company-settlement",
+        icon: TbReceipt,
+        roles: ["admin", "developer", "manager", "audit"],
       },
     ],
   },
