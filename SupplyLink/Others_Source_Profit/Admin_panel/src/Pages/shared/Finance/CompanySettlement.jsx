@@ -103,6 +103,22 @@ const CompanySettlement = () => {
     );
   }, [investorList, searchTerm]);
 
+  // Dynamic Total Sum of Filtered Investors Table
+  const tableTotals = useMemo(() => {
+    return filteredInvestors.reduce(
+      (acc, inv) => {
+        acc.cards += Number(inv.total_cards || 0);
+        acc.capital += Number(inv.total_capital || 0);
+        acc.profit += Number(inv.total_all_time_profit || 0);
+        acc.withdrawn += Number(inv.total_withdrawn || 0);
+        acc.unwithdrawn += Number(inv.unwithdrawn_profit || 0);
+        acc.balance += Number(inv.total_balance || 0);
+        return acc;
+      },
+      { cards: 0, capital: 0, profit: 0, withdrawn: 0, unwithdrawn: 0, balance: 0 }
+    );
+  }, [filteredInvestors]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -707,6 +723,32 @@ const CompanySettlement = () => {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="bg-blue-950/40 border-t-2 border-blue-500/40 font-bold text-xs text-white">
+                  <td className="py-4 px-4 text-blue-200 uppercase font-black tracking-wider">
+                    সর্বমোট ({filteredInvestors.length} জন ইনভেস্টর):
+                  </td>
+                  <td className="py-4 px-4"></td>
+                  <td className="py-4 px-4 text-center font-mono text-blue-300 font-black">
+                    {tableTotals.cards}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono text-white font-black text-sm">
+                    ৳{formatCurrency(tableTotals.capital)}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono text-emerald-400 font-black text-sm">
+                    ৳{formatCurrency(tableTotals.profit)}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono text-rose-400 font-black text-sm">
+                    ৳{formatCurrency(tableTotals.withdrawn)}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono text-blue-300 font-black text-sm">
+                    ৳{formatCurrency(tableTotals.unwithdrawn)}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono text-indigo-300 font-black text-base bg-indigo-500/20 border-l border-indigo-500/40">
+                    ৳{formatCurrency(tableTotals.balance)}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
