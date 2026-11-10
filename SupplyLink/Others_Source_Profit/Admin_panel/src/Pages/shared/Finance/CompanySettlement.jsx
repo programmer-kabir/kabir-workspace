@@ -22,7 +22,10 @@ import {
   BadgePercent,
   Sparkles,
   CreditCard,
-  ArrowRightLeft
+  ArrowRightLeft,
+  CheckCircle,
+  HelpCircle,
+  History
 } from "lucide-react";
 
 const formatCurrency = (num) => {
@@ -39,7 +42,6 @@ const CompanySettlement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("investors"); // 'investors' | 'company_cards' | 'overview' | 'expenses'
-  const printRef = useRef(null);
 
   const fetchSettlement = async () => {
     setLoading(true);
@@ -66,6 +68,8 @@ const CompanySettlement = () => {
   }, []);
 
   const summary = data?.summary || {};
+  const invStages = summary.investor_stages || {};
+  const compStages = summary.company_stages || {};
   const investorList = data?.investor_breakdown || [];
   const companyCards = data?.company_cards || [];
   const expenseBreakdown = data?.expense_breakdown || [];
@@ -90,7 +94,7 @@ const CompanySettlement = () => {
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center space-y-4 text-slate-400">
         <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
         <p className="text-sm font-medium animate-pulse text-slate-300">
-          ইনভেস্টর ও কোম্পানি কার্ডের বিস্তারিত হিসাব লোড হচ্ছে...
+          ইনভেস্টর ও কোম্পানি কার্ডের ৩-ধাপের হিসাব লোড হচ্ছে...
         </p>
       </div>
     );
@@ -113,7 +117,7 @@ const CompanySettlement = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6 text-slate-100 print:p-0 print:m-0 print:max-w-full print:text-black">
+    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-7 text-slate-100 print:p-0 print:m-0 print:max-w-full print:text-black">
       {/* 🧭 Top Header (Dark Theme) */}
       <div className="card-surface p-5 sm:p-6 rounded-2xl border border-white/[0.08] bg-[#0d162b] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl print:hidden">
         <div className="flex items-center gap-3">
@@ -123,14 +127,14 @@ const CompanySettlement = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                ইনভেস্টর বনাম কোম্পানি সামগ্রিক মূলধন ও লাভ বিবরণী
+                ইনভেস্টর বনাম কোম্পানি ৩-ধাপের হিসাব বিবরণী
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 স্বতন্ত্র অডিট
               </span>
             </div>
             <p className="text-xs md:text-sm text-slate-400 mt-0.5">
-              মোট বিনিয়োগ (আসল), মোট লাভ, উত্তোলিত অর্থ ও অবশিষ্ট পাওনার স্বচ্ছ হিসাব
+              ১. সর্বমোট ইতিহাস → ২. উত্তোলিত পরিশোধ → ৩. বর্তমানে অবশিষ্ট পাওনা
             </p>
           </div>
         </div>
@@ -156,194 +160,306 @@ const CompanySettlement = () => {
       {/* 🖨️ Printable Header */}
       <div className="hidden print:block text-center border-b pb-4 mb-4 text-black">
         <h1 className="text-2xl font-bold">SupplyLink Bangladesh Limited</h1>
-        <p className="text-sm text-gray-700">Investor vs Company Capital & Profit Audit Statement</p>
+        <p className="text-sm text-gray-700">3-Stage Investor & Company Financial Audit Statement</p>
         <p className="text-xs text-gray-600">Generated: {new Date().toLocaleDateString('bn-BD')}</p>
       </div>
 
-      {/* 🌟 2 HERO HIGHLIGHT PANELS: INVESTORS VS COMPANY (SYMMETRIC & DETAILED) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
-        {/* PANEL 1: GENERAL INVESTORS PORTION (126 Investors) */}
-        <div className="card-surface p-6 rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#0d162b] via-[#0e1a38] to-[#0a1226] shadow-xl relative overflow-hidden flex flex-col justify-between space-y-5">
-          <div className="flex items-center justify-between border-b border-blue-500/20 pb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl">
-                <Users className="w-5 h-5" />
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-white">
-                  ১. সাধারণ ইনভেস্টরদের অংশ ({summary.investor_running_count} জন)
-                </h2>
-                <p className="text-[11px] text-slate-400">কোম্পানির ৩টি নিজস্ব কার্ড বাদে ১২৬ জন প্রকৃত ইনভেস্টর</p>
-              </div>
-            </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
-              {summary.investor_running_cards_count} টি রানিং কার্ড
+      {/* =========================================================================
+          SECTION 1: সাধারণ ইনভেস্টরদের ৩টি পর্যায় (৩টি কার্ড)
+          ========================================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg">
+              <Users className="w-4 h-4" />
             </span>
+            <h2 className="text-sm md:text-base font-bold text-white uppercase tracking-wider">
+              সাধারণ ইনভেস্টরদের হিসাব (কোম্পানির ৩টি কার্ড বাদে)
+            </h2>
           </div>
-
-          {/* Top 2 Big Numbers: Total Investment vs Total Profit */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">ইনভেস্টরদের মোট বিনিয়োগ (আসল)</p>
-              <p className="text-2xl font-black font-mono text-white tracking-tight">
-                ৳{formatCurrency(summary.investor_running_capital)}
-              </p>
-              <p className="text-[11px] text-blue-400 font-medium">১২৬ জন ইনভেস্টরের মূলধন</p>
-            </div>
-
-            <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">ইনভেস্টরদের মোট লাভ</p>
-              <p className="text-2xl font-black font-mono text-emerald-400 tracking-tight">
-                ৳{formatCurrency(summary.investor_lifetime_profit)}
-              </p>
-              <p className="text-[11px] text-slate-400 font-medium">মোট অর্জিত মুনাফা</p>
-            </div>
-          </div>
-
-          {/* Bottom Breakdown: Withdrawals & Remaining Balances */}
-          <div className="space-y-2.5 text-xs border-t border-white/[0.08] pt-4 text-slate-300">
-            <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
-                <span className="text-slate-400">উত্তোলিত লাভ:</span>
-                <span className="font-semibold font-mono text-rose-400">৳{formatCurrency(summary.investor_withdrawn_profit)}</span>
-              </div>
-              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
-                <span className="text-slate-400">উত্তোলিত মূলধন:</span>
-                <span className="font-semibold font-mono text-slate-400">৳{formatCurrency(summary.investor_withdrawn_capital)}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="flex justify-between items-center bg-blue-500/[0.06] p-2.5 rounded-lg border border-blue-500/20">
-                <span className="text-blue-300 font-medium">বাকি থাকা নিট লাভ:</span>
-                <span className="font-bold font-mono text-emerald-400">৳{formatCurrency(summary.investor_unwithdrawn_profit)}</span>
-              </div>
-              <div className="flex justify-between items-center bg-blue-500/[0.06] p-2.5 rounded-lg border border-blue-500/20">
-                <span className="text-blue-300 font-medium">বাকি থাকা মূলধন:</span>
-                <span className="font-bold font-mono text-white">৳{formatCurrency(summary.investor_remaining_capital)}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-2 px-3 bg-blue-500/15 border border-blue-500/30 rounded-xl font-bold text-sm">
-              <span className="text-blue-200">ইনভেস্টরদের মোট পাওনা ব্যালেন্স (আসল + বাকি লাভ):</span>
-              <span className="font-mono text-blue-300">৳{formatCurrency(summary.investor_total_balance)}</span>
-            </div>
-          </div>
-
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <span className="text-xs text-slate-400">
+            সর্বমোট ৩৪৮টি কার্ডের পূর্ণাঙ্গ ৩-ধাপের গতিধারা
+          </span>
         </div>
 
-        {/* PANEL 2: COMPANY OWN 3 CARDS (Cards 1, 2, 3) */}
-        <div className="card-surface p-6 rounded-2xl border border-purple-500/30 bg-gradient-to-br from-[#0d162b] via-[#1a1032] to-[#0a1226] shadow-xl relative overflow-hidden flex flex-col justify-between space-y-5">
-          <div className="flex items-center justify-between border-b border-purple-500/20 pb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl">
-                <Building2 className="w-5 h-5" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* STAGE 1: ALL-TIME TOTAL */}
+          <div className="card-surface p-5 rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#0d162b] via-[#0f1d3d] to-[#0a1226] shadow-lg flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-blue-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
+                  <History className="w-4 h-4" />
+                </span>
+                <h3 className="text-xs font-bold text-blue-300 uppercase tracking-wider">
+                  ১. সর্বমোট ইতিহাস (All-Time)
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200">
+                {invStages.all_time?.cards || 0} টি কার্ড
               </span>
-              <div>
-                <h2 className="text-base font-bold text-white">
-                  ২. কোম্পানির নিজস্ব অংশ (কার্ড ১, ২, ৩)
-                </h2>
-                <p className="text-[11px] text-slate-400">সাপ্লাইলিংক মেয়াদপূর্ব, অংশীদারি ও বিনিয়োগ হিসাব</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">মোট আসল মূলধন</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-white">
+                  ৳{formatCurrency(invStages.all_time?.capital)}
+                </p>
+                <p className="text-[10px] text-slate-400">{invStages.all_time?.count || 0} জন ইনভেস্টরের দেওয়া মূলধন</p>
+              </div>
+
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">মোট অর্জিত লাভ (Profit)</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-emerald-400">
+                  ৳{formatCurrency(invStages.all_time?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-400">লাইফটাইম সর্বমোট মুনাফা</p>
               </div>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20">
-              ৩ টি কোম্পানি কার্ড
-            </span>
+
+            <p className="text-[11px] text-slate-400 text-center pt-1 border-t border-white/[0.05]">
+              শুরু থেকে আজ পর্যন্ত ইনভেস্টরদের মোট অবদান
+            </p>
           </div>
 
-          {/* Top 2 Big Numbers: Total Investment vs Total Profit */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">কোম্পানির মোট বিনিয়োগ (আসল)</p>
-              <p className="text-2xl font-black font-mono text-white tracking-tight">
-                ৳{formatCurrency(summary.company_total_capital)}
-              </p>
-              <p className="text-[11px] text-purple-400 font-medium">কার্ড ১ এর মূলধন</p>
+          {/* STAGE 2: ALREADY WITHDRAWN / PAID OUT */}
+          <div className="card-surface p-5 rounded-2xl border border-rose-500/30 bg-gradient-to-br from-[#0d162b] via-[#24101d] to-[#0a1226] shadow-lg flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-rose-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-rose-500/10 text-rose-400 rounded-lg border border-rose-500/20">
+                  <CheckCircle className="w-4 h-4" />
+                </span>
+                <h3 className="text-xs font-bold text-rose-300 uppercase tracking-wider">
+                  ২. ইতোমধ্যে উত্তোলিত (পরিশোধিত)
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-200">
+                {invStages.withdrawn?.cards || 0} টি ক্লোজড
+              </span>
             </div>
 
-            <div className="bg-slate-900/60 border border-white/[0.08] p-4 rounded-xl space-y-1">
-              <p className="text-xs text-slate-400 uppercase font-semibold">কোম্পানির মোট লাভ</p>
-              <p className="text-2xl font-black font-mono text-purple-400 tracking-tight">
-                ৳{formatCurrency(summary.company_lifetime_profit)}
-              </p>
-              <p className="text-[11px] text-slate-400 font-medium">কার্ড ২ ও ১ এর মোট লাভ</p>
+            <div className="space-y-3">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">উত্তোলিত মূলধন (আসল)</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-rose-300">
+                  ৳{formatCurrency(invStages.withdrawn?.capital)}
+                </p>
+                <p className="text-[10px] text-slate-400">২২২টি সমাপ্ত কার্ডের আসল ফেরত</p>
+              </div>
+
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">উত্তোলিত লাভ (Profit)</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-rose-400">
+                  ৳{formatCurrency(invStages.withdrawn?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-400">ক্যাশ তুলে নেওয়া হয়েছে</p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-rose-500/20 text-xs font-bold flex justify-between items-center text-rose-200">
+              <span>মোট ফেরত সম্পন্ন:</span>
+              <span className="font-mono text-rose-300">৳{formatCurrency(invStages.withdrawn?.total_withdrawn)}</span>
             </div>
           </div>
 
-          {/* Bottom Breakdown: Withdrawals & Remaining Balances */}
-          <div className="space-y-2.5 text-xs border-t border-white/[0.08] pt-4 text-slate-300">
-            <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
-                <span className="text-slate-400">উত্তোলিত লাভ:</span>
-                <span className="font-semibold font-mono text-purple-300">৳{formatCurrency(summary.company_withdrawn_profit)}</span>
+          {/* STAGE 3: CURRENTLY REMAINING / ACTIVE CLAIMS */}
+          <div className="card-surface p-5 rounded-2xl border border-emerald-500/35 bg-gradient-to-br from-[#0d162b] via-[#0b241e] to-[#0a1226] shadow-xl flex flex-col justify-between space-y-4 ring-1 ring-emerald-500/30">
+            <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <h3 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">
+                  ৩. বর্তমানে অবশিষ্ট (রানিং পাওনা)
+                </h3>
               </div>
-              <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-lg border border-white/[0.05]">
-                <span className="text-slate-400">উত্তোলিত মূলধন:</span>
-                <span className="font-semibold font-mono text-slate-400">৳{formatCurrency(summary.company_withdrawn_capital)}</span>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200">
+                {invStages.remaining?.cards || 0} টি রানিং
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">বাকি থাকা মূলধন (আসল)</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-white">
+                  ৳{formatCurrency(invStages.remaining?.capital)}
+                </p>
+                <p className="text-[10px] text-emerald-400 font-medium">{invStages.remaining?.count || 0} জন ইনভেস্টরের বকেয়া আসল</p>
+              </div>
+
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">বাকি থাকা নিট লাভ</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-emerald-400">
+                  ৳{formatCurrency(invStages.remaining?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-400">মোট লাভ - উত্তোলিত লাভ</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="flex justify-between items-center bg-purple-500/[0.06] p-2.5 rounded-lg border border-purple-500/20">
-                <span className="text-purple-300 font-medium">বাকি থাকা নিট লাভ:</span>
-                <span className="font-bold font-mono text-purple-400">৳{formatCurrency(summary.company_unwithdrawn_profit)}</span>
-              </div>
-              <div className="flex justify-between items-center bg-purple-500/[0.06] p-2.5 rounded-lg border border-purple-500/20">
-                <span className="text-purple-300 font-medium">বাকি থাকা মূলধন:</span>
-                <span className="font-bold font-mono text-white">৳{formatCurrency(summary.company_remaining_capital)}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-2 px-3 bg-purple-500/15 border border-purple-500/30 rounded-xl font-bold text-sm">
-              <span className="text-purple-200">কোম্পানির মোট পাওনা ব্যালেন্স (আসল + বাকি লাভ):</span>
-              <span className="font-mono text-purple-300">৳{formatCurrency(summary.company_total_balance)}</span>
+            <div className="pt-2.5 pb-1 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs font-bold flex justify-between items-center text-emerald-200">
+              <span>মোট বর্তমান দায় (আসল + লাভ):</span>
+              <span className="font-mono text-base text-emerald-300">
+                ৳{formatCurrency(invStages.remaining?.total_claim)}
+              </span>
             </div>
           </div>
-
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
         </div>
       </div>
 
-      {/* 💼 3 Summary Overview Cards: Liquid Cash, Total Capital, Total Profit */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card-surface p-5 rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-[#0d162b] to-emerald-950/20 shadow-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">উপলব্ধ মোট নগদ ক্যাশ</span>
-            <span className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-              <Wallet className="w-4 h-4" />
+      {/* =========================================================================
+          SECTION 2: কোম্পানির নিজস্ব ৩টি কার্ড (কার্ড ১, ২, ৩)
+          ========================================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg">
+              <Building2 className="w-4 h-4" />
             </span>
+            <h2 className="text-sm md:text-base font-bold text-white uppercase tracking-wider">
+              কোম্পানির নিজস্ব অংশ (কার্ড ১, ২ ও ৩ - সাপ্লাইলিঙ্ক)
+            </h2>
           </div>
-          <p className="text-2xl font-black font-mono text-white">
-            ৳{formatCurrency(summary.net_cash)}
-          </p>
-          <p className="text-[11px] text-emerald-400 font-medium">সব কিস্তি ও বন্ধক ফেরত যুক্ত নগদ তহবিল</p>
+          <span className="text-xs text-slate-400">
+            মেয়াদপূর্ব মুনাফা, অংশীদারি মুনাফা ও বিনিয়োগ হিসাব
+          </span>
         </div>
 
-        <div className="card-surface p-5 rounded-2xl border border-white/[0.08] bg-slate-900/60 shadow-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">সর্বমোট রানিং মূলধন (উভয়)</span>
-            <span className="p-2 bg-white/[0.06] text-slate-300 rounded-xl border border-white/[0.08]">
-              <Layers className="w-4 h-4" />
-            </span>
-          </div>
-          <p className="text-2xl font-black font-mono text-white">
-            ৳{formatCurrency(summary.total_combined_capital)}
-          </p>
-          <p className="text-[11px] text-slate-400">ইনভেস্টর ১৯.৬২L + কোম্পানি ৭২.১k</p>
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* COMPANY STAGE 1: ALL-TIME */}
+          <div className="card-surface p-5 rounded-2xl border border-purple-500/30 bg-gradient-to-br from-[#0d162b] via-[#1f1035] to-[#0a1226] shadow-lg flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+              <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                ১. কোম্পানির সর্বমোট বিনিয়োগ ও লাভ
+              </h3>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
+                ৩ টি কার্ড
+              </span>
+            </div>
 
-        <div className="card-surface p-5 rounded-2xl border border-amber-500/25 bg-gradient-to-br from-[#0d162b] to-amber-950/20 shadow-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">সর্বমোট অর্জিত লাভ (উভয়)</span>
-            <span className="p-2 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
-              <TrendingUp className="w-4 h-4" />
-            </span>
+            <div className="space-y-3">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">কোম্পানির মোট বিনিয়োগ</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-white">
+                  ৳{formatCurrency(compStages.all_time?.capital)}
+                </p>
+                <p className="text-[10px] text-purple-400 font-medium">কার্ড ১ (মেয়াদপূর্ব মুনাফা হিসাব)</p>
+              </div>
+
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">কোম্পানির মোট অর্জিত লাভ</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-purple-300">
+                  ৳{formatCurrency(compStages.all_time?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-400">কার্ড ২ (অংশীদারি) ও ১ এর লাভ</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 text-center pt-1 border-t border-white/[0.05]">
+              কোম্পানির নামে রক্ষিত নিজস্ব তহবিল
+            </p>
           </div>
-          <p className="text-2xl font-black font-mono text-amber-400">
-            ৳{formatCurrency(summary.total_combined_lifetime_profit)}
-          </p>
-          <p className="text-[11px] text-slate-400">ইনভেস্টর ৫.১০L + কোম্পানি ৭.৮৩L</p>
+
+          {/* COMPANY STAGE 2: WITHDRAWN */}
+          <div className="card-surface p-5 rounded-2xl border border-white/[0.08] bg-slate-900/60 shadow-lg flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                ২. ইতোমধ্যে উত্তোলিত (পরিশোধিত)
+              </h3>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
+                ০ টি ক্লোজড
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-white/[0.04]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">উত্তোলিত মূলধন (বিনিয়োগ)</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-slate-400">
+                  ৳{formatCurrency(compStages.withdrawn?.capital)}
+                </p>
+                <p className="text-[10px] text-slate-500">কোনো মূলধন তোলা হয়নি</p>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-white/[0.04]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">উত্তোলিত লাভ</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-slate-400">
+                  ৳{formatCurrency(compStages.withdrawn?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-500">লেজারে সংরক্ষিত রয়েছে</p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/[0.06] text-xs font-bold flex justify-between items-center text-slate-400">
+              <span>মোট উত্তোলন:</span>
+              <span className="font-mono text-slate-300">৳0.00</span>
+            </div>
+          </div>
+
+          {/* COMPANY STAGE 3: REMAINING */}
+          <div className="card-surface p-5 rounded-2xl border border-purple-500/35 bg-gradient-to-br from-[#0d162b] via-[#1a0e2d] to-[#0a1226] shadow-xl flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+              <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                ৩. বর্তমানে অবশিষ্ট (কোম্পানি ব্যালেন্স)
+              </h3>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
+                ৩ টি রানিং
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">বাকি থাকা মূলধন</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-white">
+                  ৳{formatCurrency(compStages.remaining?.capital)}
+                </p>
+                <p className="text-[10px] text-purple-400 font-medium">কার্ড ১ এর অক্ষত মূলধন</p>
+              </div>
+
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-white/[0.06]">
+                <p className="text-[11px] text-slate-400 uppercase font-medium">বাকি থাকা নিট লাভ</p>
+                <p className="text-xl lg:text-2xl font-black font-mono text-purple-300">
+                  ৳{formatCurrency(compStages.remaining?.profit)}
+                </p>
+                <p className="text-[10px] text-slate-400">কার্ড ২ ও ১ এর জমে থাকা লাভ</p>
+              </div>
+            </div>
+
+            <div className="pt-2.5 pb-1 px-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-bold flex justify-between items-center text-purple-200">
+              <span>কোম্পানির মোট ব্যালেন্স:</span>
+              <span className="font-mono text-base text-purple-300">
+                ৳{formatCurrency(compStages.remaining?.total_claim)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          SECTION 3: নগদ ক্যাশ ও দায় পরিশোধের কভারেজ ব্যানার
+          ========================================================================= */}
+      <div className="card-surface p-5 sm:p-6 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900/90 to-emerald-950/30 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="inline-block px-3 py-0.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+              ক্যাশ ও দায় পরিশোধ স্ট্যাটাস
+            </span>
+            <h3 className="text-lg md:text-xl font-bold text-white">
+              হাতে থাকা মোট নগদ ক্যাশ: <span className="font-mono text-emerald-400 font-black">৳{formatCurrency(summary.net_cash)}</span>
+            </h3>
+            <p className="text-xs text-slate-300">
+              ইনভেস্টরদের সর্বমোট পাওনা (আসল + বাকি লাভ): <span className="font-mono font-bold text-white">৳{formatCurrency(invStages.remaining?.total_claim)}</span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 bg-slate-900/80 p-3.5 rounded-xl border border-emerald-500/30">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-[11px] text-slate-400 font-medium">ইনভেস্টর পাওনা বাদে ক্যাশ উদ্বৃত্ত</p>
+              <p className="text-xl font-black font-mono text-emerald-400">
+                + ৳{formatCurrency(summary.cash_surplus_after_all_claims)}
+              </p>
+              <p className="text-[10px] text-emerald-300 font-semibold">১০০% ক্যাশ কভারেজ সুরক্ষিত</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -614,8 +730,8 @@ const CompanySettlement = () => {
                   <span className="text-indigo-400 font-mono">৳{formatCurrency(summary.net_cash)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/[0.04]">
-                  <span className="text-slate-400">সাধারণ ইনভেস্টরদের আসল মূলধন পাওনা</span>
-                  <span className="font-semibold font-mono text-blue-400">৳{formatCurrency(summary.investor_running_capital)}</span>
+                  <span className="text-slate-400">সাধারণ ইনভেস্টরদের অবশিষ্ট আসল মূলধন</span>
+                  <span className="font-semibold font-mono text-blue-400">৳{formatCurrency(invStages.remaining?.capital)}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-emerald-500/30 text-base font-bold bg-emerald-500/[0.08] p-3.5 rounded-xl border border-emerald-500/20">
                   <span className="text-emerald-200">ইনভেস্টর আসল বাদে ক্যাশ উদ্বৃত্ত</span>

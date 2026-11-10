@@ -32,7 +32,80 @@ try {
     $unpaidCount = (int)($instRow['unpaid_count'] ?? 0);
     $totalLiquidPool = $netCash + $unpaidAmount;
 
-    // 3. COMPANY 3 CARDS SPECIFICALLY (Cards 1, 2, 3)
+    // =========================================================================
+    // 3. GENERAL INVESTORS (3-STAGE LIFECYCLE: EXCLUDING CARDS 1, 2, 3)
+    // =========================================================================
+
+    // Stage 1: All-Time History (Running + Closed)
+    $qInvAll = $mysqli->query("
+        SELECT 
+            COUNT(*) AS total_cards,
+            COUNT(DISTINCT investor_id) AS total_investors,
+            COALESCE(SUM(investment_amount), 0) AS total_capital
+        FROM investment_cards
+        WHERE id NOT IN (1, 2, 3)
+    ");
+    $rInvAll = $qInvAll ? $qInvAll->fetch_assoc() : [];
+    $invAllCards = (int)($rInvAll['total_cards'] ?? 0);
+    $invAllCount = (int)($rInvAll['total_investors'] ?? 0);
+    $invAllCapital = (float)($rInvAll['total_capital'] ?? 0);
+
+    $qInvAllProfit = $mysqli->query("
+        SELECT COALESCE(SUM(profit_amount), 0) AS total_profit
+        FROM profit_generator
+        WHERE card_id NOT IN (1, 2, 3)
+    ");
+    $invAllProfit = (float)($qInvAllProfit ? $qInvAllProfit->fetch_assoc()['total_profit'] : 0);
+
+    // Stage 2: Already Withdrawn / Paid Out (Closed Cards & Withdrawn Profit)
+    $qInvClosed = $mysqli->query("
+        SELECT 
+            COUNT(*) AS closed_cards,
+            COUNT(DISTINCT investor_id) AS closed_investors,
+            COALESCE(SUM(investment_amount), 0) AS closed_capital
+        FROM investment_cards
+        WHERE id NOT IN (1, 2, 3) AND status = 'closed'
+    ");
+    $rInvClosed = $qInvClosed ? $qInvClosed->fetch_assoc() : [];
+    $invWithdrawnCards = (int)($rInvClosed['closed_cards'] ?? 0);
+    $invWithdrawnCount = (int)($rInvClosed['closed_investors'] ?? 0);
+    $invWithdrawnCapital = (float)($rInvClosed['closed_capital'] ?? 0);
+
+    $qInvWithdrawnProfit = $mysqli->query("
+        SELECT COALESCE(SUM(amount), 0) AS withdrawn_profit
+        FROM profit_history
+        WHERE status = 'withdraw' AND investor_id != 1
+    ");
+    $invWithdrawnProfit = (float)($qInvWithdrawnProfit ? $qInvWithdrawnProfit->fetch_assoc()['withdrawn_profit'] : 0);
+    $invTotalWithdrawn = $invWithdrawnCapital + $invWithdrawnProfit;
+
+    // Stage 3: Currently Remaining / Running (Active Claims)
+    $qInvRun = $mysqli->query("
+        SELECT 
+            COUNT(*) AS running_cards,
+            COUNT(DISTINCT investor_id) AS running_investors,
+            COALESCE(SUM(investment_amount), 0) AS running_capital
+        FROM investment_cards
+        WHERE id NOT IN (1, 2, 3) AND status = 'running'
+    ");
+    $rInvRun = $qInvRun ? $qInvRun->fetch_assoc() : [];
+    $invRemainingCards = (int)($rInvRun['running_cards'] ?? 0);
+    $invRemainingCount = (int)($rInvRun['running_investors'] ?? 0);
+    $invRemainingCapital = (float)($rInvRun['running_capital'] ?? 0);
+
+    $invRemainingProfit = max(0, $invAllProfit - $invWithdrawnProfit);
+    $invTotalRemainingClaim = $invRemainingCapital + $invRemainingProfit;
+
+    // Coverage & Surpluses based on current remaining investor claims
+    $netCapitalSurplus = $totalLiquidPool - $invRemainingCapital;
+    $capitalCoveragePercent = $invRemainingCapital > 0 
+        ? min(100.0, round(($totalLiquidPool / $invRemainingCapital) * 100, 2)) 
+        : 100.0;
+    $cashSurplusAfterAllClaims = $netCash - $invTotalRemainingClaim;
+
+    // =========================================================================
+    // 4. COMPANY OWN 3 CARDS (Cards 1, 2, 3)
+    // =========================================================================
     $compCardsRes = $mysqli->query("
         SELECT 
             ic.id AS card_id,
@@ -69,54 +142,9 @@ try {
     }
     $companyWithdrawnProfit = 0.0;
     $companyWithdrawnCapital = 0.0;
-    $companyUnwithdrawnProfit = $companyTotalLifetimeProfit;
+    $companyRemainingProfit = $companyTotalLifetimeProfit;
     $companyRemainingCapital = $companyTotalCapital;
-    $companyTotalBalance = $companyRemainingCapital + $companyUnwithdrawnProfit;
-
-    // 4. GENERAL INVESTORS (Running Cards excluding 1, 2, 3)
-    $invCardQuery = $mysqli->query("
-        SELECT 
-            COUNT(DISTINCT ic.id) AS running_cards_count,
-            COUNT(DISTINCT ic.investor_id) AS running_investor_count,
-            COALESCE(SUM(ic.investment_amount), 0) AS running_capital
-        FROM investment_cards ic
-        WHERE ic.status = 'running' AND ic.id NOT IN (1, 2, 3)
-    ");
-    $invCardRow = $invCardQuery ? $invCardQuery->fetch_assoc() : [];
-    $investorRunningCapital = (float)($invCardRow['running_capital'] ?? 0);
-    $investorRunningCardsCount = (int)($invCardRow['running_cards_count'] ?? 0);
-    $investorRunningCount = (int)($invCardRow['running_investor_count'] ?? 0);
-
-    // General Investors Profit & Withdrawals
-    $genProfQuery = $mysqli->query("
-        SELECT COALESCE(SUM(profit_amount), 0) AS total_profit
-        FROM profit_generator
-        WHERE card_id NOT IN (1, 2, 3)
-    ");
-    $investorLifetimeProfit = (float)($genProfQuery->fetch_assoc()['total_profit'] ?? 0);
-
-    $genWithdrawnQuery = $mysqli->query("
-        SELECT COALESCE(SUM(amount), 0) AS total_withdrawn 
-        FROM profit_history 
-        WHERE status = 'withdraw' AND investor_id != 1
-    ");
-    $investorWithdrawnProfit = (float)($genWithdrawnQuery->fetch_assoc()['total_withdrawn'] ?? 0);
-    $investorWithdrawnCapital = 0.0; // on running cards
-    $investorUnwithdrawnProfit = max(0, $investorLifetimeProfit - $investorWithdrawnProfit);
-    $investorRemainingCapital = $investorRunningCapital;
-    $investorTotalBalance = $investorRemainingCapital + $investorUnwithdrawnProfit;
-
-    // Combined Totals (All 129 Running Cards: Investors + Company)
-    $totalCombinedCapital = $investorRunningCapital + $companyTotalCapital;
-    $totalCombinedLifetimeProfit = $investorLifetimeProfit + $companyTotalLifetimeProfit;
-    $totalCombinedWithdrawnProfit = $investorWithdrawnProfit + $companyWithdrawnProfit;
-    $totalCombinedUnwithdrawnProfit = $investorUnwithdrawnProfit + $companyUnwithdrawnProfit;
-
-    // Coverage & Surpluses
-    $netCapitalSurplus = $totalLiquidPool - $investorRunningCapital;
-    $capitalCoveragePercent = $investorRunningCapital > 0 
-        ? min(100.0, round(($totalLiquidPool / $investorRunningCapital) * 100, 2)) 
-        : 100.0;
+    $companyTotalRemainingClaim = $companyRemainingCapital + $companyRemainingProfit;
 
     // 5. Product Sales and Gross Profits
     $saleQuery = $mysqli->query("
@@ -166,7 +194,7 @@ try {
     }
 
     $netOperatingProfit = ($lifetimeGrossProfit + $lifetimeOtherIncome) - $totalExpenses;
-    $companyLifetimeRetainedProfit = $netOperatingProfit - $investorWithdrawnProfit;
+    $companyLifetimeRetainedProfit = $netOperatingProfit - $invWithdrawnProfit;
 
     // 8. General Investor by Investor Breakdown (Cards 1, 2, 3 excluded)
     $investorBreakdownSql = "
@@ -209,7 +237,6 @@ try {
                 'total_capital'          => $cap,
                 'total_all_time_profit'  => $allProf,
                 'total_withdrawn'        => $withdrawn,
-                'withdrawn_capital'      => 0.0,
                 'unwithdrawn_profit'     => $unwithdrawn,
                 'total_balance'          => $cap + $unwithdrawn
             ];
@@ -223,35 +250,69 @@ try {
             "total_cash_in"                  => (float)($cashRow['total_cash_in'] ?? 0),
             "total_cash_out"                 => (float)($cashRow['total_cash_out'] ?? 0),
             "total_liquid_pool"              => $totalLiquidPool,
-            
-            // Investor Specific
-            "investor_running_capital"       => $investorRunningCapital,
-            "investor_running_count"         => $investorRunningCount,
-            "investor_running_cards_count"   => $investorRunningCardsCount,
-            "investor_lifetime_profit"       => $investorLifetimeProfit,
-            "investor_withdrawn_profit"      => $investorWithdrawnProfit,
-            "investor_withdrawn_capital"     => $investorWithdrawnCapital,
-            "investor_unwithdrawn_profit"    => $investorUnwithdrawnProfit,
-            "investor_remaining_capital"     => $investorRemainingCapital,
-            "investor_total_balance"         => $investorTotalBalance,
+            "cash_surplus_after_all_claims"  => $cashSurplusAfterAllClaims,
             "capital_coverage_percent"       => $capitalCoveragePercent,
             "net_capital_surplus"            => $netCapitalSurplus,
 
-            // Company 3 Cards Specific
-            "company_total_capital"          => $companyTotalCapital,
-            "company_lifetime_profit"        => $companyTotalLifetimeProfit,
-            "company_withdrawn_profit"       => $companyWithdrawnProfit,
-            "company_withdrawn_capital"      => $companyWithdrawnCapital,
-            "company_unwithdrawn_profit"     => $companyUnwithdrawnProfit,
-            "company_remaining_capital"      => $companyRemainingCapital,
-            "company_total_balance"          => $companyTotalBalance,
-            "company_cards"                  => $companyCards,
+            // INVESTORS 3 STAGES
+            "investor_stages" => [
+                "all_time" => [
+                    "cards"   => $invAllCards,
+                    "count"   => $invAllCount,
+                    "capital" => $invAllCapital,
+                    "profit"  => $invAllProfit
+                ],
+                "withdrawn" => [
+                    "cards"           => $invWithdrawnCards,
+                    "count"           => $invWithdrawnCount,
+                    "capital"         => $invWithdrawnCapital,
+                    "profit"          => $invWithdrawnProfit,
+                    "total_withdrawn" => $invTotalWithdrawn
+                ],
+                "remaining" => [
+                    "cards"       => $invRemainingCards,
+                    "count"       => $invRemainingCount,
+                    "capital"     => $invRemainingCapital,
+                    "profit"      => $invRemainingProfit,
+                    "total_claim" => $invTotalRemainingClaim
+                ]
+            ],
 
-            // Combined
-            "total_combined_capital"         => $totalCombinedCapital,
-            "total_combined_lifetime_profit" => $totalCombinedLifetimeProfit,
-            "total_combined_withdrawn_profit"=> $totalCombinedWithdrawnProfit,
-            "total_combined_unwithdrawn_profit" => $totalCombinedUnwithdrawnProfit,
+            // COMPANY 3 CARDS 3 STAGES
+            "company_stages" => [
+                "all_time" => [
+                    "cards"   => 3,
+                    "capital" => $companyTotalCapital,
+                    "profit"  => $companyTotalLifetimeProfit
+                ],
+                "withdrawn" => [
+                    "cards"           => 0,
+                    "capital"         => 0.0,
+                    "profit"          => 0.0,
+                    "total_withdrawn" => 0.0
+                ],
+                "remaining" => [
+                    "cards"       => 3,
+                    "capital"     => $companyRemainingCapital,
+                    "profit"      => $companyRemainingProfit,
+                    "total_claim" => $companyTotalRemainingClaim
+                ]
+            ],
+
+            // Legacy quick access fields
+            "investor_running_capital"       => $invRemainingCapital,
+            "investor_running_count"         => $invRemainingCount,
+            "investor_running_cards_count"   => $invRemainingCards,
+            "investor_lifetime_profit"       => $invAllProfit,
+            "investor_withdrawn_profit"      => $invWithdrawnProfit,
+            "investor_unwithdrawn_profit"    => $invRemainingProfit,
+            "investor_total_balance"         => $invTotalRemainingClaim,
+
+            "company_total_capital"          => $companyRemainingCapital,
+            "company_lifetime_profit"        => $companyRemainingProfit,
+            "company_withdrawn_profit"       => 0.0,
+            "company_unwithdrawn_profit"     => $companyRemainingProfit,
+            "company_total_balance"          => $companyTotalRemainingClaim,
 
             // P&L
             "lifetime_sales"                 => $lifetimeSales,
