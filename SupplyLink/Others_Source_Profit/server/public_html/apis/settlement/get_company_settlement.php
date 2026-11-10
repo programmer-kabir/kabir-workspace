@@ -239,6 +239,12 @@ try {
             $allProf = (float)$inv['total_all_time_profit'];
             $withdrawn = (float)$inv['total_withdrawn'];
             $unwithdrawn = max(0, $allProf - $withdrawn);
+            $totalBalance = $cap + $unwithdrawn;
+
+            // যারা সব টাকা তুলে নিয়েছে (ব্যালেন্স ০), তাদের লিস্টে দেখানোর দরকার নেই
+            if ($totalBalance <= 0.001) {
+                continue;
+            }
 
             $investorsList[] = [
                 'investor_id'            => (int)$inv['investor_id'],
@@ -249,7 +255,7 @@ try {
                 'total_all_time_profit'  => $allProf,
                 'total_withdrawn'        => $withdrawn,
                 'unwithdrawn_profit'     => $unwithdrawn,
-                'total_balance'          => $cap + $unwithdrawn
+                'total_balance'          => $totalBalance
             ];
         }
     }

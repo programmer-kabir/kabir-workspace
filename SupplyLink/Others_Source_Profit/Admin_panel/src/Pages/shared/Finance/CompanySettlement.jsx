@@ -92,11 +92,12 @@ const CompanySettlement = () => {
     expense_covered_by_company: summary.lifetime_expenses || 0
   };
 
-  // Filtered Investors
+  // Filtered Investors (যাদের এখনো পাওনা বা ব্যালেন্স বাকি আছে শুধুমাত্র তাদের লিস্ট)
   const filteredInvestors = useMemo(() => {
-    if (!searchTerm.trim()) return investorList;
+    const activeInvestors = investorList.filter((inv) => Number(inv.total_balance || 0) > 0.001);
+    if (!searchTerm.trim()) return activeInvestors;
     const term = searchTerm.toLowerCase();
-    return investorList.filter((inv) =>
+    return activeInvestors.filter((inv) =>
       inv.investor_name?.toLowerCase().includes(term) ||
       inv.investor_mobile?.toLowerCase().includes(term) ||
       inv.investor_id?.toString().includes(term)
