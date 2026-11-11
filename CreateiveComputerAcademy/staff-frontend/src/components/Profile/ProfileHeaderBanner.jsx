@@ -32,7 +32,7 @@ export default function ProfileHeaderBanner({
 
   return (
     <div className="relative rounded-[2.5rem] shadow-lg border border-slate-200/60 dark:border-slate-700/60 overflow-hidden group transition-all min-h-[380px] lg:min-h-[430px] flex flex-col justify-end">
-      
+
       {/* ── 1. FULL-BLEED PANORAMIC COVER PICTURE ── */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
@@ -69,13 +69,13 @@ export default function ProfileHeaderBanner({
         </button>
       </div>
 
-      {/* ── 4. PROFILE INFO OVERLAY (BOTTOM ROW) ── */}
-      <div className="relative z-10 p-6 sm:p-8 lg:p-10">
+      {/* ── 4. PROFILE INFO OVERLAY (BOTTOM-ANCHORED ROW) ── */}
+      <div className="relative z-10 px-6 sm:px-8 lg:px-10 pt-8 pb-3 sm:pb-3.5 lg:pb-4">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start lg:items-end justify-between">
-          
+
           {/* Left: Avatar + Name + Badges */}
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 sm:gap-7 flex-1">
-            
+
             {/* Avatar with Interactive Camera Overlay */}
             <div className="relative group/avatar shrink-0">
               <input
@@ -115,7 +115,7 @@ export default function ProfileHeaderBanner({
             </div>
 
             {/* Name & Badges */}
-            <div className="space-y-3 pb-1">
+            <div className="space-y-2.5">
               <h1
                 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-xl"
                 style={{ fontFamily: "'Playfair Display', serif" }}
@@ -151,7 +151,7 @@ export default function ProfileHeaderBanner({
           </div>
 
           {/* Right: Glassmorphism Edit Profile Button */}
-          <div className="shrink-0 pb-1 w-full lg:w-auto">
+          <div className="shrink-0 w-full lg:w-auto">
             <button
               type="button"
               onClick={() => onOpenModal('profile')}
