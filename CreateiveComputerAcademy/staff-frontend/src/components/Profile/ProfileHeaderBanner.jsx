@@ -3,8 +3,8 @@ import { FiUser, FiBriefcase, FiEdit, FiCamera, FiBookOpen } from 'react-icons/f
 
 /**
  * ProfileHeaderBanner
- * Generous height cover banner with avatar sitting in the middle of the bottom border line (Facebook/Twitter hero style),
- * featuring crisp typography, glassmorphism badges, and quick action buttons.
+ * Full-bleed panoramic cover banner with avatar, name, badges, and edit button
+ * completely inside the image over a sleek gradient. No bottom white bar.
  */
 export default function ProfileHeaderBanner({
   currentUser,
@@ -32,51 +32,52 @@ export default function ProfileHeaderBanner({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700/80 overflow-hidden relative transition-colors">
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-50/40 dark:from-blue-900/10 to-transparent pointer-events-none" />
+    <div className="relative rounded-[2.5rem] shadow-xl border border-slate-200/50 dark:border-slate-700/60 overflow-hidden group transition-all w-full min-h-[360px] sm:min-h-[400px] lg:min-h-[440px] flex flex-col justify-end">
+      
+      {/* ── 1. 100% FULL-BLEED PANORAMIC COVER PICTURE (NO WHITE BAR) ── */}
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+        style={{
+          backgroundImage: currentUser?.cover_picture
+            ? `url(${apiUrl}${currentUser.cover_picture})`
+            : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
+        }}
+      />
 
-      {/* ── 1. EXPANDED PANORAMIC COVER PICTURE (TALL FOR FULL VIEW) ── */}
-      <div className="relative h-80 sm:h-96 lg:h-[410px] w-full group overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
-          style={{
-            backgroundImage: currentUser?.cover_picture
-              ? `url(${apiUrl}${currentUser.cover_picture})`
-              : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
-          }}
+      {/* ── 2. CINEMATIC GRADIENT OVERLAYS (FOR 100% READABILITY) ── */}
+      {/* Top subtle vignette for Change Cover button */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent pointer-events-none" />
+      {/* Bottom deep smooth gradient so Name, Avatar, and Badges pop crisply */}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-transparent pointer-events-none" />
+
+      {/* ── 3. FLOATING CHANGE COVER BUTTON (TOP RIGHT) ── */}
+      <div className="absolute top-5 right-5 sm:top-6 sm:right-6 z-20">
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleCoverChange}
         />
-        {/* Cinematic gradient overlay at bottom of cover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent pointer-events-none" />
-
-        {/* Change Cover Photo floating button on top right */}
-        <div className="absolute top-6 right-6 z-20">
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverChange}
-          />
-          <button
-            type="button"
-            onClick={() => coverInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900/70 hover:bg-slate-900/90 text-white rounded-2xl text-xs font-bold backdrop-blur-md border border-white/20 shadow-md transition-all cursor-pointer active:scale-95"
-            title="Change cover photo"
-          >
-            <FiCamera size={14} className="text-white/90" />
-            <span className="hidden sm:inline">Change Cover</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => coverInputRef.current?.click()}
+          className="flex items-center gap-2 px-4 py-2.5 bg-black/40 hover:bg-black/60 active:scale-95 text-white rounded-2xl text-xs font-bold backdrop-blur-md border border-white/20 shadow-md transition-all cursor-pointer"
+          title="Change cover photo"
+        >
+          <FiCamera size={14} className="text-white/90" />
+          <span className="hidden sm:inline">Change Cover</span>
+        </button>
       </div>
 
-      {/* ── 2. PROFILE INFO SECTION (AVATAR IN THE MIDDLE OF THE LINE) ── */}
-      <div className="relative px-6 sm:px-10 lg:px-12 pb-7">
-        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start lg:items-end -mt-20 sm:-mt-24 lg:-mt-28 relative z-10 justify-between">
+      {/* ── 4. PROFILE INFO (INSIDE THE IMAGE AT THE BOTTOM) ── */}
+      <div className="relative z-10 p-6 sm:p-8 lg:p-10">
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-7 items-start lg:items-end justify-between">
           
           {/* Left: Avatar + Name + Badges */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 sm:gap-7 flex-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 sm:gap-6 flex-1">
             
-            {/* Avatar centered on boundary line (half on cover, half below) */}
+            {/* Avatar with Interactive Camera Overlay */}
             <div className="relative group/avatar shrink-0">
               <input
                 ref={avatarInputRef}
@@ -86,7 +87,7 @@ export default function ProfileHeaderBanner({
                 onChange={handleAvatarChange}
               />
 
-              <div className="w-36 h-36 sm:w-40 sm:h-40 lg:w-44 lg:h-44 rounded-3xl bg-white dark:bg-slate-800 p-2 shadow-2xl ring-4 ring-white dark:ring-slate-800 transition-all duration-300 group-hover/avatar:scale-[1.02] relative overflow-hidden">
+              <div className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-3xl bg-white/20 dark:bg-slate-900/50 p-2 shadow-2xl backdrop-blur-md ring-2 ring-white/40 dark:ring-white/30 transition-all duration-300 group-hover/avatar:ring-white/70 relative overflow-hidden">
                 {currentUser?.profile_picture ? (
                   <img
                     src={`${apiUrl}${currentUser.profile_picture}`}
@@ -94,7 +95,7 @@ export default function ProfileHeaderBanner({
                     className="w-full h-full object-cover rounded-2xl shadow-inner"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-6xl uppercase shadow-inner">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-5xl uppercase shadow-inner">
                     {currentUser?.name?.charAt(0)}
                   </div>
                 )}
@@ -114,31 +115,34 @@ export default function ProfileHeaderBanner({
               </div>
             </div>
 
-            {/* Name & Badges */}
+            {/* Name & Badges — FULLY INSIDE THE IMAGE */}
             <div className="space-y-3 pb-1">
               <h1
-                className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white lg:text-white lg:drop-shadow-xl tracking-tight transition-colors"
-                style={{ fontFamily: "'Playfair Display', serif" }}
+                className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-2xl"
+                style={{ 
+                  fontFamily: "'Playfair Display', serif",
+                  textShadow: '0 4px 16px rgba(0, 0, 0, 0.75)' 
+                }}
               >
                 {currentUser?.name}
               </h1>
 
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-slate-800 dark:text-slate-100 font-bold flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/80 px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-xs border border-slate-200 dark:border-slate-600 transition-colors">
-                  <FiUser className="text-slate-500 dark:text-slate-400" size={15} />
+                <span className="text-white font-bold flex items-center gap-1.5 bg-black/40 hover:bg-black/55 px-3.5 py-1.5 rounded-full text-xs sm:text-sm shadow-sm border border-white/20 backdrop-blur-md transition-colors">
+                  <FiUser className="text-white/80" size={15} />
                   {currentUser?.role_name || 'Staff Member'}
                 </span>
 
                 {currentUser?.department_name && (
-                  <span className="text-slate-800 dark:text-slate-100 font-bold flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/80 px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-xs border border-slate-200 dark:border-slate-600 transition-colors">
-                    <FiBriefcase className="text-slate-500 dark:text-slate-400" size={15} />
+                  <span className="text-white font-bold flex items-center gap-1.5 bg-black/40 hover:bg-black/55 px-3.5 py-1.5 rounded-full text-xs sm:text-sm shadow-sm border border-white/20 backdrop-blur-md transition-colors">
+                    <FiBriefcase className="text-white/80" size={15} />
                     {currentUser.department_name}
                   </span>
                 )}
 
                 {Boolean(currentUser?.is_student) && (
-                  <span className="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-xs border border-emerald-200 dark:border-emerald-800 transition-colors">
-                    <FiBookOpen className="text-emerald-600 dark:text-emerald-400" size={15} />
+                  <span className="text-emerald-300 font-bold flex items-center gap-1.5 bg-emerald-950/70 hover:bg-emerald-950/90 px-3.5 py-1.5 rounded-full text-xs sm:text-sm shadow-sm border border-emerald-400/40 backdrop-blur-md transition-colors">
+                    <FiBookOpen className="text-emerald-400" size={15} />
                     <span>
                       {currentUser?.institution_type || 'Student'}
                       {currentUser?.student_institution ? ` • ${currentUser.student_institution}` : ''}
@@ -150,12 +154,12 @@ export default function ProfileHeaderBanner({
 
           </div>
 
-          {/* Right: Edit Profile Button */}
+          {/* Right: Glassmorphism Edit Profile Button */}
           <div className="shrink-0 pb-1 w-full lg:w-auto">
             <button
               type="button"
               onClick={() => onOpenModal('profile')}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white rounded-2xl font-bold border border-slate-200 dark:border-slate-600 transition-all shadow-sm hover:shadow-md cursor-pointer text-sm active:scale-95"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 active:scale-95 text-white rounded-2xl font-bold backdrop-blur-md border border-white/30 transition-all shadow-lg hover:shadow-xl cursor-pointer text-sm"
             >
               <FiEdit size={16} /> Edit Profile
             </button>
