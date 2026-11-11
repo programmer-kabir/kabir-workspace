@@ -14,7 +14,7 @@ import CommandPalette from '../components/CommandPalette';
 import BreakRequestModal from '../components/BreakRequestModal';
 import BreakLockOverlay from '../components/BreakLockOverlay';
 import { Toaster, toast } from 'sonner';
-import LuxuryToastContainer from '../components/LuxuryToast';
+import LuxuryToastContainer, { showLuxuryToast } from '../components/LuxuryToast';
 import Pusher from 'pusher-js';
 import { FiSearch, FiX, FiSidebar, FiMenu, FiCoffee } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
@@ -101,8 +101,12 @@ const AuthenticatedLayout = ({ children }) => {
     const channel = pusher.subscribe(`user-${currentUser.id}`);
 
     channel.bind('new-notification', function (data) {
-      toast.info(data.title, {
-        description: data.message,
+      showLuxuryToast({
+        title: data.title || 'নতুন নোটিফিকেশন! 🔔',
+        message: data.message,
+        tag: data.type === 'student_status_approved' ? 'Student Approved' : (data.type === 'student_status_rejected' ? 'Request Declined' : 'Notification'),
+        type: data.type?.includes('reject') ? 'warning' : 'success',
+        duration: 5000,
       });
       window.dispatchEvent(new Event('new-notification-received'));
     });

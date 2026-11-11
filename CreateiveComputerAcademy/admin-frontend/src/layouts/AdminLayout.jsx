@@ -5,6 +5,7 @@ import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 import { toast, Toaster } from 'sonner';
+import { showLuxuryToast } from '../components/LuxuryToast';
 import Pusher from 'pusher-js';
 import { FiSidebar } from 'react-icons/fi';
 
@@ -55,8 +56,12 @@ const AdminLayout = ({ children }) => {
     const channel = pusher.subscribe(`user-${currentUser.id}`);
     
     channel.bind('new-notification', function(data) {
-      toast.info(data.title, {
-        description: data.message,
+      showLuxuryToast({
+        title: data.title || 'নতুন নোটিফিকেশন! 🔔',
+        message: data.message,
+        tag: data.type === 'student_approval_request' ? 'Staff Request' : 'Notification',
+        type: data.type?.includes('reject') ? 'warning' : 'info',
+        duration: 5000,
       });
       window.dispatchEvent(new Event('new-notification-received'));
     });

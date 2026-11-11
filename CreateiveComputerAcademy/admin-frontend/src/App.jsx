@@ -22,6 +22,7 @@ import DailyRoster from './pages/DailyRoster';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import { Toaster } from 'sonner';
+import LuxuryToastContainer from './components/LuxuryToast';
 
 import LeaveManagement from './pages/LeaveManagement';
 import MangoVaultManager from './pages/MangoVaultManager';
@@ -51,6 +52,7 @@ function App() {
   return (
     <AuthProvider>
       <Toaster position="top-right" richColors />
+      <LuxuryToastContainer />
       <Router>
         <Routes>
           {/* Public */}

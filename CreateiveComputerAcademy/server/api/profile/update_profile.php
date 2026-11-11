@@ -2,6 +2,7 @@
 require_once '../../config/database.php';
 require_once '../../config/cors.php';
 require_once '../leave/StudentLeaveHelper.php';
+require_once '../notifications/notification_helper.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -170,6 +171,30 @@ try {
             $insSql = "INSERT INTO employees (" . implode(', ', $insCols) . ") VALUES (" . implode(', ', $insVals) . ")";
             $insStmt = $db->prepare($insSql);
             $insStmt->execute($empParams);
+        }
+    }
+
+    // If new student verification requested, notify Admin and Developer roles
+    if ($resultingStudentStatus === 'pending' && $is_student_val == 1) {
+        $senderName = $name ?: 'Staff Member';
+        $instName = $student_institution_val ?: 'Educational Institution';
+        $instType = $institution_type_val ?: 'Student';
+        $notifTitle = "🎓 শিক্ষার্থী ভেরিফিকেশন আবেদন";
+        $notifMsg = "{$senderName} শিক্ষার্থী ছুটির সুবিধার জন্য আবেদন করেছেন ({$instName} - {$instType})। অনুমোদন করতে স্টাফ ডিরেক্টরি দেখুন।";
+
+        try {
+            NotificationHelper::sendToRole($db, 'admin', $user_id, $notifTitle, $notifMsg, 'student_approval_request', 'admin', '/staff', 'high', [
+                'staff_user_id' => $user_id,
+                'institution' => $instName,
+                'level' => $student_level_val,
+            ]);
+            NotificationHelper::sendToRole($db, 'developer', $user_id, $notifTitle, $notifMsg, 'student_approval_request', 'admin', '/staff', 'high', [
+                'staff_user_id' => $user_id,
+                'institution' => $instName,
+                'level' => $student_level_val,
+            ]);
+        } catch (Exception $notifEx) {
+            error_log("Failed to send student approval notification: " . $notifEx->getMessage());
         }
     }
 

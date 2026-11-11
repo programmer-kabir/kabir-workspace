@@ -221,16 +221,32 @@ export default function useProfileData() {
         setStudentStatus(returnedStatus);
         setProfileMessage({ text: 'Profile updated successfully!', type: 'success' });
         
-        // Trigger Luxury Toast
-        showLuxuryToast({
-          title: 'সার্ভারে সংরক্ষিত! 📁',
-          message: isStudent 
-            ? 'আপনার প্রোফাইল ও শিক্ষার্থী আবেদন সফলভাবে সার্ভারে সেভ হয়েছে।' 
-            : 'আপনার প্রোফাইলের সকল তথ্য সফলভাবে সার্ভারে সেভ হয়েছে।',
-          tag: 'Server Saved',
-          type: 'success',
-          duration: 4500,
-        });
+        // Trigger Luxury Toast with polished contextual title and tag
+        if (isStudent && returnedStatus === 'pending') {
+          showLuxuryToast({
+            title: 'শিক্ষার্থী আবেদন জমা হয়েছে! 🎓',
+            message: 'আপনার শিক্ষাপ্রতিষ্ঠানের তথ্য সফলভাবে অ্যাডমিন পর্যালোচনায় পাঠানো হয়েছে। অ্যাডমিন অনুমোদন করলে ছুটির সুবিধা সক্রিয় হবে।',
+            tag: 'Pending Approval',
+            type: 'info',
+            duration: 5000,
+          });
+        } else if (isStudent && returnedStatus === 'approved') {
+          showLuxuryToast({
+            title: 'প্রোফাইল ও শিক্ষার্থী তথ্য সংরক্ষিত! 🎓',
+            message: 'আপনার অনুমোদিত শিক্ষার্থী প্রোফাইল ও ব্যক্তিগত তথ্য সফলভাবে হালনাগাদ করা হয়েছে।',
+            tag: 'Profile Active',
+            type: 'success',
+            duration: 4500,
+          });
+        } else {
+          showLuxuryToast({
+            title: 'প্রোফাইল আপডেট সফল! ✨',
+            message: 'আপনার নাম, মোবাইল ও ব্যক্তিগত তথ্য সফলভাবে হালনাগাদ করা হয়েছে।',
+            tag: 'Profile Updated',
+            type: 'success',
+            duration: 4500,
+          });
+        }
 
         updateUser({
           name,

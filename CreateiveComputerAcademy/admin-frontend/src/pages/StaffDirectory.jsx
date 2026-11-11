@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { showLuxuryToast } from '../components/LuxuryToast';
 import {
   FiSearch, FiUserPlus, FiEdit2, FiTrash2, FiX, FiAlertTriangle,
   FiEye, FiEyeOff, FiUser, FiMail, FiPhone, FiBriefcase, FiLock,
@@ -565,6 +566,23 @@ const StaffDirectory = () => {
       });
       if (res.data.status === 'success') {
         await fetchAll();
+        if (action === 'approve') {
+          showLuxuryToast({
+            title: 'শিক্ষার্থী অনুমোদন সম্পন্ন! 🎓',
+            message: `${staff.name}-এর শিক্ষার্থী স্ট্যাটাস অনুমোদিত হয়েছে এবং ${quota} দিনের অ্যাকাডেমিক ছুটি চালু করা হয়েছে।`,
+            tag: 'Student Approved',
+            type: 'success',
+            duration: 5000,
+          });
+        } else {
+          showLuxuryToast({
+            title: 'আবেদন বাতিল করা হয়েছে! ❌',
+            message: `${staff.name}-এর শিক্ষার্থী আবেদন বাতিল করা হয়েছে।`,
+            tag: 'Request Rejected',
+            type: 'warning',
+            duration: 5000,
+          });
+        }
       } else {
         alert(res.data.message || 'Failed to update student status');
       }
@@ -650,6 +668,13 @@ const StaffDirectory = () => {
       if (res.data.status === 'success') {
         await fetchAll();
         setEditOpen(false);
+        showLuxuryToast({
+          title: 'স্টাফ তথ্য আপডেট সম্পন্ন! 👤',
+          message: `${formData.name}-এর প্রোফাইল ও চাকুরির তথ্য সফলভাবে সংরক্ষণ করা হয়েছে।`,
+          tag: 'Staff Saved',
+          type: 'success',
+          duration: 4500,
+        });
       } else {
         setFormError(res.data.message);
       }

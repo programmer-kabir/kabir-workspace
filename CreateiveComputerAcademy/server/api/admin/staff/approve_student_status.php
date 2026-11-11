@@ -2,6 +2,7 @@
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
 require_once '../../leave/StudentLeaveHelper.php';
+require_once '../../notifications/notification_helper.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -53,6 +54,29 @@ try {
             ':user_id'  => $user_id
         ]);
 
+        // Send real-time notification to staff member
+        try {
+            $staff_user_stmt = $db->prepare("SELECT name FROM users WHERE id = :user_id LIMIT 1");
+            $staff_user_stmt->execute([':user_id' => $user_id]);
+            $staff_user = $staff_user_stmt->fetch(PDO::FETCH_ASSOC);
+            $staff_name = $staff_user['name'] ?? 'Staff Member';
+
+            NotificationHelper::sendToUser(
+                $db,
+                $user_id,
+                $admin_id,
+                '🎉 শিক্ষার্থী স্ট্যাটাস অনুমোদিত!',
+                "অভিনন্দন {$staff_name}! অ্যাডমিন আপনার শিক্ষার্থী স্ট্যাটাস অনুমোদন করেছেন। প্রতি মাসে সর্বোচ্চ {$quota} দিনের অ্যাকাডেমিক ছুটি (ম্যাঙ্গো কর্তন ব্যতীত) চালু হয়েছে।",
+                'student_status_approved',
+                'staff',
+                '/leave',
+                'high',
+                ['student_status' => 'approved', 'quota' => $quota]
+            );
+        } catch (Exception $e) {
+            error_log("Staff approval notif error: " . $e->getMessage());
+        }
+
         echo json_encode([
             "status" => "success",
             "message" => "Student status approved successfully. Academic leave benefits unlocked.",
@@ -78,6 +102,25 @@ try {
             ':admin_id'         => $admin_id,
             ':user_id'          => $user_id
         ]);
+
+        // Send real-time notification to staff member
+        try {
+            $reasonText = $rejection_reason ?: 'ভেরিফিকেশন তথ্য অপর্যাপ্ত বা অসম্পূর্ণ';
+            NotificationHelper::sendToUser(
+                $db,
+                $user_id,
+                $admin_id,
+                '⚠️ শিক্ষার্থী আবেদন বাতিল',
+                "আপনার শিক্ষার্থী ভেরিফিকেশন আবেদনটি অ্যাডমিন দ্বারা বাতিল করা হয়েছে। কারণ: {$reasonText}",
+                'student_status_rejected',
+                'staff',
+                '/profile',
+                'normal',
+                ['student_status' => 'rejected', 'reason' => $reasonText]
+            );
+        } catch (Exception $e) {
+            error_log("Staff rejection notif error: " . $e->getMessage());
+        }
 
         echo json_encode([
             "status" => "success",
