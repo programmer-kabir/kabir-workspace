@@ -484,6 +484,129 @@ const DeleteModal = ({ staff, onClose, onConfirm, loading }) => (
   </div>
 );
 
+// ── Reject Student Modal ──────────────────────────────────────────────────────
+const RejectStudentModal = ({ staff, reason, setReason, onClose, onConfirm, loading }) => {
+  const quickReasons = [
+    'একাডেমিক তথ্য যাচাই করা যায়নি',
+    'বর্তমানে সক্রিয় শিক্ষার্থী নন',
+    'ইনস্টিটিউটের নাম ও শ্রেণি অসম্পূর্ণ',
+    'ভেরিফিকেশন ডকুমেন্টস মেলেনি',
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border border-slate-200 dark:border-slate-700 relative overflow-hidden animate-in zoom-in-95 duration-250">
+        
+        {/* Top Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center text-xl shadow-xs shrink-0">
+              <FiXCircle size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                শিক্ষার্থী আবেদন বাতিল
+              </h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                {staff?.name} • {staff?.institution_type || 'Student'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+          >
+            <FiX size={18} />
+          </button>
+        </div>
+
+        {/* Staff Academic Info Summary */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-700/60 text-xs space-y-1.5 mb-5">
+          <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+            <span>প্রতিষ্ঠান (Institution):</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+              {staff?.student_institution || 'Not specified'}
+            </span>
+          </div>
+          {staff?.student_level && (
+            <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+              <span>শ্রেণি/বর্ষ (Class/Year):</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {staff.student_level}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Reasons Chips */}
+        <div className="mb-4">
+          <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+            দ্রুত কারণ নির্বাচন করুন (Quick Presets)
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {quickReasons.map((qr) => (
+              <button
+                key={qr}
+                type="button"
+                onClick={() => setReason(qr)}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-xl border transition-all cursor-pointer ${
+                  reason === qr
+                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border-rose-300 dark:border-rose-800 shadow-2xs font-bold'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                {qr}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Reason Input */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            বাতিলের কারণ (Rejection Reason)
+          </label>
+          <textarea
+            rows="3"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="স্টাফের কাছে পাঠানো কারণ লিখুন..."
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none shadow-2xs"
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer"
+          >
+            ফিরে যান (Cancel)
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <FiXCircle size={14} />
+                বাতিল নিশ্চিত করুন
+              </>
+            )}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
 // ── Main StaffDirectory ───────────────────────────────────────────────────────
 const StaffDirectory = () => {
   const [staffList, setStaffList]     = useState([]);
@@ -496,6 +619,9 @@ const StaffDirectory = () => {
   const [createOpen, setCreateOpen]   = useState(false);
   const [editOpen, setEditOpen]       = useState(false);
   const [deleteOpen, setDeleteOpen]   = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingStaff, setRejectingStaff] = useState(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState('একাডেমিক তথ্য যাচাই করা যায়নি');
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [formData, setFormData]       = useState(EMPTY_FORM);
   const [formError, setFormError]     = useState('');
@@ -546,45 +672,65 @@ const StaffDirectory = () => {
     return true;
   });
 
-  // ── 1-Click Approve / Reject Student Status ────────────────────────────────
-  const handleApproveStudent = async (e, staff, action, quota = 3) => {
+  // ── 1-Click Approve Student Status ──────────────────────────────────────────
+  const handleApproveStudent = async (e, staff, quota = 3) => {
     e.stopPropagation();
-    let rejectionReason = null;
-    if (action === 'reject') {
-      const promptReason = window.prompt(`Please enter rejection reason for ${staff.name} (optional):`, 'Academic verification details not valid');
-      if (promptReason === null) return; // user cancelled prompt
-      rejectionReason = promptReason;
-    }
-
     setActionLoading(true);
     try {
       const res = await axios.post(`${API_BASE}api/admin/staff/approve_student_status.php`, {
         user_id: staff.id,
-        action: action,
+        action: 'approve',
         student_leave_quota: quota,
-        rejection_reason: rejectionReason,
       });
       if (res.data.status === 'success') {
         await fetchAll();
-        if (action === 'approve') {
-          showLuxuryToast({
-            title: 'শিক্ষার্থী অনুমোদন সম্পন্ন! 🎓',
-            message: `${staff.name}-এর শিক্ষার্থী স্ট্যাটাস অনুমোদিত হয়েছে এবং ${quota} দিনের অ্যাকাডেমিক ছুটি চালু করা হয়েছে।`,
-            tag: 'Student Approved',
-            type: 'success',
-            duration: 5000,
-          });
-        } else {
-          showLuxuryToast({
-            title: 'আবেদন বাতিল করা হয়েছে! ❌',
-            message: `${staff.name}-এর শিক্ষার্থী আবেদন বাতিল করা হয়েছে।`,
-            tag: 'Request Rejected',
-            type: 'warning',
-            duration: 5000,
-          });
-        }
+        showLuxuryToast({
+          title: 'শিক্ষার্থী অনুমোদন সম্পন্ন! 🎓',
+          message: `${staff.name}-এর শিক্ষার্থী স্ট্যাটাস অনুমোদিত হয়েছে এবং ${quota} দিনের অ্যাকাডেমিক ছুটি চালু করা হয়েছে।`,
+          tag: 'Student Approved',
+          type: 'success',
+          duration: 5000,
+        });
       } else {
         alert(res.data.message || 'Failed to update student status');
+      }
+    } catch {
+      alert('Error updating student status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── Open Reject Student Modal ───────────────────────────────────────────────
+  const openRejectModal = (e, staff) => {
+    e.stopPropagation();
+    setRejectingStaff(staff);
+    setRejectionReasonText('একাডেমিক তথ্য যাচাই করা যায়নি');
+    setRejectModalOpen(true);
+  };
+
+  // ── Confirm Rejection from Modal ────────────────────────────────────────────
+  const handleConfirmReject = async () => {
+    if (!rejectingStaff) return;
+    setActionLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}api/admin/staff/approve_student_status.php`, {
+        user_id: rejectingStaff.id,
+        action: 'reject',
+        rejection_reason: rejectionReasonText.trim() || 'একাডেমিক তথ্য যাচাই করা যায়নি',
+      });
+      if (res.data.status === 'success') {
+        await fetchAll();
+        setRejectModalOpen(false);
+        showLuxuryToast({
+          title: 'আবেদন বাতিল করা হয়েছে! ❌',
+          message: `${rejectingStaff.name}-এর শিক্ষার্থী আবেদন বাতিল করা হয়েছে।`,
+          tag: 'Request Rejected',
+          type: 'warning',
+          duration: 5000,
+        });
+      } else {
+        alert(res.data.message || 'Failed to reject student request');
       }
     } catch {
       alert('Error updating student status');
@@ -936,14 +1082,14 @@ const StaffDirectory = () => {
                     <div className="flex gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={(e) => handleApproveStudent(e, staff, 'approve', staff.student_leave_quota || 3)}
+                        onClick={(e) => handleApproveStudent(e, staff, staff.student_leave_quota || 3)}
                         className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                       >
                         <FiCheckCircle size={13} /> Approve (3d/mo)
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => handleApproveStudent(e, staff, 'reject')}
+                        onClick={(e) => openRejectModal(e, staff)}
                         className="py-1.5 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950/70 dark:hover:bg-rose-900/80 dark:text-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                       >
                         <FiXCircle size={13} /> Reject
@@ -998,6 +1144,16 @@ const StaffDirectory = () => {
         <DeleteModal
           staff={selectedStaff} onClose={() => setDeleteOpen(false)}
           onConfirm={handleDelete} loading={actionLoading}
+        />
+      )}
+      {rejectModalOpen && rejectingStaff && (
+        <RejectStudentModal
+          staff={rejectingStaff}
+          reason={rejectionReasonText}
+          setReason={setRejectionReasonText}
+          onClose={() => setRejectModalOpen(false)}
+          onConfirm={handleConfirmReject}
+          loading={actionLoading}
         />
       )}
 
