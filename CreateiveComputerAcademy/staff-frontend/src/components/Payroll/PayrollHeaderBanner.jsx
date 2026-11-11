@@ -16,6 +16,8 @@ export const PayrollHeaderBanner = ({
   liveSecsRemainder = 0,
   liveEarned = 0,
   activeHourlyRate = 0,
+  isOnBreak = false,
+  activeBreakType = null,
 }) => {
   return (
     <div className="space-y-6">
@@ -114,24 +116,32 @@ export const PayrollHeaderBanner = ({
         <>
           {/* Active Ongoing Shift Live Earning Banner */}
           {summary.active_session && (
-            <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 p-5 rounded-3xl shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden animate-pulse-subtle">
+            <div className={`p-5 rounded-3xl shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden transition-all ${
+              isOnBreak
+                ? 'bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-600/40'
+                : 'bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 animate-pulse-subtle'
+            }`}>
               <div className="flex items-center gap-4">
                 <div className="relative flex items-center justify-center">
-                  <div className="w-4 h-4 bg-emerald-400 rounded-full animate-ping absolute" />
-                  <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full z-10" />
+                  <div className={`w-4 h-4 rounded-full ${isOnBreak ? 'bg-amber-400' : 'bg-emerald-400 animate-ping'} absolute`} />
+                  <div className={`w-3.5 h-3.5 rounded-full z-10 ${isOnBreak ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/30">
-                      Live Shift In Progress
+                    <span className={`text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                      isOnBreak
+                        ? 'text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/40'
+                        : 'text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30'
+                    }`}>
+                      {isOnBreak ? `☕ বিরতি চলছে (${activeBreakType || 'Break'} — আয় স্থগিত)` : 'Live Shift In Progress'}
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400">
                       Checked in at {summary.active_session.check_in_time}
                     </span>
                   </div>
                   <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                    Currently Working:{' '}
-                    <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">
+                    {isOnBreak ? 'কার্যকর কাজের সময় (স্থগিত): ' : 'Currently Working: '}
+                    <span className={`font-extrabold ${isOnBreak ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
                       {liveHumanTime}
                     </span>{' '}
                     ({liveTotalMinutes} mins {liveSecsRemainder} secs)
@@ -139,18 +149,20 @@ export const PayrollHeaderBanner = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 bg-white dark:bg-slate-900/80 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 shadow-xs">
+              <div className={`flex items-center gap-6 bg-white dark:bg-slate-900/80 px-5 py-3 rounded-2xl border shadow-xs ${
+                isOnBreak ? 'border-amber-200 dark:border-amber-500/30' : 'border-emerald-200 dark:border-emerald-500/20'
+              }`}>
                 <div>
                   <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    Live Session Earnings
+                    {isOnBreak ? 'Session Earnings (Paused)' : 'Live Session Earnings'}
                   </div>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                  <div className={`text-xl font-black ${isOnBreak ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     + ৳ {liveEarned.toFixed(2)}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    Hourly Rate
+                    Hourly Rate (Net)
                   </div>
                   <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
                     ৳ {activeHourlyRate.toFixed(2)}/h

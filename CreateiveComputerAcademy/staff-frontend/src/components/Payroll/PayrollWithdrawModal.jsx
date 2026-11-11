@@ -92,27 +92,30 @@ export const PayrollWithdrawModal = ({
               </div>
 
               <div className="space-y-2 divide-y divide-slate-100 dark:divide-slate-700/50">
-                {coveredCycles.map((c) => (
-                  <div key={c.month_key} className="pt-2 first:pt-0 flex items-start justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <span>🗓️ {c.month_label}</span>
-                        <span className="text-[10px] font-medium text-slate-400">({c.sessions_count || 0} সেশন • {formatMinutesToClock(c.approved_minutes)})</span>
-                      </div>
-                      {Number(c.overtime_hours || 0) > 0 && (
-                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pl-4 mt-0.5">
-                          🥭 ওভারটাইম: {formatHoursToBengali(c.overtime_hours)} (মূল্য: ৳{Number(c.overtime_cash || 0).toFixed(2)})
+                {coveredCycles.map((c) => {
+                  const hasAvailableOt = Number(summary.overtime_bank?.available_hours || 0) > 0 && Number(c.overtime_hours || 0) > 0;
+                  return (
+                    <div key={c.month_key} className="pt-2 first:pt-0 flex items-start justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <span>🗓️ {c.month_label}</span>
+                          <span className="text-[10px] font-medium text-slate-400">({c.sessions_count || 0} সেশন • {formatMinutesToClock(c.approved_minutes)})</span>
                         </div>
-                      )}
+                        {hasAvailableOt && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pl-4 mt-0.5">
+                            🥭 ওভারটাইম: {formatHoursToBengali(c.overtime_hours)} (মূল্য: ৳{Number(c.overtime_cash || 0).toFixed(2)})
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-slate-900 dark:text-white">৳ {Number(c.total_earned || 0).toLocaleString()}</span>
+                        {hasAvailableOt && includeOvertimeCashout && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">+৳{Number(c.overtime_cash || 0).toFixed(2)}</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-black text-slate-900 dark:text-white">৳ {Number(c.total_earned || 0).toLocaleString()}</span>
-                      {Number(c.overtime_hours || 0) > 0 && (
-                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">+৳{Number(c.overtime_cash || 0).toFixed(2)}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs font-bold">

@@ -147,16 +147,8 @@ class BreakDbHelper {
             } catch (Throwable $pe) {
                 $shift_hours = 8.0;
             }
-            if ($shift_hours <= 0) $shift_hours = 7.33;
-            $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
-                ? 440
-                : ((abs($shift_hours - 6.33) < 0.05 || abs($shift_hours - 6.3333) < 0.05)
-                    ? 380
-                    : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05)
-                        ? 320
-                        : ((abs($shift_hours - 4.33) < 0.05 || abs($shift_hours - 4.3333) < 0.05)
-                            ? 260
-                            : max(60, intval(round($shift_hours * 60))))));
+            if ($shift_hours <= 0) $shift_hours = 8.0;
+            $shiftMins = intval(round($shift_hours * 60)); // Exact shift: 360m for 6h staff, 480m for 8h staff
 
             // 2. Fetch holidays
             $holidays = [];
@@ -172,34 +164,55 @@ class BreakDbHelper {
             $attStmt->execute([':user_id' => $user_id]);
             $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Group worked seconds per calendar date
-            $dailyWorked = [];
+            // Fetch completed breaks grouped by date
+            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' GROUP BY date");
+            $bStmt->execute([':user_id' => $user_id]);
+            $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            // Group presence and excess breaks (beyond 40m allocated paid break) per calendar date
+            $allocatedBreakSec = 40 * 60; // 40m allocated paid break
+            $dailyPresence = [];
+            $dailyExcessBreak = [];
             foreach ($attRows as $r) {
                 $in_ts = strtotime($r['check_in']);
                 $out_ts = strtotime($r['check_out']);
                 if ($out_ts <= $in_ts) continue;
                 $d = $r['date'];
-                if (!isset($dailyWorked[$d])) $dailyWorked[$d] = 0;
-                $dailyWorked[$d] += ($out_ts - $in_ts);
+                $grossSec = ($out_ts - $in_ts);
+                $bSec = intval($breaksByDate[$d] ?? 0) * 60;
+                $excessBreakSec = max(0, $bSec - $allocatedBreakSec);
+
+                if (!isset($dailyPresence[$d])) {
+                    $dailyPresence[$d] = 0;
+                    $dailyExcessBreak[$d] = 0;
+                }
+                $dailyPresence[$d] += $grossSec;
+                $dailyExcessBreak[$d] = max($dailyExcessBreak[$d], $excessBreakSec);
             }
 
             $totalOvertimeSeconds = 0;
             $totalShortSeconds = 0;
-            foreach ($dailyWorked as $d => $workedSec) {
+            $totalExcessBreakSeconds = 0;
+            foreach ($dailyPresence as $d => $pSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
                 $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
-                $diffSec = $workedSec - $expectedSec;
+                $diffSec = $pSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
                 } elseif ($diffSec < -900 && !$isFriday) {
                     $totalShortSeconds += abs($diffSec);
                 }
+                $exB = $dailyExcessBreak[$d] ?? 0;
+                if ($exB > 0) {
+                    $totalExcessBreakSeconds += $exB;
+                }
             }
             $totalOvertimeMinutes = round($totalOvertimeSeconds / 60);
             $totalShortMinutes = round($totalShortSeconds / 60);
+            $totalExcessBreakMinutes = round($totalExcessBreakSeconds / 60);
 
             // 4. Deduct claimed mango breaks (Full Day 480 mins + In-Shift minutes)
             $claimStmt = $db->prepare("SELECT SUM(duration_minutes) as used_mins FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') AND status != 'Rejected'");
@@ -231,16 +244,16 @@ class BreakDbHelper {
                 $boughtMins = (int)($boughtRow['bought_mins'] ?? 0);
             } catch (Throwable $e2) {}
 
-            // 8. Add Tiffin net savings / penalties
+            // 8. Tiffin efficiency savings bonus (when taking less than 40m allocated paid break)
             $tiffinSavings = 0;
             try {
-                $tStmt = $db->prepare("SELECT COALESCE(SUM(tiffin_delta_minutes), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
+                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_bonus FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
                 $tStmt->execute([':user_id' => $user_id]);
                 $tRow = $tStmt->fetch(PDO::FETCH_ASSOC);
-                $tiffinSavings = (int)($tRow['t_savings'] ?? 0);
+                $tiffinSavings = (int)($tRow['t_bonus'] ?? 0);
             } catch (Throwable $e3) {}
 
-            // 9. Deduct unexcused absent days (Option 2: 8h / shift_hours per absent day)
+            // 9. Deduct unexcused absent days (8h / shift_hours per absent day)
             $absentMins = 0;
             try {
                 $absStmt = $db->prepare("SELECT COUNT(*) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent'");
@@ -258,7 +271,7 @@ class BreakDbHelper {
 
             // Total net earned across all attendance and transactions
             $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
-            $totalDeductedMins = $totalShortMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            $totalDeductedMins = $totalShortMinutes + $totalExcessBreakMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
             $totalNetAvailableMins = max(0, $totalGrossMins - $totalDeductedMins);
 
             // Staff only sees and can claim what is NOT held in the admin vault
@@ -293,16 +306,8 @@ class BreakDbHelper {
             } catch (Throwable $pe) {
                 $shift_hours = 8.0;
             }
-            if ($shift_hours <= 0) $shift_hours = 7.33;
-            $shiftMins = (abs($shift_hours - 7.33) < 0.05 || abs($shift_hours - 7.3333) < 0.05)
-                ? 440
-                : ((abs($shift_hours - 6.33) < 0.05 || abs($shift_hours - 6.3333) < 0.05)
-                    ? 380
-                    : ((abs($shift_hours - 5.33) < 0.05 || abs($shift_hours - 5.3333) < 0.05)
-                        ? 320
-                        : ((abs($shift_hours - 4.33) < 0.05 || abs($shift_hours - 4.3333) < 0.05)
-                            ? 260
-                            : max(60, intval(round($shift_hours * 60))))));
+            if ($shift_hours <= 0) $shift_hours = 8.0;
+            $shiftMins = intval(round($shift_hours * 60)); // Exact shift: 360m for 6h staff, 480m for 8h staff
 
             $holidays = [];
             $holStmt = $db->query("SELECT date, expected_hours FROM holidays");
@@ -316,33 +321,54 @@ class BreakDbHelper {
             $attStmt->execute([':user_id' => $user_id]);
             $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $dailyWorked = [];
+            // Fetch completed breaks grouped by date
+            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' GROUP BY date");
+            $bStmt->execute([':user_id' => $user_id]);
+            $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            $allocatedBreakSec = 40 * 60; // 40m allocated paid break
+            $dailyPresence = [];
+            $dailyExcessBreak = [];
             foreach ($attRows as $r) {
                 $in_ts = strtotime($r['check_in']);
                 $out_ts = strtotime($r['check_out']);
                 if ($out_ts <= $in_ts) continue;
                 $d = $r['date'];
-                if (!isset($dailyWorked[$d])) $dailyWorked[$d] = 0;
-                $dailyWorked[$d] += ($out_ts - $in_ts);
+                $grossSec = ($out_ts - $in_ts);
+                $bSec = intval($breaksByDate[$d] ?? 0) * 60;
+                $excessBreakSec = max(0, $bSec - $allocatedBreakSec);
+
+                if (!isset($dailyPresence[$d])) {
+                    $dailyPresence[$d] = 0;
+                    $dailyExcessBreak[$d] = 0;
+                }
+                $dailyPresence[$d] += $grossSec;
+                $dailyExcessBreak[$d] = max($dailyExcessBreak[$d], $excessBreakSec);
             }
 
             $totalOvertimeSeconds = 0;
             $totalShortSeconds = 0;
-            foreach ($dailyWorked as $d => $workedSec) {
+            $totalExcessBreakSeconds = 0;
+            foreach ($dailyPresence as $d => $pSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
                 $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
-                $diffSec = $workedSec - $expectedSec;
+                $diffSec = $pSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
                 } elseif ($diffSec < -900 && !$isFriday) {
                     $totalShortSeconds += abs($diffSec);
                 }
+                $exB = $dailyExcessBreak[$d] ?? 0;
+                if ($exB > 0) {
+                    $totalExcessBreakSeconds += $exB;
+                }
             }
             $totalOvertimeMinutes = round($totalOvertimeSeconds / 60);
             $totalShortMinutes = round($totalShortSeconds / 60);
+            $totalExcessBreakMinutes = round($totalExcessBreakSeconds / 60);
 
             $claimStmt = $db->prepare("SELECT SUM(duration_minutes) as used_mins FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') AND status != 'Rejected'");
             $claimStmt->execute([':user_id' => $user_id]);
@@ -372,7 +398,7 @@ class BreakDbHelper {
 
             $tiffinSavings = 0;
             try {
-                $tStmt = $db->prepare("SELECT COALESCE(SUM(tiffin_delta_minutes), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
+                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
                 $tStmt->execute([':user_id' => $user_id]);
                 $tRow = $tStmt->fetch(PDO::FETCH_ASSOC);
                 $tiffinSavings = (int)($tRow['t_savings'] ?? 0);
@@ -392,7 +418,7 @@ class BreakDbHelper {
             $vaultTransInMins = $vaultSummary['transferred_in_minutes'];
 
             $totalGrossMins = $totalOvertimeMinutes + $boughtMins + $tiffinSavings + $vaultTransInMins;
-            $totalDeductedMins = $totalShortMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
+            $totalDeductedMins = $totalShortMinutes + $totalExcessBreakMinutes + $usedBreakMins + $cashedMins + $soldMins + $absentMins + $vaultTransOutMins;
             // Return raw signed balance (negative if staff has overtime debt/deficit from absences)
             return (int)($totalGrossMins - $totalDeductedMins);
         } catch (Throwable $e) {

@@ -34,6 +34,8 @@ export default function PayrollWallet() {
     liveSecsRemainder,
     liveHumanTime,
     hasActiveShift,
+    isOnBreak,
+    activeBreakType,
     timeFilter,
     setTimeFilter,
     currentPeriodEarned,
@@ -88,6 +90,8 @@ export default function PayrollWallet() {
         liveSecsRemainder={liveSecsRemainder}
         liveEarned={liveEarned}
         activeHourlyRate={activeHourlyRate}
+        isOnBreak={isOnBreak}
+        activeBreakType={activeBreakType}
       />
 
       {hasScheme && (

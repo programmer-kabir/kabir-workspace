@@ -175,12 +175,25 @@ export default function ProfileSidebarCards({
               <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
                 Monthly Quota
               </div>
-              <span className="font-bold text-xs bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md">
+              <span className={`font-bold text-xs px-2 py-0.5 rounded-md ${
+                currentUser?.student_status === 'approved'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                  : currentUser?.student_status === 'rejected'
+                    ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+              }`}>
                 {currentUser?.student_status === 'approved' 
                   ? `${currentUser?.student_leave_quota || 3} Days / Month`
-                  : 'Pending Approval'}
+                  : currentUser?.student_status === 'rejected'
+                    ? '0 Days (Rejected)'
+                    : 'Pending Approval'}
               </span>
             </div>
+            {currentUser?.student_status === 'rejected' && currentUser?.student_rejection_reason && (
+              <div className="pt-2 text-[11px] text-rose-600 dark:text-rose-400 font-medium bg-rose-50/60 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
+                <span className="font-bold">বাতিলের কারণ:</span> {currentUser.student_rejection_reason}
+              </div>
+            )}
           </div>
         </div>
       )}

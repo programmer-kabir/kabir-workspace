@@ -72,19 +72,38 @@ export function usePayrollData() {
 
   // Live ticking timer for ongoing shift
   useEffect(() => {
-    const activeStart = data?.summary?.active_session?.session_start;
+    const activeSession = data?.summary?.active_session;
+    const activeStart = activeSession?.session_start;
     if (!activeStart) {
       setLiveSeconds(0);
       return;
     }
+
+    const isOnBreak = Boolean(activeSession?.is_on_break);
+    const excessBreakSecs = Number(activeSession?.excess_break_minutes || 0) * 60;
+
     const calcSeconds = () => {
+      // If user is currently on an active break beyond the 40m allocated paid break, freeze timer
+      if (isOnBreak && Number(activeSession?.excess_break_minutes || 0) > 0) {
+        return Math.max(0, Number(activeSession?.elapsed_minutes || 0) * 60);
+      }
       const startTs = new Date(activeStart.replace(' ', 'T')).getTime();
-      return Math.max(0, Math.floor((Date.now() - startTs) / 1000));
+      const rawSecs = Math.max(0, Math.floor((Date.now() - startTs) / 1000));
+      return Math.max(0, rawSecs - excessBreakSecs);
     };
+
     setLiveSeconds(calcSeconds());
+    if (isOnBreak && Number(activeSession?.excess_break_minutes || 0) > 0) {
+      return;
+    }
     const interval = setInterval(() => setLiveSeconds(calcSeconds()), 1000);
     return () => clearInterval(interval);
-  }, [data?.summary?.active_session?.session_start]);
+  }, [
+    data?.summary?.active_session?.session_start,
+    data?.summary?.active_session?.is_on_break,
+    data?.summary?.active_session?.excess_break_minutes,
+    data?.summary?.active_session?.elapsed_minutes
+  ]);
 
   const summary = data?.summary || {};
   const hasScheme = Boolean(data?.has_scheme);
@@ -233,6 +252,8 @@ export function usePayrollData() {
     progressPercent, targetCompleted, activeHourlyRate, liveEarned,
     liveTotalMinutes, liveClockHours, liveClockMinutes, liveSecsRemainder,
     liveHumanTime, hasActiveShift, timeFilter, setTimeFilter,
+    isOnBreak: Boolean(summary?.active_session?.is_on_break),
+    activeBreakType: summary?.active_session?.active_break_type || null,
     currentPeriodEarned, currentPeriodMinutes, currentPeriodHours,
     currentPeriodSessions, filteredEarnings, filterSubtitles, todayStr,
     isModalOpen, setIsModalOpen, openWithdrawModal, selectedInvoice,

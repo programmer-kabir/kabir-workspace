@@ -1,14 +1,8 @@
 <?php
-// server/api/payroll/PayrollHelper.php
-
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../notifications/notification_helper.php';
 
 class PayrollHelper {
-
-    /**
-     * Self-healing JIT schema migration for payroll cycle controls and withdrawal tracking
-     */
     public static function ensureSchema($pdo) {
         if (!$pdo instanceof PDO) return;
         try {
@@ -63,24 +57,52 @@ class PayrollHelper {
             // 5. Staff Security Deposit (জামানত) schema
             require_once __DIR__ . '/../security_deposit/SecurityDepositHelper.php';
             SecurityDepositHelper::ensureSchema($pdo);
+
+            // 6. Self-healing alignment: Sync shift_hours from employees table (e.g. 6h for Jahidul & Kalam, 8h for others)
+            try {
+                $pdo->exec("
+                    UPDATE staff_pay_schemes ps
+                    JOIN employees e ON ps.user_id = e.user_id
+                    SET ps.standard_daily_hours = COALESCE(e.shift_hours, 8.0)
+                    WHERE ps.status = 'active' AND e.shift_hours IS NOT NULL AND e.shift_hours > 0
+                ");
+            } catch (Throwable $eSync) {}
+
+            $schemesToUpdate = $pdo->query("SELECT id, scheme_type, salary_amount, contract_amount, working_days_per_month, standard_daily_hours, contract_duration_months, hourly_rate FROM staff_pay_schemes WHERE status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($schemesToUpdate as $sch) {
+                $empShift = floatval($sch['standard_daily_hours'] ?: 8.0);
+                $calcRate = self::calculateHourlyRate(
+                    $sch['scheme_type'],
+                    $sch['salary_amount'],
+                    $sch['contract_amount'],
+                    $sch['working_days_per_month'] ?: 26,
+                    $empShift,
+                    $sch['contract_duration_months'] ?: 12
+                );
+                if (abs(floatval($sch['hourly_rate']) - $calcRate) > 0.001) {
+                    $uStmt = $pdo->prepare("UPDATE staff_pay_schemes SET hourly_rate = :rate WHERE id = :id");
+                    $uStmt->execute([':rate' => $calcRate, ':id' => $sch['id']]);
+                }
+            }
         } catch (Throwable $e) {
             error_log('PayrollHelper::ensureSchema error: ' . $e->getMessage());
         }
     }
 
     /**
-     * Map daily hours to exact net work minutes (e.g. 7.33h = 440m / 7h 20m, 6.33h = 380m / 6h 20m, 5.33h = 320m / 5h 20m)
+     * Map daily hours to standard shift minutes (e.g. 8.0h = 480m, 6.0h = 360m).
+     * Allocated 40-minute paid break is included in the shift. Any excess break beyond 40m is deducted.
      */
     public static function getStandardDailyMinutes($dailyHours) {
         $dh = floatval($dailyHours);
-        if (abs($dh - 7.33) < 0.05 || abs($dh - 7.3333) < 0.05) {
-            return 440; // 7h 20m (8h shift minus 40m unpaid tiffin)
-        } elseif (abs($dh - 6.33) < 0.05 || abs($dh - 6.3333) < 0.05) {
-            return 380; // 6h 20m (7h shift minus 40m unpaid tiffin)
-        } elseif (abs($dh - 5.33) < 0.05 || abs($dh - 5.3333) < 0.05) {
-            return 320; // 5h 20m (6h shift minus 40m unpaid tiffin)
-        } elseif (abs($dh - 4.33) < 0.05 || abs($dh - 4.3333) < 0.05) {
-            return 260; // 4h 20m (5h shift minus 40m unpaid tiffin)
+        if ($dh <= 0 || abs($dh - 8.0) < 0.05) {
+            return 480; // Standard 8h shift (480 mins)
+        } elseif (abs($dh - 7.0) < 0.05) {
+            return 420;
+        } elseif (abs($dh - 6.0) < 0.05) {
+            return 360; // Standard 6h shift (360 mins) for 6-hour staff
+        } elseif (abs($dh - 5.0) < 0.05) {
+            return 300;
         }
         return max(60, intval(round($dh * 60)));
     }
@@ -88,13 +110,13 @@ class PayrollHelper {
     /**
      * Calculate hourly rate based on scheme parameters
      */
-    public static function calculateHourlyRate($schemeType, $salaryAmount, $contractAmount, $workingDays = 26, $dailyHours = 7.33, $durationMonths = 12) {
+    public static function calculateHourlyRate($schemeType, $salaryAmount, $contractAmount, $workingDays = 26, $dailyHours = 8.0, $durationMonths = 12) {
         $workingDays = max(1, intval($workingDays));
         $dailyHours = max(0.1, floatval($dailyHours));
         $durationMonths = max(1, intval($durationMonths));
 
         $dailyMins = self::getStandardDailyMinutes($dailyHours);
-        $effectiveDailyHours = $dailyMins / 60.0;
+        $effectiveDailyHours = $dailyMins / 60.0; // 8.0 hours
 
         if ($schemeType === 'YEARLY_CONTRACT') {
             $amount = floatval($contractAmount);
@@ -155,9 +177,7 @@ class PayrollHelper {
         }
     }
 
-    /**
-     * Save/Replace contract tiers for a scheme
-     */
+
     public static function saveContractTiers($pdo, $schemeId, $userId, $tiers, $workingDays = 26, $dailyHours = 8.0) {
         if (!$schemeId || empty($tiers) || !is_array($tiers)) return;
 
@@ -470,9 +490,26 @@ class PayrollHelper {
                 }
 
                 $rawMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
-                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 7.33);
+
+                // Deduct any completed breaks taken by user on this day (Breaks earn ৳ 0)
+                $stmtBreak = $pdo->prepare("
+                    SELECT COALESCE(SUM(duration_minutes), 0)
+                    FROM user_breaks
+                    WHERE user_id = :user_id 
+                      AND date = :date 
+                      AND status = 'Completed'
+                ");
+                $stmtBreak->execute([':user_id' => $uId, ':date' => $attDate]);
+                $totalBreakMinutes = intval($stmtBreak->fetchColumn());
+
+                // Option B: 40 minutes allocated paid break included in 8h shift. Excess break beyond 40m is deducted.
+                $allocatedBreakMinutes = 40;
+                $excessBreakMinutes = max(0, $totalBreakMinutes - $allocatedBreakMinutes);
+                $netPaidMinutes = max(0, $rawMinutes - $excessBreakMinutes);
+
+                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
                 $standardDailyMinutes = self::getStandardDailyMinutes($standardDailyHours);
-                $approvedMinutes = min($rawMinutes, $standardDailyMinutes);
+                $approvedMinutes = min($netPaidMinutes, $standardDailyMinutes);
 
                 // Tier-aware active hourly rate for this date
                 $dayTierInfo = self::getTierInfoForMonth($scheme, $attDate, $tiers);
@@ -482,7 +519,7 @@ class PayrollHelper {
                 $sessionStart = date('Y-m-d H:i:s', $inTs);
                 $sessionEnd = date('Y-m-d H:i:s', $outTs);
                 $dispCapHours = round($standardDailyMinutes / 60.0, 2);
-                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw}" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$dispCapHours}h ({$standardDailyMinutes}m); overtime reserved for Mango Bank]" : "");
+                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw} [Total: {$rawMinutes}m, Break: {$totalBreakMinutes}m (Excess: {$excessBreakMinutes}m), Paid Work: {$approvedMinutes}m]" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$dispCapHours}h ({$standardDailyMinutes}m); overtime to Mango Bank]" : "");
 
                 // Check if already in staff_work_earnings
                 $stmtCheck = $pdo->prepare("
@@ -737,17 +774,55 @@ class PayrollHelper {
                 : ($today . ' ' . $liveAttendance['check_in']);
             $liveInTs = strtotime($liveInStr);
             $nowTs = time();
-            $liveElapsedMinutes = max(0, intval(round(($nowTs - $liveInTs) / 60)));
+            $grossElapsedMinutes = max(0, intval(round(($nowTs - $liveInTs) / 60)));
+
+            // Fetch completed breaks for today (unpaid time = ৳ 0)
+            $stmtCompletedBreaks = $pdo->prepare("
+                SELECT COALESCE(SUM(duration_minutes), 0)
+                FROM user_breaks
+                WHERE user_id = :user_id AND date = :today AND status = 'Completed'
+            ");
+            $stmtCompletedBreaks->execute([':user_id' => $userId, ':today' => $today]);
+            $completedBreakMins = intval($stmtCompletedBreaks->fetchColumn());
+
+            // Check if user is currently on an active break right now
+            $stmtActiveBreak = $pdo->prepare("
+                SELECT id, break_type, purpose, start_time 
+                FROM user_breaks 
+                WHERE user_id = :user_id AND date = :today AND status = 'Active' 
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtActiveBreak->execute([':user_id' => $userId, ':today' => $today]);
+            $activeBreak = $stmtActiveBreak->fetch(PDO::FETCH_ASSOC);
+
+            $currentBreakMins = 0;
+            if ($activeBreak && !empty($activeBreak['start_time'])) {
+                $bStartTs = strtotime($activeBreak['start_time']);
+                $currentBreakMins = max(0, intval(round(($nowTs - $bStartTs) / 60)));
+            }
+
+            // Total break minutes taken today (allocated 40m is paid; only excess beyond 40m is deducted)
+            $totalBreakMins = $completedBreakMins + $currentBreakMins;
+            $excessBreakMins = max(0, $totalBreakMins - 40);
+            $netElapsedMinutes = max(0, $grossElapsedMinutes - $excessBreakMins);
+
             $liveTierInfo = self::getTierInfoForMonth($scheme, $today, $tiers);
             $liveRate = $liveTierInfo['hourly_rate'] ?: $hourlyRate;
-            $liveEarned = round(($liveElapsedMinutes / 60.0) * $liveRate, 2);
+            $liveEarned = round(($netElapsedMinutes / 60.0) * $liveRate, 2);
 
             $activeSession = [
                 'attendance_id' => $liveAttendance['id'],
                 'check_in_time' => $liveAttendance['check_in'],
                 'session_start' => date('Y-m-d H:i:s', $liveInTs),
-                'elapsed_minutes' => $liveElapsedMinutes,
-                'elapsed_hours' => round($liveElapsedMinutes / 60, 2),
+                'elapsed_minutes' => $netElapsedMinutes,
+                'elapsed_hours' => round($netElapsedMinutes / 60, 2),
+                'gross_elapsed_minutes' => $grossElapsedMinutes,
+                'completed_break_minutes' => $completedBreakMins,
+                'current_break_minutes' => $currentBreakMins,
+                'total_break_minutes' => $totalBreakMins,
+                'excess_break_minutes' => $excessBreakMins,
+                'is_on_break' => !empty($activeBreak),
+                'active_break_type' => $activeBreak ? ($activeBreak['purpose'] ?: $activeBreak['break_type']) : null,
                 'live_earned' => $liveEarned,
                 'hourly_rate' => $liveRate,
             ];
@@ -1137,28 +1212,54 @@ class PayrollHelper {
                 }
             }
 
-            // Aggregate by date
-            $dailyWorkedSec = [];
+            // Fetch all completed breaks per date within cycle cutoff
+            $stmtAllBreaks = $pdo->prepare("
+                SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins
+                FROM user_breaks
+                WHERE user_id = :user_id AND status = 'Completed' AND date <= :cycle_end_date
+                GROUP BY date
+            ");
+            $stmtAllBreaks->execute([':user_id' => $userId, ':cycle_end_date' => $cycleEndDate]);
+            $breaksPerDate = $stmtAllBreaks->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            // Aggregate gross office presence and excess breaks (beyond 40m allocated paid break) by date
+            $allocatedBreakSec = 40 * 60; // 40 minutes allocated paid break
+            $dailyPresenceSec = [];
+            $dailyExcessBreakSec = [];
             foreach ($attRowsAll as $ar) {
                 $inTs = strtotime(strpos($ar['check_in'], ' ') !== false ? $ar['check_in'] : ($ar['date'] . ' ' . $ar['check_in']));
                 $outTs = strtotime(strpos($ar['check_out'], ' ') !== false ? $ar['check_out'] : ($ar['date'] . ' ' . $ar['check_out']));
                 if ($outTs <= $inTs) continue;
                 $d = $ar['date'];
-                if (!isset($dailyWorkedSec[$d])) $dailyWorkedSec[$d] = 0;
-                $dailyWorkedSec[$d] += ($outTs - $inTs);
+                $grossSec = ($outTs - $inTs);
+                $bSec = intval($breaksPerDate[$d] ?? 0) * 60;
+                $excessBreakSec = max(0, $bSec - $allocatedBreakSec);
+
+                if (!isset($dailyPresenceSec[$d])) {
+                    $dailyPresenceSec[$d] = 0;
+                    $dailyExcessBreakSec[$d] = 0;
+                }
+                $dailyPresenceSec[$d] += $grossSec;
+                $dailyExcessBreakSec[$d] = max($dailyExcessBreakSec[$d], $excessBreakSec);
             }
+
+            $stdDailyMins = self::getStandardDailyMinutes($scheme['standard_daily_hours'] ?: 8.0);
+            $effectiveShiftHours = $stdDailyMins / 60.0;
+            $shiftHours = $effectiveShiftHours;
 
             $totalOtSeconds = 0;
             $totalShortSeconds = 0;
+            $totalExcessBreakSeconds = 0;
             $monthlyOtSec = [];
             $monthlyShortSec = [];
-            foreach ($dailyWorkedSec as $dStr => $wSec) {
+            $monthlyExcessBreakSec = [];
+            foreach ($dailyPresenceSec as $dStr => $pSec) {
                 $isFri = (date('N', strtotime($dStr)) == 5);
-                $expSec = $isFri ? 0 : ($shiftMins * 60);
+                $expSec = $isFri ? 0 : ($stdDailyMins * 60); // Exact daily shift target: 480m for 8h, 360m for 6h
                 if (isset($holidays[$dStr])) {
                     $expSec = $holidays[$dStr] * 3600;
                 }
-                $diffSec = $wSec - $expSec;
+                $diffSec = $pSec - $expSec;
                 $mKey = substr($dStr, 0, 7);
                 if ($diffSec > 0) {
                     $totalOtSeconds += $diffSec;
@@ -1168,9 +1269,15 @@ class PayrollHelper {
                     $totalShortSeconds += $shortSec;
                     $monthlyShortSec[$mKey] = ($monthlyShortSec[$mKey] ?? 0) + $shortSec;
                 }
+                $exB = $dailyExcessBreakSec[$dStr] ?? 0;
+                if ($exB > 0) {
+                    $totalExcessBreakSeconds += $exB;
+                    $monthlyExcessBreakSec[$mKey] = ($monthlyExcessBreakSec[$mKey] ?? 0) + $exB;
+                }
             }
             $totalOtHours = round($totalOtSeconds / 3600, 2);
             $totalShortHours = round($totalShortSeconds / 3600, 2);
+            $totalExcessBreakHours = round($totalExcessBreakSeconds / 3600, 2);
 
             // Fetch Tiffin efficiency bonus seconds within cycle cutoff
             $totalTiffinBonusSeconds = 0;
@@ -1277,17 +1384,17 @@ class PayrollHelper {
             $cashedOtHours = floatval($stmtCashed->fetchColumn());
 
             // Unified Single Bucket Rule (Matching Mango Tree calculated from exact seconds):
-            // Gross Overtime = Attendance Overtime + Tiffin Efficiency Savings
+            // Gross Overtime = Pure Attendance Overtime beyond 8.0h shift + Tiffin Efficiency Savings Bonus
             $totalGrossOtSeconds = $totalOtSeconds + $totalTiffinBonusSeconds;
             $grossOtHours = round($totalGrossOtSeconds / 3600, 2);
 
-            // Deductions = Short Shifts + Claimed Full Day Leaves + In-Shift Extra Breaks + Cashed Out Overtime
-            $totalDeductionSeconds = $totalShortSeconds + $totalClaimedBreakSeconds + $totalInShiftBreakSeconds + intval($cashedOtHours * 3600);
+            // Deductions = Short Shifts + Excess Breaks (>40m) + Claimed Full Day Leaves + In-Shift Extra Breaks + Cashed Out Overtime + Unexcused Absences
+            $totalDeductionSeconds = $totalShortSeconds + $totalExcessBreakSeconds + $totalClaimedBreakSeconds + $totalInShiftBreakSeconds + intval($cashedOtHours * 3600) + intval($totalLeaveHours * 3600);
             $totalDeductions = round($totalDeductionSeconds / 3600, 2);
 
             $netAvailableOtSeconds = max(0, $totalGrossOtSeconds - $totalDeductionSeconds);
             $availableOtHours = round($netAvailableOtSeconds / 3600, 2);
-            $availableRipeMangoes = floor($availableOtHours / $shiftHours);
+            $availableRipeMangoes = floor($availableOtHours / ($effectiveShiftHours ?: 8.0)); // Exact shift hours per ripe mango (e.g. 6h for 6h staff, 8h for 8h staff)!
             $effectiveOtCashRate = ($schemeType === 'STAGGERED_CONTRACT' && !empty($activeTierInfo['hourly_rate']))
                 ? floatval($activeTierInfo['hourly_rate'])
                 : $hourlyRate;
@@ -1295,36 +1402,35 @@ class PayrollHelper {
 
             // Month-by-month overtime breakdown for unlocked cycles
             $monthlyOtBreakdown = [];
-            $totalCoveredShortCash = 0.0;
-            foreach ($unlockedMonths as $uMonthKey => $uMonthLabel) {
-                $gSec = ($monthlyOtSec[$uMonthKey] ?? 0) + ($monthlyTiffinBonusSec[$uMonthKey] ?? 0);
-                $dSec = ($monthlyShortSec[$uMonthKey] ?? 0) + ($monthlyBreakSec[$uMonthKey] ?? 0);
-                $netSec = max(0, $gSec - $dSec);
-                $hrs = round($netSec / 3600, 2);
 
-                $uMonthRate = ($schemeType === 'STAGGERED_CONTRACT' && !empty($tiers))
-                    ? (self::getTierInfoForMonth($scheme, $uMonthKey, $tiers)['hourly_rate'] ?: $hourlyRate)
-                    : $hourlyRate;
+            if ($availableOtHours > 0) {
+                foreach ($unlockedMonths as $uMonthKey => $uMonthLabel) {
+                    $gSec = ($monthlyOtSec[$uMonthKey] ?? 0) + ($monthlyTiffinBonusSec[$uMonthKey] ?? 0);
+                    $dSec = ($monthlyShortSec[$uMonthKey] ?? 0) + ($monthlyBreakSec[$uMonthKey] ?? 0) + ($monthlyExcessBreakSec[$uMonthKey] ?? 0);
+                    $netSec = max(0, $gSec - $dSec);
+                    $hrs = round($netSec / 3600, 2);
 
-                $cash = round($hrs * $uMonthRate, 2);
+                    $uMonthRate = ($schemeType === 'STAGGERED_CONTRACT' && !empty($tiers))
+                        ? (self::getTierInfoForMonth($scheme, $uMonthKey, $tiers)['hourly_rate'] ?: $hourlyRate)
+                        : $hourlyRate;
 
-                // Short time covered by Overtime Bank
-                $covShortSec = min($monthlyShortSec[$uMonthKey] ?? 0, max(0, $gSec - ($monthlyBreakSec[$uMonthKey] ?? 0)));
-                $covShortCash = round(($covShortSec / 3600) * $uMonthRate, 2);
-                $totalCoveredShortCash += $covShortCash;
+                    $cash = round($hrs * $uMonthRate, 2);
 
-                $monthlyOtBreakdown[] = [
-                    'month_key' => $uMonthKey,
-                    'month_label' => $uMonthLabel,
-                    'gross_ot_hours' => round(($monthlyOtSec[$uMonthKey] ?? 0) / 3600, 2),
-                    'tiffin_bonus_hours' => round(($monthlyTiffinBonusSec[$uMonthKey] ?? 0) / 3600, 2),
-                    'short_hours' => round(($monthlyShortSec[$uMonthKey] ?? 0) / 3600, 2),
-                    'in_shift_break_hours' => round(($monthlyBreakSec[$uMonthKey] ?? 0) / 3600, 2),
-                    'covered_short_cash' => $covShortCash,
-                    'ot_seconds' => $netSec,
-                    'ot_hours' => $hrs,
-                    'cash_value' => $cash
-                ];
+                    if ($hrs > 0) {
+                        $monthlyOtBreakdown[] = [
+                            'month_key' => $uMonthKey,
+                            'month_label' => $uMonthLabel,
+                            'gross_ot_hours' => round(($monthlyOtSec[$uMonthKey] ?? 0) / 3600, 2),
+                            'tiffin_bonus_hours' => round(($monthlyTiffinBonusSec[$uMonthKey] ?? 0) / 3600, 2),
+                            'short_hours' => round(($monthlyShortSec[$uMonthKey] ?? 0) / 3600, 2),
+                            'excess_break_hours' => round(($monthlyExcessBreakSec[$uMonthKey] ?? 0) / 3600, 2),
+                            'ot_seconds' => $netSec,
+                            'ot_hours' => $hrs,
+                            'cash_value' => $cash,
+                            'hourly_rate' => $uMonthRate
+                        ];
+                    }
+                }
             }
 
             $summary['overtime_bank'] = [
@@ -1336,6 +1442,7 @@ class PayrollHelper {
                 'total_overtime_hours' => $totalOtHours,
                 'total_tiffin_bonus_hours' => $totalTiffinBonusHours,
                 'total_short_hours' => $totalShortHours,
+                'total_excess_break_hours' => $totalExcessBreakHours,
                 'total_in_shift_break_hours' => $inShiftOtHours,
                 'cashed_out_hours' => $cashedOtHours,
                 'claimed_break_hours' => $claimedOtHours,
@@ -1347,45 +1454,25 @@ class PayrollHelper {
                 'monthly_breakdown' => $monthlyOtBreakdown
             ];
 
-            // Enrich each monthly cycle in ledger with its corresponding overtime numbers & restored short time
+            // Enrich each monthly cycle in ledger with its corresponding overtime numbers
             if (!empty($summary['monthly_cycle_ledger'])) {
                 foreach ($summary['monthly_cycle_ledger'] as &$cycleItem) {
                     $mK = $cycleItem['month_key'];
                     $cycleRate = !empty($cycleItem['tier_hourly_rate']) ? floatval($cycleItem['tier_hourly_rate']) : $hourlyRate;
                     $gSec = ($monthlyOtSec[$mK] ?? 0) + ($monthlyTiffinBonusSec[$mK] ?? 0);
-                    $dSec = ($monthlyShortSec[$mK] ?? 0) + ($monthlyBreakSec[$mK] ?? 0);
+                    $dSec = ($monthlyShortSec[$mK] ?? 0) + ($monthlyBreakSec[$mK] ?? 0) + ($monthlyExcessBreakSec[$mK] ?? 0);
                     $netSec = max(0, $gSec - $dSec);
                     $otHrs = round($netSec / 3600, 2);
                     $otCash = round($otHrs * $cycleRate, 2);
 
-                    // Short time covered by overtime is restored to base salary to prevent double-deduction
-                    $covShortSec = min($monthlyShortSec[$mK] ?? 0, max(0, $gSec - ($monthlyBreakSec[$mK] ?? 0)));
-                    $covShortCash = round(($covShortSec / 3600) * $cycleRate, 2);
-                    $restoredBase = round(floatval($cycleItem['total_earned']) + $covShortCash, 2);
-
+                    $baseEarned = floatval($cycleItem['total_earned']);
                     $cycleItem['overtime_hours'] = $otHrs;
                     $cycleItem['overtime_cash'] = $otCash;
-                    $cycleItem['covered_short_cash'] = $covShortCash;
-                    $cycleItem['base_earned_restored'] = $restoredBase;
-                    $cycleItem['total_earned'] = $restoredBase;
-                    $cycleItem['invoice_integer_amount'] = floor($restoredBase);
-                    $cycleItem['fractional_rollover'] = round($restoredBase - floor($restoredBase), 2);
-                    $cycleItem['combined_earned'] = round($restoredBase + $otCash, 2);
+                    $cycleItem['invoice_integer_amount'] = floor($baseEarned);
+                    $cycleItem['fractional_rollover'] = round($baseEarned - floor($baseEarned), 2);
+                    $cycleItem['combined_earned'] = round($baseEarned + $otCash, 2);
                 }
                 unset($cycleItem);
-            }
-
-            // Restore covered short time into summary base totals
-            if ($totalCoveredShortCash > 0) {
-                $summary['total_earned'] = round($summary['total_earned'] + $totalCoveredShortCash, 2);
-                if (isset($summary['matured_earned'])) {
-                    $summary['matured_earned'] = round($summary['matured_earned'] + $totalCoveredShortCash, 2);
-                }
-                if (isset($summary['available_withdrawable_total'])) {
-                    $summary['available_withdrawable_total'] = round($summary['available_withdrawable_total'] + $totalCoveredShortCash, 2);
-                    $summary['available_withdrawable'] = floor($summary['available_withdrawable_total']);
-                    $summary['fractional_rollover'] = round($summary['available_withdrawable_total'] - $summary['available_withdrawable'], 2);
-                }
             }
         } catch (Throwable $otEx) {
             error_log("Error calculating overtime bank in summary: " . $otEx->getMessage());
@@ -1415,7 +1502,7 @@ class PayrollHelper {
 
             // If user has an active, unfulfilled security deposit:
             // Adjust available_withdrawable according to Option A living allowance threshold
-            if (!empty($depositSummary['has_deposit']) && empty($depositSummary['is_fulfilled'])) {
+            if (!empty($depositSummary['has_deposit']) && empty($depositSummary['is_fulfilled']) && ($depositSummary['status'] ?? '') !== 'exempt' && floatval($depositSummary['target_amount'] ?? 0) > 0) {
                 $livingAllowance = floatval($depositSummary['monthly_living_allowance'] ?: 5000.0);
                 $curTakeHome = floatval($depositSummary['current_month_split']['take_home_amount'] ?? $livingAllowance);
                 $allowedTakeHome = min($summary['available_withdrawable_total'], $curTakeHome);

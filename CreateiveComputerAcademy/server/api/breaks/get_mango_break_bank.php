@@ -174,45 +174,72 @@ try {
         }
     }
 
-    // 6. Aggregate attendance per calendar day to avoid false gaps on split check-ins
-    $daily_worked = [];
+    // 6. Fetch completed breaks grouped by date for accurate net work calculation
+    $brkSql = "SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins 
+               FROM user_breaks 
+               WHERE user_id = :user_id AND status = 'Completed'";
+    $brkParams = [':user_id' => $user_id];
+    if (!$is_all_time) {
+        $brkSql .= " AND date BETWEEN :m_start AND :m_end";
+        $brkParams[':m_start'] = $month_start;
+        $brkParams[':m_end'] = $month_end;
+    }
+    $brkSql .= " GROUP BY date";
+    $brkStmt = $db->prepare($brkSql);
+    $brkStmt->execute($brkParams);
+    $breaksByDate = $brkStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Aggregate attendance per calendar day (Gross Office Presence and Excess Breaks beyond 40m allocated paid break)
+    $allocatedBreakSec = 40 * 60; // 40 minutes allocated paid break
+    $daily_presence = [];
+    $daily_excess_break = [];
     foreach ($attendance_rows as $row) {
         $in_ts = strtotime($row['check_in']);
         $out_ts = strtotime($row['check_out']);
         if ($out_ts <= $in_ts) continue;
 
         $dt = $row['date'];
-        if (!isset($daily_worked[$dt])) {
-            $daily_worked[$dt] = 0;
+        $grossSec = ($out_ts - $in_ts);
+        $bSec = intval($breaksByDate[$dt] ?? 0) * 60;
+        $excessBreakSec = max(0, $bSec - $allocatedBreakSec);
+
+        if (!isset($daily_presence[$dt])) {
+            $daily_presence[$dt] = 0;
+            $daily_excess_break[$dt] = 0;
         }
-        $daily_worked[$dt] += ($out_ts - $in_ts);
+        $daily_presence[$dt] += $grossSec;
+        $daily_excess_break[$dt] = max($daily_excess_break[$dt], $excessBreakSec);
     }
 
     $total_worked_seconds = 0;
     $total_expected_seconds = 0;
     $total_overtime_seconds = 0;
     $total_short_seconds = 0;
+    $total_excess_break_seconds = 0;
     $contributions = [];
     $gaps = [];
 
-    foreach ($daily_worked as $date_str => $worked_sec) {
-        $total_worked_seconds += $worked_sec;
+    // Standard daily expected shift: derived from user's employee profile (e.g. 6.0h for Jahidul & Kalam, 8.0h for others)
+    $standardDailyMins = intval(round($shift_hours * 60));
+
+    foreach ($daily_presence as $date_str => $presence_sec) {
+        $total_worked_seconds += $presence_sec;
 
         $is_friday = (date('N', strtotime($date_str)) == 5);
-        $expected_sec = $is_friday ? 0 : ($shift_hours * 3600);
+        $expected_sec = $is_friday ? 0 : ($standardDailyMins * 60);
 
         if (isset($holidays[$date_str])) {
             $expected_sec = $holidays[$date_str] * 3600;
         }
 
         $total_expected_seconds += $expected_sec;
-        $diff_sec = $worked_sec - $expected_sec;
+        $diff_sec = $presence_sec - $expected_sec;
 
         if ($diff_sec > 0) {
             $total_overtime_seconds += $diff_sec;
             $contributions[] = [
                 'date' => $date_str,
-                'worked_hours' => round($worked_sec / 3600, 2),
+                'worked_hours' => round($presence_sec / 3600, 2),
                 'expected_hours' => round($expected_sec / 3600, 2),
                 'overtime_hours' => round($diff_sec / 3600, 2),
                 'overtime_seconds' => $diff_sec,
@@ -224,12 +251,17 @@ try {
             $total_short_seconds += $short_sec;
             $gaps[] = [
                 'date' => $date_str,
-                'worked_hours' => round($worked_sec / 3600, 2),
+                'worked_hours' => round($presence_sec / 3600, 2),
                 'expected_hours' => round($expected_sec / 3600, 2),
                 'short_hours' => round($short_sec / 3600, 2),
                 'short_seconds' => $short_sec,
                 'type' => 'gap'
             ];
+        }
+
+        $exB = $daily_excess_break[$date_str] ?? 0;
+        if ($exB > 0) {
+            $total_excess_break_seconds += $exB;
         }
     }
 
@@ -507,7 +539,8 @@ try {
     $vault_trans_in_hours = round($vaultSummary['transferred_in_minutes'] / 60.0, 2);
 
     // Available Net Overtime Balance for this period calculated from exact seconds to avoid rounding drift
-    $total_gross_overtime_seconds = $total_overtime_seconds + (int)($total_bought_overtime_hours * 3600) + ((int)($tiffin_summary['bonus_minutes'] ?? 0) * 60) + (int)($vaultSummary['transferred_in_minutes'] * 60);
+    // Attendance Overtime beyond 8h + Tiffin Efficiency Savings Bonus + P2P bought + Vault in
+    $total_gross_overtime_seconds = $total_overtime_seconds + (int)round($total_tiffin_bonus_hours * 3600) + (int)($total_bought_overtime_hours * 3600) + (int)($vaultSummary['transferred_in_minutes'] * 60);
     
     $total_in_shift_break_seconds = 0;
     foreach ($in_shift_mango_breaks as $imb) {
@@ -519,7 +552,8 @@ try {
             $total_claimed_break_seconds += (int)$mb['duration_minutes'] * 60;
         }
     }
-    $total_deducted_seconds = $total_short_seconds + $total_claimed_break_seconds + $total_in_shift_break_seconds + (int)($total_cashed_out_overtime_hours * 3600) + (int)($total_sold_overtime_hours * 3600) + ((int)($tiffin_summary['penalty_minutes'] ?? 0) * 60) + (int)($total_absent_deducted_hours * 3600) + (int)($vaultSummary['transferred_out_minutes'] * 60) + (int)($vaultSummary['held_minutes'] * 60);
+    // Deductions = Short Shifts + Excess Breaks (>40m) + Full Day Breaks + In-Shift Breaks + Cashed Out + Sold + Absents + Vault Holds
+    $total_deducted_seconds = $total_short_seconds + $total_excess_break_seconds + $total_claimed_break_seconds + $total_in_shift_break_seconds + (int)($total_cashed_out_overtime_hours * 3600) + (int)($total_sold_overtime_hours * 3600) + (int)($total_absent_deducted_hours * 3600) + (int)($vaultSummary['transferred_out_minutes'] * 60) + (int)($vaultSummary['held_minutes'] * 60);
 
     $total_gross_overtime_hours = round($total_gross_overtime_seconds / 3600.0, 2);
     $total_deducted_hours = round($total_deducted_seconds / 3600.0, 2);
@@ -530,18 +564,19 @@ try {
     $overtime_debt_hours = $has_overtime_debt ? round(abs($net_balance_seconds) / 3600.0, 2) : 0.0;
     $available_hours = max(0, $net_balance_hours);
 
-    // Calculate Ripe Mangoes for this selected period
-    $ripe_mango_count = $has_overtime_debt ? 0 : (int)floor($available_hours / $shift_hours);
-    $partial_hours = $has_overtime_debt ? 0.0 : round(fmod($available_hours, $shift_hours), 2);
-    $progress_to_next_mango = ($shift_hours > 0 && !$has_overtime_debt) ? round(($partial_hours / $shift_hours) * 100, 1) : 0;
+    // Calculate Ripe Mangoes: 1 shift's worth of accumulated overtime = 1 Ripe Mango (1 Day Paid Break 🥭)
+    $mango_divisor_hours = $shift_hours > 0 ? $shift_hours : 8.0;
+    $ripe_mango_count = $has_overtime_debt ? 0 : (int)floor($available_hours / $mango_divisor_hours);
+    $partial_hours = $has_overtime_debt ? 0.0 : round(fmod($available_hours, $mango_divisor_hours), 2);
+    $progress_to_next_mango = (!$has_overtime_debt) ? round(($partial_hours / $mango_divisor_hours) * 100, 1) : 0;
     $remaining_hours_for_next = $has_overtime_debt 
-        ? round($overtime_debt_hours + $shift_hours, 2) 
-        : round($shift_hours - $partial_hours, 2);
+        ? round($overtime_debt_hours + $mango_divisor_hours, 2) 
+        : round($mango_divisor_hours - $partial_hours, 2);
 
     // 11. All-time cumulative available hours & ripe mangoes (for break booking availability)
     $all_time_balance_minutes = BreakDbHelper::getAvailableMangoMinutes($db, $user_id);
     $all_time_available_hours = round(max(0, $all_time_balance_minutes / 60.0), 2);
-    $all_time_ripe_mangoes = (int)floor($all_time_available_hours / $shift_hours);
+    $all_time_ripe_mangoes = (int)floor($all_time_available_hours / $mango_divisor_hours);
 
     // Generate individual Mango items for the tree
     $mango_items = [];
