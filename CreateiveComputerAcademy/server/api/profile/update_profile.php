@@ -1,10 +1,6 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
 require_once '../../config/database.php';
+require_once '../../config/cors.php';
 require_once '../leave/StudentLeaveHelper.php';
 
 $database = new Database();
@@ -114,16 +110,18 @@ if ($is_student_val !== null) {
         } else {
             // New request or previously rejected -> set to 'pending' for admin review
             $resultingStudentStatus = 'pending';
-            $empUpdates[] = "student_status = 'pending'";
+            $empUpdates[] = "student_status = :student_status";
+            $empParams[':student_status'] = 'pending';
             $empUpdates[] = "student_rejection_reason = NULL";
         }
-        $empUpdates[] = "is_student = 1";
+        $empUpdates[] = "is_student = :is_student";
         $empParams[':is_student'] = 1;
     } else {
         $resultingStudentStatus = 'none';
-        $empUpdates[] = "is_student = 0";
-        $empUpdates[] = "student_status = 'none'";
+        $empUpdates[] = "is_student = :is_student";
         $empParams[':is_student'] = 0;
+        $empUpdates[] = "student_status = :student_status";
+        $empParams[':student_status'] = 'none';
     }
 }
 if ($institution_type_val !== null) {
