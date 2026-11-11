@@ -59,7 +59,8 @@ if(isset($data->email)) {
         } else {
             StudentLeaveHelper::ensureSchema($db);
             $emp_query = "SELECT e.employee_code, e.designation, d.name AS department_name, e.has_tiffin_break, e.allocated_break_minutes,
-                                 e.is_student, e.institution_type, e.student_institution, e.student_level, e.student_leave_quota
+                                 e.is_student, e.student_status, e.student_rejection_reason,
+                                 e.institution_type, e.student_institution, e.student_level, e.student_leave_quota
                           FROM employees e
                           LEFT JOIN departments d ON e.department_id = d.id
                           WHERE e.user_id = :user_id LIMIT 1";
@@ -77,11 +78,13 @@ if(isset($data->email)) {
             $row['allocated_break_minutes'] = $allocBreak;
             $row['is_manual_break']         = ($hasTiffin === 0 || ($allocBreak > 0 && $hasTiffin === 0));
 
-            $row['is_student']          = isset($emp_row['is_student']) ? (int)$emp_row['is_student'] : 0;
-            $row['institution_type']    = $emp_row['institution_type'] ?? 'College';
-            $row['student_institution'] = $emp_row['student_institution'] ?? '';
-            $row['student_level']       = $emp_row['student_level'] ?? '';
-            $row['student_leave_quota'] = isset($emp_row['student_leave_quota']) ? (int)$emp_row['student_leave_quota'] : 3;
+            $row['is_student']                = isset($emp_row['is_student']) ? (int)$emp_row['is_student'] : 0;
+            $row['student_status']            = $emp_row['student_status'] ?? 'none';
+            $row['student_rejection_reason']  = $emp_row['student_rejection_reason'] ?? null;
+            $row['institution_type']          = $emp_row['institution_type'] ?? 'College';
+            $row['student_institution']       = $emp_row['student_institution'] ?? '';
+            $row['student_level']             = $emp_row['student_level'] ?? '';
+            $row['student_leave_quota']       = isset($emp_row['student_leave_quota']) ? (int)$emp_row['student_leave_quota'] : 3;
         }
 
         echo json_encode([

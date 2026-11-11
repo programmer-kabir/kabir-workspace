@@ -23,6 +23,19 @@ class StudentLeaveHelper {
             if (!in_array('student_level', $cols)) {
                 $db->exec("ALTER TABLE `employees` ADD COLUMN `student_level` VARCHAR(100) NULL");
             }
+            if (!in_array('student_status', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `student_status` VARCHAR(30) NOT NULL DEFAULT 'none'");
+                $db->exec("UPDATE `employees` SET `student_status` = 'approved' WHERE `is_student` = 1 AND `student_status` = 'none'");
+            }
+            if (!in_array('student_rejection_reason', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `student_rejection_reason` VARCHAR(255) NULL");
+            }
+            if (!in_array('student_approved_by', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `student_approved_by` INT NULL");
+            }
+            if (!in_array('student_approved_at', $cols)) {
+                $db->exec("ALTER TABLE `employees` ADD COLUMN `student_approved_at` DATETIME NULL");
+            }
 
             // Ensure leave_requests.type allows 'Student Academic Leave' (widen ENUM to VARCHAR)
             $lrType = $db->query("SHOW COLUMNS FROM `leave_requests` LIKE 'type'")->fetch(PDO::FETCH_ASSOC);
@@ -61,7 +74,8 @@ class StudentLeaveHelper {
 
         if (in_array('is_student', $cols)) {
             $empStmt = $db->prepare("
-                SELECT is_student, student_leave_quota, student_institution, institution_type, student_level 
+                SELECT is_student, student_leave_quota, student_institution, institution_type, student_level,
+                       student_status, student_rejection_reason
                 FROM employees 
                 WHERE user_id = :uid 
                 LIMIT 1
@@ -74,22 +88,31 @@ class StudentLeaveHelper {
                 'student_leave_quota' => 3, 
                 'student_institution' => null,
                 'institution_type' => 'College',
-                'student_level' => null
+                'student_level' => null,
+                'student_status' => 'none',
+                'student_rejection_reason' => null
             ];
         }
 
         $isStudent = !empty($emp['is_student']);
+        $studentStatus = $emp['student_status'] ?? ($isStudent ? 'approved' : 'none');
         $monthlyQuota = !empty($emp['student_leave_quota']) ? intval($emp['student_leave_quota']) : 3;
         $institution = $emp['student_institution'] ?? '';
         $institutionType = $emp['institution_type'] ?? 'College';
         $studentLevel = $emp['student_level'] ?? '';
+        $rejectionReason = $emp['student_rejection_reason'] ?? '';
 
-        if (!$isStudent) {
+        $isApproved = ($isStudent && $studentStatus === 'approved');
+
+        if (!$isApproved) {
             return [
-                'is_student'       => false,
-                'institution'      => '',
-                'institution_type' => '',
-                'student_level'    => '',
+                'is_student'       => $isStudent,
+                'student_status'   => $studentStatus,
+                'is_approved'      => false,
+                'rejection_reason' => $rejectionReason,
+                'institution'      => $institution,
+                'institution_type' => $institutionType,
+                'student_level'    => $studentLevel,
                 'monthly_quota'    => 0,
                 'approved_days'    => 0,
                 'pending_days'     => 0,
@@ -144,6 +167,9 @@ class StudentLeaveHelper {
 
         return [
             'is_student'       => true,
+            'student_status'   => 'approved',
+            'is_approved'      => true,
+            'rejection_reason' => '',
             'institution'      => $institution,
             'institution_type' => $institutionType,
             'student_level'    => $studentLevel,

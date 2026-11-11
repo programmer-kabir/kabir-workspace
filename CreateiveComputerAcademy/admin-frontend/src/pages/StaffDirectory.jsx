@@ -16,8 +16,8 @@ const EMPTY_FORM = {
   joining_date: '', resignation_date: '',
   shift_start: '09:00:00', shift_end: '17:00:00', allocated_break_minutes: 60,
   has_tiffin_break: 1, tiffin_start_time: '13:20', tiffin_end_time: '14:00', tiffin_duration_minutes: 40,
-  is_student: 0, student_leave_quota: 3, student_institution: '',
-  institution_type: 'College', student_level: '',
+  is_student: 0, student_status: 'none', student_leave_quota: 3, student_institution: '',
+  institution_type: 'College', student_level: '', student_rejection_reason: '',
 };
 
 // ── Role badge ───────────────────────────────────────────────────────────────
@@ -352,6 +352,26 @@ const StaffModal = ({ mode, formData, setFormData, departments, onClose, onSubmi
 
             {Boolean(formData.is_student) && (
               <>
+                <Field label="Verification Status">
+                  <select
+                    value={formData.student_status || (formData.is_student ? 'approved' : 'none')}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormData({
+                        ...formData,
+                        student_status: val,
+                        is_student: (val === 'approved' || val === 'pending') ? 1 : 0
+                      });
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+                  >
+                    <option value="approved">🟢 Approved (অনুমোদিত - ছুটি সক্রিয়)</option>
+                    <option value="pending">🟡 Pending Review (অপেক্ষমাণ)</option>
+                    <option value="rejected">🔴 Rejected (অনুরোধ বাতিল)</option>
+                    <option value="none">⚪ Inactive / None</option>
+                  </select>
+                </Field>
+
                 <Field label="Institution Type">
                   <select
                     value={formData.institution_type || 'College'}
@@ -396,6 +416,18 @@ const StaffModal = ({ mode, formData, setFormData, departments, onClose, onSubmi
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                   />
                 </Field>
+
+                {formData.student_status === 'rejected' && (
+                  <Field label="Rejection Reason (Optional)">
+                    <input
+                      type="text"
+                      value={formData.student_rejection_reason || ''}
+                      onChange={e => setFormData({ ...formData, student_rejection_reason: e.target.value })}
+                      placeholder="e.g. Incomplete student credentials"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-rose-500 transition-all"
+                    />
+                  </Field>
+                )}
               </>
             )}
 
@@ -488,6 +520,8 @@ const StaffDirectory = () => {
 
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const pendingStudents = staffList.filter(s => s.student_status === 'pending');
+
   const filteredStaff = staffList.filter(s => {
     const matchSearch =
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -495,6 +529,8 @@ const StaffDirectory = () => {
       (s.email && s.email.toLowerCase().includes(searchTerm.toLowerCase()));
     
     if (!matchSearch) return false;
+
+    if (statusFilter === 'pending_student') return s.student_status === 'pending';
 
     const empStatus = (s.employment_status || 'active').toLowerCase();
     const accStatus = (s.status || 'active').toLowerCase();
@@ -508,6 +544,36 @@ const StaffDirectory = () => {
     if (statusFilter === 'inactive') return empStatus === 'inactive' || empStatus === 'suspended' || accStatus === 'inactive' || accStatus === 'suspended';
     return true;
   });
+
+  // ── 1-Click Approve / Reject Student Status ────────────────────────────────
+  const handleApproveStudent = async (e, staff, action, quota = 3) => {
+    e.stopPropagation();
+    let rejectionReason = null;
+    if (action === 'reject') {
+      const promptReason = window.prompt(`Please enter rejection reason for ${staff.name} (optional):`, 'Academic verification details not valid');
+      if (promptReason === null) return; // user cancelled prompt
+      rejectionReason = promptReason;
+    }
+
+    setActionLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}api/admin/staff/approve_student_status.php`, {
+        user_id: staff.id,
+        action: action,
+        student_leave_quota: quota,
+        rejection_reason: rejectionReason,
+      });
+      if (res.data.status === 'success') {
+        await fetchAll();
+      } else {
+        alert(res.data.message || 'Failed to update student status');
+      }
+    } catch {
+      alert('Error updating student status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // ── Create ────────────────────────────────────────────────────────────────
   const openCreate = () => { setFormData(EMPTY_FORM); setFormError(''); setCreateOpen(true); };
@@ -558,6 +624,8 @@ const StaffDirectory = () => {
       tiffin_end_time: staff.tiffin_end_time ? staff.tiffin_end_time.substring(0, 5) : '14:00',
       tiffin_duration_minutes: staff.tiffin_duration_minutes !== undefined ? staff.tiffin_duration_minutes : 40,
       is_student: staff.is_student ? 1 : 0,
+      student_status: staff.student_status || (staff.is_student ? 'approved' : 'none'),
+      student_rejection_reason: staff.student_rejection_reason || '',
       student_leave_quota: staff.student_leave_quota !== undefined ? staff.student_leave_quota : 3,
       student_institution: staff.student_institution || '',
       institution_type: staff.institution_type || 'College',
@@ -645,32 +713,73 @@ const StaffDirectory = () => {
         </div>
       </div>
 
+      {/* Pending Student Approvals Banner */}
+      {pendingStudents.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0 shadow-xs">
+              🎓
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <span>Pending Student Approvals</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                  {pendingStudents.length} awaiting review
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Staff submitted academic enrollment info. Approve to unlock their 3 days/month exam leave quota.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === 'pending_student' ? 'all' : 'pending_student')}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition shadow-xs shrink-0 cursor-pointer"
+          >
+            {statusFilter === 'pending_student' ? 'Show All Staff' : `Review ${pendingStudents.length} Request${pendingStudents.length > 1 ? 's' : ''} →`}
+          </button>
+        </div>
+      )}
+
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-3">
         {[
           { id: 'all', label: 'All Staff', count: staffList.length },
+          ...(pendingStudents.length > 0 ? [{ id: 'pending_student', label: '🎓 Pending Student Requests', count: pendingStudents.length, isHighlight: true }] : []),
           { id: 'active', label: 'Active', count: staffList.filter(s => (s.employment_status || 'active').toLowerCase() === 'active' && s.status === 'active').length },
           { id: 'probation', label: 'Probation', count: staffList.filter(s => (s.employment_status || '').toLowerCase() === 'probation').length },
           { id: 'resigned', label: 'Resigned / Left', count: staffList.filter(s => (s.employment_status || '').toLowerCase() === 'resigned').length },
           { id: 'terminated', label: 'Terminated', count: staffList.filter(s => (s.employment_status || '').toLowerCase() === 'terminated').length },
           { id: 'on_leave', label: 'On Leave', count: staffList.filter(s => (s.employment_status || '').toLowerCase() === 'on_leave' || (s.employment_status || '').toLowerCase() === 'on leave').length },
           { id: 'inactive', label: 'Inactive / Suspended', count: staffList.filter(s => (s.employment_status || '').toLowerCase() === 'inactive' || (s.employment_status || '').toLowerCase() === 'suspended' || s.status === 'inactive' || s.status === 'suspended').length },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 active:scale-95 ${
-              statusFilter === tab.id
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 shadow-2xs'
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${statusFilter === tab.id ? 'bg-blue-800 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
+        ].map(tab => {
+          const isSelected = statusFilter === tab.id;
+          let btnColor = isSelected
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+            : tab.isHighlight
+              ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 shadow-2xs';
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 active:scale-95 ${btnColor}`}
+            >
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                isSelected 
+                  ? 'bg-blue-800 text-white' 
+                  : tab.isHighlight 
+                    ? 'bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200' 
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Error under form */}
@@ -737,7 +846,14 @@ const StaffDirectory = () => {
                     <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5">{staff.designation || 'Staff Member'}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <RoleBadge role={staff.role} />
-                      {Boolean(staff.is_student) && (
+                      {staff.student_status === 'pending' ? (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 shadow-xs animate-pulse"
+                          title="Pending Admin Student Verification"
+                        >
+                          <span>🟡 Student Pending</span>
+                        </span>
+                      ) : (staff.student_status === 'approved' || Boolean(staff.is_student)) ? (
                         <span 
                           className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 shadow-xs"
                           title={`${staff.institution_type || 'Institution'}: ${staff.student_institution || 'Not set'}${staff.student_level ? ` • ${staff.student_level}` : ''}`}
@@ -749,7 +865,14 @@ const StaffDirectory = () => {
                             <span>({staff.student_leave_quota || 3}d/mo)</span>
                           )}
                         </span>
-                      )}
+                      ) : staff.student_status === 'rejected' ? (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900 flex items-center gap-1"
+                          title={staff.student_rejection_reason || 'Student status rejected'}
+                        >
+                          <span>🔴 Student Rejected</span>
+                        </span>
+                      ) : null}
                       {staff.status === 'inactive' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
                           Login Blocked
@@ -765,6 +888,44 @@ const StaffDirectory = () => {
                     <FiEdit2 size={15} />
                   </button>
                 </div>
+
+                {/* Quick 1-Click Approve / Reject Box if pending student */}
+                {staff.student_status === 'pending' && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="my-3 p-3.5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200/90 dark:border-amber-800/80 text-xs text-amber-950 dark:text-amber-200 space-y-2 shadow-xs cursor-default"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black flex items-center gap-1.5 text-amber-900 dark:text-amber-200">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        Student Verification Request
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200/70 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
+                        {staff.institution_type || 'Student'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 leading-snug">
+                      🏛️ <strong>{staff.student_institution || 'Institution Not Specified'}</strong>
+                      {staff.student_level ? ` (${staff.student_level})` : ''}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => handleApproveStudent(e, staff, 'approve', staff.student_leave_quota || 3)}
+                        className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      >
+                        <FiCheckCircle size={13} /> Approve (3d/mo)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleApproveStudent(e, staff, 'reject')}
+                        className="py-1.5 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950/70 dark:hover:bg-rose-900/80 dark:text-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      >
+                        <FiXCircle size={13} /> Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2 mt-auto pt-2">
                   {[

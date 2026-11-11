@@ -214,15 +214,31 @@ const LeaveApplyForm = ({ currentUser, studentQuota, onSuccess }) => {
               }}
               className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-2.5 outline-none transition-all"
             >
-              {studentQuota?.is_student && (
+              {studentQuota?.is_student && studentQuota?.is_approved ? (
                 <option value="Student Academic Leave">
                   🎓 Student Academic Leave ({remainingStudentQuota} days left)
                 </option>
-              )}
+              ) : studentQuota?.is_student ? (
+                <option value="student_pending" disabled>
+                  🎓 Student Academic Leave (Pending Admin Approval ⏳)
+                </option>
+              ) : null}
               <option value="Casual">Casual Leave</option>
               <option value="Medical">Medical Leave</option>
               <option value="Unpaid">Unpaid Leave</option>
             </select>
+
+            {studentQuota?.is_student && !studentQuota?.is_approved && (
+              <div className="mt-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 leading-relaxed shadow-xs flex items-start gap-2">
+                <FiClock className="text-amber-600 mt-0.5 shrink-0" size={14} />
+                <div>
+                  <p className="font-bold">🎓 স্টুডেন্ট অ্যাকাডেমিক ছুটি (অনুমোদনের অপেক্ষায়):</p>
+                  <p className="mt-0.5">
+                    আপনার শিক্ষার্থী প্রোফাইলটি বর্তমানে অ্যাডমিন ভেরিফিকেশনের অপেক্ষায় রয়েছে। অ্যাডমিন অনুমোদন করার পর আপনি প্রতি মাসে সর্বোচ্চ ৩ দিনের অ্যাকাডেমিক ছুটি নিতে পারবেন (ম্যাঙ্গো কর্তন ব্যতীত)।
+                  </p>
+                </div>
+              </div>
+            )}
 
             {type === 'Student Academic Leave' && (
               <div className="mt-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed shadow-xs space-y-1">

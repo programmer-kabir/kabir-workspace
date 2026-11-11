@@ -22,6 +22,8 @@ export default function ProfileSettingsModal({
   setUsername,
   isStudent,
   setIsStudent,
+  studentStatus,
+  studentRejectionReason,
   institutionType,
   setInstitutionType,
   studentInstitution,
@@ -126,6 +128,8 @@ export default function ProfileSettingsModal({
             setPhone={setPhone}
             isStudent={isStudent}
             setIsStudent={setIsStudent}
+            studentStatus={studentStatus}
+            studentRejectionReason={studentRejectionReason}
             institutionType={institutionType}
             setInstitutionType={setInstitutionType}
             studentInstitution={studentInstitution}

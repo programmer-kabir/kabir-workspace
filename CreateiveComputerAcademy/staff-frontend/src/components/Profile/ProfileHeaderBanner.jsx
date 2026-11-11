@@ -33,7 +33,7 @@ export default function ProfileHeaderBanner({
 
   return (
     <div className="relative rounded-[2.5rem] shadow-xl border border-slate-200/50 dark:border-slate-700/60 overflow-hidden group transition-all w-full min-h-[360px] sm:min-h-[400px] lg:min-h-[440px] flex flex-col justify-end">
-      
+
       {/* ── 1. 100% FULL-BLEED PANORAMIC COVER PICTURE (NO WHITE BAR) ── */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
@@ -71,12 +71,12 @@ export default function ProfileHeaderBanner({
       </div>
 
       {/* ── 4. PROFILE INFO (INSIDE THE IMAGE AT THE BOTTOM) ── */}
-      <div className="relative z-10 p-6 sm:p-8 lg:p-10">
+      <div className="relative z-10 p-6 sm:p-8 lg:px-10 ">
         <div className="flex flex-col lg:flex-row gap-5 sm:gap-7 items-start lg:items-end justify-between">
-          
+
           {/* Left: Avatar + Name + Badges */}
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 sm:gap-6 flex-1">
-            
+
             {/* Avatar with Interactive Camera Overlay */}
             <div className="relative group/avatar shrink-0">
               <input
@@ -119,9 +119,9 @@ export default function ProfileHeaderBanner({
             <div className="space-y-3 pb-1">
               <h1
                 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-2xl"
-                style={{ 
+                style={{
                   fontFamily: "'Playfair Display', serif",
-                  textShadow: '0 4px 16px rgba(0, 0, 0, 0.75)' 
+                  textShadow: '0 4px 16px rgba(0, 0, 0, 0.75)'
                 }}
               >
                 {currentUser?.name}

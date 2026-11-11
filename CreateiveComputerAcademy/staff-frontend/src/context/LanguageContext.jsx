@@ -63,6 +63,12 @@ const dictionary = {
     academic_level_class: "Class / Year / Semester",
     enter_institution_name: "e.g. Govt. Science College",
     enter_academic_level: "e.g. Class 10, HSC 2nd Year, 4th Semester",
+    student_status_approved: "Approved & Active",
+    student_status_pending: "Verification Pending (Awaiting Admin Approval)",
+    student_status_rejected: "Verification Rejected",
+    student_pending_notice: "Your academic info has been submitted. Academic leave quota (up to 3 days/month) will activate once approved by Admin.",
+    student_rejected_notice: "Admin has rejected your student status verification.",
+    student_approved_notice: "Student status is approved. You can apply for up to 3 days of student academic leaves each month.",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -122,6 +128,12 @@ const dictionary = {
     academic_level_class: "শ্রেণি / শিক্ষাবর্ষ / সেমিস্টার",
     enter_institution_name: "যেমন: সরকারি বিজ্ঞান কলেজ",
     enter_academic_level: "যেমন: ১০ম শ্রেণি, এইচএসসি ২য় বর্ষ, ৪র্থ সেমিস্টার",
+    student_status_approved: "অনুমোদিত ও সক্রিয়",
+    student_status_pending: "অনুমোদনের অপেক্ষায় (অ্যাডমিন ভেরিফিকেশন চলছে)",
+    student_status_rejected: "অনুরোধ বাতিল করা হয়েছে",
+    student_pending_notice: "আপনার শিক্ষার্থী তথ্য সংরক্ষিত হয়েছে। অ্যাডমিন অনুমোদন করার পর ৩ দিনের অ্যাকাডেমিক ছুটির কোটা চালু হবে।",
+    student_rejected_notice: "অ্যাডমিন আপনার শিক্ষার্থী স্ট্যাটাস অনুমোদন করেননি।",
+    student_approved_notice: "শিক্ষার্থী স্ট্যাটাস অনুমোদিত। আপনি প্রতি মাসে সর্বোচ্চ ৩ দিন পর্যন্ত স্টুডেন্ট অ্যাকাডেমিক ছুটি নিতে পারবেন।",
   }
 };
 

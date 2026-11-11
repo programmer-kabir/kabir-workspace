@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
   FiUser, FiMail, FiPhone, FiHash, FiBriefcase, 
-  FiClock, FiCalendar, FiCreditCard, FiEdit, FiBookOpen, FiAward 
+  FiClock, FiCalendar, FiCreditCard, FiEdit, FiBookOpen, FiAward,
+  FiCheckCircle, FiXCircle 
 } from 'react-icons/fi';
 
 /**
@@ -119,15 +120,30 @@ export default function ProfileSidebarCards({
         </div>
       </div>
 
-      {/* Academic Status Card (if student) */}
-      {Boolean(currentUser?.is_student) && (
+      {/* Academic Status Card (if student or pending request) */}
+      {(Boolean(currentUser?.is_student) || (currentUser?.student_status && currentUser?.student_status !== 'none')) && (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
-          <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2.5 mb-6">
-            <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-              <FiBookOpen size={14} />
-            </span>
-            Academic Information
-          </h3>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <FiBookOpen size={14} />
+              </span>
+              Academic Status
+            </h3>
+            {currentUser?.student_status === 'approved' ? (
+              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <FiCheckCircle size={10} /> Approved
+              </span>
+            ) : currentUser?.student_status === 'rejected' ? (
+              <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <FiXCircle size={10} /> Rejected
+              </span>
+            ) : (
+              <span className="text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Pending
+              </span>
+            )}
+          </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-700/50">
               <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-sm">
@@ -160,7 +176,9 @@ export default function ProfileSidebarCards({
                 Monthly Quota
               </div>
               <span className="font-bold text-xs bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md">
-                {currentUser?.student_leave_quota || 3} Days / Month
+                {currentUser?.student_status === 'approved' 
+                  ? `${currentUser?.student_leave_quota || 3} Days / Month`
+                  : 'Pending Approval'}
               </span>
             </div>
           </div>

@@ -20,6 +20,8 @@ export default function ProfileModalProfileTab({
   setPhone,
   isStudent,
   setIsStudent,
+  studentStatus = 'none',
+  studentRejectionReason = null,
   institutionType,
   setInstitutionType,
   studentInstitution,
@@ -244,9 +246,19 @@ export default function ProfileModalProfileTab({
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     {t('academic_info')}
                     {isStudent && (
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <FiCheck size={10} /> {isBn ? 'সক্রিয়' : 'Active'}
-                      </span>
+                      studentStatus === 'approved' ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <FiCheck size={10} /> {isBn ? 'অনুমোদিত' : 'Approved'}
+                        </span>
+                      ) : studentStatus === 'rejected' ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <FiXCircle size={10} /> {isBn ? 'বাতিল' : 'Rejected'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> {isBn ? 'অনুমোদনের অপেক্ষায়' : 'Pending Approval'}
+                        </span>
+                      )
                     )}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -267,11 +279,44 @@ export default function ProfileModalProfileTab({
               </label>
             </div>
 
-            {/* Benefit Notice */}
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 leading-relaxed bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-indigo-100/60 dark:border-indigo-900/30">
-              <FiInfo className="text-indigo-500 shrink-0" size={14} />
-              <span>{t('student_leave_benefit')}</span>
-            </p>
+            {/* Approval / Benefit Notice */}
+            {isStudent && studentStatus === 'pending' ? (
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                <FiInfo className="text-amber-600 mt-0.5 shrink-0" size={15} />
+                <div>
+                  <p className="font-bold">{isBn ? 'অ্যাডমিন অনুমোদনের অপেক্ষায় (Pending Verification)' : 'Awaiting Admin Approval'}</p>
+                  <p className="mt-0.5 leading-relaxed">{t('student_pending_notice')}</p>
+                </div>
+              </div>
+            ) : isStudent && studentStatus === 'rejected' ? (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2.5">
+                <FiXCircle className="text-rose-600 mt-0.5 shrink-0" size={15} />
+                <div>
+                  <p className="font-bold">{isBn ? 'শিক্ষার্থী অনুমোদন বাতিল হয়েছে' : 'Student Status Rejected'}</p>
+                  {studentRejectionReason && (
+                    <p className="mt-0.5 text-rose-700 dark:text-rose-300 font-semibold">
+                      {isBn ? 'কারণ: ' : 'Reason: '} {studentRejectionReason}
+                    </p>
+                  )}
+                  <p className="mt-1 text-[11px] text-rose-600/90 dark:text-rose-400">
+                    {isBn ? 'সঠিক তথ্য আপডেট করে সেভ করলে তা আবার অ্যাডমিন পর্যালোচনায় পাঠানো হবে।' : 'Update your academic details and save to resubmit for review.'}
+                  </p>
+                </div>
+              </div>
+            ) : isStudent && studentStatus === 'approved' ? (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-start gap-2.5">
+                <FiCheckCircle className="text-emerald-600 mt-0.5 shrink-0" size={15} />
+                <div>
+                  <p className="font-bold">{isBn ? 'শিক্ষার্থী স্ট্যাটাস অনুমোদিত ও সক্রিয়' : 'Student Status Approved & Active'}</p>
+                  <p className="mt-0.5 leading-relaxed">{t('student_approved_notice')}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 leading-relaxed bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-indigo-100/60 dark:border-indigo-900/30">
+                <FiInfo className="text-indigo-500 shrink-0" size={14} />
+                <span>{t('student_leave_benefit')}</span>
+              </p>
+            )}
 
             {/* Expanded Academic Fields when isStudent is TRUE */}
             {isStudent && (

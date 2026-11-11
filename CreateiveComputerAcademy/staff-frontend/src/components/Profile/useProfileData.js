@@ -15,6 +15,8 @@ export default function useProfileData() {
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [username, setUsername] = useState(currentUser?.username || '');
   const [isStudent, setIsStudent] = useState(Boolean(currentUser?.is_student));
+  const [studentStatus, setStudentStatus] = useState(currentUser?.student_status || (currentUser?.is_student ? 'approved' : 'none'));
+  const [studentRejectionReason, setStudentRejectionReason] = useState(currentUser?.student_rejection_reason || null);
   const [institutionType, setInstitutionType] = useState(currentUser?.institution_type || 'College');
   const [studentInstitution, setStudentInstitution] = useState(currentUser?.student_institution || '');
   const [studentLevel, setStudentLevel] = useState(currentUser?.student_level || '');
@@ -62,6 +64,8 @@ export default function useProfileData() {
       setPhone(currentUser.phone || '');
       setUsername(currentUser.username || '');
       setIsStudent(Boolean(currentUser.is_student));
+      setStudentStatus(currentUser.student_status || (currentUser.is_student ? 'approved' : 'none'));
+      setStudentRejectionReason(currentUser.student_rejection_reason || null);
       setInstitutionType(currentUser.institution_type || 'College');
       setStudentInstitution(currentUser.student_institution || '');
       setStudentLevel(currentUser.student_level || '');
@@ -200,12 +204,15 @@ export default function useProfileData() {
       });
 
       if (res.data.status === 'success') {
+        const returnedStatus = res.data.data?.student_status || res.data.student_status || (isStudent ? 'pending' : 'none');
+        setStudentStatus(returnedStatus);
         setProfileMessage({ text: 'Profile updated successfully!', type: 'success' });
         updateUser({
           name,
           phone,
           username,
           ...studentPayload,
+          student_status: returnedStatus,
         });
         setTimeout(() => {
           setIsModalOpen(false);
@@ -266,13 +273,15 @@ export default function useProfileData() {
   };
 
   const openSettingsModal = (tab = 'profile') => {
-    setName(currentUser.name || '');
-    setPhone(currentUser.phone || '');
-    setUsername(currentUser.username || '');
-    setIsStudent(Boolean(currentUser.is_student));
-    setInstitutionType(currentUser.institution_type || 'College');
-    setStudentInstitution(currentUser.student_institution || '');
-    setStudentLevel(currentUser.student_level || '');
+    setName(currentUser?.name || '');
+    setPhone(currentUser?.phone || '');
+    setUsername(currentUser?.username || '');
+    setIsStudent(Boolean(currentUser?.is_student));
+    setStudentStatus(currentUser?.student_status || (currentUser?.is_student ? 'approved' : 'none'));
+    setStudentRejectionReason(currentUser?.student_rejection_reason || null);
+    setInstitutionType(currentUser?.institution_type || 'College');
+    setStudentInstitution(currentUser?.student_institution || '');
+    setStudentLevel(currentUser?.student_level || '');
     setModalTab(tab);
     setIsModalOpen(true);
   };
@@ -289,6 +298,9 @@ export default function useProfileData() {
     setUsername,
     isStudent,
     setIsStudent,
+    studentStatus,
+    setStudentStatus,
+    studentRejectionReason,
     institutionType,
     setInstitutionType,
     studentInstitution,

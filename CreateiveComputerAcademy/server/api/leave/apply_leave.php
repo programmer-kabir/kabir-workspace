@@ -30,10 +30,17 @@ if (trim($data->type) === 'Student Academic Leave') {
     $reqMonth = date('Y-m', strtotime($data->start_date));
     $quota = StudentLeaveHelper::getQuotaSummary($db, $data->user_id, $reqMonth);
 
-    if (!$quota['is_student']) {
+    if (empty($quota['is_approved'])) {
+        $msg = "Only admin-approved students can apply for Student Academic Leave.";
+        if (($quota['student_status'] ?? '') === 'pending') {
+            $msg = "আপনার স্টুডেন্ট প্রোফাইল অ্যাডমিন অনুমোদনের অপেক্ষায় রয়েছে। অ্যাডমিন অনুমোদন করার পর আপনি স্টুডেন্ট ছুটির আবেদন করতে পারবেন।";
+        } else if (($quota['student_status'] ?? '') === 'rejected') {
+            $reason = !empty($quota['rejection_reason']) ? " (কারণ: {$quota['rejection_reason']})" : "";
+            $msg = "আপনার স্টুডেন্ট আবেদনটি অ্যাডমিন কর্তৃক বাতিল করা হয়েছে{$reason}। বিস্তারিত জানতে অফিসে যোগাযোগ করুন।";
+        }
         echo json_encode([
             "status" => "error",
-            "message" => "Only staff registered as College/University students can apply for Student Academic Leave."
+            "message" => $msg
         ]);
         exit;
     }

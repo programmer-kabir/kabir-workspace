@@ -72,7 +72,8 @@ try {
         StudentLeaveHelper::ensureSchema($db);
         $emp_stmt = $db->prepare(
             "SELECT e.employee_code, e.designation, d.name AS department_name, e.shift_start, e.shift_end, e.joining_date, e.has_tiffin_break, e.allocated_break_minutes,
-                    e.is_student, e.institution_type, e.student_institution, e.student_level, e.student_leave_quota
+                    e.is_student, e.institution_type, e.student_institution, e.student_level, e.student_leave_quota,
+                    e.student_status, e.student_rejection_reason
              FROM employees e
              LEFT JOIN departments d ON e.department_id = d.id
              WHERE e.user_id = :user_id LIMIT 1"
@@ -103,6 +104,8 @@ try {
     $user['student_institution'] = $emp['student_institution'] ?? '';
     $user['student_level']       = $emp['student_level'] ?? '';
     $user['student_leave_quota'] = isset($emp['student_leave_quota']) ? (int)$emp['student_leave_quota'] : 3;
+    $user['student_status']      = $emp['student_status'] ?? (!empty($emp['is_student']) ? 'approved' : 'none');
+    $user['student_rejection_reason'] = $emp['student_rejection_reason'] ?? '';
 
     echo json_encode(["status" => "success", "user" => $user]);
 

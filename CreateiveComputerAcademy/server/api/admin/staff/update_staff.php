@@ -210,6 +210,21 @@ try {
         $emp_fields[] = 'is_student = :is_student';
         $emp_params[':is_student'] = !empty($data->is_student) ? 1 : 0;
     }
+    if (isset($data->student_status)) {
+        $allowedStatuses = ['approved', 'pending', 'rejected', 'none'];
+        $cleanStatus = in_array($data->student_status, $allowedStatuses) ? $data->student_status : 'none';
+        $emp_fields[] = 'student_status = :student_status';
+        $emp_params[':student_status'] = $cleanStatus;
+        if ($cleanStatus === 'approved') {
+            $emp_fields[] = 'is_student = 1';
+        } else if ($cleanStatus === 'none' || $cleanStatus === 'rejected') {
+            $emp_fields[] = 'is_student = 0';
+        }
+    }
+    if (isset($data->student_rejection_reason)) {
+        $emp_fields[] = 'student_rejection_reason = :student_rejection_reason';
+        $emp_params[':student_rejection_reason'] = trim($data->student_rejection_reason) !== '' ? trim($data->student_rejection_reason) : null;
+    }
     if (isset($data->student_leave_quota)) {
         $emp_fields[] = 'student_leave_quota = :student_leave_quota';
         $emp_params[':student_leave_quota'] = max(0, intval($data->student_leave_quota));

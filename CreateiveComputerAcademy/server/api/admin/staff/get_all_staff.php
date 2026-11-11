@@ -16,8 +16,8 @@ try {
     } catch (Throwable $e) {}
 
     $studentSelect = in_array('is_student', $cols) 
-        ? "COALESCE(e.is_student, 0) AS is_student, COALESCE(e.student_leave_quota, 3) AS student_leave_quota, e.student_institution, COALESCE(e.institution_type, 'College') AS institution_type, e.student_level,"
-        : "0 AS is_student, 3 AS student_leave_quota, NULL AS student_institution, 'College' AS institution_type, NULL AS student_level,";
+        ? "COALESCE(e.is_student, 0) AS is_student, COALESCE(e.student_status, 'none') AS student_status, e.student_rejection_reason, e.student_approved_at, COALESCE(e.student_leave_quota, 3) AS student_leave_quota, e.student_institution, COALESCE(e.institution_type, 'College') AS institution_type, e.student_level,"
+        : "0 AS is_student, 'none' AS student_status, NULL AS student_rejection_reason, NULL AS student_approved_at, 3 AS student_leave_quota, NULL AS student_institution, 'College' AS institution_type, NULL AS student_level,";
 
     $query = "
         SELECT 

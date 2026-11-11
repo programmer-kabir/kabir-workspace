@@ -23,6 +23,8 @@ export default function Profile() {
     setUsername,
     isStudent,
     setIsStudent,
+    studentStatus,
+    studentRejectionReason,
     institutionType,
     setInstitutionType,
     studentInstitution,
@@ -132,6 +134,8 @@ export default function Profile() {
           setUsername={setUsername}
           isStudent={isStudent}
           setIsStudent={setIsStudent}
+          studentStatus={studentStatus}
+          studentRejectionReason={studentRejectionReason}
           institutionType={institutionType}
           setInstitutionType={setInstitutionType}
           studentInstitution={studentInstitution}

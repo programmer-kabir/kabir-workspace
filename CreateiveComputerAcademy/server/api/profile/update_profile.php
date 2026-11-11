@@ -76,6 +76,13 @@ if ($username !== null) {
 }
 
 // Student & Academic fields
+$chkEmp = $db->prepare("SELECT id, is_student, student_status, student_institution, student_level, institution_type FROM employees WHERE user_id = :uid LIMIT 1");
+$chkEmp->execute([':uid' => $user_id]);
+$empRow = $chkEmp->fetch(PDO::FETCH_ASSOC);
+
+$currentStudentStatus = $empRow['student_status'] ?? (!empty($empRow['is_student']) ? 'approved' : 'none');
+$resultingStudentStatus = $currentStudentStatus;
+
 $is_student_val = null;
 if (isset($data->is_student) || isset($_POST['is_student'])) {
     $rawIsStudent = $data->is_student ?? $_POST['is_student'];
@@ -101,8 +108,23 @@ $empUpdates = [];
 $empParams = [':uid' => $user_id];
 
 if ($is_student_val !== null) {
-    $empUpdates[] = "is_student = :is_student";
-    $empParams[':is_student'] = $is_student_val;
+    if ($is_student_val == 1) {
+        if ($currentStudentStatus === 'approved') {
+            $resultingStudentStatus = 'approved';
+        } else {
+            // New request or previously rejected -> set to 'pending' for admin review
+            $resultingStudentStatus = 'pending';
+            $empUpdates[] = "student_status = 'pending'";
+            $empUpdates[] = "student_rejection_reason = NULL";
+        }
+        $empUpdates[] = "is_student = 1";
+        $empParams[':is_student'] = 1;
+    } else {
+        $resultingStudentStatus = 'none';
+        $empUpdates[] = "is_student = 0";
+        $empUpdates[] = "student_status = 'none'";
+        $empParams[':is_student'] = 0;
+    }
 }
 if ($institution_type_val !== null) {
     $empUpdates[] = "institution_type = :institution_type";
@@ -161,6 +183,7 @@ try {
             "phone" => $phone,
             "username" => $username,
             "is_student" => $is_student_val,
+            "student_status" => $resultingStudentStatus,
             "institution_type" => $institution_type_val,
             "student_institution" => $student_institution_val,
             "student_level" => $student_level_val
