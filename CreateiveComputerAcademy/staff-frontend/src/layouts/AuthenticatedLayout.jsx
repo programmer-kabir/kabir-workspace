@@ -14,6 +14,7 @@ import CommandPalette from '../components/CommandPalette';
 import BreakRequestModal from '../components/BreakRequestModal';
 import BreakLockOverlay from '../components/BreakLockOverlay';
 import { Toaster, toast } from 'sonner';
+import LuxuryToastContainer from '../components/LuxuryToast';
 import Pusher from 'pusher-js';
 import { FiSearch, FiX, FiSidebar, FiMenu, FiCoffee } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
@@ -115,6 +116,7 @@ const AuthenticatedLayout = ({ children }) => {
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden relative">
       <Toaster richColors position="top-right" />
+      <LuxuryToastContainer />
 
       {/* Responsive Sidebar (Desktop Collapsible & Mobile Slide-over Drawer) */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />

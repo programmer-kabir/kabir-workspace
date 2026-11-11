@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { showLuxuryToast } from '../LuxuryToast';
 
 /**
  * useProfileData
@@ -143,6 +144,12 @@ export default function useProfileData() {
       );
       if (res.data.status === 'success') {
         setProfileMessage({ text: res.data.message, type: 'success' });
+        showLuxuryToast({
+          title: `${cropType === 'profile' ? 'প্রোফাইল ছবি' : 'কভার ব্যানার'} সংরক্ষিত! 🖼️`,
+          message: 'নতুন ছবিটি সফলভাবে ক্রপ ও আপলোড সম্পন্ন হয়েছে।',
+          tag: 'Media Uploaded',
+          type: 'success',
+        });
         updateUser({
           [cropType === 'profile' ? 'profile_picture' : 'cover_picture']: res.data.path,
         });
@@ -171,6 +178,12 @@ export default function useProfileData() {
       });
       if (res.data.status === 'success') {
         setPayoutMessage({ text: 'Payout payment method saved successfully!', type: 'success' });
+        showLuxuryToast({
+          title: 'উত্তোলন সেটিংস সংরক্ষিত! 💳',
+          message: 'আপনার পেমেন্ট মেথড ও অ্যাকাউন্ট তথ্য সফলভাবে সেভ হয়েছে।',
+          tag: 'Payout Saved',
+          type: 'success',
+        });
         setTimeout(() => setPayoutMessage(null), 3500);
       } else {
         setPayoutMessage({ text: res.data.message || 'Failed to save payout method.', type: 'error' });
@@ -207,6 +220,18 @@ export default function useProfileData() {
         const returnedStatus = res.data.data?.student_status || res.data.student_status || (isStudent ? 'pending' : 'none');
         setStudentStatus(returnedStatus);
         setProfileMessage({ text: 'Profile updated successfully!', type: 'success' });
+        
+        // Trigger Luxury Toast
+        showLuxuryToast({
+          title: 'সার্ভারে সংরক্ষিত! 📁',
+          message: isStudent 
+            ? 'আপনার প্রোফাইল ও শিক্ষার্থী আবেদন সফলভাবে সার্ভারে সেভ হয়েছে।' 
+            : 'আপনার প্রোফাইলের সকল তথ্য সফলভাবে সার্ভারে সেভ হয়েছে।',
+          tag: 'Server Saved',
+          type: 'success',
+          duration: 4500,
+        });
+
         updateUser({
           name,
           phone,
@@ -220,6 +245,12 @@ export default function useProfileData() {
         }, 1200);
       } else {
         setProfileMessage({ text: res.data.message || 'Failed to update profile.', type: 'error' });
+        showLuxuryToast({
+          title: 'আপডেট ব্যর্থ হয়েছে! ⚠️',
+          message: res.data.message || 'প্রোফাইল তথ্য সেভ করতে সমস্যা হয়েছে।',
+          tag: 'Update Error',
+          type: 'error',
+        });
       }
     } catch (error) {
       setProfileMessage({
@@ -256,6 +287,12 @@ export default function useProfileData() {
 
       if (res.data.status === 'success') {
         setPasswordMessage({ text: 'Password updated successfully!', type: 'success' });
+        showLuxuryToast({
+          title: 'পাসওয়ার্ড পরিবর্তিত! 🔒',
+          message: 'আপনার অ্যাকাউন্টের নিরাপত্তা পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে।',
+          tag: 'Security Saved',
+          type: 'success',
+        });
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
