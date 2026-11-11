@@ -1,0 +1,44 @@
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+export const fetchInvestInstallments = createAsyncThunk(
+  "investInstallments/fetchInvestInstallments",
+  async (card_no, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${
+          import.meta.env.VITE_LOCALHOST_KEY
+        }/investor_apis/get_installments.php?investment_card_no=${card_no}`
+      );
+      const raw = response.data;
+      const data = Array.isArray(raw) ? raw : (raw?.data || []);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+const InvestInstallments = createSlice({
+  name: "investInstallments",
+  initialState: {
+    inInvestInstallmentsLoading: false,
+    investInstallments: [],
+    isInvestInstallmentsError: null,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchInvestInstallments.pending, (state) => {
+      state.inInvestInstallmentsLoading = true;
+    });
+    builder.addCase(fetchInvestInstallments.fulfilled, (state, action) => {
+      state.inInvestInstallmentsLoading = false;
+      state.investInstallments = Array.isArray(action.payload) ? action.payload : [];
+      state.isInvestInstallmentsError = null;
+    });
+    builder.addCase(fetchInvestInstallments.rejected, (state, action) => {
+      state.inInvestInstallmentsLoading = false;
+      state.investInstallments = [];
+      state.isInvestInstallmentsError = action.payload || action.error.message;
+    });
+  },
+});
+
+export default InvestInstallments.reducer;

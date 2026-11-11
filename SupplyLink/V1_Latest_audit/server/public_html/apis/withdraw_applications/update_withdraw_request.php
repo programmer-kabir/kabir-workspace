@@ -1,0 +1,343 @@
+<?php
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../cors.php';
+guardManagerAdminOnly();
+
+header("Content-Type: application/json; charset=UTF-8");
+ini_set('display_errors', 0);
+error_reporting(0);
+
+function jsonFail($msg, $code = 400) {
+  http_response_code($code);
+  echo json_encode(["success" => false, "message" => $msg], JSON_UNESCAPED_UNICODE);
+  exit;
+}
+
+function toInt($v, $def = 0) {
+  if ($v === null || $v === '') return $def;
+  $n = filter_var($v, FILTER_VALIDATE_INT);
+  return ($n === false) ? $def : (int)$n;
+}
+
+function cleanStr($v) {
+  return trim((string)($v ?? ''));
+}
+
+try {
+  if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    jsonFail("Invalid method. Use POST.", 405);
+  }
+
+  @$mysqli->query("SET time_zone = '+06:00'");
+
+  $raw = file_get_contents("php://input");
+  $body = json_decode($raw, true);
+  if (!is_array($body)) $body = [];
+
+  $request_id = toInt($body['request_id'] ?? 0, 0);
+  $action     = strtolower(cleanStr($body['action'] ?? ''));
+  $reject_reason  = cleanStr($body['reject_reason'] ?? '');
+  $payment_method = cleanStr($body['payment_method'] ?? '');
+
+  $payloadReviewer = toInt($body['reviewed_by'] ?? 0, 0);
+
+  if (!isset($body['request_id']) || $body['request_id'] === '' || $request_id < 0) {
+    jsonFail("request_id required");
+  }
+  if (!in_array($action, ['paid', 'rejected'], true)) {
+    jsonFail("action must be 'paid' or 'rejected'");
+  }
+  if ($action === 'rejected' && $reject_reason === '') {
+    jsonFail("reject_reason required for rejected action");
+  }
+
+  $actor_id = (int)$payloadReviewer;
+  if ($actor_id <= 0) jsonFail("reviewed_by required", 401);
+
+  // reviewer check
+  $stmtChk = $mysqli->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+  $stmtChk->bind_param("i", $actor_id);
+  $stmtChk->execute();
+  $rv = $stmtChk->get_result()->fetch_assoc();
+  if (!$rv) jsonFail("Reviewer user not found", 404);
+
+  // ================= TRANSACTION =================
+  $mysqli->begin_transaction();
+
+  // 🔥 card_id সহ data lock
+  $stmtL = $mysqli->prepare("
+    SELECT id, status, card_id, investor_id, amount, payable_amount, total_profit, withdraw_date
+    FROM investment_withdraw_requests
+    WHERE id = ?
+    FOR UPDATE
+  ");
+  $stmtL->bind_param("i", $request_id);
+  $stmtL->execute();
+  $row = $stmtL->get_result()->fetch_assoc();
+
+  if (!$row) {
+    $mysqli->rollback();
+    jsonFail("Request not found", 404);
+  }
+
+  if (strtolower($row['status']) !== 'pending') {
+    $mysqli->rollback();
+    jsonFail("Only pending requests allowed", 409);
+  }
+
+  $card_id = (int)$row['card_id'];
+
+  // ================= ACTION =================
+  if ($action === 'paid') {
+
+    // ✅ update withdraw
+    $stmtU = $mysqli->prepare("
+      UPDATE investment_withdraw_requests
+      SET
+        status = 'paid',
+        reviewed_by = ?,
+        reviewed_at = NOW(),
+        payment_method = ?,
+        reject_reason = NULL
+      WHERE id = ?
+      LIMIT 1
+    ");
+    $stmtU->bind_param("isi", $actor_id, $payment_method, $request_id);
+    if (!$stmtU->execute()) {
+      throw new Exception("Withdraw update failed");
+    }
+
+    // 🔥 AUTO CLOSE CARD + END DATE
+    if ($card_id > 0) {
+      $stmtC = $mysqli->prepare("
+        UPDATE investment_cards
+        SET 
+          status = 'closed',
+          end_date = NOW()
+        WHERE id = ?
+        LIMIT 1
+      ");
+      $stmtC->bind_param("i", $card_id);
+      if (!$stmtC->execute()) {
+        throw new Exception("Card close failed");
+      }
+    }
+
+    // 💰 AUTOMATIC CASH OUT INSERTION
+    $investorId = (int)($row['investor_id'] ?? 0);
+    $investorName = "ইনভেস্টর";
+    if ($investorId > 0) {
+      $stmtInvName = $mysqli->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+      if ($stmtInvName) {
+        $stmtInvName->bind_param("i", $investorId);
+        $stmtInvName->execute();
+        $rInv = $stmtInvName->get_result()->fetch_assoc();
+        if (!empty($rInv['name'])) {
+          $investorName = $rInv['name'];
+        }
+        $stmtInvName->close();
+      }
+    }
+
+    $cardName = "কার্ড #" . $card_id;
+    $cardAmt = 0;
+    if ($card_id > 0) {
+      $stmtCardInfo = $mysqli->prepare("SELECT card_name, investment_amount FROM investment_cards WHERE id = ? LIMIT 1");
+      if ($stmtCardInfo) {
+        $stmtCardInfo->bind_param("i", $card_id);
+        $stmtCardInfo->execute();
+        $rCard = $stmtCardInfo->get_result()->fetch_assoc();
+        if (!empty($rCard['card_name'])) {
+          $cardName = $rCard['card_name'];
+        }
+        if (!empty($rCard['investment_amount'])) {
+          $cardAmt = (float)$rCard['investment_amount'];
+        }
+        $stmtCardInfo->close();
+      }
+    }
+
+    // 💰 Investment Capital Payout (Prioritize investment principal 'amount', then card's 'investment_amount')
+    $payAmount = ((float)($row['amount'] ?? 0) > 0)
+      ? (float)$row['amount']
+      : (((float)$cardAmt > 0) ? (float)$cardAmt : (float)($row['payable_amount'] ?? 0));
+
+    if ($payAmount > 0) {
+      $cardDetailsStr = ($card_id > 0) ? " (কার্ড #{$card_id})" : "";
+      $cashSource = "গ্রাহক: {$investorName} - কার্ড #{$card_id} ({$cardName})";
+      $cashPurpose = "বিনিয়োগ মূলধন ফেরত ও কার্ড সমাপ্ত - গ্রাহক: {$investorName}{$cardDetailsStr}";
+      $cashCategory = "investor-payout";
+      $cashRefId = ($card_id > 0) ? "inv_wth_card_" . $card_id : "inv_wth_req_" . $request_id;
+      $cashRemarks = "উইথড্র আবেদন #{$request_id} অনুমোদন ও মূলধন পরিশোধ (পদ্ধতি: " . ($payment_method ?: "Cash") . ")";
+      $cashDate = date('Y-m-d');
+
+      // Check if cash record already exists for this refId (prevent duplicate)
+      $stmtChkCash = $mysqli->prepare("SELECT id FROM cash WHERE refId = ? LIMIT 1");
+      $stmtChkCash->bind_param("s", $cashRefId);
+      $stmtChkCash->execute();
+      $existingCash = $stmtChkCash->get_result()->fetch_assoc();
+      $stmtChkCash->close();
+
+      if (!$existingCash) {
+        $stmtCash = $mysqli->prepare("
+          INSERT INTO cash (
+            type, source, purpose, amount, category,
+            refId, remarks, date, createdAt,
+            approval_status, approved_by, approved_at
+          ) VALUES (
+            'out', ?, ?, ?, ?,
+            ?, ?, ?, NOW(),
+            'approved', ?, NOW()
+          )
+        ");
+        if ($stmtCash) {
+          $stmtCash->bind_param(
+            "ssdssssi",
+            $cashSource,
+            $cashPurpose,
+            $payAmount,
+            $cashCategory,
+            $cashRefId,
+            $cashRemarks,
+            $cashDate,
+            $actor_id
+          );
+          if (!$stmtCash->execute()) {
+            throw new Exception("Cash out insert failed: " . $stmtCash->error);
+          }
+          $stmtCash->close();
+        }
+      } else {
+        // Sync existing cash record with correct investment amount, purpose, source & category
+        $existCashId = (int)$existingCash['id'];
+        $stmtUpdCash = $mysqli->prepare("
+          UPDATE cash
+          SET source = ?, purpose = ?, amount = ?, category = ?, remarks = ?
+          WHERE id = ?
+          LIMIT 1
+        ");
+        if ($stmtUpdCash) {
+          $stmtUpdCash->bind_param("ssdssi", $cashSource, $cashPurpose, $payAmount, $cashCategory, $cashRemarks, $existCashId);
+          $stmtUpdCash->execute();
+          $stmtUpdCash->close();
+        }
+      }
+    }
+
+  } else {
+
+    // ❌ rejected
+    $stmtU = $mysqli->prepare("
+      UPDATE investment_withdraw_requests
+      SET
+        status = 'rejected',
+        reviewed_by = ?,
+        reviewed_at = NOW(),
+        reject_reason = ?,
+        payment_method = NULL
+      WHERE id = ?
+      LIMIT 1
+    ");
+    $stmtU->bind_param("isi", $actor_id, $reject_reason, $request_id);
+    if (!$stmtU->execute()) {
+      throw new Exception("Reject failed");
+    }
+  }
+
+  // ✅ read updated data
+  $stmtR = $mysqli->prepare("
+    SELECT *
+    FROM investment_withdraw_requests
+    WHERE id = ?
+    LIMIT 1
+  ");
+  $stmtR->bind_param("i", $request_id);
+  $stmtR->execute();
+  $updated = $stmtR->get_result()->fetch_assoc();
+
+  $mysqli->commit();
+
+  // 🚀 Send Automated Email Notification (Admin Alert + Investor copy if email exists)
+  try {
+    require_once __DIR__ . '/../helpers/mailer.php';
+
+    // 1. Fetch Investor details
+    $investorId = (int)($updated['investor_id'] ?? 0);
+    $investorData = null;
+    if ($investorId > 0) {
+      $stmtInv = $mysqli->prepare("SELECT id, name, mobile, email, address, id_number FROM users WHERE id = ? LIMIT 1");
+      if ($stmtInv) {
+        $stmtInv->bind_param("i", $investorId);
+        $stmtInv->execute();
+        $investorData = $stmtInv->get_result()->fetch_assoc();
+        $stmtInv->close();
+      }
+    }
+    if (empty($investorData)) {
+      $investorData = [
+        'id'     => $investorId,
+        'name'   => 'Investor #' . $investorId,
+        'mobile' => $updated['mobile'] ?? null,
+        'email'  => null
+      ];
+    }
+
+    // 2. Fetch Card details
+    $cId = (int)($updated['card_id'] ?? $card_id);
+    $cardData = null;
+    if ($cId > 0) {
+      $stmtCard = $mysqli->prepare("SELECT id, card_name, investment_amount, payment_type, start_date, maturity_date, status FROM investment_cards WHERE id = ? LIMIT 1");
+      if ($stmtCard) {
+        $stmtCard->bind_param("i", $cId);
+        $stmtCard->execute();
+        $cardData = $stmtCard->get_result()->fetch_assoc();
+        $stmtCard->close();
+      }
+    }
+    if (empty($cardData)) {
+      $cardData = [
+        'id'                => $cId,
+        'card_name'         => 'Card #' . $cId,
+        'investment_amount' => $updated['amount'] ?? 0,
+        'payment_type'      => 'standard',
+        'status'            => ($action === 'paid' ? 'closed' : 'active')
+      ];
+    }
+
+    // 3. Fetch Reviewer details
+    $reviewerData = null;
+    if ($actor_id > 0) {
+      $stmtRev = $mysqli->prepare("SELECT id, name, mobile, email FROM users WHERE id = ? LIMIT 1");
+      if ($stmtRev) {
+        $stmtRev->bind_param("i", $actor_id);
+        $stmtRev->execute();
+        $reviewerData = $stmtRev->get_result()->fetch_assoc();
+        $stmtRev->close();
+      }
+    }
+    if (empty($reviewerData)) {
+      $reviewerData = [
+        'id'   => $actor_id,
+        'name' => 'Staff #' . $actor_id
+      ];
+    }
+
+    $extraNotes = ($action === 'rejected') ? $reject_reason : $payment_method;
+    sendWithdrawDecisionNotification($action, $updated, $investorData, $cardData, $reviewerData, $extraNotes);
+
+  } catch (Throwable $mailErr) {
+    error_log("Withdraw decision notification non-fatal error: " . $mailErr->getMessage());
+  }
+
+  echo json_encode([
+    "success" => true,
+    "message" => ($action === 'paid') 
+        ? "Marked as paid + card closed + end_date set" 
+        : "Rejected",
+    "data" => $updated
+  ], JSON_UNESCAPED_UNICODE);
+
+} catch (Exception $e) {
+  if (isset($mysqli)) $mysqli->rollback();
+  jsonFail($e->getMessage(), 500);
+}

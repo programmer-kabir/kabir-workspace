@@ -1,0 +1,141 @@
+<?php
+
+
+// Prevent PHP notices/warnings from corrupting JSON output
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+
+header('Content-Type: application/json; charset=utf-8');
+
+require_once __DIR__ . '/../cors.php';
+
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    session_start();
+}
+
+require_once __DIR__ . '/../db.php';
+// JSON ইনপুট নেই
+
+$raw   = file_get_contents('php://input');
+$input = json_decode($raw, true);
+
+if ($input === null) {
+    echo json_encode([
+        'success' => false,
+        'valid'   => false,
+        'message' => 'Invalid JSON',
+    ]);
+    exit;
+}
+
+$id       = isset($input['id']) ? trim((string)$input['id']) : null;
+$password = isset($input['password']) ? (string)$input['password'] : null;
+
+if (!$id || !$password) {
+    echo json_encode([
+        'success' => false,
+        'valid'   => false,
+        'message' => 'ID/মোবাইল এবং পাসওয়ার্ড প্রদান করুন'
+    ]);
+    exit;
+}
+
+// DB: Find user by id, mobile or id_number with roles
+$sql = "
+    SELECT 
+        u.id, 
+        u.name, 
+        u.mobile, 
+        u.email,
+        u.id_number,
+        u.address,
+        u.photo,
+        u.password,
+        GROUP_CONCAT(DISTINCT ur.role) AS roles
+    FROM users u
+    LEFT JOIN user_roles ur ON ur.user_id = u.id
+    WHERE u.id = ? OR u.mobile = ? OR u.id_number = ?
+    GROUP BY u.id, u.name, u.mobile, u.email, u.id_number, u.address, u.photo, u.password
+    LIMIT 1
+";
+$stmt = $mysqli->prepare($sql);
+
+if (!$stmt) {
+    echo json_encode([
+        'success' => false,
+        'valid'   => false,
+        'message' => 'Prepare failed',
+        'error'   => $mysqli->error,
+    ]);
+    exit;
+}
+
+$stmt->bind_param("sss", $id, $id, $id);
+
+if (!$stmt->execute()) {
+    echo json_encode([
+        'success' => false,
+        'valid'   => false,
+        'message' => 'Execute failed',
+        'error'   => $stmt->error,
+    ]);
+    exit;
+}
+
+$stmt->store_result();
+
+if ($stmt->num_rows === 0) {
+    echo json_encode([
+        'success' => true,
+        'valid'   => false,
+        'message' => 'User পাওয়া যায়নি',
+    ]);
+    $stmt->close();
+    exit;
+}
+
+$stmt->bind_result($db_id, $name, $mobile, $email, $id_number, $address, $photo, $db_password, $db_roles);
+$stmt->fetch();
+$stmt->close();
+
+// Password check
+if ($password !== $db_password) {
+    echo json_encode([
+        'success' => true,
+        'valid'   => false,
+        'message' => 'Password ভুল',
+    ]);
+    exit;
+}
+
+// Parse roles list
+$rolesList = !empty($db_roles) ? explode(',', $db_roles) : ['investor'];
+
+// Set User & Investor Session
+$_SESSION['user'] = [
+    'id'        => (int)$db_id,
+    'name'      => $name,
+    'mobile'    => $mobile,
+    'email'     => $email,
+    'role'      => !empty($rolesList) ? $rolesList[0] : 'investor',
+    'roles'     => $rolesList,
+];
+$_SESSION['investor_id']   = (int)$db_id;
+$_SESSION['investor_name'] = $name;
+
+echo json_encode([
+    'success' => true,
+    'valid'   => true,
+    'message' => 'Login successful',
+    'user' => [
+        'id'        => (int)$db_id,
+        'name'      => $name,
+        'mobile'    => $mobile,
+        'email'     => $email,
+        'id_number' => $id_number,
+        'address'   => $address,
+        'photo'     => $photo,
+        'roles'     => $rolesList,
+    ]
+]);
