@@ -253,10 +253,11 @@ class BreakDbHelper {
                 $tiffinSavings = (int)($tRow['t_bonus'] ?? 0);
             } catch (Throwable $e3) {}
 
-            // 9. Deduct unexcused absent days (8h / shift_hours per absent day)
+            // 9. Deduct unexcused absent days — count DISTINCT dates to avoid duplicate-row double-counting;
+            //    exclude Fridays (DAYOFWEEK=6) which have no shift obligation.
             $absentMins = 0;
             try {
-                $absStmt = $db->prepare("SELECT COUNT(*) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent'");
+                $absStmt = $db->prepare("SELECT COUNT(DISTINCT date) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent' AND DAYOFWEEK(date) != 6");
                 $absStmt->execute([':user_id' => $user_id]);
                 $absRow = $absStmt->fetch(PDO::FETCH_ASSOC);
                 $absentCount = (int)($absRow['absent_count'] ?? 0);
@@ -404,9 +405,11 @@ class BreakDbHelper {
                 $tiffinSavings = (int)($tRow['t_savings'] ?? 0);
             } catch (Throwable $e3) {}
 
+            // Deduct unexcused absent days — DISTINCT date to avoid duplicate-row double-counting;
+            // exclude Fridays (DAYOFWEEK=6, no shift obligation).
             $absentMins = 0;
             try {
-                $absStmt = $db->prepare("SELECT COUNT(*) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent'");
+                $absStmt = $db->prepare("SELECT COUNT(DISTINCT date) as absent_count FROM attendance WHERE user_id = :user_id AND status = 'Absent' AND DAYOFWEEK(date) != 6");
                 $absStmt->execute([':user_id' => $user_id]);
                 $absRow = $absStmt->fetch(PDO::FETCH_ASSOC);
                 $absentCount = (int)($absRow['absent_count'] ?? 0);

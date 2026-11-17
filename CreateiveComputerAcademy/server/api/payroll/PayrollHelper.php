@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../notifications/notification_helper.php';
+require_once __DIR__ . '/OvertimeEngine.php';
+require_once __DIR__ . '/PayrollSync.php';
+require_once __DIR__ . '/PayrollRoadmap.php';
+require_once __DIR__ . '/PayrollWithdrawal.php';
 
 class PayrollHelper {
     public static function ensureSchema($pdo) {
@@ -164,532 +168,39 @@ class PayrollHelper {
     }
 
     /**
-     * Fetch contract tiers for a scheme
+     * Fetch contract tiers for a scheme (delegated to PayrollRoadmap)
      */
     public static function getContractTiers($pdo, $schemeId) {
-        if (!$schemeId) return [];
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM staff_contract_tiers WHERE scheme_id = :scheme_id ORDER BY tier_number ASC");
-            $stmt->execute([':scheme_id' => $schemeId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            return [];
-        }
-    }
-
-
-    public static function saveContractTiers($pdo, $schemeId, $userId, $tiers, $workingDays = 26, $dailyHours = 8.0) {
-        if (!$schemeId || empty($tiers) || !is_array($tiers)) return;
-
-        try {
-            $pdo->prepare("DELETE FROM staff_contract_tiers WHERE scheme_id = :scheme_id")->execute([':scheme_id' => $schemeId]);
-
-            $insStmt = $pdo->prepare("
-                INSERT INTO staff_contract_tiers (
-                    scheme_id, user_id, tier_number, tier_name,
-                    start_month_index, end_month_index, monthly_salary,
-                    hourly_rate, working_days_per_month, standard_daily_hours, status, created_at
-                ) VALUES (
-                    :scheme_id, :user_id, :tier_number, :tier_name,
-                    :start_month_index, :end_month_index, :monthly_salary,
-                    :hourly_rate, :working_days_per_month, :standard_daily_hours, 'pending', NOW()
-                )
-            ");
-
-            $dailyHours = max(0.1, floatval($dailyHours));
-            $workingDays = max(1, intval($workingDays));
-            $dailyMins = self::getStandardDailyMinutes($dailyHours);
-            $effectiveDailyHours = $dailyMins / 60.0;
-            $monthlyHours = $workingDays * $effectiveDailyHours;
-
-            foreach ($tiers as $idx => $t) {
-                $tNum = isset($t['tier_number']) ? intval($t['tier_number']) : ($idx + 1);
-                $tName = !empty($t['tier_name']) ? trim($t['tier_name']) : "Tier {$tNum}";
-                $sIdx = isset($t['start_month_index']) ? intval($t['start_month_index']) : (($idx * 3) + 1);
-                $eIdx = isset($t['end_month_index']) ? intval($t['end_month_index']) : (($idx + 1) * 3);
-                $salary = floatval($t['monthly_salary'] ?? 0.0);
-                $rate = ($monthlyHours > 0) ? round($salary / $monthlyHours, 6) : 0.0;
-
-                $insStmt->execute([
-                    ':scheme_id' => $schemeId,
-                    ':user_id' => $userId,
-                    ':tier_number' => $tNum,
-                    ':tier_name' => $tName,
-                    ':start_month_index' => $sIdx,
-                    ':end_month_index' => $eIdx,
-                    ':monthly_salary' => $salary,
-                    ':hourly_rate' => $rate,
-                    ':working_days_per_month' => $workingDays,
-                    ':standard_daily_hours' => $dailyHours
-                ]);
-            }
-        } catch (Throwable $e) {
-            error_log("Error in saveContractTiers: " . $e->getMessage());
-        }
+        return PayrollRoadmap::getContractTiers($pdo, $schemeId);
     }
 
     /**
-     * Resolve the active tier and rate for a specific date or YYYY-MM
+     * Save/replace contract tiers for a scheme (delegated to PayrollRoadmap)
+     */
+    public static function saveContractTiers($pdo, $schemeId, $userId, $tiers, $workingDays = 26, $dailyHours = 8.0) {
+        return PayrollRoadmap::saveContractTiers($pdo, $schemeId, $userId, $tiers, $workingDays, $dailyHours);
+    }
+
+    /**
+     * Resolve the active tier and rate for a specific date or YYYY-MM (delegated to PayrollRoadmap)
      */
     public static function getTierInfoForMonth($scheme, $dateOrMonth, $tiers = null) {
-        $defaultRate = floatval($scheme['hourly_rate'] ?? 0.0);
-        $defaultSalary = floatval($scheme['salary_amount'] ?? 0.0);
-
-        if (empty($scheme['contract_start_date'])) {
-            return [
-                'tier_number' => null,
-                'tier_name' => null,
-                'monthly_salary' => $defaultSalary,
-                'hourly_rate' => $defaultRate,
-                'month_index' => 1
-            ];
-        }
-
-        $startTs = strtotime($scheme['contract_start_date']);
-        $startYear = (int)date('Y', $startTs);
-        $startMonth = (int)date('n', $startTs);
-
-        $targetTs = strtotime((strlen($dateOrMonth) === 7 ? $dateOrMonth . '-01' : $dateOrMonth));
-        $targetYear = (int)date('Y', $targetTs);
-        $targetMonth = (int)date('n', $targetTs);
-
-        $monthIndex = ($targetYear - $startYear) * 12 + ($targetMonth - $startMonth) + 1;
-        if ($monthIndex < 1) $monthIndex = 1;
-
-        if (($scheme['scheme_type'] ?? '') !== 'STAGGERED_CONTRACT' || empty($tiers)) {
-            return [
-                'tier_number' => null,
-                'tier_name' => null,
-                'monthly_salary' => $defaultSalary,
-                'hourly_rate' => $defaultRate,
-                'month_index' => $monthIndex
-            ];
-        }
-
-        // Match against existing tiers
-        foreach ($tiers as $t) {
-            $sIdx = intval($t['start_month_index']);
-            $eIdx = intval($t['end_month_index']);
-            if ($monthIndex >= $sIdx && $monthIndex <= $eIdx) {
-                return [
-                    'tier_number' => intval($t['tier_number']),
-                    'tier_name' => $t['tier_name'],
-                    'monthly_salary' => floatval($t['monthly_salary']),
-                    'hourly_rate' => floatval($t['hourly_rate']),
-                    'month_index' => $monthIndex
-                ];
-            }
-        }
-
-        // If month index exceeds, return final tier
-        $lastTier = end($tiers);
-        return [
-            'tier_number' => intval($lastTier['tier_number']),
-            'tier_name' => $lastTier['tier_name'],
-            'monthly_salary' => floatval($lastTier['monthly_salary']),
-            'hourly_rate' => floatval($lastTier['hourly_rate']),
-            'month_index' => $monthIndex
-        ];
+        return PayrollRoadmap::getTierInfoForMonth($scheme, $dateOrMonth, $tiers);
     }
 
     /**
-     * Build visual roadmap object for Staggered Contracts
+     * Build visual roadmap object for Staggered Contracts (delegated to PayrollRoadmap)
      */
     public static function buildContractRoadmap($scheme, $tiers, $totalEarned, $pdo = null, $userId = null) {
-        if (($scheme['scheme_type'] ?? '') !== 'STAGGERED_CONTRACT' || empty($tiers)) {
-            return null;
-        }
-
-        $contractStart = !empty($scheme['contract_start_date']) ? $scheme['contract_start_date'] : date('Y-m-d');
-        $contractTarget = floatval($scheme['contract_amount'] ?: 60000.0);
-        $startTs = strtotime($contractStart);
-        $startYear = (int)date('Y', $startTs);
-        $startMonth = (int)date('n', $startTs);
-
-        $nowYear = (int)date('Y');
-        $nowMonth = (int)date('n');
-        $currentMonthIndex = max(1, ($nowYear - $startYear) * 12 + ($nowMonth - $startMonth) + 1);
-        $today = date('Y-m-d');
-        $todayTs = strtotime($today);
-
-        $tierList = [];
-        $activeTier = null;
-        $totalContractMonths = intval($scheme['contract_duration_months'] ?: 12);
-
-        foreach ($tiers as $idx => $t) {
-            $tNum = intval($t['tier_number']);
-            $sIdx = intval($t['start_month_index']);
-            $eIdx = intval($t['end_month_index']);
-            $sal = floatval($t['monthly_salary']);
-            $rate = floatval($t['hourly_rate']);
-
-            // Precise date boundaries for this tier
-            $tierStartDate = date('Y-m-d', strtotime("+" . ($sIdx - 1) . " months", $startTs));
-            $nextMonthStart = date('Y-m-d', strtotime("+" . $eIdx . " months", $startTs));
-            $tierEndDate = date('Y-m-d', strtotime("-1 day", strtotime($nextMonthStart)));
-            $totalDays = max(1, (int)round((strtotime($tierEndDate) - strtotime($tierStartDate)) / 86400) + 1);
-
-            $status = 'upcoming';
-            $daysElapsed = 0;
-            $daysRemaining = $totalDays;
-
-            if ($today > $tierEndDate) {
-                $status = 'completed';
-                $daysElapsed = $totalDays;
-                $daysRemaining = 0;
-            } elseif ($today >= $tierStartDate && $today <= $tierEndDate) {
-                $status = 'active';
-                $daysElapsed = max(1, (int)round(($todayTs - strtotime($tierStartDate)) / 86400) + 1);
-                $daysRemaining = max(0, (int)round((strtotime($tierEndDate) - $todayTs) / 86400));
-            } else {
-                $status = 'upcoming';
-                $daysElapsed = 0;
-                $daysRemaining = $totalDays;
-            }
-
-            // Attendance days worked in this tier
-            $attendanceDays = 0;
-            if ($pdo && $userId) {
-                try {
-                    $stmtAttCount = $pdo->prepare("
-                        SELECT COUNT(DISTINCT work_date) 
-                        FROM staff_work_earnings 
-                        WHERE user_id = :user_id 
-                          AND work_date BETWEEN :t_start AND :t_end
-                    ");
-                    $stmtAttCount->execute([
-                        ':user_id' => $userId,
-                        ':t_start' => $tierStartDate,
-                        ':t_end' => $tierEndDate
-                    ]);
-                    $attendanceDays = intval($stmtAttCount->fetchColumn() ?: 0);
-                } catch (Throwable $e) {}
-            }
-
-            $daysProgress = min(100.0, round(($daysElapsed / $totalDays) * 100, 1));
-            $nextTier = isset($tiers[$idx + 1]) ? $tiers[$idx + 1] : null;
-
-            $tObj = [
-                'tier_number' => $tNum,
-                'tier_name' => $t['tier_name'],
-                'start_month_index' => $sIdx,
-                'end_month_index' => $eIdx,
-                'month_span_label' => "Month {$sIdx}–{$eIdx}",
-                'start_date' => $tierStartDate,
-                'end_date' => $tierEndDate,
-                'total_days' => $totalDays,
-                'days_elapsed' => $daysElapsed,
-                'days_remaining' => $daysRemaining,
-                'days_progress' => $daysProgress,
-                'attendance_days' => $attendanceDays,
-                'next_promotion_date' => $nextTier ? $nextMonthStart : null,
-                'next_tier_salary' => $nextTier ? floatval($nextTier['monthly_salary']) : null,
-                'next_tier_name' => $nextTier ? $nextTier['tier_name'] : null,
-                'monthly_salary' => $sal,
-                'hourly_rate' => $rate,
-                'status' => $status
-            ];
-
-            if ($status === 'active') {
-                $tObj['months_remaining_in_tier'] = max(0, $eIdx - $currentMonthIndex + 1);
-                $activeTier = $tObj;
-            }
-
-            $tierList[] = $tObj;
-        }
-
-        if (!$activeTier && !empty($tierList)) {
-            $lastT = end($tierList);
-            $activeTier = ($today > $lastT['end_date']) 
-                ? $lastT 
-                : $tierList[0];
-        }
-
-        return [
-            'scheme_type' => 'STAGGERED_CONTRACT',
-            'contract_amount' => $contractTarget,
-            'total_earned' => round($totalEarned, 2),
-            'remaining_contract' => max(0.0, round($contractTarget - $totalEarned, 2)),
-            'progress_percent' => $contractTarget > 0 ? min(100.0, round(($totalEarned / $contractTarget) * 100, 1)) : 100.0,
-            'current_month_index' => $currentMonthIndex,
-            'total_months' => $totalContractMonths,
-            'active_tier' => $activeTier,
-            'tiers' => $tierList
-        ];
+        return PayrollRoadmap::buildContractRoadmap($scheme, $tiers, $totalEarned, $pdo, $userId);
     }
 
     /**
      * Sync attendance records into staff_work_earnings for a user or scheme
+     * (Delegated to dedicated PayrollSync engine)
      */
     public static function syncAttendanceEarnings($pdo, $userId = null, $schemeId = null) {
-        $schemes = [];
-        if ($schemeId) {
-            $stmt = $pdo->prepare("SELECT * FROM staff_pay_schemes WHERE id = :id AND status = 'active'");
-            $stmt->execute([':id' => $schemeId]);
-            $schemes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } elseif ($userId) {
-            $stmt = $pdo->prepare("SELECT * FROM staff_pay_schemes WHERE user_id = :user_id AND status = 'active' ORDER BY id DESC");
-            $stmt->execute([':user_id' => $userId]);
-            $schemes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $stmt = $pdo->query("SELECT * FROM staff_pay_schemes WHERE status = 'active' ORDER BY id DESC");
-            $schemes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        $totalSyncedSessions = 0;
-        $totalSyncedAmount = 0.0;
-
-        foreach ($schemes as $scheme) {
-            $sId = $scheme['id'];
-            $uId = $scheme['user_id'];
-            $startDate = $scheme['contract_start_date'];
-            $endDate = !empty($scheme['contract_end_date']) ? $scheme['contract_end_date'] : null;
-            $hourlyRate = floatval($scheme['hourly_rate']);
-            $tiers = self::getContractTiers($pdo, $sId);
-
-            // Find all attendance records within contract period
-            $sql = "
-                SELECT id, user_id, date, check_in, check_out, status
-                FROM attendance
-                WHERE user_id = :user_id
-                  AND date >= :start_date
-                  " . ($endDate ? "AND date <= :end_date" : "") . "
-                  AND check_in IS NOT NULL AND check_in != ''
-                  AND check_out IS NOT NULL AND check_out != ''
-                  AND status IN ('Present', 'Late', 'Half Day')
-                ORDER BY date ASC, check_in ASC
-            ";
-
-            $params = [
-                ':user_id' => $uId,
-                ':start_date' => $startDate,
-            ];
-            if ($endDate) {
-                $params[':end_date'] = $endDate;
-            }
-
-            $stmtAtt = $pdo->prepare($sql);
-            $stmtAtt->execute($params);
-            $attendances = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($attendances as $att) {
-                $attId = $att['id'];
-                $attDate = $att['date'];
-                $checkInRaw = trim($att['check_in']);
-                $checkOutRaw = trim($att['check_out']);
-
-                // Normalize check-in / check-out timestamps
-                $inTimeStr = (strpos($checkInRaw, ' ') !== false) ? $checkInRaw : ($attDate . ' ' . $checkInRaw);
-                $outTimeStr = (strpos($checkOutRaw, ' ') !== false) ? $checkOutRaw : ($attDate . ' ' . $checkOutRaw);
-
-                $inTs = strtotime($inTimeStr);
-                $outTs = strtotime($outTimeStr);
-
-                if ($outTs <= $inTs) {
-                    continue; // Skip invalid or zero durations
-                }
-
-                $rawMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
-
-                // Deduct any completed breaks taken by user on this day (Breaks earn ৳ 0)
-                $stmtBreak = $pdo->prepare("
-                    SELECT COALESCE(SUM(duration_minutes), 0)
-                    FROM user_breaks
-                    WHERE user_id = :user_id 
-                      AND date = :date 
-                      AND status = 'Completed'
-                ");
-                $stmtBreak->execute([':user_id' => $uId, ':date' => $attDate]);
-                $totalBreakMinutes = intval($stmtBreak->fetchColumn());
-
-                // Option B: 40 minutes allocated paid break included in 8h shift. Excess break beyond 40m is deducted.
-                $allocatedBreakMinutes = 40;
-                $excessBreakMinutes = max(0, $totalBreakMinutes - $allocatedBreakMinutes);
-                $netPaidMinutes = max(0, $rawMinutes - $excessBreakMinutes);
-
-                $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
-                $standardDailyMinutes = self::getStandardDailyMinutes($standardDailyHours);
-                $approvedMinutes = min($netPaidMinutes, $standardDailyMinutes);
-
-                // Tier-aware active hourly rate for this date
-                $dayTierInfo = self::getTierInfoForMonth($scheme, $attDate, $tiers);
-                $activeDayRate = $dayTierInfo['hourly_rate'] ?: $hourlyRate;
-
-                $earnedAmount = round(($approvedMinutes / 60.0) * $activeDayRate, 2);
-                $sessionStart = date('Y-m-d H:i:s', $inTs);
-                $sessionEnd = date('Y-m-d H:i:s', $outTs);
-                $dispCapHours = round($standardDailyMinutes / 60.0, 2);
-                $notes = "Attendance Work Session ({$att['status']}): {$checkInRaw} to {$checkOutRaw} [Total: {$rawMinutes}m, Break: {$totalBreakMinutes}m (Excess: {$excessBreakMinutes}m), Paid Work: {$approvedMinutes}m]" . ($rawMinutes > $standardDailyMinutes ? " [Capped at {$dispCapHours}h ({$standardDailyMinutes}m); overtime to Mango Bank]" : "");
-
-                // Check if already in staff_work_earnings
-                $stmtCheck = $pdo->prepare("
-                    SELECT id FROM staff_work_earnings 
-                    WHERE scheme_id = :scheme_id 
-                      AND source_type = 'attendance' 
-                      AND reference_id = :reference_id
-                    LIMIT 1
-                ");
-                $stmtCheck->execute([
-                    ':scheme_id' => $sId,
-                    ':reference_id' => $attId
-                ]);
-                $existingEarning = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-                if ($existingEarning) {
-                    $stmtUpdate = $pdo->prepare("
-                        UPDATE staff_work_earnings SET
-                            work_date = :work_date,
-                            session_start = :session_start,
-                            session_end = :session_end,
-                            approved_minutes = :approved_minutes,
-                            applied_rate = :applied_rate,
-                            earned_amount = :earned_amount,
-                            notes = :notes
-                        WHERE id = :id
-                    ");
-                    $stmtUpdate->execute([
-                        ':work_date' => $attDate,
-                        ':session_start' => $sessionStart,
-                        ':session_end' => $sessionEnd,
-                        ':approved_minutes' => $approvedMinutes,
-                        ':applied_rate' => $activeDayRate,
-                        ':earned_amount' => $earnedAmount,
-                        ':notes' => $notes,
-                        ':id' => $existingEarning['id']
-                    ]);
-                } else {
-                    $stmtInsert = $pdo->prepare("
-                        INSERT INTO staff_work_earnings (
-                            user_id, scheme_id, work_date, session_start, session_end,
-                            approved_minutes, applied_rate, earned_amount, is_surplus,
-                            source_type, reference_id, notes, created_at
-                        ) VALUES (
-                            :user_id, :scheme_id, :work_date, :session_start, :session_end,
-                            :approved_minutes, :applied_rate, :earned_amount, 0,
-                            'attendance', :reference_id, :notes, NOW()
-                        )
-                    ");
-                    $stmtInsert->execute([
-                        ':user_id' => $uId,
-                        ':scheme_id' => $sId,
-                        ':work_date' => $attDate,
-                        ':session_start' => $sessionStart,
-                        ':session_end' => $sessionEnd,
-                        ':approved_minutes' => $approvedMinutes,
-                        ':applied_rate' => $activeDayRate,
-                        ':earned_amount' => $earnedAmount,
-                        ':reference_id' => $attId,
-                        ':notes' => $notes
-                    ]);
-                }
-
-                $totalSyncedSessions++;
-                $totalSyncedAmount += $earnedAmount;
-            }
-
-            // Also sync approved mango full day breaks from user_breaks into staff_work_earnings so leave day is fully paid
-            try {
-                $sqlMango = "
-                    SELECT id, user_id, date, duration_minutes, reason 
-                    FROM user_breaks 
-                    WHERE user_id = :user_id 
-                      AND break_type = 'Mango Full Day'
-                      AND status = 'Approved'
-                      AND date >= :start_date
-                      " . ($endDate ? "AND date <= :end_date" : "") . "
-                ";
-                $stmtMangoClaims = $pdo->prepare($sqlMango);
-                $stmtMangoClaims->execute($params);
-                $mangoClaims = $stmtMangoClaims->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($mangoClaims as $mc) {
-                    $mcId = $mc['id'];
-                    $mcDate = $mc['date'];
-                    $mcMinutes = intval($mc['duration_minutes'] ?: 480);
-                    $mcHours = round($mcMinutes / 60.0, 2);
-                    $mcTierInfo = self::getTierInfoForMonth($scheme, $mcDate, $tiers);
-                    $mcRate = $mcTierInfo['hourly_rate'] ?: $hourlyRate;
-                    $mcEarned = round($mcHours * $mcRate, 2);
-                    $mcNotes = "Paid Mango Day Off (Redeemed {$mcHours}h Break from Overtime Bank)";
-
-                    $stmtCheckMc = $pdo->prepare("
-                        SELECT id FROM staff_work_earnings 
-                        WHERE scheme_id = :scheme_id 
-                          AND source_type = 'mango_leave' 
-                          AND reference_id = :reference_id
-                        LIMIT 1
-                    ");
-                    $stmtCheckMc->execute([
-                        ':scheme_id' => $sId,
-                        ':reference_id' => $mcId
-                    ]);
-                    $existingMcEarning = $stmtCheckMc->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$existingMcEarning) {
-                        $stmtInsMc = $pdo->prepare("
-                            INSERT INTO staff_work_earnings (
-                                user_id, scheme_id, work_date, session_start, session_end,
-                                approved_minutes, applied_rate, earned_amount, is_surplus,
-                                source_type, reference_id, notes, created_at
-                            ) VALUES (
-                                :user_id, :scheme_id, :work_date, :session_start, :session_end,
-                                :approved_minutes, :applied_rate, :earned_amount, 0,
-                                'mango_leave', :reference_id, :notes, NOW()
-                            )
-                        ");
-                        $stmtInsMc->execute([
-                            ':user_id' => $uId,
-                            ':scheme_id' => $sId,
-                            ':work_date' => $mcDate,
-                            ':session_start' => $mcDate . ' 09:00:00',
-                            ':session_end' => $mcDate . ' 17:00:00',
-                            ':approved_minutes' => $mcMinutes,
-                            ':applied_rate' => $mcRate,
-                            ':earned_amount' => $mcEarned,
-                            ':reference_id' => $mcId,
-                            ':notes' => $mcNotes
-                        ]);
-                        $totalSyncedSessions++;
-                        $totalSyncedAmount += $mcEarned;
-                    }
-                }
-            } catch (Throwable $tMango) {
-                error_log("Error syncing mango claims to earnings: " . $tMango->getMessage());
-            }
-
-            // Recalculate surplus flags chronologically for yearly contract schemes
-            if ($scheme['scheme_type'] === 'YEARLY_CONTRACT') {
-                $contractTarget = floatval($scheme['contract_amount']);
-                $stmtAll = $pdo->prepare("
-                    SELECT id, earned_amount 
-                    FROM staff_work_earnings 
-                    WHERE scheme_id = :scheme_id 
-                    ORDER BY work_date ASC, session_start ASC, id ASC
-                ");
-                $stmtAll->execute([':scheme_id' => $sId]);
-                $allEarnings = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
-
-                $runningEarned = 0.0;
-                $stmtUpdateSurplus = $pdo->prepare("UPDATE staff_work_earnings SET is_surplus = :is_surplus WHERE id = :id");
-
-                foreach ($allEarnings as $row) {
-                    $rowEarned = floatval($row['earned_amount']);
-                    $isSurplus = ($runningEarned >= $contractTarget) ? 1 : 0;
-                    $stmtUpdateSurplus->execute([
-                        ':is_surplus' => $isSurplus,
-                        ':id' => $row['id']
-                    ]);
-                    $runningEarned += $rowEarned;
-                }
-            }
-        }
-
-        return [
-            'status' => 'success',
-            'synced_sessions' => $totalSyncedSessions,
-            'synced_amount' => round($totalSyncedAmount, 2),
-            'timestamp' => date('Y-m-d H:i:s')
-        ];
+        return PayrollSync::syncAttendanceEarnings($pdo, $userId, $schemeId);
     }
 
     /**
@@ -1065,22 +576,41 @@ class PayrollHelper {
             $salaryAmount = floatval($scheme['salary_amount']);
             $availableWithdrawableTotal = max(0.0, $maturedEarned - $totalWithdrawn - $pendingWithdrawn);
 
-            // Minimum withdrawal threshold is the monthly salary requirement (e.g. ৳ 15,000)
-            $minWithdrawalLimit = ($salaryAmount > 0) ? $salaryAmount : 5000.0;
-
             $summary['monthly_salary'] = $salaryAmount;
             $summary['matured_earned'] = $maturedEarned;
             $summary['accruing_balance'] = round($accruingEarned, 2);
         }
 
+        // Calculate dynamic salary target requirement across unlocked, unpaid billing cycles
+        $unlockedUnpaidMonths = [];
+        $targetSalaryRequirement = 0.0;
+        if (!empty($monthlyCycleLedger)) {
+            foreach ($monthlyCycleLedger as $cItem) {
+                if (!empty($cItem['is_unlocked']) && ($cItem['cycle_paid_status'] ?? 'unpaid') !== 'paid') {
+                    $unlockedUnpaidMonths[] = $cItem;
+                    $mSalary = floatval($cItem['tier_salary'] ?? $scheme['salary_amount'] ?? 0);
+                    $targetSalaryRequirement += $mSalary;
+                }
+            }
+        }
+        $unlockedCycleCount = count($unlockedUnpaidMonths);
+        if ($targetSalaryRequirement <= 0) {
+            $targetSalaryRequirement = ($schemeType === 'STAGGERED_CONTRACT' && !empty($activeTierInfo['monthly_salary'])) 
+                ? floatval($activeTierInfo['monthly_salary']) 
+                : ((floatval($scheme['salary_amount'] ?? 0) > 0) ? floatval($scheme['salary_amount']) : 5000.0);
+            $unlockedCycleCount = max(1, $unlockedCycleCount);
+        }
+        $minWithdrawalLimit = $targetSalaryRequirement;
+
         // Integer cashout & Paisa/Fraction Rollover calculation
         $availableWithdrawableInteger = floor($availableWithdrawableTotal);
         $fractionalRollover = round($availableWithdrawableTotal - $availableWithdrawableInteger, 2);
         $canWithdraw = ($minWithdrawalLimit > 0 && $availableWithdrawableInteger >= $minWithdrawalLimit);
+        $shortfallInitial = ceil(max(0, $minWithdrawalLimit - $availableWithdrawableInteger));
         $withdrawalBlockReason = !$canWithdraw 
             ? (($availableWithdrawableInteger <= 0) 
                 ? 'No matured withdrawable balance available yet.' 
-                : 'Minimum withdrawal requirement for your scheme is ৳ ' . number_format($minWithdrawalLimit) . '.')
+                : "আপনার {$unlockedCycleCount} মাসের নির্ধারিত মোট বেতন লক্ষ্যমাত্রা ৳ " . number_format($minWithdrawalLimit) . "। বর্তমান ব্যালেন্স ৳ " . number_format($availableWithdrawableInteger) . " (ঘাটতি: ৳ " . number_format($shortfallInitial) . ")। লক্ষ্যমাত্রা পূরণ না হওয়া পর্যন্ত উইথড্র লক থাকবে।")
             : null;
 
         $summary['available_withdrawable_total'] = round($availableWithdrawableTotal, 2);
@@ -1088,6 +618,9 @@ class PayrollHelper {
         $summary['fractional_rollover'] = $fractionalRollover;
         $summary['min_withdrawal_limit'] = $minWithdrawalLimit;
         $summary['can_withdraw'] = $canWithdraw;
+        $summary['unlocked_cycle_count'] = $unlockedCycleCount;
+        $summary['target_salary_requirement'] = $minWithdrawalLimit;
+        $summary['shortfall_amount'] = $shortfallInitial;
         $summary['withdrawal_block_reason'] = $withdrawalBlockReason;
 
         // Auto Notify Staff when maturity cycle unlocks with withdrawable amount ONLY IF user strictly meets/exceeds their required minimum salary threshold
@@ -1188,250 +721,147 @@ class PayrollHelper {
                 $cycleLabel = date('F Y');
             }
 
-            // Fetch attendance for unlocked cycle overtime calculation
-            $stmtAttAll = $pdo->prepare("
-                SELECT date, check_in, check_out 
-                FROM attendance 
-                WHERE user_id = :user_id 
-                  AND check_in IS NOT NULL AND check_out IS NOT NULL
-                  AND date <= :cycle_end_date
-                ORDER BY date ASC
-            ");
-            $stmtAttAll->execute([
-                ':user_id' => $userId,
-                ':cycle_end_date' => $cycleEndDate
-            ]);
-            $attRowsAll = $stmtAttAll->fetchAll(PDO::FETCH_ASSOC);
-
-            // Holidays
-            $holidays = [];
-            $holStmt = $pdo->query("SELECT date, expected_hours FROM holidays");
-            if ($holStmt) {
-                while ($h = $holStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $holidays[$h['date']] = (float)$h['expected_hours'];
-                }
-            }
-
-            // Fetch all completed breaks per date within cycle cutoff
-            $stmtAllBreaks = $pdo->prepare("
-                SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins
-                FROM user_breaks
-                WHERE user_id = :user_id AND status = 'Completed' AND date <= :cycle_end_date
-                GROUP BY date
-            ");
-            $stmtAllBreaks->execute([':user_id' => $userId, ':cycle_end_date' => $cycleEndDate]);
-            $breaksPerDate = $stmtAllBreaks->fetchAll(PDO::FETCH_KEY_PAIR);
-
-            // Aggregate gross office presence and excess breaks (beyond 40m allocated paid break) by date
-            $allocatedBreakSec = 40 * 60; // 40 minutes allocated paid break
-            $dailyPresenceSec = [];
-            $dailyExcessBreakSec = [];
-            foreach ($attRowsAll as $ar) {
-                $inTs = strtotime(strpos($ar['check_in'], ' ') !== false ? $ar['check_in'] : ($ar['date'] . ' ' . $ar['check_in']));
-                $outTs = strtotime(strpos($ar['check_out'], ' ') !== false ? $ar['check_out'] : ($ar['date'] . ' ' . $ar['check_out']));
-                if ($outTs <= $inTs) continue;
-                $d = $ar['date'];
-                $grossSec = ($outTs - $inTs);
-                $bSec = intval($breaksPerDate[$d] ?? 0) * 60;
-                $excessBreakSec = max(0, $bSec - $allocatedBreakSec);
-
-                if (!isset($dailyPresenceSec[$d])) {
-                    $dailyPresenceSec[$d] = 0;
-                    $dailyExcessBreakSec[$d] = 0;
-                }
-                $dailyPresenceSec[$d] += $grossSec;
-                $dailyExcessBreakSec[$d] = max($dailyExcessBreakSec[$d], $excessBreakSec);
-            }
-
             $stdDailyMins = self::getStandardDailyMinutes($scheme['standard_daily_hours'] ?: 8.0);
             $effectiveShiftHours = $stdDailyMins / 60.0;
             $shiftHours = $effectiveShiftHours;
 
-            $totalOtSeconds = 0;
-            $totalShortSeconds = 0;
-            $totalExcessBreakSeconds = 0;
-            $monthlyOtSec = [];
-            $monthlyShortSec = [];
-            $monthlyExcessBreakSec = [];
-            foreach ($dailyPresenceSec as $dStr => $pSec) {
-                $isFri = (date('N', strtotime($dStr)) == 5);
-                $expSec = $isFri ? 0 : ($stdDailyMins * 60); // Exact daily shift target: 480m for 8h, 360m for 6h
-                if (isset($holidays[$dStr])) {
-                    $expSec = $holidays[$dStr] * 3600;
-                }
-                $diffSec = $pSec - $expSec;
-                $mKey = substr($dStr, 0, 7);
-                if ($diffSec > 0) {
-                    $totalOtSeconds += $diffSec;
-                    $monthlyOtSec[$mKey] = ($monthlyOtSec[$mKey] ?? 0) + $diffSec;
-                } elseif ($diffSec < -900 && !$isFri) {
-                    $shortSec = abs($diffSec);
-                    $totalShortSeconds += $shortSec;
-                    $monthlyShortSec[$mKey] = ($monthlyShortSec[$mKey] ?? 0) + $shortSec;
-                }
-                $exB = $dailyExcessBreakSec[$dStr] ?? 0;
-                if ($exB > 0) {
-                    $totalExcessBreakSeconds += $exB;
-                    $monthlyExcessBreakSec[$mKey] = ($monthlyExcessBreakSec[$mKey] ?? 0) + $exB;
-                }
-            }
-            $totalOtHours = round($totalOtSeconds / 3600, 2);
-            $totalShortHours = round($totalShortSeconds / 3600, 2);
-            $totalExcessBreakHours = round($totalExcessBreakSeconds / 3600, 2);
+            // ── OvertimeEngine: Single Source of Truth (same engine as Mango Tree) ──
+            // Computes gross OT, tiffin bonuses, short shifts, excess breaks, absents,
+            // mango claims, and cashouts in one unified pass.
+            $otEngine = OvertimeEngine::calculate($pdo, $userId, $effectiveShiftHours, $cycleEndDate);
 
-            // Fetch Tiffin efficiency bonus seconds within cycle cutoff
-            $totalTiffinBonusSeconds = 0;
-            $monthlyTiffinBonusSec = [];
-            try {
-                $stmtTf = $pdo->prepare("
-                    SELECT date, COALESCE(tiffin_delta_minutes, 0) as t_delta 
-                    FROM user_breaks 
-                    WHERE user_id = :user_id 
-                      AND break_type = 'Tiffin' 
-                      AND status = 'Completed' 
-                      AND date <= :cycle_end_date
-                ");
-                $stmtTf->execute([
-                    ':user_id' => $userId,
-                    ':cycle_end_date' => $cycleEndDate
-                ]);
-                while ($tf = $stmtTf->fetch(PDO::FETCH_ASSOC)) {
-                    $tDelta = intval($tf['t_delta']);
-                    if ($tDelta > 0) {
-                        $sec = $tDelta * 60;
-                        $totalTiffinBonusSeconds += $sec;
-                        $mKey = substr($tf['date'], 0, 7);
-                        $monthlyTiffinBonusSec[$mKey] = ($monthlyTiffinBonusSec[$mKey] ?? 0) + $sec;
-                    }
-                }
-            } catch (Throwable $eTf) {}
-            $totalTiffinBonusHours = round($totalTiffinBonusSeconds / 3600, 2);
-
-            // Claims directly from central user_breaks table (within cycle cutoff)
-            $stmtMb = $pdo->prepare("
-                SELECT date, break_type, duration_minutes 
-                FROM user_breaks 
-                WHERE user_id = :user_id 
-                  AND status != 'Rejected' 
-                  AND break_type IN ('Mango Full Day', 'Mango Break', 'Mango Overtime')
-                  AND date <= :cycle_end_date
-            ");
-            $stmtMb->execute([
-                ':user_id' => $userId,
-                ':cycle_end_date' => $cycleEndDate
-            ]);
-            $mbRows = $stmtMb->fetchAll(PDO::FETCH_ASSOC);
-
-            $claimedOtHours = 0.0;
-            $inShiftOtHours = 0.0;
-            $totalClaimedBreakSeconds = 0;
-            $totalInShiftBreakSeconds = 0;
-            $claimedDatesMap = [];
-            $monthlyBreakSec = [];
-
-            foreach ($mbRows as $mb) {
-                $hrs = round(intval($mb['duration_minutes']) / 60, 2);
-                $bSec = intval($mb['duration_minutes']) * 60;
-                $mKey = substr($mb['date'], 0, 7);
-                if ($mb['break_type'] === 'Mango Full Day') {
-                    $claimedOtHours += $hrs;
-                    $totalClaimedBreakSeconds += $bSec;
-                    if (!empty($mb['date'])) {
-                        $claimedDatesMap[$mb['date']] = true;
-                    }
-                } else {
-                    $inShiftOtHours += $hrs;
-                    $totalInShiftBreakSeconds += $bSec;
-                    $monthlyBreakSec[$mKey] = ($monthlyBreakSec[$mKey] ?? 0) + $bSec;
-                }
-            }
-
-            // Leaves & Absences outside of claimed mango breaks
-            $leaveDatesMap = [];
-            try {
-                $lrStmt = $pdo->prepare("SELECT start_date, end_date FROM leave_requests WHERE user_id = :user_id AND status = 'Approved'");
-                $lrStmt->execute([':user_id' => $userId]);
-                while ($al = $lrStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $cur = strtotime($al['start_date']);
-                    $end = strtotime($al['end_date']);
-                    while ($cur <= $end) {
-                        $dt = date('Y-m-d', $cur);
-                        if (date('N', $cur) != 5 && !isset($claimedDatesMap[$dt])) {
-                            $leaveDatesMap[$dt] = true;
-                        }
-                        $cur = strtotime('+1 day', $cur);
-                    }
-                }
-            } catch (Throwable $e) {}
-
-            try {
-                $attLeaveStmt = $pdo->prepare("SELECT date FROM attendance WHERE user_id = :user_id AND status IN ('Leave', 'Absent')");
-                $attLeaveStmt->execute([':user_id' => $userId]);
-                while ($attL = $attLeaveStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $dt = $attL['date'];
-                    if (date('N', strtotime($dt)) != 5 && !isset($claimedDatesMap[$dt])) {
-                        $leaveDatesMap[$dt] = true;
-                    }
-                }
-            } catch (Throwable $e) {}
-
-            $totalLeaveHours = round(count($leaveDatesMap) * $effectiveShiftHours, 2);
-            $totalGapHours = round($totalShortHours + $totalLeaveHours, 2);
-
-            // Cashed out overtime from staff_withdrawals
-            $stmtCashed = $pdo->prepare("SELECT COALESCE(SUM(overtime_hours_cashed), 0) FROM staff_withdrawals WHERE user_id = :user_id AND status != 'rejected'");
-            $stmtCashed->execute([':user_id' => $userId]);
-            $cashedOtHours = floatval($stmtCashed->fetchColumn());
+            $totalOtSeconds           = $otEngine['gross_ot_seconds'];
+            $totalOtHours             = $otEngine['gross_ot_hours'];
+            $totalTiffinBonusSeconds  = $otEngine['tiffin_bonus_seconds'];
+            $totalTiffinBonusHours    = $otEngine['tiffin_bonus_hours'];
+            $monthlyOtSec             = $otEngine['monthly_ot_seconds'];
+            $monthlyTiffinBonusSec    = $otEngine['monthly_tiffin_seconds'];
+            $monthlyExcessBreakSec    = $otEngine['monthly_excess_break_sec'];
+            $monthlyBreakSec          = $otEngine['monthly_break_sec'];
+            $totalShortSeconds        = $otEngine['short_seconds'];
+            $totalShortHours          = $otEngine['short_hours'];
+            $totalExcessBreakSeconds  = $otEngine['excess_break_seconds'];
+            $totalExcessBreakHours    = $otEngine['excess_break_hours'];
+            $totalClaimedBreakSeconds = $otEngine['claimed_break_seconds'];
+            $claimedOtHours           = round($otEngine['claimed_break_seconds'] / 3600, 2);
+            $totalInShiftBreakSeconds = $otEngine['in_shift_break_seconds'];
+            $inShiftOtHours           = round($otEngine['in_shift_break_seconds'] / 3600, 2);
+            $cashedOtHours            = $otEngine['cashed_out_hours'];
+            $absentPenaltySec         = $otEngine['absent_seconds'];
+            $monthlyAbsentSec         = $otEngine['monthly_absent_sec'];
+            $totalTiffinBonusSeconds  = $otEngine['tiffin_bonus_seconds'];
+            $monthlyOtSec             = $otEngine['monthly_ot_seconds'];
+            $monthlyTiffinBonusSec    = $otEngine['monthly_tiffin_seconds'];
+            $monthlyExcessBreakSec    = $otEngine['monthly_excess_break_sec'];
+            $monthlyBreakSec          = $otEngine['monthly_break_sec'];
+            $totalShortSeconds        = $otEngine['short_seconds'];
+            $totalExcessBreakSeconds  = $otEngine['excess_break_seconds'];
+            $totalClaimedBreakSeconds = $otEngine['claimed_break_seconds'];
+            $totalInShiftBreakSeconds = $otEngine['in_shift_break_seconds'];
+            $cashedOtHours            = $otEngine['cashed_out_hours'];
+            // Absent penalty seconds are now also absorbed via engine (same rule as Mango Tree)
+            $absentPenaltySec         = $otEngine['absent_seconds'];
+            $monthlyAbsentSec         = $otEngine['monthly_absent_sec'];
 
             // Unified Single Bucket Rule (Matching Mango Tree calculated from exact seconds):
             // Gross Overtime = Pure Attendance Overtime beyond 8.0h shift + Tiffin Efficiency Savings Bonus
-            $totalGrossOtSeconds = $totalOtSeconds + $totalTiffinBonusSeconds;
+            $totalGrossOtSeconds = $otEngine['total_gross_ot_seconds'];
             $grossOtHours = round($totalGrossOtSeconds / 3600, 2);
 
-            // Deductions = Short Shifts + Excess Breaks (>40m) + Claimed Full Day Leaves + In-Shift Extra Breaks + Cashed Out Overtime + Unexcused Absences
-            $totalDeductionSeconds = $totalShortSeconds + $totalExcessBreakSeconds + $totalClaimedBreakSeconds + $totalInShiftBreakSeconds + intval($cashedOtHours * 3600) + intval($totalLeaveHours * 3600);
-            $totalDeductions = round($totalDeductionSeconds / 3600, 2);
-
-            $netAvailableOtSeconds = max(0, $totalGrossOtSeconds - $totalDeductionSeconds);
-            $availableOtHours = round($netAvailableOtSeconds / 3600, 2);
-            $availableRipeMangoes = floor($availableOtHours / ($effectiveShiftHours ?: 8.0)); // Exact shift hours per ripe mango (e.g. 6h for 6h staff, 8h for 8h staff)!
             $effectiveOtCashRate = ($schemeType === 'STAGGERED_CONTRACT' && !empty($activeTierInfo['hourly_rate']))
                 ? floatval($activeTierInfo['hourly_rate'])
                 : $hourlyRate;
-            $availableOtCashValue = round($availableOtHours * $effectiveOtCashRate, 2);
 
-            // Month-by-month overtime breakdown for unlocked cycles
+            // Non-shift deductions: Excess breaks (>40m), Claimed Mango breaks, In-shift breaks,
+            // cashed out OT, AND absent/leave penalty (same as Mango Tree rule)
+            $totalOtherDeductionSeconds = $totalExcessBreakSeconds + $totalClaimedBreakSeconds
+                                        + $totalInShiftBreakSeconds + intval($cashedOtHours * 3600)
+                                        + $absentPenaltySec;
+            $totalDeductions = round($totalOtherDeductionSeconds / 3600, 2);
+
+            // Chronological Ledger Overtime Restoration (Oldest Month to Newest Month)
+            // Eliminates double deduction: Overtime first restores base salary up to monthly target.
+            // Any surplus overtime flows into the Overtime Bank / Mango Tree as ripe mangoes and extra cash!
+            $chronoLedger = array_reverse($summary['monthly_cycle_ledger']);
+            $runningOtCash = 0.0;
+            $totalOtUsedForBase = 0.0;
+            $newMaturedEarned = 0.0;
             $monthlyOtBreakdown = [];
 
-            if ($availableOtHours > 0) {
-                foreach ($unlockedMonths as $uMonthKey => $uMonthLabel) {
-                    $gSec = ($monthlyOtSec[$uMonthKey] ?? 0) + ($monthlyTiffinBonusSec[$uMonthKey] ?? 0);
-                    $dSec = ($monthlyShortSec[$uMonthKey] ?? 0) + ($monthlyBreakSec[$uMonthKey] ?? 0) + ($monthlyExcessBreakSec[$uMonthKey] ?? 0);
-                    $netSec = max(0, $gSec - $dSec);
-                    $hrs = round($netSec / 3600, 2);
+            foreach ($chronoLedger as &$cycleItem) {
+                $mK = $cycleItem['month_key'];
+                $cycleRate = !empty($cycleItem['tier_hourly_rate']) ? floatval($cycleItem['tier_hourly_rate']) : $hourlyRate;
+                $mTargetSalary = floatval($cycleItem['tier_salary'] ?: ($scheme['salary_amount'] ?: 5000));
+                $baseEarned = floatval($cycleItem['total_earned']);
 
-                    $uMonthRate = ($schemeType === 'STAGGERED_CONTRACT' && !empty($tiers))
-                        ? (self::getTierInfoForMonth($scheme, $uMonthKey, $tiers)['hourly_rate'] ?: $hourlyRate)
-                        : $hourlyRate;
+                // Gross overtime earned this month (Attendance OT beyond shift + Tiffin efficiency savings)
+                $monthGrossOtSec = ($monthlyOtSec[$mK] ?? 0) + ($monthlyTiffinBonusSec[$mK] ?? 0);
+                $monthGrossOtCash = round(($monthGrossOtSec / 3600.0) * $cycleRate, 2);
 
-                    $cash = round($hrs * $uMonthRate, 2);
+                // Month-specific non-shift deductions (excess breaks beyond 40m, claimed mango breaks in this month, absent penalty)
+                $monthOtherDedSec = ($monthlyExcessBreakSec[$mK] ?? 0) + ($monthlyBreakSec[$mK] ?? 0)
+                                  + ($monthlyAbsentSec[$mK] ?? 0);  // ← Absent/Leave penalty same as Mango Tree
+                $monthOtherDedCash = round(($monthOtherDedSec / 3600.0) * $cycleRate, 2);
+                $monthNetOtCash = max(0.0, $monthGrossOtCash - $monthOtherDedCash);
 
-                    if ($hrs > 0) {
-                        $monthlyOtBreakdown[] = [
-                            'month_key' => $uMonthKey,
-                            'month_label' => $uMonthLabel,
-                            'gross_ot_hours' => round(($monthlyOtSec[$uMonthKey] ?? 0) / 3600, 2),
-                            'tiffin_bonus_hours' => round(($monthlyTiffinBonusSec[$uMonthKey] ?? 0) / 3600, 2),
-                            'short_hours' => round(($monthlyShortSec[$uMonthKey] ?? 0) / 3600, 2),
-                            'excess_break_hours' => round(($monthlyExcessBreakSec[$uMonthKey] ?? 0) / 3600, 2),
-                            'ot_seconds' => $netSec,
-                            'ot_hours' => $hrs,
-                            'cash_value' => $cash,
-                            'hourly_rate' => $uMonthRate
-                        ];
-                    }
+                // Pool available overtime into running cash
+                $runningOtCash += $monthNetOtCash;
+
+                // Cover base salary shortfall for unlocked/matured cycles using available overtime
+                $otCoverCash = 0.0;
+                if (!empty($cycleItem['is_unlocked'])) {
+                    $baseShortfall = max(0.0, $mTargetSalary - $baseEarned);
+                    $otCoverCash = min($baseShortfall, $runningOtCash);
+                    $restoredBaseEarned = round($baseEarned + $otCoverCash, 2);
+                    $runningOtCash = max(0.0, $runningOtCash - $otCoverCash);
+                    $newMaturedEarned += $restoredBaseEarned;
+                    $totalOtUsedForBase += $otCoverCash;
+                } else {
+                    $restoredBaseEarned = $baseEarned;
+                }
+
+                $cycleRemainingOtHours = ($cycleRate > 0) ? round($runningOtCash / $cycleRate, 2) : 0.0;
+
+                // Update ledger item
+                $cycleItem['total_earned'] = $restoredBaseEarned;
+                $cycleItem['ot_restoration_amount'] = $otCoverCash;
+                $cycleItem['overtime_cash'] = round($runningOtCash, 2);
+                $cycleItem['overtime_hours'] = $cycleRemainingOtHours;
+                $cycleItem['invoice_integer_amount'] = floor($restoredBaseEarned);
+                $cycleItem['fractional_rollover'] = round($restoredBaseEarned - floor($restoredBaseEarned), 2);
+                $cycleItem['combined_earned'] = round($restoredBaseEarned + $runningOtCash, 2);
+
+                if (!empty($cycleItem['is_unlocked']) && ($monthGrossOtSec > 0 || $monthOtherDedSec > 0)) {
+                    $monthlyOtBreakdown[] = [
+                        'month_key' => $mK,
+                        'month_label' => $cycleItem['month_label'] ?? $mK,
+                        'gross_ot_hours' => round(($monthlyOtSec[$mK] ?? 0) / 3600, 2),
+                        'tiffin_bonus_hours' => round(($monthlyTiffinBonusSec[$mK] ?? 0) / 3600, 2),
+                        'short_hours' => round(($monthlyShortSec[$mK] ?? 0) / 3600, 2),
+                        'excess_break_hours' => round(($monthlyExcessBreakSec[$mK] ?? 0) / 3600, 2),
+                        'ot_seconds' => $monthGrossOtSec,
+                        'ot_hours' => round($monthGrossOtSec / 3600, 2),
+                        'ot_restoration_amount' => $otCoverCash,
+                        'cash_value' => $monthGrossOtCash,
+                        'hourly_rate' => $cycleRate
+                    ];
                 }
             }
+            unset($cycleItem);
+
+            // Re-reverse back to newest first for display
+            $summary['monthly_cycle_ledger'] = array_reverse($chronoLedger);
+
+            // Deduct previously cashed out overtime from running overtime cash
+            $cashedCash = round($cashedOtHours * $effectiveOtCashRate, 2);
+            $runningOtCash = max(0.0, $runningOtCash - $cashedCash);
+
+            // ── Single Source of Truth: use OvertimeEngine for available_hours / ripe_mangoes.
+            // This guarantees Payroll payout modal shows the same OT hours as the Mango Tree,
+            // eliminating divergence from per-month floor in the restoration loop.
+            $availableOtHours     = $otEngine['available_hours'];   // SSoT
+            $availableRipeMangoes = floor($availableOtHours / ($effectiveShiftHours ?: 8.0));
+            $availableOtCashValue = round($availableOtHours * $effectiveOtCashRate, 2);
 
             $summary['overtime_bank'] = [
                 'cycle_label' => $cycleLabel,
@@ -1447,6 +877,7 @@ class PayrollHelper {
                 'cashed_out_hours' => $cashedOtHours,
                 'claimed_break_hours' => $claimedOtHours,
                 'total_deductions_hours' => $totalDeductions,
+                'ot_used_for_base_shortfall' => round($totalOtUsedForBase, 2),
                 'available_hours' => $availableOtHours,
                 'ripe_mangoes' => intval($availableRipeMangoes),
                 'cash_value' => $availableOtCashValue,
@@ -1454,26 +885,24 @@ class PayrollHelper {
                 'monthly_breakdown' => $monthlyOtBreakdown
             ];
 
-            // Enrich each monthly cycle in ledger with its corresponding overtime numbers
-            if (!empty($summary['monthly_cycle_ledger'])) {
-                foreach ($summary['monthly_cycle_ledger'] as &$cycleItem) {
-                    $mK = $cycleItem['month_key'];
-                    $cycleRate = !empty($cycleItem['tier_hourly_rate']) ? floatval($cycleItem['tier_hourly_rate']) : $hourlyRate;
-                    $gSec = ($monthlyOtSec[$mK] ?? 0) + ($monthlyTiffinBonusSec[$mK] ?? 0);
-                    $dSec = ($monthlyShortSec[$mK] ?? 0) + ($monthlyBreakSec[$mK] ?? 0) + ($monthlyExcessBreakSec[$mK] ?? 0);
-                    $netSec = max(0, $gSec - $dSec);
-                    $otHrs = round($netSec / 3600, 2);
-                    $otCash = round($otHrs * $cycleRate, 2);
-
-                    $baseEarned = floatval($cycleItem['total_earned']);
-                    $cycleItem['overtime_hours'] = $otHrs;
-                    $cycleItem['overtime_cash'] = $otCash;
-                    $cycleItem['invoice_integer_amount'] = floor($baseEarned);
-                    $cycleItem['fractional_rollover'] = round($baseEarned - floor($baseEarned), 2);
-                    $cycleItem['combined_earned'] = round($baseEarned + $otCash, 2);
-                }
-                unset($cycleItem);
+            // Recompute withdrawable balance with restored matured earned
+            if ($schemeType === 'YEARLY_CONTRACT') {
+                $contractTarget = floatval($scheme['contract_amount']);
+                $maturedSurplusCalc = max(0.0, $newMaturedEarned - $contractTarget);
+                $availableWithdrawableTotal = max(0.0, $maturedSurplusCalc - $totalWithdrawn - $pendingWithdrawn);
+                $summary['matured_earned'] = round($newMaturedEarned, 2);
+                $summary['matured_surplus_earned'] = $maturedSurplusCalc;
+            } else {
+                $availableWithdrawableTotal = max(0.0, $newMaturedEarned - $totalWithdrawn - $pendingWithdrawn);
+                $summary['matured_earned'] = round($newMaturedEarned, 2);
             }
+
+            $availableWithdrawableInteger = floor($availableWithdrawableTotal);
+            $fractionalRollover = round($availableWithdrawableTotal - $availableWithdrawableInteger, 2);
+
+            $summary['available_withdrawable_total'] = round($availableWithdrawableTotal, 2);
+            $summary['available_withdrawable'] = $availableWithdrawableInteger;
+            $summary['fractional_rollover'] = $fractionalRollover;
         } catch (Throwable $otEx) {
             error_log("Error calculating overtime bank in summary: " . $otEx->getMessage());
             $summary['overtime_bank'] = null;
@@ -1485,11 +914,19 @@ class PayrollHelper {
         $totalPotentialWithdrawable = floor($baseTotalFunds + $potentialOtCash);
         $canWithdraw = ($minWithdrawalLimit > 0 && $totalPotentialWithdrawable >= $minWithdrawalLimit);
         $summary['can_withdraw'] = $canWithdraw;
+        $summary['total_potential_withdrawable'] = $totalPotentialWithdrawable;
+
         if (!$canWithdraw) {
-            $summary['withdrawal_block_reason'] = ($totalPotentialWithdrawable <= 0)
-                ? 'No matured withdrawable balance available yet.'
-                : 'Minimum withdrawal requirement for your scheme is ৳ ' . number_format($minWithdrawalLimit) . '.';
+            $shortfallAmount = ceil(max(0, $minWithdrawalLimit - $totalPotentialWithdrawable));
+            $summary['shortfall_amount'] = $shortfallAmount;
+            if ($totalPotentialWithdrawable <= 0) {
+                $summary['withdrawal_block_reason'] = 'No matured withdrawable balance available yet.';
+            } else {
+                $cycleText = ($unlockedCycleCount > 1) ? "{$unlockedCycleCount} মাসের" : "১ মাসের";
+                $summary['withdrawal_block_reason'] = "আপনার {$cycleText} নির্ধারিত মোট বেতন লক্ষ্যমাত্রা ৳ " . number_format($minWithdrawalLimit) . "। বর্তমান সমন্বিত ব্যালেন্স ৳ " . number_format($totalPotentialWithdrawable) . " (ঘাটতি: ৳ " . number_format($shortfallAmount) . ")। লক্ষ্যমাত্রা পূরণ না হওয়া পর্যন্ত উইথড্র লক থাকবে।";
+            }
         } else {
+            $summary['shortfall_amount'] = 0;
             $summary['withdrawal_block_reason'] = null;
         }
 
@@ -1620,183 +1057,18 @@ class PayrollHelper {
 
     /**
      * Check and send maturity notification to staff on 15th once per cycle
+     * (Delegated to dedicated PayrollWithdrawal engine)
      */
     public static function checkAndSendMaturityNotification($pdo, $userId, $availableAmount, $fractionalRollover) {
-        try {
-            $scheme = self::getActiveScheme($pdo, $userId);
-            if (!$scheme) {
-                return;
-            }
-
-            // Strictly determine minimum withdrawal limit (monthly salary or 5k)
-            $minLimit = ($scheme['scheme_type'] === 'YEARLY_CONTRACT') 
-                ? 5000.0 
-                : floatval($scheme['salary_amount'] ?: 5000.0);
-
-            // If available amount does not meet or exceed salary limit, staff is NOT eligible to withdraw -> DO NOT send notification!
-            if ($availableAmount < $minLimit || $minLimit <= 0) {
-                return;
-            }
-
-            require_once __DIR__ . '/../notifications/notification_helper.php';
-
-            $currentCycle = date('Y-m');
-            $metaTag = 'payout_unlocked_' . $currentCycle;
-
-            // Check if notification already sent for this cycle
-            $stmt = $pdo->prepare("
-                SELECT id FROM notifications 
-                WHERE user_id = :user_id 
-                  AND type = 'payroll_unlocked' 
-                  AND (metadata LIKE :meta_tag OR title LIKE '%পে-রোল%')
-                LIMIT 1
-            ");
-            $stmt->execute([
-                ':user_id' => $userId,
-                ':meta_tag' => '%' . $metaTag . '%'
-            ]);
-
-            if (!$stmt->fetch()) {
-                $title = "🎉 পে-রোল সাইকেল আনলক: ৳" . number_format($availableAmount) . " তোলার জন্য প্রস্তুত!";
-                $msg = "আপনার পে-রোল সাইকেল সফলভাবে আনলক হয়েছে। ৳" . number_format($availableAmount) . " তোলার জন্য প্রস্তুত রয়েছে।" . ($fractionalRollover > 0 ? " (অবশিষ্ট ৳" . number_format($fractionalRollover, 2) . " পরের মাসের সাথে রোলওভার হবে)" : "");
-                
-                NotificationHelper::sendToUser(
-                    $pdo,
-                    $userId,
-                    null,
-                    $title,
-                    $msg,
-                    'payroll_unlocked',
-                    'all',
-                    '/payroll',
-                    'high',
-                    ['cycle' => $currentCycle, 'tag' => $metaTag, 'amount' => $availableAmount, 'fraction' => $fractionalRollover]
-                );
-            }
-        } catch (Exception $e) {
-            error_log("Maturity Notification Error: " . $e->getMessage());
-        }
+        return PayrollWithdrawal::checkAndSendMaturityNotification($pdo, $userId, $availableAmount, $fractionalRollover);
     }
 
     /**
      * Request a withdrawal (supports base salary + optional overtime cashout)
+     * (Delegated to dedicated PayrollWithdrawal engine)
      */
     public static function requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails, $overtimeHoursToCash = 0.0) {
-        $amount = floor(floatval($amount)); // Integer cashout
-        $overtimeHoursToCash = max(0.0, floatval($overtimeHoursToCash));
-
-        if ($amount <= 0) {
-            throw new Exception("Withdrawal amount must be a positive whole number (e.g. ৳ 5000).");
-        }
-
-        $summary = self::getStaffWalletSummary($pdo, $userId);
-        if (!$summary['has_scheme']) {
-            throw new Exception($summary['message']);
-        }
-
-        $minLimit = floatval($summary['min_withdrawal_limit'] ?? 5000);
-        if ($amount < $minLimit) {
-            throw new Exception("Minimum withdrawal amount for your pay scheme is ৳" . number_format($minLimit) . ".");
-        }
-
-        // Base withdrawable (using full fractional balance before cashout floor)
-        $baseAvailable = floatval($summary['available_withdrawable_total'] ?? $summary['available_withdrawable'] ?? 0.0);
-        $otCashAmount = 0.0;
-
-        if ($overtimeHoursToCash > 0) {
-            $otBank = $summary['overtime_bank'] ?? null;
-            $availOtHours = floatval($otBank['available_hours'] ?? 0.0);
-            if ($overtimeHoursToCash > $availOtHours) {
-                throw new Exception("Requested overtime cashout (" . $overtimeHoursToCash . "h) exceeds your available Overtime Bank (" . $availOtHours . "h).");
-            }
-            $otHourlyRate = floatval($otBank['hourly_rate'] ?? 0.0);
-            $otCashAmount = round($overtimeHoursToCash * $otHourlyRate, 2);
-        }
-
-        $totalMaxAvailable = floor($baseAvailable + $otCashAmount);
-
-        if ($amount > $totalMaxAvailable) {
-            throw new Exception("Requested amount (৳" . number_format($amount) . ") exceeds your total available withdrawable balance (৳" . number_format($totalMaxAvailable) . ").");
-        }
-
-        $scheme = $summary['scheme'];
-        $withdrawalType = ($scheme['scheme_type'] === 'YEARLY_CONTRACT') ? 'CONTRACT_SURPLUS' : 'MONTHLY_SALARY';
-
-        // Stamp covered billing cycles and invoices for permanent audit history
-        $coveredMonthsList = [];
-        $coveredInvoicesList = [];
-        if (!empty($summary['monthly_cycle_ledger'])) {
-            foreach ($summary['monthly_cycle_ledger'] as $cycle) {
-                if (!empty($cycle['is_unlocked']) && $cycle['status'] !== 'paid') {
-                    $coveredMonthsList[] = $cycle['month_label'] ?: $cycle['month_key'];
-                    $coveredInvoicesList[] = $cycle['invoice_id'];
-                }
-            }
-        }
-        $coveredMonthsStr = !empty($coveredMonthsList) ? implode(', ', $coveredMonthsList) : date('F Y');
-        $coveredInvoicesStr = !empty($coveredInvoicesList) ? implode(', ', $coveredInvoicesList) : null;
-
-        $stmt = $pdo->prepare("
-            INSERT INTO staff_withdrawals (
-                user_id, scheme_id, amount, overtime_hours_cashed, covered_months, invoice_ids,
-                withdrawal_type, status, payment_method, account_details, requested_at
-            ) VALUES (
-                :user_id, :scheme_id, :amount, :overtime_hours_cashed, :covered_months, :invoice_ids,
-                :withdrawal_type, 'pending', :payment_method, :account_details, NOW()
-            )
-        ");
-
-        $stmt->execute([
-            ':user_id' => $userId,
-            ':scheme_id' => $scheme['id'],
-            ':amount' => $amount,
-            ':overtime_hours_cashed' => $overtimeHoursToCash,
-            ':covered_months' => $coveredMonthsStr,
-            ':invoice_ids' => $coveredInvoicesStr,
-            ':withdrawal_type' => $withdrawalType,
-            ':payment_method' => $paymentMethod,
-            ':account_details' => $accountDetails,
-        ]);
-
-        $withdrawalId = $pdo->lastInsertId();
-
-        // Send notifications
-        try {
-            require_once __DIR__ . '/../notifications/notification_helper.php';
-            
-            // 1. Notify Admin
-            NotificationHelper::sendToRole(
-                $pdo,
-                'admin',
-                $userId,
-                "💰 New Payout Request: ৳" . number_format($amount),
-                "A staff member submitted a withdrawal request of ৳" . number_format($amount) . " via " . strtoupper($paymentMethod) . ".",
-                'withdrawal_request',
-                'admin',
-                '/payroll'
-            );
-
-            // 2. Notify Staff
-            NotificationHelper::sendToUser(
-                $pdo,
-                $userId,
-                null,
-                "⏳ Withdrawal Request Submitted: ৳" . number_format($amount),
-                "Your payout request of ৳" . number_format($amount) . " via {$paymentMethod} is currently under admin review.",
-                'withdrawal_pending',
-                'staff',
-                '/payroll'
-            );
-        } catch (Exception $e) {
-            // Non-blocking
-        }
-
-        return [
-            'withdrawal_id' => $withdrawalId,
-            'amount' => $amount,
-            'status' => 'pending',
-            'requested_at' => date('Y-m-d H:i:s')
-        ];
+        return PayrollWithdrawal::requestWithdrawal($pdo, $userId, $amount, $paymentMethod, $accountDetails, $overtimeHoursToCash);
     }
 }
 ?>

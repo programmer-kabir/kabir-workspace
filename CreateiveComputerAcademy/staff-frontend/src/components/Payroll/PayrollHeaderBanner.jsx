@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiShield, FiRefreshCw, FiArrowUpRight, FiAlertCircle } from 'react-icons/fi';
+import { FiShield, FiRefreshCw, FiArrowUpRight, FiAlertCircle, FiLock } from 'react-icons/fi';
 import { StaffAvatar } from './payrollUtils.jsx';
 
 export const PayrollHeaderBanner = ({
@@ -78,25 +78,72 @@ export const PayrollHeaderBanner = ({
                   Number(summary.available_withdrawable || 0) <= 0 &&
                   Number(summary.overtime_bank?.available_hours || 0) <= 0
                 }
+                title={summary.withdrawal_block_reason || 'Request Withdrawal'}
                 className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-md transition duration-200 ${
-                  Number(summary.available_withdrawable || 0) > 0 ||
-                  Number(summary.overtime_bank?.available_hours || 0) > 0
+                  summary.can_withdraw
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
+                    : Number(summary.available_withdrawable || 0) > 0 || Number(summary.overtime_bank?.available_hours || 0) > 0
+                    ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 shadow-xs cursor-pointer'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700 shadow-none'
                 }`}
               >
-                <FiArrowUpRight className="w-5 h-5" />
-                Request Withdrawal
+                {summary.can_withdraw ? (
+                  <>
+                    <FiArrowUpRight className="w-5 h-5" />
+                    <span>Request Withdrawal</span>
+                  </>
+                ) : (
+                  <>
+                    <FiLock className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>উইথড্র লকড (হিসাব দেখুন)</span>
+                  </>
+                )}
               </button>
               {Number(summary.min_withdrawal_limit || 0) > 0 && (
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                  Min. ৳{Number(summary.min_withdrawal_limit).toLocaleString()} required
+                  {summary.unlocked_cycle_count > 1 ? `${summary.unlocked_cycle_count} Months ` : ''}Min. ৳{Number(summary.min_withdrawal_limit).toLocaleString()} target
                 </span>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* When Scheme is active: Withdrawal Locked Notification Banner if target not met */}
+      {hasScheme && !summary.can_withdraw && summary.withdrawal_block_reason && Number(summary.available_withdrawable || 0) > 0 && (
+        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-600/40 p-5 rounded-3xl shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3 z-10">
+            <div className="p-2.5 bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 rounded-2xl shrink-0 mt-0.5">
+              <FiLock className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm md:text-base font-bold text-amber-900 dark:text-amber-200 flex flex-wrap items-center gap-2">
+                <span>উইথড্র সাময়িকভাবে লকড (বেতন লক্ষ্যমাত্রা অপূর্ণ)</span>
+                <button
+                  type="button"
+                  onClick={openWithdrawModal}
+                  className="px-2.5 py-0.5 rounded-full bg-amber-200/80 hover:bg-amber-300 dark:bg-amber-800/60 dark:hover:bg-amber-700/60 text-amber-900 dark:text-amber-100 text-[11px] font-bold transition cursor-pointer underline inline-flex items-center gap-1"
+                >
+                  ক্যাশ আউট ও আম হিসাব দেখুন →
+                </button>
+              </h4>
+              <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-1 leading-relaxed max-w-3xl">
+                {summary.withdrawal_block_reason}
+              </p>
+            </div>
+          </div>
+          {Number(summary.shortfall_amount || 0) > 0 && (
+            <div className="shrink-0 bg-white dark:bg-slate-900/90 px-4 py-2.5 rounded-2xl border border-amber-300 dark:border-amber-700/50 text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">
+                ঘাটতি (Shortfall)
+              </span>
+              <span className="text-base font-black text-rose-600 dark:text-rose-400">
+                - ৳ {Number(summary.shortfall_amount).toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* No Scheme Alert */}
       {!hasScheme && (

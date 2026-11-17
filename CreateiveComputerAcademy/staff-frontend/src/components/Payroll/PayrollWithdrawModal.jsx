@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiAlertCircle, FiRefreshCw, FiSend } from 'react-icons/fi';
+import { FiAlertCircle, FiRefreshCw, FiSend, FiLock, FiInfo } from 'react-icons/fi';
 import { formatMinutesToClock, formatHoursToBengali, formatHoursToClock } from './payrollUtils.jsx';
 
 export const PayrollWithdrawModal = ({
@@ -19,7 +19,8 @@ export const PayrollWithdrawModal = ({
   if (!isOpen) return null;
 
   const baseTotal = Number(summary.available_withdrawable_total ?? summary.available_withdrawable ?? 0);
-  const otVal = includeOvertimeCashout ? Number(summary.overtime_bank?.cash_value || 0) : 0;
+  const otCashValue = Number(summary.overtime_bank?.cash_value || 0);
+  const otVal = includeOvertimeCashout ? otCashValue : 0;
   const currentTotal = baseTotal + otVal;
   const integerLimit = Math.floor(currentTotal);
   const fractionRemainder = (currentTotal - integerLimit).toFixed(2);
@@ -27,6 +28,9 @@ export const PayrollWithdrawModal = ({
   const minLimit = Number(summary.min_withdrawal_limit || 0);
   const numAmount = Number(withdrawAmount) || 0;
   const isUnderMinSalary = minLimit > 0 && numAmount < minLimit;
+  const remainingShortfall = Math.max(0, Math.ceil(minLimit - numAmount));
+  const maxPotentialWithMangoes = Math.floor(baseTotal + otCashValue);
+  const shortfallEvenWithMangoes = Math.max(0, Math.ceil(minLimit - maxPotentialWithMangoes));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
@@ -101,9 +105,14 @@ export const PayrollWithdrawModal = ({
                           <span>🗓️ {c.month_label}</span>
                           <span className="text-[10px] font-medium text-slate-400">({c.sessions_count || 0} সেশন • {formatMinutesToClock(c.approved_minutes)})</span>
                         </div>
+                        {Number(c.ot_restoration_amount || 0) > 0 && (
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pl-4 mt-0.5">
+                            🛡️ ওভারটাইম সমন্বয়: +৳{Number(c.ot_restoration_amount).toFixed(2)} (ঘাটতি পূরণ করে মূল বেতন নিশ্চিত)
+                          </div>
+                        )}
                         {hasAvailableOt && (
                           <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pl-4 mt-0.5">
-                            🥭 ওভারটাইম: {formatHoursToBengali(c.overtime_hours)} (মূল্য: ৳{Number(c.overtime_cash || 0).toFixed(2)})
+                            🥭 অতিরিক্ত ওভারটাইম: {formatHoursToBengali(c.overtime_hours)} (মূল্য: ৳{Number(c.overtime_cash || 0).toFixed(2)})
                           </div>
                         )}
                       </div>
@@ -259,15 +268,59 @@ export const PayrollWithdrawModal = ({
             </div>
           )}
 
-          {/* Minimum salary threshold alert inside modal */}
+          {/* Minimum salary threshold alert inside modal with mango breakdown */}
           {isUnderMinSalary && (
-            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
-              <FiAlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">উত্তোলন সীমা অপূর্ণ (ক্যাশ আউট লক)</p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                  আপনার নির্ধারিত মাসিক স্যালারি <strong>৳ {minLimit.toLocaleString()}</strong>। বর্তমান নির্বাচিত ব্যালেন্স <strong>৳ {numAmount.toLocaleString()}</strong> হওয়ায় উত্তোলন সাময়িকভাবে লক রয়েছে। উত্তোলন আনলক করতে দয়া করে উপরের <strong>"ম্যাঙ্গো ওভারটাইম ক্যাশ আউট"</strong> বক্সে টিক দিন।
-                </p>
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <FiLock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-amber-950 dark:text-amber-100">উত্তোলন লক্ষ্যমাত্রা অপূর্ণ (ক্যাশ আউট লক)</p>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    আপনার {coveredCycles.length > 1 ? `${coveredCycles.length} মাসের ` : ''}নির্ধারিত মোট বেতন লক্ষ্যমাত্রা <strong>৳ {minLimit.toLocaleString()}</strong>। 
+                    বর্তমানে আপনার মূল কাজের ব্যালেন্স <strong>৳ {Math.floor(baseTotal).toLocaleString()}</strong>
+                    {otCashValue > 0 ? (
+                      <> এবং গাছে <strong>{formatHoursToBengali(summary.overtime_bank.available_hours)}</strong> ({summary.overtime_bank.ripe_mangoes || 0}টি আম) ওভারটাইম জমা আছে যার ক্যাশ মূল্য <strong>৳ {Math.floor(otCashValue).toLocaleString()}</strong>।</>
+                    ) : (
+                      <> (গাছে বিক্রয়যোগ্য কোনো আম/ওভারটাইম জমা নেই)।</>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status after selling mangoes */}
+              <div className="pt-2.5 border-t border-amber-200 dark:border-amber-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-semibold">
+                <div className="leading-relaxed">
+                  {otCashValue > 0 ? (
+                    includeOvertimeCashout ? (
+                      shortfallEvenWithMangoes > 0 ? (
+                        <span className="text-rose-700 dark:text-rose-400">
+                          ⚠️ সব আম বিক্রি যোগ করার পরও লক্ষ্যমাত্রা পূরণে এখনো <strong>৳ {shortfallEvenWithMangoes.toLocaleString()}</strong> ঘাটতি থাকে।
+                        </span>
+                      ) : (
+                        <span className="text-emerald-700 dark:text-emerald-400">
+                          ✓ আম বিক্রি যোগ করায় লক্ষ্যমাত্রা অর্জিত হয়েছে! এখন সাবমিট করতে পারবেন।
+                        </span>
+                      )
+                    ) : (
+                      shortfallEvenWithMangoes > 0 ? (
+                        <span className="text-amber-800 dark:text-amber-300">
+                          💡 উপরের <strong>"ম্যাঙ্গো ওভারটাইম ব্যাংক"</strong> টিক দিয়ে আম বিক্রি যোগ করলেও এখনো <strong>৳ {shortfallEvenWithMangoes.toLocaleString()}</strong> ঘাটতি থাকবে।
+                        </span>
+                      ) : (
+                        <span className="text-indigo-700 dark:text-indigo-300">
+                          🎉 উপরের <strong>"ম্যাঙ্গো ওভারটাইম ব্যাংক"</strong> টিক দিয়ে আম বিক্রি যোগ করলেই ঘাটতি পূরণ হয়ে উইথড্র আনলক হয়ে যাবে!
+                        </span>
+                      )
+                    )
+                  ) : (
+                    <span className="text-rose-700 dark:text-rose-400">
+                      লক্ষ্যমাত্রা অর্জনে অবশিষ্ট ঘাটতি: <strong>৳ {remainingShortfall.toLocaleString()}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="px-3 py-1 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-black text-xs shrink-0 self-end sm:self-auto">
+                  ঘাটতি: - ৳ {remainingShortfall.toLocaleString()}
+                </div>
               </div>
             </div>
           )}
@@ -289,8 +342,19 @@ export const PayrollWithdrawModal = ({
                   : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20 cursor-pointer disabled:opacity-50'
               }`}
             >
-              {submitting ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-              Submit Request
+              {submitting ? (
+                <FiRefreshCw className="w-4 h-4 animate-spin" />
+              ) : isUnderMinSalary ? (
+                <>
+                  <FiLock className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>সাবমিট লকড (ঘাটতি: ৳{remainingShortfall.toLocaleString()})</span>
+                </>
+              ) : (
+                <>
+                  <FiSend className="w-4 h-4" />
+                  <span>Submit Request</span>
+                </>
+              )}
             </button>
           </div>
         </form>
