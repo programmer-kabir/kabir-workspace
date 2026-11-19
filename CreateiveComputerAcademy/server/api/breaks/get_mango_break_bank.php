@@ -174,10 +174,14 @@ try {
         }
     }
 
-    // 6. Fetch completed breaks grouped by date for accurate net work calculation
+    // 6. Fetch completed regular breaks grouped by date for accurate net work calculation
+    // Exclude Mango breaks ('Mango Full Day', 'Mango Break', 'Mango Overtime') which are overtime claims
+    // and must NEVER be double-deducted under regular daily excess break penalties.
     $brkSql = "SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins 
                FROM user_breaks 
-               WHERE user_id = :user_id AND status = 'Completed'";
+               WHERE user_id = :user_id 
+                 AND status = 'Completed' 
+                 AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime')";
     $brkParams = [':user_id' => $user_id];
     if (!$is_all_time) {
         $brkSql .= " AND date BETWEEN :m_start AND :m_end";

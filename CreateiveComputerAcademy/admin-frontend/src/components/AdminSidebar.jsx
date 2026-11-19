@@ -102,7 +102,8 @@ const AdminSidebar = ({ isOpen = true }) => {
         { name: 'Daily Roster', path: '/attendance' },
         { name: 'Leave Approvals', path: '/leave' },
         { name: 'Attendance Disputes', path: '/attendance-disputes', badge: pendingDisputes },
-        { name: 'Mango Vault & Leaves 🥭', path: '/mango-vault' }
+        { name: 'Mango Vault & Leaves 🥭', path: '/mango-vault' },
+        { name: 'Holidays & Closures 🏛️', path: '/holidays' }
       ]
     },
     {

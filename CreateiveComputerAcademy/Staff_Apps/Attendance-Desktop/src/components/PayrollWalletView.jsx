@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 import {
   FiDollarSign, FiClock, FiCheckCircle, FiAlertCircle,
   FiArrowUpRight, FiTrendingUp, FiShield, FiSend, FiRefreshCw,
-  FiCalendar, FiLayers, FiInfo, FiFileText, FiPrinter
+  FiCalendar, FiLayers, FiInfo, FiFileText, FiPrinter, FiSliders
 } from 'react-icons/fi';
 import { FaCoins } from 'react-icons/fa6';
 import { getApiBase } from '../utils/api';
+import EarningsSimulator from './EarningsSimulator';
 
 const R2_PUBLIC_BASE = 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev/';
 
@@ -69,11 +70,16 @@ export const StaffAvatar = ({ name = '', picture = '', size = 'md', className = 
   );
 };
 
-export default function PayrollWallet() {
+export default function PayrollWallet({ initialTab = 'overview' }) {
   const { currentUser } = useAuth();
   const API_BASE = (getApiBase() || '').replace(/\/+$/, '') + '/';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
   // Timeframe filter state: 'today' | 'this_week' | 'this_month' | 'all_time'
   const [timeFilter, setTimeFilter] = useState('today');
@@ -391,6 +397,34 @@ export default function PayrollWallet() {
         </div>
       </div>
 
+      {hasScheme && (
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FiDollarSign size={16} />
+            <span>Wallet Overview & Ledgers</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('simulator')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'simulator'
+                ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FiSliders size={16} />
+            <span>Smart Earnings & Mango Simulator 🔮🥭</span>
+          </button>
+        </div>
+      )}
+
       {!hasScheme ? (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-6 rounded-3xl text-center space-y-3">
           <FiAlertCircle className="w-10 h-10 text-amber-500 mx-auto" />
@@ -399,6 +433,8 @@ export default function PayrollWallet() {
             Your payroll scheme is currently pending assignment by the administrator. Please reach out to management.
           </p>
         </div>
+      ) : activeTab === 'simulator' ? (
+        <EarningsSimulator summary={summary} currentUser={currentUser} />
       ) : (
         <>
           {/* Active Ongoing Shift Live Earning Banner */}

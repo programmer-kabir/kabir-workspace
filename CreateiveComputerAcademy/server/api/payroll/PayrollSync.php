@@ -39,6 +39,17 @@ class PayrollSync {
         $totalSyncedSessions = 0;
         $totalSyncedAmount = 0.0;
 
+        // Fetch paid holidays to prevent double-charging base earnings when someone works on a holiday
+        $holidaysByDate = [];
+        try {
+            $stmtAllHol = $pdo->query("SELECT date, COALESCE(is_paid, 1) as is_paid FROM holidays");
+            if ($stmtAllHol) {
+                while ($hr = $stmtAllHol->fetch(PDO::FETCH_ASSOC)) {
+                    $holidaysByDate[$hr['date']] = intval($hr['is_paid']);
+                }
+            }
+        } catch (Throwable $e) {}
+
         foreach ($schemes as $scheme) {
             $sId = $scheme['id'];
             $uId = $scheme['user_id'];
@@ -87,6 +98,27 @@ class PayrollSync {
 
                 if ($outTs <= $inTs) {
                     continue; // Skip invalid or zero durations
+                }
+
+                // ── SPECIAL OFF-DAYS (Fridays & Paid Holidays) ────────────────────────
+                // On Fridays & Paid Holidays, all actual worked attendance time is 100% credited
+                // as Overtime (Mango Bank) via OvertimeEngine. Base daily pay on paid holidays is
+                // independently guaranteed via 'paid_holiday' credit. Skip redundant base earning here.
+                $isWeekendFriday = (date('N', strtotime($attDate)) == 5);
+                if ($isWeekendFriday) {
+                    try {
+                        $stmtDelDup = $pdo->prepare("DELETE FROM staff_work_earnings WHERE scheme_id = :scheme_id AND source_type = 'attendance' AND reference_id = :reference_id");
+                        $stmtDelDup->execute([':scheme_id' => $sId, ':reference_id' => $attId]);
+                    } catch (Throwable $e) {}
+                    continue;
+                }
+
+                if (isset($holidaysByDate[$attDate]) && $holidaysByDate[$attDate] === 1) {
+                    try {
+                        $stmtDelDup = $pdo->prepare("DELETE FROM staff_work_earnings WHERE scheme_id = :scheme_id AND source_type = 'attendance' AND reference_id = :reference_id");
+                        $stmtDelDup->execute([':scheme_id' => $sId, ':reference_id' => $attId]);
+                    } catch (Throwable $e) {}
+                    continue;
                 }
 
                 $rawMinutes = max(1, intval(round(($outTs - $inTs) / 60)));
@@ -257,6 +289,104 @@ class PayrollSync {
                 error_log("Error syncing mango claims to earnings: " . $tMango->getMessage());
             }
 
+            // Also sync official paid holidays into staff_work_earnings (Full Base Wage Protection on Center Closures)
+            try {
+                $sqlHol = "
+                    SELECT id, date, title, COALESCE(is_paid, 1) as is_paid, COALESCE(closure_type, 'public_holiday') as closure_type
+                    FROM holidays
+                    WHERE (is_paid = 1 OR is_paid IS NULL)
+                      AND date >= :start_date
+                      " . ($endDate ? "AND date <= :end_date" : "") . "
+                ";
+                $holParams = [':start_date' => $startDate];
+                if ($endDate) {
+                    $holParams[':end_date'] = $endDate;
+                }
+                $stmtHol = $pdo->prepare($sqlHol);
+                $stmtHol->execute($holParams);
+                $paidHolidays = $stmtHol->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($paidHolidays as $ph) {
+                    $phId = (int)$ph['id'];
+                    $phDate = $ph['date'];
+                    $phTitle = $ph['title'];
+
+                    $standardDailyHours = floatval($scheme['standard_daily_hours'] ?: 8.0);
+                    $standardDailyMinutes = PayrollHelper::getStandardDailyMinutes($standardDailyHours);
+
+                    $phTierInfo = PayrollHelper::getTierInfoForMonth($scheme, $phDate, $tiers);
+                    $phRate = $phTierInfo['hourly_rate'] ?: $hourlyRate;
+                    $phEarned = round(($standardDailyMinutes / 60.0) * $phRate, 2);
+                    $phNotes = "Official Paid Holiday / Center Closure: {$phTitle} [{$standardDailyHours}h Standard Shift Credit]";
+
+                    $stmtCheckHol = $pdo->prepare("
+                        SELECT id FROM staff_work_earnings 
+                        WHERE scheme_id = :scheme_id 
+                          AND source_type = 'paid_holiday' 
+                          AND reference_id = :reference_id
+                        LIMIT 1
+                    ");
+                    $stmtCheckHol->execute([
+                        ':scheme_id' => $sId,
+                        ':reference_id' => $phId
+                    ]);
+                    $existingHolEarning = $stmtCheckHol->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingHolEarning) {
+                        $stmtUpdHol = $pdo->prepare("
+                            UPDATE staff_work_earnings SET
+                                work_date = :work_date,
+                                session_start = :session_start,
+                                session_end = :session_end,
+                                approved_minutes = :approved_minutes,
+                                applied_rate = :applied_rate,
+                                earned_amount = :earned_amount,
+                                notes = :notes
+                            WHERE id = :id
+                        ");
+                        $stmtUpdHol->execute([
+                            ':work_date' => $phDate,
+                            ':session_start' => $phDate . ' 09:00:00',
+                            ':session_end' => $phDate . ' 17:00:00',
+                            ':approved_minutes' => $standardDailyMinutes,
+                            ':applied_rate' => $phRate,
+                            ':earned_amount' => $phEarned,
+                            ':notes' => $phNotes,
+                            ':id' => $existingHolEarning['id']
+                        ]);
+                    } else {
+                        $stmtInsHol = $pdo->prepare("
+                            INSERT INTO staff_work_earnings (
+                                user_id, scheme_id, work_date, session_start, session_end,
+                                approved_minutes, applied_rate, earned_amount, is_surplus,
+                                source_type, reference_id, notes, created_at
+                            ) VALUES (
+                                :user_id, :scheme_id, :work_date, :session_start, :session_end,
+                                :approved_minutes, :applied_rate, :earned_amount, 0,
+                                'paid_holiday', :reference_id, :notes, NOW()
+                            )
+                        ");
+                        $stmtInsHol->execute([
+                            ':user_id' => $uId,
+                            ':scheme_id' => $sId,
+                            ':work_date' => $phDate,
+                            ':session_start' => $phDate . ' 09:00:00',
+                            ':session_end' => $phDate . ' 17:00:00',
+                            ':approved_minutes' => $standardDailyMinutes,
+                            ':applied_rate' => $phRate,
+                            ':earned_amount' => $phEarned,
+                            ':reference_id' => $phId,
+                            ':notes' => $phNotes
+                        ]);
+                    }
+
+                    $totalSyncedSessions++;
+                    $totalSyncedAmount += $phEarned;
+                }
+            } catch (Throwable $tHol) {
+                error_log("Error syncing paid holidays to earnings: " . $tHol->getMessage());
+            }
+
             // Recalculate surplus flags chronologically for yearly contract schemes
             if ($scheme['scheme_type'] === 'YEARLY_CONTRACT') {
                 $contractTarget = floatval($scheme['contract_amount']);
@@ -283,6 +413,16 @@ class PayrollSync {
                 }
             }
         }
+
+        // Cleanup any orphaned paid_holiday earnings where holiday no longer exists or is_paid = 0
+        try {
+            $pdo->exec("
+                DELETE swe FROM staff_work_earnings swe
+                LEFT JOIN holidays h ON swe.reference_id = h.id
+                WHERE swe.source_type = 'paid_holiday'
+                  AND (h.id IS NULL OR h.is_paid = 0)
+            ");
+        } catch (Throwable $e) {}
 
         return [
             'status' => 'success',

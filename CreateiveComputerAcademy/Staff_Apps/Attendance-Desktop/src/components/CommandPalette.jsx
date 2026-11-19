@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   FiSearch, FiHome, FiList, FiClock, FiCalendar, FiFileText, FiUser, FiSettings, 
   FiMessageSquare, FiMoon, FiSun, FiSidebar, FiX, FiCheckCircle, FiPlay, FiCornerDownLeft,
-  FiDownload, FiCoffee, FiDollarSign, FiBookOpen, FiRadio, FiDatabase, FiCode, FiActivity, FiUsers
+  FiDownload, FiCoffee, FiDollarSign, FiBookOpen, FiRadio, FiDatabase, FiCode, FiActivity, FiUsers,
+  FiAward, FiTarget, FiSliders
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -50,6 +51,7 @@ const CommandPalette = ({
     const items = [
       { id: 'nav-dashboard', label: 'Dashboard', subLabel: 'Overview, today shift & announcements', group: 'Navigation', icon: FiHome, path: '/' },
       { id: 'nav-community', label: 'Community Wall', subLabel: 'Staff feed, stories & updates', group: 'Navigation', icon: FiUsers, path: '/community', color: 'text-violet-500' },
+      { id: 'nav-events', label: 'Team Feasts & Tours 🎉', subLabel: 'Outings, biryani parties & expense vouchers', group: 'Navigation', icon: FiCalendar, path: '/events', color: 'text-amber-500' },
       { id: 'nav-messages', label: 'Team Messages & Chat', subLabel: 'Direct messaging & voice notes', group: 'Navigation', icon: FiMessageSquare, path: '/messages' },
       { id: 'nav-attendance', label: 'Attendance & Quick Punch', subLabel: 'Punch In / Out, shifts & recordings', group: 'Navigation', icon: FiClock, path: '/attendance' },
       { id: 'nav-mango-tree', label: 'Mango Break Tree', subLabel: 'Gamified break tracking & rewards', group: 'Navigation', icon: FiCoffee, path: '/mango-tree', color: 'text-amber-500' },
@@ -57,7 +59,10 @@ const CommandPalette = ({
       { id: 'nav-tasks', label: 'Creative Tasks & Board', subLabel: 'Assigned tasks, deliverables & AI review', group: 'Navigation', icon: FiList, path: '/tasks' },
       { id: 'nav-feed', label: 'Academy Feed', subLabel: 'Tutorials, notices & academy guidelines', group: 'Navigation', icon: FiBookOpen, path: '/feed', color: 'text-indigo-400' },
       { id: 'nav-payroll', label: 'Work Wallet & Salary', subLabel: 'Earnings, payslips & advance requests', group: 'Navigation', icon: FiDollarSign, path: '/payroll', color: 'text-emerald-500' },
+      { id: 'nav-simulator', label: 'Smart Finance & Mango Simulator 💰🥭', subLabel: 'Simulate overtime, mango cashouts & promotions', group: 'Navigation', icon: FiSliders, path: '/simulator', color: 'text-amber-500' },
       { id: 'nav-credits', label: 'Credit Wallet & P2P Market', subLabel: 'Coin balance, transactions & overtime trade', group: 'Navigation', icon: FaCoins, path: '/credits', color: 'text-amber-500' },
+      { id: 'nav-career', label: 'Career & Badges 🏆', subLabel: 'Level, rank, medals & XP hall of fame', group: 'Navigation', icon: FiAward, path: '/career', color: 'text-amber-400' },
+      { id: 'nav-productivity', label: 'Productivity & Focus Hub 📝🎧', subLabel: '1-3-5 planner, soundscapes & scratchpad', group: 'Navigation', icon: FiTarget, path: '/productivity', color: 'text-rose-500' },
       { id: 'nav-leave', label: 'Leave Requests & Balances', subLabel: 'Apply for leave & view balance history', group: 'Navigation', icon: FiCalendar, path: '/leave' },
       { id: 'nav-reports', label: 'Reports & Work Analytics', subLabel: 'Monthly work logs, export PDF/Excel', group: 'Navigation', icon: FiFileText, path: '/reports' },
       { id: 'nav-brand-kit', label: 'Brand Kit & Assets', subLabel: 'Official logos, colors & typography', group: 'Navigation', icon: HiSparkles, path: '/brand-kit', color: 'text-amber-400' },
@@ -74,7 +79,9 @@ const CommandPalette = ({
         { id: 'nav-dev-api', label: 'Developer Suite: API & Sockets Tester', subLabel: 'Endpoint explorer & Pusher events', group: 'Developer Suite', icon: FiRadio, path: '/developer/api-tester', color: 'text-cyan-400' },
         { id: 'nav-dev-crons', label: 'Developer Suite: Crons & Automation', subLabel: 'Trigger auto-absent & system crons', group: 'Developer Suite', icon: FiClock, path: '/developer/crons', color: 'text-cyan-400' },
         { id: 'nav-dev-db', label: 'Developer Suite: Database & Cache', subLabel: 'R2 storage, MySQL snapshots & janitor', group: 'Developer Suite', icon: FiDatabase, path: '/developer/database', color: 'text-cyan-400' },
-        { id: 'nav-dev-editor', label: 'Developer Suite: Server Code Editor', subLabel: 'Direct server PHP editor with opcache clear', group: 'Developer Suite', icon: FiCode, path: '/developer/editor', color: 'text-cyan-400' }
+        { id: 'nav-dev-editor', label: 'Developer Suite: Server Code Editor', subLabel: 'Direct server PHP editor with opcache clear', group: 'Developer Suite', icon: FiCode, path: '/developer/editor', color: 'text-cyan-400' },
+        { id: 'nav-dev-events', label: 'Developer Suite: Team Events Manager', subLabel: 'Create outings, approve payments & manage invites', group: 'Developer Suite', icon: FiCalendar, path: '/developer/events', color: 'text-cyan-400' },
+        { id: 'nav-dev-mango-vault', label: 'Developer Suite: Mango Vault Manager', subLabel: 'Academy mango bank, vault holds & debt resolution', group: 'Developer Suite', icon: FiCoffee, path: '/developer/mango-vault', color: 'text-amber-400' }
       );
     }
 

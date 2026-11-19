@@ -10,8 +10,12 @@ import Login from './components/Login';
 import DashboardView from './components/DashboardView';
 import AttendanceView from './components/AttendanceView';
 import CommunityFeed from './components/CommunityFeed';
+import TeamEventsView from './components/TeamEventsView';
 import MessagesView from './components/MessagesView';
 import DesktopAppView from './components/DesktopAppView';
+import MyWorkstationView from './components/MyWorkstationView';
+import CareerRankingsView from './components/CareerRankingsView';
+import ProductivityPlannerView from './components/ProductivityPlannerView';
 import MangoBreakTreeView from './components/MangoBreakTreeView';
 import BreaksView from './components/BreaksView';
 import TasksView from './components/TasksView';
@@ -24,6 +28,8 @@ import BrandKitView from './components/BrandKitView';
 import ProfileView from './components/ProfileView';
 import SettingsView from './components/SettingsView';
 import DeveloperConsoleView from './components/DeveloperConsoleView';
+import DeveloperEvents from './components/DeveloperEvents';
+import MangoVaultManager from './components/MangoVaultManager';
 import BreakLockOverlay from './components/BreakLockOverlay';
 import CommandPalette from './components/CommandPalette';
 import { SearchProvider } from './context/SearchContext';
@@ -251,14 +257,23 @@ function App() {
     '/': 'Dashboard',
     '/attendance': 'Attendance',
     '/community': 'Community Wall',
+    '/events': 'Team Feasts & Tours 🎉',
     '/messages': 'Messages',
     '/desktop-app': 'Desktop App & Updates',
+    '/workstation': 'My Workstation & Recordings',
+    '/my-workstation': 'My Workstation & Recordings',
     '/mango-tree': 'Mango Break Tree',
     '/breaks': 'Breaks Log',
     '/tasks': 'Tasks',
     '/content-studio': 'Content Studio',
     '/feed': 'Academy Feed',
+    '/career': 'Career & Badges 🏆',
+    '/achievements': 'Career & Badges 🏆',
+    '/productivity': 'Productivity & Focus Hub 📝🎧',
+    '/planner': 'Productivity & Focus Hub 📝🎧',
     '/payroll': 'Work Wallet & Salary',
+    '/simulator': 'Smart Finance & Mango Simulator 💰🥭',
+    '/payroll/simulator': 'Smart Finance & Mango Simulator 💰🥭',
     '/credits': 'Credit Wallet',
     '/leave': 'Leave Management',
     '/reports': 'Reports',
@@ -271,7 +286,9 @@ function App() {
     '/developer/api-tester': 'API & Sockets Tester',
     '/developer/crons': 'Crons & Automation',
     '/developer/database': 'Database & Cache Cleaner',
-    '/developer/editor': 'Server Code Editor'
+    '/developer/editor': 'Server Code Editor',
+    '/developer/events': 'Team Events & Feasts Manager',
+    '/developer/mango-vault': 'Mango Vault & Overtime Debt Manager'
   };
 
   const renderTabContent = () => {
@@ -309,6 +326,14 @@ function App() {
       return <CommunityFeed />;
     }
 
+    if (activeTab === '/events') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <TeamEventsView onNavigate={setActiveTab} />
+        </div>
+      );
+    }
+
     if (activeTab === '/messages') {
       return <MessagesView />;
     }
@@ -328,7 +353,15 @@ function App() {
     if (activeTab === '/payroll') {
       return (
         <div className="p-4 sm:p-6 lg:p-8  mx-auto space-y-6">
-          <PayrollWalletView />
+          <PayrollWalletView initialTab="overview" />
+        </div>
+      );
+    }
+
+    if (activeTab === '/simulator' || activeTab === '/payroll/simulator') {
+      return (
+        <div className="p-4 sm:p-6 lg:p-8  mx-auto space-y-6">
+          <PayrollWalletView initialTab="simulator" />
         </div>
       );
     }
@@ -341,8 +374,32 @@ function App() {
       );
     }
 
+    if (activeTab === '/career' || activeTab === '/achievements') {
+      return (
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 w-full mx-auto">
+          <CareerRankingsView />
+        </div>
+      );
+    }
+
+    if (activeTab === '/productivity' || activeTab === '/planner') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <ProductivityPlannerView />
+        </div>
+      );
+    }
+
     if (activeTab === '/desktop-app') {
       return <DesktopAppView />;
+    }
+
+    if (activeTab === '/workstation' || activeTab === '/my-workstation') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <MyWorkstationView />
+        </div>
+      );
     }
 
     if (activeTab === '/reports') {
@@ -373,6 +430,22 @@ function App() {
       return (
         <div className="p-4 sm:p-6 lg:p-8  mx-auto space-y-6">
           <SettingsView onNavigate={setActiveTab} />
+        </div>
+      );
+    }
+
+    if (activeTab === '/developer/events') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <DeveloperEvents onNavigate={setActiveTab} />
+        </div>
+      );
+    }
+
+    if (activeTab === '/developer/mango-vault') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <MangoVaultManager onNavigate={setActiveTab} />
         </div>
       );
     }

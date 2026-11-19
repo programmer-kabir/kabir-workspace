@@ -26,9 +26,12 @@ const dictionary = {
     community_wall: "Community Wall",
     team_events: "Team Feasts & Tours",
     desktop_app: "Desktop App & Updates",
+    my_workstation: "My Workstation & Recordings",
     mango_tree: "Mango Break Tree",
     content_studio: "Content Studio",
     payroll_wallet: "Work Wallet & Salary",
+    career_badges: "Career & Badges 🏆",
+    productivity_planner: "Focus & Planner 📝🎧",
     dev_suite: "Dev Console",
     dev_overview: "Overview",
     dev_events: "Team Events & Feasts",
@@ -69,6 +72,8 @@ const dictionary = {
     student_pending_notice: "Your academic info has been submitted. Academic leave quota (up to 3 days/month) will activate once approved by Admin.",
     student_rejected_notice: "Admin has rejected your student status verification.",
     student_approved_notice: "Student status is approved. You can apply for up to 3 days of student academic leaves each month.",
+    center_closed: "Center Closed / Holiday",
+    paid_holiday: "Official Paid Holiday (100% Salary Protected)",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -91,9 +96,12 @@ const dictionary = {
     community_wall: "কমিউনিটি ওয়াল",
     team_events: "টিম ফিস্ট ও ট্যুর 🎉",
     desktop_app: "ডেস্কটপ অ্যাপ ও আপডেট",
+    my_workstation: "আমার কাজের লগ ও ভিডিও",
     mango_tree: "ম্যাঙ্গো ব্রেক ট্রি",
     content_studio: "কনটেন্ট স্টুডিও",
     payroll_wallet: "ওয়ার্ক ওয়ালেট ও বেতন",
+    career_badges: "ক্যারিয়ার ও মেডেল 🏆",
+    productivity_planner: "ফোকাস ও প্ল্যানার 📝🎧",
     dev_suite: "ডেভ কনসোল",
     dev_overview: "ওভারভিউ",
     dev_events: "টিম ইভেন্ট ও ফিস্ট",
@@ -134,6 +142,8 @@ const dictionary = {
     student_pending_notice: "আপনার শিক্ষার্থী তথ্য সংরক্ষিত হয়েছে। অ্যাডমিন অনুমোদন করার পর ৩ দিনের অ্যাকাডেমিক ছুটির কোটা চালু হবে।",
     student_rejected_notice: "অ্যাডমিন আপনার শিক্ষার্থী স্ট্যাটাস অনুমোদন করেননি।",
     student_approved_notice: "শিক্ষার্থী স্ট্যাটাস অনুমোদিত। আপনি প্রতি মাসে সর্বোচ্চ ৩ দিন পর্যন্ত স্টুডেন্ট অ্যাকাডেমিক ছুটি নিতে পারবেন।",
+    center_closed: "ছুটি ও সেন্টার বন্ধ",
+    paid_holiday: "বেতনভুক্ত সরকারি ছুটি (১০০% বেতন সুরক্ষিত)",
   }
 };
 

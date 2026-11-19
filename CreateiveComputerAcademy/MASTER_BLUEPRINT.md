@@ -1,8 +1,8 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Blueprint
 
-**Generated / Updated:** October 19, 2026  
+**Generated / Updated:** November 19, 2026  
 **Role:** Lead Software Architect / Senior Full-Stack Developer Analysis  
-**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App), 1 PHP REST backend (366 endpoints across 28 domains), 80 baseline MySQL tables + dynamic runtime tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, and Google Gemini AI integration.
+**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App), 1 PHP REST backend (367 endpoints across 28 domains), 80 baseline MySQL tables + dynamic runtime tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, and Google Gemini AI integration.
 
 No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
@@ -71,8 +71,10 @@ The complete repository has been exhaustively analyzed:
 - **Language & Runtime**: Plain PHP (procedural per-endpoint scripts, zero external framework, no ORM).
 - **Database Access**: PDO (PHP Data Objects) with prepared statements, connection timezone pinned to `+06:00` (Asia/Dhaka).
 - **Core Domain Helpers**:
-  - `BreakDbHelper` (`server/api/breaks/BreakDbHelper.php`): Overtime calculation, break validation, mango bank reconciliation
-  - `PayrollHelper` (`server/api/payroll/PayrollHelper.php`): Contract schemes, hourly rates, attendance session earnings sync
+  - `BreakDbHelper` (`server/api/breaks/BreakDbHelper.php`): Overtime calculation, break validation, mango bank reconciliation, and double-deduction immunity
+  - `OvertimeEngine` (`server/api/payroll/OvertimeEngine.php`): Single Source of Truth (SSoT) overtime calculator, running cash, shortfall compensation, and mango tree harmonization
+  - `PayrollLedger` (`server/api/payroll/PayrollLedger.php`): Modular financial ledger engine, chronological cycle invoice allocation, fractional rollover, and wallet stats
+  - `PayrollHelper` (`server/api/payroll/PayrollHelper.php`): Central facade orchestrating schemes, hourly rates, attendance session earnings, and withdrawals
   - `CreditHelper` (`server/api/credits/CreditHelper.php`): Double-entry idempotent credit ledger
   - `AttendanceSecurityHelper` (`server/api/attendance/AttendanceSecurityHelper.php`): Dynamic IP filter, proxy header detection, device fingerprinting
   - `CommunityDbHelper` (`server/api/community/CommunityDbHelper.php`): Feed provisioning, recursive comments, likes resolution
@@ -220,6 +222,9 @@ graph TD
 24. **Student Academic Leave Quota Management**:
     - Student employee recognition via schema self-provisioning in `server/api/leave/StudentLeaveHelper.php` adding `is_student`, `student_leave_quota` (default 3 days/month), and `student_institution` to the `employees` table.
     - Automated quota deduction logic excluding weekly Fridays, with balance verification endpoint (`api/leave/get_student_quota.php`), real-time quota telemetry in Staff Leave Portal (`Leave.jsx`), and Admin approval constraints (`LeaveManagement.jsx`).
+25. **Staff Workstation Activity & Surveillance Review Hub**:
+    - Dedicated staff portal review page (`MyWorkstation.jsx` at `/workstation` and `MyWorkstationView.jsx` in Desktop App).
+    - Scoped endpoint (`server/api/screen_monitor/get_my_workstation_logs.php`) serving staff their own 30-minute recorded video clips with embedded Google Drive stream players (1x-4x speed controls), cloud sync status, inactivity audit log (5+ min idle occurrences, active application title/process, resumption timestamps), and real-time workstation heartbeat connectivity telemetry.
 
 ---
 
@@ -315,7 +320,7 @@ The system operates on **80 baseline tables** defined in `server/u647959341_cca_
 | **Auth** | `api/auth/` | `login.php`, `verify.php`, `sync.php`, `logout.php`, `make_hash.php` | ⚠️ `make_hash.php` is an unauthenticated public hash generator |
 | **Attendance** | `api/attendance/` | `check_in.php`, `check_out.php`, `dispute.php`, `get_attendance.php`, `get_my_idle_status.php`, `sync_offline.php` | Dynamic IP check, device fingerprinting & offline sync queue |
 | **Screen Monitor** | `api/screen_monitor/` | `get_active_staff.php`, `signal.php`, `heartbeat.php` | Pusher signaling for WebRTC video streams & remote input control |
-| **Workstation Video Surveillance** | `api/screen_monitor/` | `upload_workstation_video.php`, `get_workstation_videos.php` | Google Drive Cloud Vault integration with Cloudflare R2 failover & embedded streaming previews |
+| **Workstation Video Surveillance** | `api/screen_monitor/` | `upload_workstation_video.php`, `get_workstation_videos.php`, `get_my_workstation_logs.php` | Google Drive Cloud Vault integration with Cloudflare R2 failover & scoped staff streaming previews |
 | **Admin Screen Monitor** | `api/admin/screen_monitor/` | `get_idle_alerts.php`, `acknowledge_idle_alert.php` | Workstation idle audits & alert resolution |
 | **Admin Attendance** | `api/admin/attendance/` | `get_daily_roster.php`, `get_disputes.php`, `resolve_dispute.php`, `update_attendance.php` | Conventionally admin |
 | **Student & Staff Leaves** | `api/leave/`<br>`api/admin/leave/` | `apply_leave.php`, `get_leaves.php`, `get_student_quota.php`, `update_leave_status.php` | Student academic leave quota enforcement excluding Fridays (`StudentLeaveHelper.php`) |
@@ -540,8 +545,17 @@ The system operates on **80 baseline tables** defined in `server/u647959341_cca_
 - `server/config/database.php`: Central PDO database connection provider with forced timezone `+06:00`.
 - `server/config/cors.php`: Primary access origin filter for web & electron communication.
 - `server/config/SmsHelper.php`: SMS dispatcher with simulation shield (`maintenance_status.json`).
-- `server/api/breaks/BreakDbHelper.php`: Central overtime, break limit, and mango tree calculation engine.
-- `server/api/payroll/PayrollHelper.php`: Staff compensation, hourly rate calculation, and earnings synchronizer.
+- `server/api/breaks/BreakDbHelper.php`: Central overtime, break limit, and mango tree calculation engine with Friday and distinct date deduplication.
+- `server/api/payroll/OvertimeEngine.php`: Single Source of Truth (SSoT) engine for all overtime, tiffin savings, short shifts, excess breaks, absences, mango claims, cashed-out OT, P2P trades, and admin vault calculations.
+- `server/api/payroll/PayrollSync.php`: Dedicated engine for attendance earnings & break claim synchronization.
+- `server/api/payroll/PayrollRoadmap.php`: Dedicated engine for contract tiers, staggered roadmaps, and promotion milestones.
+- `server/api/payroll/PayrollWithdrawal.php`: Dedicated engine for withdrawal validation, execution, and payout notifications.
+- `server/api/payroll/PayrollLedger.php`: Modular financial ledger engine, chronological cycle invoice allocation, fractional rollover, and wallet stats calculation.
+- `server/api/payroll/PayrollHelper.php`: Core compensation facade orchestrator, coordinating `PayrollLedger`, `OvertimeEngine`, and payout cycle locks.
+- `staff-frontend/src/components/Payroll/PayrollWithdrawModal.jsx`: Interactive shortfall calculator with sticky header, scrollable body, sticky footer, mango cashout toggle, and submission lock.
+- `server/api/screen_monitor/get_my_workstation_logs.php`: Scoped staff surveillance clips & inactivity/idle audit logs endpoint.
+- `staff-frontend/src/pages/MyWorkstation.jsx`: Staff workstation review page with embedded Google Drive video player (1x-4x speed controls) and inactivity audit logs.
+- `staff-frontend/src/components/Payroll/PayrollHeaderBanner.jsx`: Withdrawal eligibility badges, lock state visualizer, and target status banner.
 - `server/api/leave/StudentLeaveHelper.php`: Student academic leave quota calculation, Friday off-day exemption, and employee schema provisioning.
 - `server/api/screen_monitor/upload_workstation_video.php`: Workstation surveillance video router uploading to Google Drive Cloud Vault (`CCA_Vault`) with R2 failover.
 - `server/api/screen_monitor/signal.php`: Pusher signaling gateway for WebRTC screen streaming.
@@ -691,9 +705,13 @@ Each PHP script file under `server/api/` serves as its own independent controlle
 
 ### 12.17 Service Map
 Key backend & client services:
-- `CommunityDbHelper`: Schema provisioning, post fetching with likes/comments resolution.
-- `BreakDbHelper`: Break verification, Mango minute calculation, trade validation.
-- `PayrollHelper`: Contract rate calculation, session earnings sync, payout processing.
+- `OvertimeEngine`: Single Source of Truth (SSoT) overtime calculator computing gross attendance OT, tiffin efficiency savings, short shifts, excess breaks, absences/leaves, mango claims, cashed-out OT, P2P trades, and admin vault holds.
+- `PayrollSync`: Dedicated synchronization service for attendance earnings, mango leave day compensations, and yearly contract surplus flags.
+- `PayrollRoadmap`: Contract tier resolution, staggered roadmap progressions, promotion milestones, and rate freezes.
+- `PayrollWithdrawal`: Payout request validation, minimum salary limit enforcement, audit cycle stamping, and notifications.
+- `PayrollLedger`: Dedicated financial ledger engine calculating staff wallet summaries, monthly cycle invoice chronologies, fractional rollovers, and active overtime value.
+- `PayrollHelper`: Central compensation facade and staff wallet orchestrator.
+- `BreakDbHelper`: Break verification, Mango minute calculation, trade validation, and deduplicated absence penalties.
 - `StudentLeaveHelper`: Academic leave quota management, Friday off-day exemption, and employee schema provisioning.
 - `CreditHelper`: Ledger balance updates and idempotency protection.
 - `AttendanceSecurityHelper`: IP filtering, proxy resolution, and device fingerprint validation.
@@ -708,8 +726,10 @@ Key backend & client services:
 The MySQL database tables defined in Section 5 serve as the data model layer.
 
 ### 12.19 Important Business Logic
-- **Mango Overtime Calculation**:
-  `Available Mins = (Worked OT + Bought OT) - (Claimed Breaks + Cashed Out OT + Sold OT)`
+- **Unified Single Bucket Overtime Engine (SSoT)**:
+  `Net Overtime = (Attendance OT beyond shift + Tiffin Savings + P2P Bought + Vault Transferred In) - (Short Shifts + Excess Breaks (>40m) + Mango Full Day Claims + In-Shift Mango Breaks + Cashed Out + P2P Sold + Absent/Leave Penalties + Vault Out)`.
+  `Staff Available Overtime = max(0, Net Overtime - Vault Held)`.
+  **Zero Divergence Rule**: All absent penalties are deducted from the Overtime pool first; base salary remains 100% intact as long as Overtime is available.
 - **P2P Trade Financial Settlement**:
   Selling staff receives a monetary earnings credit; buying staff incurs a monetary deduction at the seller's active hourly rate.
 - **Student Academic Leave Quotas**:
@@ -773,6 +793,53 @@ Described in Section 11.
 
 ### 12.30 Unknown / Unclear Areas
 Described in Section 13.
+
+### 12.31 Holidays & Center Closures (Official Wage Protection & Attendance Exemption)
+- **Engine**: `server/api/admin/holidays/HolidayHelper.php` with self-healing JIT schema migration (`is_paid`, `closure_type`, `notes`, `created_by`, `updated_at`, unique key on `date`, and `staff_work_earnings.source_type` altered to `VARCHAR(50)`).
+- **Attendance Exemption**: `cron_absent_manager.php` checks `holidays` where `expected_hours <= 0` and skips marking active staff absent. When a holiday is declared, `HolidayHelper::saveHoliday` automatically purges any existing `Absent` attendance records for that date.
+- **Full Base Wage Protection**: In `PayrollSync::syncAttendanceEarnings`, paid holidays (`is_paid = 1`) credit standard daily shift hours (8h = 480m for 8h staff, 6h = 360m for 6h staff) into `staff_work_earnings` under `source_type = 'paid_holiday'`. Zero overtime or mango debt is deducted.
+- **Automatic Rollback**: Deleting a holiday via `HolidayHelper::deleteHoliday` automatically deletes corresponding `paid_holiday` rows from `staff_work_earnings`.
+- **Admin Portal Interface**: Dedicated `admin-frontend/src/pages/HolidaysManagement.jsx` (route `/holidays`), with metric cards, Bangladesh national holiday presets, and create/edit modal.
+- **Staff Portal Visibility**: `get_attendance.php` surfaces `today_holiday` and merges holiday records into monthly history as `status: 'Holiday'` with `Paid Day Off (8h)`.
+
+### 12.32 Staff Gamification, XP & Career Leveling Engine
+- **Engine**: `server/api/gamification/GamificationHelper.php` with self-healing schema:
+  - `staff_gamification_profiles`: Total XP, calculated Level (1-20+), Tier, and Attendance Streaks.
+  - `staff_badges`: Milestone achievement awards (Streak 3, Streak 7, Streak 30, Mango Baron, Holiday Hero, Five-Star Virtuoso, Century Centurion).
+  - `staff_xp_ledger`: Granular audit log of points awarded (on-time check-ins, full shifts, holiday service, quality tasks).
+- **Auto-Sync**: Automatically computes and awards XP from historical attendance and shift records without manual initialization.
+- **Endpoints**: `server/api/gamification/get_my_career.php`, `server/api/gamification/get_leaderboard.php`.
+- **Staff Portal UI**:
+  - Dedicated page `staff-frontend/src/pages/CareerRankings.jsx` (route `/career`), with 3D metallic level badges, unlockable badge showcase, Top 3 podium, and full company leaderboard.
+  - Interactive HUD badge integrated directly into `DashboardHeroBanner.jsx`.
+  - Sidebar link: `Career & Badges 🏆` with bilingual translations.
+
+### 12.33 Staff Productivity & Focus Planner (1-3-5 Architecture, Ambient Audio & Scratchpad)
+- **Engine**: `server/api/productivity/ProductivityHelper.php` with self-healing schema:
+  - `staff_daily_plans`: Date-based 1-3-5 priority plans (1 Big Win, 3 Medium Priorities, 5 Quick Checklists) with completion tracking and XP flag.
+  - `staff_scratchpads`: User-scoped persistent markdown/plain notepad auto-synced to cloud.
+- **Gamification Linkage**: Automatically awards +25 XP via `GamificationHelper::awardXp` when 100% of a day's non-empty 1-3-5 priorities are completed.
+- **Zero-Bandwidth Procedural Ambient Sound**: `staff-frontend/src/utils/ambientSoundEngine.js` generates authentic acoustic noise and chord flows using the browser's native Web Audio API (Rainy Academy, Ocean Waves, Cozy Campfire, Deep Work Flow, Cafe & Keyboard, Pure White Noise) with zero external assets, zero bandwidth, and 100% offline reliability.
+- **Endpoints**:
+  - `server/api/productivity/get_daily_plan.php`
+  - `server/api/productivity/save_daily_plan.php`
+  - `server/api/productivity/get_scratchpad.php`
+  - `server/api/productivity/save_scratchpad.php`
+- **Staff Portal UI**:
+  - Dedicated page `staff-frontend/src/pages/ProductivityPlanner.jsx` (routes `/productivity` and `/planner`).
+  - Interactive Date Switcher (view past days' plans or future tasks).
+  - Debounced auto-save on scratchpad with word/character counters.
+  - Sidebar navigation item: `Focus & Planner 📝🎧` with English and Bengali translations.
+
+### 12.34 Smart Finance & Mango Simulator (Earnings Projection Engine)
+- **Model**: Interactive client-side projection engine `staff-frontend/src/components/Payroll/EarningsSimulator.jsx` connected to real contract parameters via `PayrollHelper::getStaffWalletSummary` and `OvertimeEngine`.
+- **Simulation Dimensions**:
+  - **Projected Overtime Work**: 0 to 60 hours slider dynamically calculating additional cash earnings and newly yielded ripe mangoes + minutes.
+  - **Mango Liquidation vs Paid Leave Reserve Strategy**: Slider allocating available ripe mangoes into cashout at withdrawal vs reserving as paid days off (zero wage reduction on emergency leaves).
+  - **Committed Working Days**: 18 to 26 days schedule simulator calculating regular base wage.
+  - **Quarterly Milestone Tier Explorer**: Current tier vs +10% boost vs +25% promotion boost recalculating entire monthly earnings.
+- **Visual Output**: Total simulated payout with live animated counter, dynamic stacked progress breakdown (Base Pay vs Overtime vs Mango Cashout), and automated strategic optimizer insights.
+- **Routing**: Integrated as a dedicated tab within `PayrollWallet.jsx` and directly accessible via `/payroll?tab=simulator` or `/simulator`.
 
 ---
 

@@ -29,6 +29,9 @@ const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
 const DeveloperEvents = React.lazy(() => import('./pages/DeveloperEvents'));
 const MangoVaultManager = React.lazy(() => import('./pages/MangoVaultManager'));
 const DesktopAppDownload = React.lazy(() => import('./pages/DesktopAppDownload'));
+const MyWorkstation = React.lazy(() => import('./pages/MyWorkstation'));
+const CareerRankings = React.lazy(() => import('./pages/CareerRankings'));
+const ProductivityPlanner = React.lazy(() => import('./pages/ProductivityPlanner'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const TeamEvents = React.lazy(() => import('./pages/TeamEvents'));
 function App() {
@@ -91,6 +94,22 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <DesktopAppDownload />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/workstation" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <MyWorkstation />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/my-workstation" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <MyWorkstation />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               } />
@@ -191,10 +210,58 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              <Route path="/career" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <CareerRankings />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/achievements" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <CareerRankings />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/productivity" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <ProductivityPlanner />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/planner" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <ProductivityPlanner />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
               <Route path="/payroll" element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <PayrollWallet />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/payroll/simulator" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <PayrollWallet initialTab="simulator" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/simulator" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <PayrollWallet initialTab="simulator" />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               } />

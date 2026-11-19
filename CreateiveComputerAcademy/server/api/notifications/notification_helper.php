@@ -1,10 +1,36 @@
 <?php
 class NotificationHelper {
+    public static function ensureSchema($db) {
+        if (!$db) return;
+        try {
+            $db->exec("
+                CREATE TABLE IF NOT EXISTS `notifications` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `user_id` INT NOT NULL,
+                    `sender_id` INT NULL,
+                    `title` VARCHAR(255) NOT NULL,
+                    `message` TEXT NOT NULL,
+                    `type` VARCHAR(100) NOT NULL,
+                    `priority` VARCHAR(20) NOT NULL DEFAULT 'normal',
+                    `portal` VARCHAR(50) NOT NULL DEFAULT 'staff',
+                    `action_url` VARCHAR(255) NULL,
+                    `metadata` LONGTEXT NULL,
+                    `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+                    `created_at` DATETIME NOT NULL,
+                    INDEX (`user_id`),
+                    INDEX (`is_read`),
+                    INDEX (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (Throwable $e) {}
+    }
+
     /**
      * Send notification to a specific user
      */
     public static function sendToUser($db, $user_id, $sender_id, $title, $message, $type, $portal, $action_url = null, $priority = 'normal', $metadata = null) {
         if (!$db || !$user_id) return false;
+        self::ensureSchema($db);
 
         try {
             $query = "INSERT INTO notifications (user_id, sender_id, title, message, type, priority, portal, action_url, metadata, is_read, created_at)

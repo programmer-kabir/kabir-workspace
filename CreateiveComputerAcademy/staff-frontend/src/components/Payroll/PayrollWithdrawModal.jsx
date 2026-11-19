@@ -33,14 +33,16 @@ export const PayrollWithdrawModal = ({
   const shortfallEvenWithMangoes = Math.max(0, Math.ceil(minLimit - maxPotentialWithMangoes));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative space-y-5">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full max-h-[92vh] md:max-h-[88vh] flex flex-col border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden">
+        {/* Fixed Sticky Header */}
+        <div className="px-6 py-5 md:px-8 md:py-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900 z-10">
           <div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">Request Payout</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Whole integer amount only</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
@@ -48,7 +50,9 @@ export const PayrollWithdrawModal = ({
           </button>
         </div>
 
-        <form onSubmit={handleWithdrawSubmit} className="space-y-4">
+        <form onSubmit={handleWithdrawSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Body Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 md:px-8 md:py-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
               Available for Cashout
@@ -133,6 +137,15 @@ export const PayrollWithdrawModal = ({
                   ৳ {Number(summary.available_withdrawable || 0).toLocaleString()}
                 </span>
               </div>
+              {includeOvertimeCashout && Number(summary.overtime_bank?.cash_value || 0) > 0 && (
+                <div className="pt-1.5 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <span className="flex items-center gap-1">
+                    <span>🥭</span>
+                    <span>ওভারটাইম ক্যাশআউট সমন্বিত:</span>
+                  </span>
+                  <span>+৳ {Number(summary.overtime_bank.cash_value).toFixed(2)}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -325,7 +338,10 @@ export const PayrollWithdrawModal = ({
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-end gap-3">
+          </div>
+
+          {/* Fixed Bottom Action Footer */}
+          <div className="px-6 py-4 md:px-8 md:py-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/70 shrink-0 flex items-center justify-end gap-3 z-10">
             <button
               type="button"
               onClick={onClose}

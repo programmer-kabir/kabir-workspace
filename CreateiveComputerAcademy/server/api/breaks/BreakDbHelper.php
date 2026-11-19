@@ -164,8 +164,8 @@ class BreakDbHelper {
             $attStmt->execute([':user_id' => $user_id]);
             $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Fetch completed breaks grouped by date
-            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' GROUP BY date");
+            // Fetch completed regular breaks grouped by date (excluding Mango breaks to prevent double deduction)
+            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') GROUP BY date");
             $bStmt->execute([':user_id' => $user_id]);
             $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -322,8 +322,8 @@ class BreakDbHelper {
             $attStmt->execute([':user_id' => $user_id]);
             $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Fetch completed breaks grouped by date
-            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' GROUP BY date");
+            // Fetch completed regular breaks grouped by date (excluding Mango breaks to prevent double deduction)
+            $bStmt = $db->prepare("SELECT date, COALESCE(SUM(duration_minutes), 0) as b_mins FROM user_breaks WHERE user_id = :user_id AND status = 'Completed' AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') GROUP BY date");
             $bStmt->execute([':user_id' => $user_id]);
             $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 

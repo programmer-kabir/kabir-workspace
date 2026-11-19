@@ -18,6 +18,9 @@
 **/.env.*
 !**/.env.example
 **/google_drive_credentials.json
+**/*credentials*.json
+**/*token_cache*.json
+
 
 # Database & Large Dumps
 **/*.sql

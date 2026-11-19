@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { soundFx } from '../utils/soundFx';
 import BreakWidget from '../components/BreakWidget';
@@ -23,6 +24,7 @@ const Attendance = () => {
   const time = useServerTime() || new Date();
 
   const [todayStatus, setTodayStatus] = useState(null);
+  const [todayHoliday, setTodayHoliday] = useState(null);
   const [history, setHistory] = useState([]);
   const [shiftHours, setShiftHours] = useState(8);
   const [totalBreakMinutes, setTotalBreakMinutes] = useState(0);
@@ -59,6 +61,7 @@ const Attendance = () => {
       });
       if (response.data.status === 'success') {
         setTodayStatus(response.data.today);
+        setTodayHoliday(response.data.today_holiday || null);
         setHistory(response.data.history || []);
         if (response.data.shift_hours) setShiftHours(response.data.shift_hours);
         if (response.data.total_break_minutes !== undefined) setTotalBreakMinutes(response.data.total_break_minutes);
@@ -183,10 +186,35 @@ const Attendance = () => {
         actionError={actionError}
       />
 
+      {todayHoliday && (
+        <div className="mb-6 p-5 rounded-3xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-200 dark:border-indigo-800/60 shadow-sm flex items-center gap-4 animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-indigo-600 text-white shrink-0 shadow-lg shadow-indigo-500/30">
+            <FiShield size={24} />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                Official Center Closure / Holiday 🏛️
+              </span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                100% Wage Protected (8h Shift Credited)
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+              {todayHoliday.title}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              The academy is officially closed today. Attendance is excused and full standard daily salary is guaranteed with zero absent deductions.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <AttendancePunchCard
           time={time}
           todayStatus={todayStatus}
+          todayHoliday={todayHoliday}
           isPunching={isPunching}
           currentUser={currentUser}
           handleCheckIn={handleCheckIn}

@@ -46,8 +46,8 @@ if($today_stmt->rowCount() > 0) {
     $today_status = $today_stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Get Total Break Time Today (Completed in-shift breaks only)
-$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :user_id AND date = :today AND status = 'Completed' AND break_type != 'Mango Full Day'";
+// Get Total Break Time Today (Completed regular in-shift breaks only, excluding Mango Breaks)
+$break_query = "SELECT SUM(duration_minutes) as total_break_minutes FROM user_breaks WHERE user_id = :user_id AND date = :today AND status = 'Completed' AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime')";
 $break_stmt = $db->prepare($break_query);
 $break_stmt->bindParam(':user_id', $user_id);
 $break_stmt->bindParam(':today', $today);
@@ -64,7 +64,7 @@ $history_stmt->execute();
 
 // Get Holidays for this month
 $holidays = [];
-$hol_query = "SELECT date, title, expected_hours FROM holidays WHERE MONTH(date) = :month AND YEAR(date) = :year";
+$hol_query = "SELECT id, date, title, expected_hours, COALESCE(is_paid, 1) as is_paid, COALESCE(closure_type, 'public_holiday') as closure_type FROM holidays WHERE MONTH(date) = :month AND YEAR(date) = :year";
 $hol_stmt = $db->prepare($hol_query);
 $hol_stmt->bindParam(':month', $current_month);
 $hol_stmt->bindParam(':year', $current_year);
@@ -73,9 +73,9 @@ while($h = $hol_stmt->fetch(PDO::FETCH_ASSOC)) {
     $holidays[$h['date']] = $h;
 }
 
-// Get Monthly Breaks
+// Get Monthly Breaks (Excluding Mango Breaks which are earned leaves)
 $monthly_breaks = [];
-$mb_query = "SELECT date, SUM(duration_minutes) as total_mins FROM user_breaks WHERE user_id = :user_id AND MONTH(date) = :month AND YEAR(date) = :year AND status = 'Completed' GROUP BY date";
+$mb_query = "SELECT date, SUM(duration_minutes) as total_mins FROM user_breaks WHERE user_id = :user_id AND MONTH(date) = :month AND YEAR(date) = :year AND status = 'Completed' AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') GROUP BY date";
 $mb_stmt = $db->prepare($mb_query);
 $mb_stmt->bindParam(':user_id', $user_id);
 $mb_stmt->bindParam(':month', $current_month);
@@ -133,9 +133,50 @@ while ($row = $history_stmt->fetch(PDO::FETCH_ASSOC)) {
     $history[] = $row;
 }
 
+// Merge official holidays into history if staff did not have an active attendance record for that date
+$existingDates = array_column($history, 'date');
+foreach ($holidays as $hDate => $hInfo) {
+    if (!in_array($hDate, $existingDates)) {
+        $isPaid = (!isset($hInfo['is_paid']) || (int)$hInfo['is_paid'] === 1);
+        $history[] = [
+            'date' => $hDate,
+            'check_in' => null,
+            'check_out' => null,
+            'status' => 'Holiday',
+            'holiday_title' => $hInfo['title'] ?? 'Official Holiday',
+            'is_paid' => $isPaid ? 1 : 0,
+            'total_hours' => $isPaid ? ($shift_hours . 'h 00m') : null,
+            'overtime' => $isPaid ? 'Paid Day Off' : 'Unpaid',
+            'is_short' => false,
+            'total_break_minutes' => 0,
+            'is_forgotten_checkout' => 0
+        ];
+    }
+}
+
+// Sort history descending by date
+usort($history, function($a, $b) {
+    return strcmp($b['date'], $a['date']);
+});
+
+// Check if today is a holiday / center closure
+$today_holiday = null;
+if (isset($holidays[$today])) {
+    $today_holiday = $holidays[$today];
+} else {
+    try {
+        $th_stmt = $db->prepare("SELECT id, date, title, expected_hours, COALESCE(is_paid, 1) as is_paid, COALESCE(closure_type, 'public_holiday') as closure_type FROM holidays WHERE date = :today LIMIT 1");
+        $th_stmt->execute([':today' => $today]);
+        if ($th_stmt->rowCount() > 0) {
+            $today_holiday = $th_stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    } catch (Throwable $e) {}
+}
+
 echo json_encode([
     "status" => "success", 
     "today" => $today_status,
+    "today_holiday" => $today_holiday,
     "total_break_minutes" => (int)$total_break_minutes,
     "shift_hours" => (int)$shift_hours,
     "has_tiffin_break" => (bool)$has_tiffin_break,

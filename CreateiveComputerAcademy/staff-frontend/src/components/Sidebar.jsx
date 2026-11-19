@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
   FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo,
-  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload
+  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiCheckSquare
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -106,6 +106,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Desktop App & Updates', transKey: 'desktop_app', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" /> },
+    { name: 'My Workstation', transKey: 'my_workstation', path: '/workstation', icon: <FiMonitor size={19} className="text-blue-500 group-hover:text-blue-400" /> },
     { name: 'Mango Break Tree', transKey: 'mango_tree', path: '/mango-tree', icon: <span className="text-lg">🥭</span> },
     { name: 'Breaks Log', transKey: 'breaks_log', path: '/breaks', icon: <FiCoffee size={19} className="text-amber-500 group-hover:text-amber-400" /> },
     // Content Team gets Content Studio, Other staff gets Tasks
@@ -115,6 +116,8 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'Academy Feed', transKey: 'academy_feed', path: '/feed', icon: <FiBookOpen size={19} className="text-indigo-400 group-hover:text-indigo-300" /> },
     { name: 'Work Wallet & Salary', transKey: 'payroll_wallet', path: '/payroll', icon: <FiDollarSign size={19} className="text-emerald-500 group-hover:text-emerald-400" /> },
     { name: 'Credit Wallet', transKey: 'credits_wallet', path: '/credits', icon: <FaCoins size={18} className="text-amber-500 group-hover:text-amber-400" /> },
+    { name: 'Career & Badges 🏆', transKey: 'career_badges', path: '/career', icon: <FiAward size={19} className="text-amber-400 group-hover:text-amber-300" /> },
+    { name: 'Focus & Planner 📝🎧', transKey: 'productivity_planner', path: '/productivity', icon: <FiCheckSquare size={19} className="text-indigo-500 group-hover:text-indigo-400" /> },
     { name: 'Leave', transKey: 'leave', path: '/leave', icon: <FiCalendar size={19} /> },
     { name: 'Reports', transKey: 'reports', path: '/reports', icon: <FiFileText size={19} /> },
     { name: 'Brand Kit', transKey: 'brand_kit', path: '/brand-kit', icon: <HiSparkles size={19} className="text-amber-400" /> },

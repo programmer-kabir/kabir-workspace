@@ -83,32 +83,42 @@ export default function AttendanceHistoryTable({
                       {record.total_break_minutes > 0 ? `${record.total_break_minutes}m` : '-'}
                     </td>
                     <td className="p-4">
-                      <span
-                        className={`inline-block transition-transform duration-300 group-hover:translate-x-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border ${
-                          record.status === 'Present'
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
-                            : record.status === 'Late'
-                            ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800/50'
-                            : record.status === 'Absent'
-                            ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800/50'
-                            : 'bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        {record.status}
-                      </span>
+                      {record.status === 'Holiday' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50">
+                          🏛️ {record.holiday_title ? `${record.holiday_title}` : 'Holiday (Closed)'}
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-block transition-transform duration-300 group-hover:translate-x-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border ${
+                            record.status === 'Present'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
+                              : record.status === 'Late'
+                              ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800/50'
+                              : record.status === 'Absent'
+                              ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800/50'
+                              : 'bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {record.status}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedDisputeDate(record.date);
-                          setIsDisputeModalOpen(true);
-                          setDisputeSuccessMsg('');
-                        }}
-                        className="text-slate-400 hover:text-amber-500 transition-colors p-2 rounded-full hover:bg-amber-50 dark:hover:bg-amber-500/10"
-                        title="Report an issue"
-                      >
-                        <FiAlertCircle size={16} />
-                      </button>
+                      {record.status !== 'Holiday' ? (
+                        <button
+                          onClick={() => {
+                            setSelectedDisputeDate(record.date);
+                            setIsDisputeModalOpen(true);
+                            setDisputeSuccessMsg('');
+                          }}
+                          className="text-slate-400 hover:text-amber-500 transition-colors p-2 rounded-full hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                          title="Report an issue"
+                        >
+                          <FiAlertCircle size={16} />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-300 dark:text-slate-600">-</span>
+                      )}
                     </td>
                   </tr>
                 ))

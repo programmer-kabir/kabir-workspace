@@ -4,6 +4,7 @@ import { FiCheckCircle, FiLogOut, FiAlertTriangle, FiShield, FiLoader } from 're
 export default function AttendancePunchCard({
   time,
   todayStatus,
+  todayHoliday,
   isPunching,
   currentUser,
   handleCheckIn,
@@ -87,7 +88,19 @@ export default function AttendancePunchCard({
         {time.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       </p>
 
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm space-y-3">
+        {todayHoliday && (
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/10 to-indigo-500/10 border border-amber-300 dark:border-amber-700/50 text-left text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2 shadow-sm">
+            <span className="text-base leading-none">🥭</span>
+            <div>
+              <span className="font-bold">Holiday Overtime Mode:</span>
+              <p className="text-[11px] opacity-90 mt-0.5">
+                আজ একাডেমি ছুটি। আপনি সেন্টারে কাজ করলে সম্পূর্ণ সময়টাই আপনার ম্যাঙ্গো ব্যাংকে ১০০% ওভারটাইম আম হিসেবে জমা হবে।
+              </p>
+            </div>
+          </div>
+        )}
+
         {!todayStatus ? (
           <button
             onClick={handleCheckIn}

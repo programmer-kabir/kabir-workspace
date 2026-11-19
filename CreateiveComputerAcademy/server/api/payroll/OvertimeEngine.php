@@ -1,47 +1,5 @@
 <?php
-/**
- * OvertimeEngine.php — Single Source of Truth for Overtime Calculation
- *
- * This engine is THE one and only place that computes:
- *   - Gross Overtime (attendance beyond shift + tiffin efficiency savings)
- *   - Short shifts, Excess breaks, Absences/Leaves
- *   - Mango break claims, Cashed-out OT, P2P trades, Vault
- *   - Net Available Overtime (what staff can redeem as breaks or cash)
- *
- * Both the Mango Break Tree (get_mango_break_bank.php) and the Payroll
- * Payout Modal (PayrollHelper.php) must call this engine so they always
- * show identical numbers — zero divergence, forever.
- *
- * Usage:
- *   require_once 'OvertimeEngine.php';
- *   $result = OvertimeEngine::calculate($pdo, $userId, $shiftHours, $upToDate);
- *
- * Returns an array with keys:
- *   gross_ot_seconds          - raw attendance overtime seconds
- *   tiffin_bonus_seconds      - tiffin efficiency savings seconds
- *   total_gross_ot_seconds    - gross_ot + tiffin_bonus
- *   short_seconds             - short-shift seconds
- *   excess_break_seconds      - excess break (>40m) seconds
- *   absent_seconds            - absent/leave penalty seconds
- *   claimed_break_seconds     - Mango Full Day breaks claimed seconds
- *   in_shift_break_seconds    - Mango in-shift break seconds
- *   cashed_out_seconds        - cashed-out overtime seconds
- *   sold_seconds              - P2P sold overtime seconds
- *   bought_seconds            - P2P bought overtime seconds
- *   vault_held_seconds        - admin vault hold seconds
- *   vault_out_seconds         - vault transferred-out seconds
- *   vault_in_seconds          - vault transferred-in seconds
- *   total_deducted_seconds    - everything subtracted from gross OT
- *   net_seconds               - gross - deducted (may be negative = debt)
- *   available_seconds         - max(0, net_seconds) — clampable to 0
- *   monthly_ot_seconds        - [month_key => seconds] per-month gross OT
- *   monthly_tiffin_seconds    - [month_key => seconds] per-month tiffin bonus
- *   monthly_short_seconds     - [month_key => seconds] per-month short
- *   monthly_excess_break_sec  - [month_key => seconds] per-month excess break
- *   monthly_break_sec         - [month_key => seconds] per-month Mango in-shift
- *   absent_dates              - [date => hours_deducted] absent/leave date map
- *   claimed_dates             - [date => true] dates covered by Mango Full Day claims
- */
+
 class OvertimeEngine {
 
     /**
@@ -84,10 +42,15 @@ class OvertimeEngine {
             $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
             // ── 3. Completed breaks per date (for excess-break calc) ───────────────
+            // Mango breaks ('Mango Full Day', 'Mango Break', 'Mango Overtime') are overtime claims
+            // and must NOT be double-counted under regular daily excess break penalties.
             $brkStmt = $pdo->prepare("
                 SELECT date, COALESCE(SUM(duration_minutes), 0) AS b_mins
                 FROM user_breaks
-                WHERE user_id = :uid AND status = 'Completed' AND date <= :upto
+                WHERE user_id = :uid 
+                  AND status = 'Completed' 
+                  AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime')
+                  AND date <= :upto
                 GROUP BY date
             ");
             $brkStmt->execute([':uid' => $userId, ':upto' => $upToDate]);

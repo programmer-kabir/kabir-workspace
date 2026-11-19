@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
   FiMessageSquare, FiSettings, FiCoffee, FiBookOpen, FiVideo,
-  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload
+  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiTarget
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -81,14 +81,18 @@ const DesktopSidebar = ({
     { name: 'Crons & Auto', path: '/developer/crons', icon: <FiClock size={14} /> },
     { name: 'Database & Cache', path: '/developer/database', icon: <FiDatabase size={14} /> },
     { name: 'Server Code Editor', path: '/developer/editor', icon: <FiCode size={14} /> },
+    { name: 'Team Events & Feasts', path: '/developer/events', icon: <FiCalendar size={14} /> },
+    { name: 'Mango Vault Manager', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span> },
   ];
 
   const menuItems = [
     { name: 'Dashboard', path: '/', icon: <FiHome size={19} /> },
     { name: 'Community Wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" /> },
+    { name: 'Team Feasts & Tours', path: '/events', icon: <span className="text-lg">🎉</span> },
     { name: 'Message', path: '/messages', icon: <FiMessageSquare size={19} /> },
     { name: 'Attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Desktop App & Updates', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" /> },
+    { name: 'My Workstation', path: '/workstation', icon: <FiMonitor size={19} className="text-blue-500 group-hover:text-blue-400" /> },
     { name: 'Mango Break Tree', path: '/mango-tree', icon: <span className="text-lg">🥭</span> },
     { name: 'Breaks Log', path: '/breaks', icon: <FiCoffee size={19} className="text-amber-500 group-hover:text-amber-400" /> },
     // Content Team gets Content Studio, Other staff gets Tasks
@@ -98,6 +102,8 @@ const DesktopSidebar = ({
     { name: 'Academy Feed', path: '/feed', icon: <FiBookOpen size={19} className="text-indigo-400 group-hover:text-indigo-300" /> },
     { name: 'Work Wallet & Salary', path: '/payroll', icon: <FiDollarSign size={19} className="text-emerald-500 group-hover:text-emerald-400" /> },
     { name: 'Credit Wallet', path: '/credits', icon: <FaCoins size={18} className="text-amber-500 group-hover:text-amber-400" /> },
+    { name: 'Career & Badges 🏆', path: '/career', icon: <FiAward size={19} className="text-amber-400 group-hover:text-amber-300" /> },
+    { name: 'Focus & Planner 📝🎧', path: '/productivity', icon: <FiTarget size={19} className="text-rose-500 group-hover:text-rose-400" /> },
     { name: 'Leave', path: '/leave', icon: <FiCalendar size={19} /> },
     { name: 'Reports', path: '/reports', icon: <FiFileText size={19} /> },
     { name: 'Brand Kit', path: '/brand-kit', icon: <HiSparkles size={19} className="text-amber-400" /> },
