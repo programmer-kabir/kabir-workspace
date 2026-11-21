@@ -33,6 +33,8 @@
 | **কন্টেন্ট স্টুডিও পাইপলাইন** | `/content-studio` | `ContentStudioView.jsx` (`/content-studio`) | [x] সম্পন্ন ও লাইভ |
 | **জামানত তহবিল ভল্ট কার্ড** | `/payroll` | `SecurityDepositVaultCard.jsx` (`PayrollWalletView`) | [x] সম্পন্ন ও লাইভ |
 | **জাতীয় ছুটির দিনের ব্যানার ও লক** | `/attendance` | `AttendanceView.jsx` (`todayHoliday` ব্যানার ও হিস্ট্রি লক) | [x] সম্পন্ন ও লাইভ |
+| **দৈনিক মোটিভেশনাল কোটস টিকার** | `/` | `DashboardMotivationTicker.jsx` (`DashboardView`) | [x] সম্পন্ন ও লাইভ |
+| **প্রোফাইল ও কভার ইমেজ ক্রপার** | `/profile` | `ImageCropperModal.jsx` (`ProfileView`) | [x] সম্পন্ন ও লাইভ |
 
 ---
 
@@ -95,8 +97,9 @@
 
 ---
 
-### 🟡 GAP 4: দৈনিক মোটিভেশনাল কোটস টিকার (Dashboard Motivation Ticker) — [UX/ভিজ্যুয়াল]
+### 🟡 GAP 4: দৈনিক মোটিভেশনাল কোটস টিকার (Dashboard Motivation Ticker) — [x] COMPLETED
 - **যে পেজে সমস্যা:** `/` (প্রধান ড্যাশবোর্ড)
+- **ডেস্কটপ স্টেটাস:** ✅ **সম্পন্ন ও লাইভ** (`DashboardMotivationTicker.jsx` কম্পোনেন্ট পোর্ট সম্পন্ন এবং `DashboardView.jsx`-এ হিরো ব্যানারের নিচে লাইভ মাউন্ট সম্পন্ন)।
 - **ওয়েব পোর্টালে যা আছে:**
   - ড্যাশবোর্ডের হিরো ব্যানারের ঠিক নিচে একটি স্লিম অ্যানিমেটেড টিকার বার রয়েছে: `staff-frontend/src/components/Dashboard/DashboardMotivationTicker.jsx`।
   - এতে কাজের একাগ্রতা, সততা ও কোয়ালিটি সম্পর্কিত ৫০টিরও বেশি বাংলা ও ইংরেজি উক্তি (`QUOTES`) রিফ্রেশ বাটন ও গ্রেডিয়েন্ট আইকন সহ লাইভ স্ক্রল হয়।
@@ -107,8 +110,9 @@
 
 ---
 
-### 🟡 GAP 5: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার (Image Cropper Modal) — [প্রোফাইল পেজ]
+### 🟡 GAP 5: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার (Image Cropper Modal) — [x] COMPLETED
 - **যে পেজে সমস্যা:** `/profile` (প্রোফাইল ও সেটিংস)
+- **ডেস্কটপ স্টেটাস:** ✅ **সম্পন্ন ও লাইভ** (`react-easy-crop`, `cropImage.js` এবং `ImageCropperModal.jsx` যুক্ত সম্পন্ন, প্রোফাইল পিকচার এবং কভার ফটো উভয়ের জন্যই ইন্টারেক্টিভ ড্র্যাগ-জুম ক্রপ এবং ডাইনামিক আপলোড কার্যকর)।
 - **ওয়েব পোর্টালে যা আছে:**
   - স্টাফ সদস্য যখন প্রোফাইল ছবি বা কভার ব্যানার আপলোড করেন, তখন সরাসরি আপলোড না হয়ে `ImageCropperModal.jsx` খোলে।
   - ব্যবহারকারী মাউস ড্র্যাগ করে জুম/প্যান করে নিখুঁত সার্কেল বা ব্যানারের রেশিওতে ক্রপ করে ছবি কনফার্ম করতে পারেন।
@@ -150,8 +154,8 @@
 - [x] ধাপ ১: কন্টেন্ট স্টুডিও মাল্টিমিডিয়া পাইপলাইন পোর্টকরণ (`/content-studio` -> `ContentStudioView.jsx`) ✅ (DONE)
 - [x] ধাপ ২: জামানত তহবিল কার্ড ইন্টিগ্রেশন (`SecurityDepositVaultCard.jsx` -> `PayrollWalletView.jsx`) ✅ (DONE)
 - [x] ধাপ ৩: জাতীয় ছুটির দিনের ব্যানার ও হিস্ট্রি লক যোগকরণ (`today_holiday` -> `AttendanceView.jsx`) ✅ (DONE)
-- [ ] ধাপ ৪: দৈনিক মোটিভেশনাল কোটস টিকার যুক্তকরণ (`DashboardMotivationTicker.jsx` -> `DashboardView.jsx`)
-- [ ] ধাপ ৫: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার মোডাল যুক্তকরণ (`ImageCropperModal.jsx` -> `ProfileView.jsx`)
+- [x] ধাপ ৪: দৈনিক মোটিভেশনাল কোটস টিকার যুক্তকরণ (`DashboardMotivationTicker.jsx` -> `DashboardView.jsx`) ✅ (DONE)
+- [x] ধাপ ৫: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার মোডাল যুক্তকরণ (`ImageCropperModal.jsx` -> `ProfileView.jsx`) ✅ (DONE)
 - [ ] ধাপ ৬: সেন্ট্রাল LanguageContext ডিকশনারি সিঙ্ক (`LanguageContext.jsx` -> Desktop App & Sidebar)
 - [ ] ধাপ ৭: লাইট মোড কালার ইউনিফর্মিটি ও ফাইনাল পলিশ
 ```

@@ -9,6 +9,7 @@ import {
 import { HiSparkles } from 'react-icons/hi';
 import TiffinTimer from './TiffinTimer';
 import ActiveBreakWidget from './ActiveBreakWidget';
+import DashboardMotivationTicker from './DashboardMotivationTicker';
 import AnimatedCounter from './AnimatedCounter';
 import { API_BASE } from '../utils/api';
 import offlineQueueService from '../services/OfflineQueueService';
@@ -591,6 +592,9 @@ const DashboardView = ({ setActiveTab }) => {
           </div>
         </div>
       </div>
+
+      {/* ── Daily Motivation Scrolling Ticker ── */}
+      <DashboardMotivationTicker />
 
       {/* ── Active Break Live Banner (Conditional) ── */}
       <ActiveBreakWidget />

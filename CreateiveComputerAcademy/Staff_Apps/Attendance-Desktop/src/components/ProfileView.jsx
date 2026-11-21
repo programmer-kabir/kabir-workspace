@@ -12,6 +12,7 @@ import {
   FiShield, FiTrendingUp
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
+import ImageCropperModal from './ImageCropperModal';
 
 const ProfileView = ({ onNavigate }) => {
   const { currentUser, updateUser } = useAuth();
@@ -21,6 +22,11 @@ const ProfileView = ({ onNavigate }) => {
   // Edit Modal & Tabs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('profile'); // 'profile' | 'payout' | 'security'
+
+  // Image Cropper State (Profile & Cover)
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [cropType, setCropType] = useState('profile');
 
   // Profile Form State
   const [name, setName] = useState(currentUser?.name || '');
@@ -139,26 +145,41 @@ const ProfileView = ({ onNavigate }) => {
     }
   };
 
-  // Handle Image Upload (Profile or Cover)
-  const handleImageUpload = async (e, type) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // Handle File Selection (Triggers ImageCropperModal)
+  const handleSelectImageFile = (e, type) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setCropType(type);
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setCropImageSrc(reader.result?.toString() || '');
+        setCropModalOpen(true);
+      });
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+  };
+
+  // Handle Cropped Image Save & Upload
+  const handleApplyCroppedImage = async (croppedBlob, croppedFile) => {
+    setCropModalOpen(false);
+    if (!croppedFile || !userId) return;
 
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', croppedFile);
     formData.append('user_id', userId);
-    formData.append('type', type);
+    formData.append('type', cropType);
 
-    toast.info(`Uploading ${type === 'profile' ? 'profile picture' : 'cover photo'}...`);
+    toast.info(`Uploading cropped ${cropType === 'profile' ? 'profile picture' : 'cover photo'}...`);
     try {
-      const res = await axios.post(`${API_BASE}/api/profile/upload_pictures.php`, formData, {
+      const res = await axios.post(`${API_BASE}/api/profile/upload_pictures.php?user_id=${userId}&type=${cropType}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data?.status === 'success') {
-        toast.success(res.data.message || 'Image uploaded successfully!');
+        toast.success(res.data.message || 'Image updated successfully!');
         soundFx.playSuccess();
         updateUser({
-          [type === 'profile' ? 'profile_picture' : 'cover_picture']: res.data.path
+          [cropType === 'profile' ? 'profile_picture' : 'cover_picture']: res.data.path
         });
       } else {
         toast.error(res.data?.message || 'Image upload failed.');
@@ -282,7 +303,7 @@ const ProfileView = ({ onNavigate }) => {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => handleImageUpload(e, 'cover')}
+              onChange={(e) => handleSelectImageFile(e, 'cover')}
             />
           </label>
         </div>
@@ -313,7 +334,7 @@ const ProfileView = ({ onNavigate }) => {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => handleImageUpload(e, 'profile')}
+                  onChange={(e) => handleSelectImageFile(e, 'profile')}
                 />
               </label>
             </div>
@@ -774,6 +795,15 @@ const ProfileView = ({ onNavigate }) => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Interactive Image Cropper Modal (Facebook/Instagram Style) */}
+      <ImageCropperModal
+        isOpen={cropModalOpen}
+        imageSrc={cropImageSrc}
+        type={cropType}
+        onClose={() => setCropModalOpen(false)}
+        onApplyCrop={handleApplyCroppedImage}
+      />
     </div>
   );
 };
