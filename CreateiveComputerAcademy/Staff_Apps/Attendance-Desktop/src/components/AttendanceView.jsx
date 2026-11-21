@@ -25,6 +25,7 @@ const AttendanceView = () => {
   const time = useServerTime() || new Date();
 
   const [todayStatus, setTodayStatus] = useState(null);
+  const [todayHoliday, setTodayHoliday] = useState(null);
   const [history, setHistory] = useState([]);
   const [shiftHours, setShiftHours] = useState(8);
   const [totalBreakMinutes, setTotalBreakMinutes] = useState(0);
@@ -220,6 +221,7 @@ const AttendanceView = () => {
           }
         }
 
+        setTodayHoliday(response.data.today_holiday || null);
         setHistory(response.data.history || []);
         if (response.data.shift_hours) setShiftHours(response.data.shift_hours);
         if (response.data.total_break_minutes !== undefined) setTotalBreakMinutes(response.data.total_break_minutes);
@@ -1164,6 +1166,30 @@ const AttendanceView = () => {
         </div>
       )}
 
+      {todayHoliday && (
+        <div className="mb-6 p-5 rounded-3xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-200 dark:border-indigo-800/60 shadow-sm flex items-center gap-4 animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-indigo-600 text-white shrink-0 shadow-lg shadow-indigo-500/30">
+            <FiShield size={24} />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                Official Center Closure / Holiday 🏛️
+              </span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                100% Wage Protected (8h Shift Credited)
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+              {todayHoliday.title}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              The academy is officially closed today. Attendance is excused and full standard daily salary is guaranteed with zero absent deductions.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid: 3D Analog Clock & Live Shift Tracker */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         
@@ -1229,6 +1255,19 @@ const AttendanceView = () => {
           <p className="text-slate-500 dark:text-slate-400 font-bold mb-6 uppercase tracking-widest text-[11px]">
             {time.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
+
+          {/* Holiday Overtime Mode Banner */}
+          {todayHoliday && (
+            <div className="w-full max-w-sm mb-4 p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/10 to-indigo-500/10 border border-amber-300 dark:border-amber-700/50 text-left text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2 shadow-xs">
+              <span className="text-base leading-none">🥭</span>
+              <div>
+                <span className="font-bold">Holiday Overtime Mode:</span>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  আজ একাডেমি ছুটি। আপনি সেন্টারে কাজ করলে সম্পূর্ণ সময়টাই আপনার ম্যাঙ্গো ব্যাংকে ১০০% ওভারটাইম আম হিসেবে জমা হবে।
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="w-full max-w-sm">
@@ -1422,27 +1461,37 @@ const AttendanceView = () => {
                     {record.total_break_minutes > 0 ? `${record.total_break_minutes}m` : '-'}
                   </td>
                   <td className="p-3.5">
-                    <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
-                      record.status === 'Present' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' :
-                      record.status === 'Late' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' :
-                      record.status === 'Absent' ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' :
-                      'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                    }`}>
-                      {record.status}
-                    </span>
+                    {record.status === 'Holiday' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full border bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 shadow-2xs">
+                        🏛️ {record.holiday_title ? `${record.holiday_title}` : 'Holiday (Closed)'}
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
+                        record.status === 'Present' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' :
+                        record.status === 'Late' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' :
+                        record.status === 'Absent' ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      }`}>
+                        {record.status}
+                      </span>
+                    )}
                   </td>
                   <td className="p-3.5 text-center">
-                    <button
-                      onClick={() => {
-                        setSelectedDisputeDate(record.date);
-                        setIsDisputeModalOpen(true);
-                        setDisputeSuccessMsg('');
-                      }}
-                      className="text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                      title="Report an issue"
-                    >
-                      <FiAlertCircle size={15} />
-                    </button>
+                    {record.status !== 'Holiday' ? (
+                      <button
+                        onClick={() => {
+                          setSelectedDisputeDate(record.date);
+                          setIsDisputeModalOpen(true);
+                          setDisputeSuccessMsg('');
+                        }}
+                        className="text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                        title="Report an issue"
+                      >
+                        <FiAlertCircle size={15} />
+                      </button>
+                    ) : (
+                      <span className="text-slate-400 text-xs font-semibold select-none">-</span>
+                    )}
                   </td>
                 </tr>
               )) : (
