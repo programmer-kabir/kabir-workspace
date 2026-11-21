@@ -89,7 +89,7 @@ export default function MyWorkstationView() {
   }, [fetchWorkstationLogs]);
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 mx-auto space-y-6">
       {/* ── Page Header & Controls ───────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>

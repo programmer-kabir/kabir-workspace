@@ -215,7 +215,7 @@ const BlogDetailsView = ({ blogId, onBack, currentUser }) => {
   const totalReactions = Object.values(reactionsSummary).reduce((a, b) => a + Number(b), 0);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300">
+    <div className="p-4 sm:p-6 lg:p-8  mx-auto space-y-8 animate-in fade-in duration-300">
       
       {/* ── TOP NAV BAR ── */}
       <div className="flex items-center justify-between gap-4">
