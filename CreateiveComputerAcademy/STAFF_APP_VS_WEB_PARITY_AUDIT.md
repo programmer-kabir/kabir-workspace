@@ -31,6 +31,7 @@
 | **মাই ওয়ার্কস্টেশন অডিট লগ** | `/workstation` | `MyWorkstationView.jsx` (`/workstation`) | [x] সম্পন্ন ও লাইভ |
 | **একাডেমি ফিড ব্লগ রিডার** | `/feed`, `/feed/:id` | `AcademyFeedView.jsx` + `BlogDetailsView.jsx` | [x] সম্পন্ন ও লাইভ |
 | **কন্টেন্ট স্টুডিও পাইপলাইন** | `/content-studio` | `ContentStudioView.jsx` (`/content-studio`) | [x] সম্পন্ন ও লাইভ |
+| **জামানত তহবিল ভল্ট কার্ড** | `/payroll` | `SecurityDepositVaultCard.jsx` (`PayrollWalletView`) | [x] সম্পন্ন ও লাইভ |
 
 ---
 
@@ -62,8 +63,9 @@
 
 ---
 
-### 🟠 GAP 2: জামানত তহবিল কার্ড (Security Deposit Vault Card) — [অত্যন্ত জরুরি]
+### 🟠 GAP 2: জামানত তহবিল কার্ড (Security Deposit Vault Card) — [x] COMPLETED
 - **যে পেজে সমস্যা:** `/payroll` (Work Wallet & Salary)
+- **ডেস্কটপ স্টেটাস:** ✅ **সম্পন্ন ও লাইভ** (`SecurityDepositVaultCard.jsx` তৈরি, `PayrollWalletView.jsx`-এ মাউন্ট এবং লাইভ কন্ডিশনাল রেন্ডারিং সম্পন্ন)।
 - **ওয়েব পোর্টালে যা আছে:**
   - যেসব স্টাফ সদস্যের জামানত চুক্তি (Security Deposit) কার্যকর রয়েছে, তাদের পে-রোল পেইজে একটি আকর্ষণীয় কার্ড রেন্ডার হয়: `staff-frontend/src/components/SecurityDeposit/SecurityDepositVaultCard.jsx`।
   - এতে প্রদর্শিত হয়:
@@ -144,7 +146,7 @@
 
 ```markdown
 - [x] ধাপ ১: কন্টেন্ট স্টুডিও মাল্টিমিডিয়া পাইপলাইন পোর্টকরণ (`/content-studio` -> `ContentStudioView.jsx`) ✅ (DONE)
-- [ ] ধাপ ২: জামানত তহবিল কার্ড ইন্টিগ্রেশন (`SecurityDepositVaultCard.jsx` -> `PayrollWalletView.jsx`)
+- [x] ধাপ ২: জামানত তহবিল কার্ড ইন্টিগ্রেশন (`SecurityDepositVaultCard.jsx` -> `PayrollWalletView.jsx`) ✅ (DONE)
 - [ ] ধাপ ৩: জাতীয় ছুটির দিনের ব্যানার ও হিস্ট্রি লক যোগকরণ (`today_holiday` -> `AttendanceView.jsx`)
 - [ ] ধাপ ৪: দৈনিক মোটিভেশনাল কোটস টিকার যুক্তকরণ (`DashboardMotivationTicker.jsx` -> `DashboardView.jsx`)
 - [ ] ধাপ ৫: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার মোডাল যুক্তকরণ (`ImageCropperModal.jsx` -> `ProfileView.jsx`)

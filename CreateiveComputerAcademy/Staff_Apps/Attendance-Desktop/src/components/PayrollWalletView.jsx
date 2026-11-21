@@ -10,6 +10,7 @@ import {
 import { FaCoins } from 'react-icons/fa6';
 import { getApiBase } from '../utils/api';
 import EarningsSimulator from './EarningsSimulator';
+import SecurityDepositVaultCard from './SecurityDeposit/SecurityDepositVaultCard';
 
 const R2_PUBLIC_BASE = 'https://pub-20551b894a524e97915e7c30fe97f682.r2.dev/';
 
@@ -679,6 +680,11 @@ export default function PayrollWallet({ initialTab = 'overview' }) {
               </div>
             </div>
           </div>
+
+          {/* Security Deposit Vault Card (If staff has active security deposit scheme) */}
+          {Boolean(summary?.security_deposit?.has_deposit) && (
+            <SecurityDepositVaultCard securityDeposit={summary.security_deposit} />
+          )}
 
           {/* Yearly Contract Speedometer / Progress Bar (If Yearly Contract) */}
           {isYearlyContract && (
