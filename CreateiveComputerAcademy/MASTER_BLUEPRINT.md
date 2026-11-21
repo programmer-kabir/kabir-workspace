@@ -1,8 +1,8 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Blueprint
 
-**Generated / Updated:** November 19, 2026  
+**Generated / Updated:** November 21, 2026  
 **Role:** Lead Software Architect / Senior Full-Stack Developer Analysis  
-**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App), 1 PHP REST backend (367 endpoints across 28 domains), 80 baseline MySQL tables + dynamic runtime tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, and Google Gemini AI integration.
+**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App with 100% Web Feature Parity), 1 PHP REST backend (410 endpoints across 32 domains), 96 baseline MySQL tables + dynamic runtime self-healing tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, Google Gemini AI integration, Team Feasts & Tours (`EventDbHelper`), Gamification & Career Rankings (`GamificationHelper`), Focus & Productivity Planner (`ProductivityHelper`, procedural `ambientSoundEngine`), Smart Finance & Mango Simulator, and Workspace Master Secrets Backup & 1-Click Restore Suite.
 
 No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
@@ -840,6 +840,35 @@ Described in Section 13.
   - **Quarterly Milestone Tier Explorer**: Current tier vs +10% boost vs +25% promotion boost recalculating entire monthly earnings.
 - **Visual Output**: Total simulated payout with live animated counter, dynamic stacked progress breakdown (Base Pay vs Overtime vs Mango Cashout), and automated strategic optimizer insights.
 - **Routing**: Integrated as a dedicated tab within `PayrollWallet.jsx` and directly accessible via `/payroll?tab=simulator` or `/simulator`.
+
+### 12.35 Staff Desktop App & Web 100% Feature Parity Architecture
+- **Objective**: Eliminate any functional divide between `staff-frontend` (browser SPA) and `Staff_Apps/Attendance-Desktop` (Electron Workstation Client).
+- **Parity Implementations**:
+  1. **Career & Badges (`/career`)**:
+     - `Staff_Apps/Attendance-Desktop/src/components/CareerRankingsView.jsx`: Ported full 3D metallic level badges, unlockable achievement badge showcase, Top 3 podium, and full company leaderboard.
+  2. **Smart Finance & Mango Simulator (`/simulator`, `/payroll/simulator`)**:
+     - `Staff_Apps/Attendance-Desktop/src/components/EarningsSimulator.jsx`: Dual-tab toggle in `PayrollWalletView.jsx` (`[Wallet Overview & Ledgers]` & `[Smart Earnings & Mango Simulator 🔮🥭]`).
+  3. **Team Feasts & Tours (`/events`)**:
+     - Ported modular architecture: `TeamEventsView.jsx`, `TeamEventsTopBar.jsx`, `EventInfoBanner.jsx`, `EventLedgerSection.jsx`, `EventParticipantsList.jsx`, `EventExpensesBoard.jsx`. Mounted in `App.jsx`, `DesktopSidebar.jsx`, and `CommandPalette.jsx`.
+  4. **Developer Tools Sub-Modules (`/developer/events`, `/developer/mango-vault`)**:
+     - Standalone single-page layout for Developer Events (`DeveloperEvents.jsx`, `TeamEventsManagerTab.jsx`).
+     - Mango Vault Manager (`MangoVaultManager.jsx`) with `MangoHoldModal`, `MangoReleaseModal`, `MangoStaffTable`, `MangoTransferModal`, `MangoVaultAuditLogs`, `MangoVaultHeader`, `MangoVaultModals`.
+  5. **My Workstation (`/workstation`)**:
+     - `MyWorkstationView.jsx` connecting to `server/api/screen_monitor/get_my_workstation_logs.php` displaying scoped video archives, idle penalty breakdowns, and surveillance timeline.
+  6. **Productivity Planner & Ambient Focus Audio (`/planner`, `/productivity`)**:
+     - `ProductivityPlannerView.jsx` with 1-3-5 matrix, cloud scratchpad auto-save, and Web Audio API procedural audio engine (`ambientSoundEngine.js`).
+  7. **Universal Command Palette (`CommandPalette.jsx`)**:
+     - `Ctrl+K` palette mapped with instant hotkeys to all modules across attendance, payroll, simulator, career, events, developer suite, workstation, and focus planner.
+
+### 12.36 Workspace Master Secrets Backup & 1-Click Restore Architecture
+- **Objective**: Zero-configuration, zero-manual-entry backup and restore mechanism across all 7 projects in `kabir-workspace` during PC migration.
+- **Fast Pruned Recursive Scanning**:
+  - `BACKUP_ALL_PROJECTS_SECRETS.ps1`: Uses `[System.IO.Directory]::GetDirectories` skipping `node_modules`, `.git`, `dist`, `build`, `vendor`, `release` in <2 seconds.
+  - Bundles 40 secret files (`.env`, `.env.local`, `.env.production`, `google_drive_credentials.json`, `token.json`) across `CreateiveComputerAcademy`, `DayalStock_WithContributor`, `DayalStock_WithoutContributor`, `SupplyLink`, `PikSea`, `FF_TopUp`, and `downloader` into `KABIR_WORKSPACE_ALL_SECRETS_BACKUP.zip` preserving exact relative directory paths.
+- **1-Click Restore Automation**:
+  - `RESTORE_ALL_PROJECTS_SECRETS.ps1`: Single-click or PowerShell command extracting `KABIR_WORKSPACE_ALL_SECRETS_BACKUP.zip` directly into the workspace root on a new PC, restoring every `.env` into its exact project and subproject directory without typing.
+- **Multi-Tier Git Shield**:
+  - Root `.gitignore` and child `.gitignore` rules ensure `*.zip`, `.env*`, and `*credentials*.json` are strictly prevented from accidental git commits.
 
 ---
 
