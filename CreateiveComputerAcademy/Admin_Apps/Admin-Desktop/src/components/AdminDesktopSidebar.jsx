@@ -98,11 +98,13 @@ const AdminDesktopSidebar = ({
       badge: (pendingDisputes || 0) + (idleAlertCount || 0),
       subItems: [
         { id: 'screen-monitor', path: '/screen-monitor', name: 'Live Screen Monitor 🛰️' },
-        { id: 'workstation-videos', path: '/workstation-video-logs', name: 'Workstation Video Vault...' },
+        { id: 'workstation-videos', path: '/workstation-video-logs', name: 'Workstation Video Vault 🎥' },
         { id: 'idle-alerts', path: '/idle-alerts', name: 'Inactivity Alerts ⏳', badge: idleAlertCount },
         { id: 'attendance', path: '/attendance', name: 'Daily Roster' },
         { id: 'leave', path: '/leave', name: 'Leave Approvals' },
-        { id: 'attendance-disputes', path: '/attendance-disputes', name: 'Attendance Disputes', badge: pendingDisputes }
+        { id: 'attendance-disputes', path: '/attendance-disputes', name: 'Attendance Disputes', badge: pendingDisputes },
+        { id: 'mango-vault', path: '/mango-vault', name: 'Mango Vault & Leaves 🥭' },
+        { id: 'holidays', path: '/holidays', name: 'Holidays & Closures 🏛️' }
       ]
     },
     {
@@ -110,13 +112,12 @@ const AdminDesktopSidebar = ({
       icon: <FiBarChart2 size={18} />,
       subItems: [
         { id: 'master-report', path: '/master-report', name: 'Company Master Report' },
-        { id: 'typing-reports', path: '/typing-reports', name: 'Typing Master Reports' },
-        { id: 'pentool-reports', path: '/pentool-reports', name: 'Pen Tool Master Reports' },
         { id: 'reports', path: '/reports', name: 'Staff Reports' },
         { id: 'reviewer-report', path: '/reviewer-report', name: 'Reviewer Reports' }
       ]
     },
     { id: 'community', path: '/community', name: 'Community Wall', icon: <FiShare2 size={18} className="text-violet-400" /> },
+    { id: 'events', path: '/events', name: 'Team Feasts & Tours 🎉', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { id: 'blogs', path: '/blogs', name: 'Academy Feed / Blog', icon: <FiBookOpen size={18} className="text-indigo-400" /> },
     { id: 'messages', path: '/messages', name: 'Message', icon: <FiMessageSquare size={18} />, badge: unreadCount },
     { id: 'brand-resources', path: '/brand-resources', name: 'Brand Kit & Assets', icon: <HiSparkles size={18} className="text-amber-400" /> },

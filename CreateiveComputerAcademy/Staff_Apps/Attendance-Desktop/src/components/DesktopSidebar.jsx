@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
   FiMessageSquare, FiSettings, FiCoffee, FiBookOpen, FiVideo,
-  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiTarget
+  FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiCheckSquare
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -77,20 +77,20 @@ const DesktopSidebar = ({
 
   const devSubMenuItems = [
     { name: 'Overview', path: '/developer', icon: <FiActivity size={14} />, transKey: 'dev_overview' },
+    { name: 'Team Events & Feasts', path: '/developer/events', icon: <FiCalendar size={14} />, transKey: 'dev_events' },
+    { name: 'Mango Vault & Leaves 🥭', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span>, transKey: 'dev_mango_vault' },
     { name: 'User Impersonator', path: '/developer/impersonate', icon: <FiUsers size={14} />, transKey: 'dev_impersonate' },
     { name: 'System Logs', path: '/developer/logs', icon: <FiFileText size={14} />, transKey: 'dev_logs' },
     { name: 'API & Sockets', path: '/developer/api-tester', icon: <FiRadio size={14} />, transKey: 'dev_api_tester' },
     { name: 'Crons & Auto', path: '/developer/crons', icon: <FiClock size={14} />, transKey: 'dev_crons' },
     { name: 'Database & Cache', path: '/developer/database', icon: <FiDatabase size={14} />, transKey: 'dev_database' },
     { name: 'Server Code Editor', path: '/developer/editor', icon: <FiCode size={14} />, transKey: 'dev_editor' },
-    { name: 'Team Events & Feasts', path: '/developer/events', icon: <FiCalendar size={14} />, transKey: 'dev_events' },
-    { name: 'Mango Vault Manager', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span>, transKey: 'dev_mango_vault' },
   ];
 
   const menuItems = [
     { name: 'Dashboard', path: '/', icon: <FiHome size={19} />, transKey: 'dashboard' },
     { name: 'Community Wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" />, transKey: 'community_wall' },
-    { name: 'Team Feasts & Tours', path: '/events', icon: <span className="text-lg">🎉</span>, transKey: 'team_events' },
+    { name: 'Team Feasts & Tours', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" />, transKey: 'team_events' },
     { name: 'Message', path: '/messages', icon: <FiMessageSquare size={19} />, transKey: 'message' },
     { name: 'Attendance', path: '/attendance', icon: <FiClock size={19} />, transKey: 'attendance' },
     { name: 'Desktop App & Updates', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" />, transKey: 'desktop_app' },
@@ -105,7 +105,7 @@ const DesktopSidebar = ({
     { name: 'Work Wallet & Salary', path: '/payroll', icon: <FiDollarSign size={19} className="text-emerald-500 group-hover:text-emerald-400" />, transKey: 'payroll_wallet' },
     { name: 'Credit Wallet', path: '/credits', icon: <FaCoins size={18} className="text-amber-500 group-hover:text-amber-400" />, transKey: 'credits_wallet' },
     { name: 'Career & Badges 🏆', path: '/career', icon: <FiAward size={19} className="text-amber-400 group-hover:text-amber-300" />, transKey: 'career_badges' },
-    { name: 'Focus & Planner 📝🎧', path: '/productivity', icon: <FiTarget size={19} className="text-rose-500 group-hover:text-rose-400" />, transKey: 'productivity_planner' },
+    { name: 'Focus & Planner 📝🎧', path: '/productivity', icon: <FiCheckSquare size={19} className="text-indigo-500 group-hover:text-indigo-400" />, transKey: 'productivity_planner' },
     { name: 'Leave', path: '/leave', icon: <FiCalendar size={19} />, transKey: 'leave' },
     { name: 'Reports', path: '/reports', icon: <FiFileText size={19} />, transKey: 'reports' },
     { name: 'Brand Kit', path: '/brand-kit', icon: <HiSparkles size={19} className="text-amber-400" />, transKey: 'brand_kit' },
@@ -237,7 +237,7 @@ const DesktopSidebar = ({
                 {/* Collapsible Sub-items */}
                 <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    devMenuOpen ? 'max-h-72 opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
+                    devMenuOpen ? 'max-h-[500px] opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
                   }`}
                 >
                   <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4.5 my-1">
