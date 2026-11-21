@@ -32,6 +32,7 @@ import DeveloperConsoleView from './components/DeveloperConsoleView';
 import DeveloperEvents from './components/DeveloperEvents';
 import MangoVaultManager from './components/MangoVaultManager';
 import BreakLockOverlay from './components/BreakLockOverlay';
+import BreakRequestModal from './components/BreakRequestModal';
 import CommandPalette from './components/CommandPalette';
 import { SearchProvider } from './context/SearchContext';
 import ModulePlaceholder from './components/ModulePlaceholder';
@@ -53,6 +54,7 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
   const [maintenance, setMaintenance] = useState({
     active: false,
     message: '',
@@ -605,6 +607,7 @@ function App() {
                 isCompactMode={isCompactMode}
                 onToggleCompactMode={handleToggleCompactMode}
                 onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+                onOpenBreakModal={() => setIsBreakModalOpen(true)}
               />
 
               {/* Content Area */}
@@ -612,6 +615,12 @@ function App() {
                 }`}>
                 {renderTabContent()}
               </main>
+
+              {/* Break Request Modal */}
+              <BreakRequestModal
+                isOpen={isBreakModalOpen}
+                onClose={() => setIsBreakModalOpen(false)}
+              />
 
               {/* Active Break Lock Overlay */}
               <BreakLockOverlay />

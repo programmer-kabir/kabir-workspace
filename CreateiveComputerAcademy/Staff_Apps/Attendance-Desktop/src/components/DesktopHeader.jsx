@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSidebar, FiSearch, FiX, FiMinus, FiSquare, FiMaximize2, FiMinimize2, FiWifiOff } from 'react-icons/fi';
+import { FiSidebar, FiSearch, FiX, FiMinus, FiSquare, FiMaximize2, FiMinimize2, FiWifiOff, FiCoffee } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import HeaderShiftStatus from './HeaderShiftStatus';
 import HeaderVideoSpoolBadge from './HeaderVideoSpoolBadge';
@@ -19,7 +19,8 @@ const DesktopHeader = ({
   onLogout,
   isCompactMode,
   onToggleCompactMode,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  onOpenBreakModal
 }) => {
   const { searchTerm, setSearchTerm } = useSearch();
   const searchInputRef = useRef(null);
@@ -196,6 +197,21 @@ const DesktopHeader = ({
         <div className="titlebar-no-drag hidden md:block">
           <HeaderClock />
         </div>
+
+        {/* Custom Break Request Button - visible to staff with scheduled tiffin */}
+        {(!currentUser?.is_manual_break && currentUser?.has_tiffin_break !== 0 && currentUser?.has_tiffin_break !== false && !(Number(currentUser?.allocated_break_minutes) > 0 && currentUser?.has_tiffin_break === 0)) && (
+          <div className="titlebar-no-drag">
+            <button
+              type="button"
+              onClick={onOpenBreakModal}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-all shadow-2xs hover:shadow-sm active:scale-95 cursor-pointer"
+              title="Request Personal / Emergency Break"
+            >
+              <FiCoffee size={13} className="text-amber-500" />
+              <span className="hidden md:inline">Take Break</span>
+            </button>
+          </div>
+        )}
 
         {/* Brand Kit Quick Launcher */}
         <div className="titlebar-no-drag">
