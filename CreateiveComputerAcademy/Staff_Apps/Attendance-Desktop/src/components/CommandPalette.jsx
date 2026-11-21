@@ -3,7 +3,7 @@ import {
   FiSearch, FiHome, FiList, FiClock, FiCalendar, FiFileText, FiUser, FiSettings, 
   FiMessageSquare, FiMoon, FiSun, FiSidebar, FiX, FiCheckCircle, FiPlay, FiCornerDownLeft,
   FiDownload, FiCoffee, FiDollarSign, FiBookOpen, FiRadio, FiDatabase, FiCode, FiActivity, FiUsers,
-  FiAward, FiTarget, FiSliders
+  FiAward, FiTarget, FiSliders, FiVideo
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { FaCoins } from 'react-icons/fa6';
@@ -57,6 +57,7 @@ const CommandPalette = ({
       { id: 'nav-mango-tree', label: 'Mango Break Tree', subLabel: 'Gamified break tracking & rewards', group: 'Navigation', icon: FiCoffee, path: '/mango-tree', color: 'text-amber-500' },
       { id: 'nav-breaks', label: 'Breaks Log & History', subLabel: 'Break history & active requests', group: 'Navigation', icon: FiCoffee, path: '/breaks', color: 'text-amber-500' },
       { id: 'nav-tasks', label: 'Creative Tasks & Board', subLabel: 'Assigned tasks, deliverables & AI review', group: 'Navigation', icon: FiList, path: '/tasks' },
+      { id: 'nav-content-studio', label: 'Content Studio OS 🎬', subLabel: 'Video assembly line, scripting & YouTube pipeline', group: 'Navigation', icon: FiVideo, path: '/content-studio', color: 'text-rose-500' },
       { id: 'nav-feed', label: 'Academy Feed', subLabel: 'Tutorials, notices & academy guidelines', group: 'Navigation', icon: FiBookOpen, path: '/feed', color: 'text-indigo-400' },
       { id: 'nav-payroll', label: 'Work Wallet & Salary', subLabel: 'Earnings, payslips & advance requests', group: 'Navigation', icon: FiDollarSign, path: '/payroll', color: 'text-emerald-500' },
       { id: 'nav-simulator', label: 'Smart Finance & Mango Simulator 💰🥭', subLabel: 'Simulate overtime, mango cashouts & promotions', group: 'Navigation', icon: FiSliders, path: '/simulator', color: 'text-amber-500' },

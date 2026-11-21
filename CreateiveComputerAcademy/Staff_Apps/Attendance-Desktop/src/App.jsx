@@ -19,6 +19,7 @@ import ProductivityPlannerView from './components/ProductivityPlannerView';
 import MangoBreakTreeView from './components/MangoBreakTreeView';
 import BreaksView from './components/BreaksView';
 import TasksView from './components/TasksView';
+import ContentStudioView from './components/ContentStudioView';
 import AcademyFeedView from './components/AcademyFeedView';
 import PayrollWalletView from './components/PayrollWalletView';
 import CreditWalletView from './components/CreditWalletView';
@@ -318,7 +319,15 @@ function App() {
       );
     }
 
-    if (activeTab === '/tasks' || activeTab === '/content-studio') {
+    if (activeTab === '/content-studio') {
+      return (
+        <div className="flex-1 w-full mx-auto">
+          <ContentStudioView onNavigate={setActiveTab} />
+        </div>
+      );
+    }
+
+    if (activeTab === '/tasks') {
       return <TasksView activeTab={activeTab} />;
     }
 
