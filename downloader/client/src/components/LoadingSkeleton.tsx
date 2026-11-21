@@ -18,7 +18,7 @@ export const LoadingSkeleton: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-20 animate-pulse">
+    <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1550px] mx-auto px-6 sm:px-10 lg:px-16 mb-20 animate-pulse">
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           

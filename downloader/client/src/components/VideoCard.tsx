@@ -103,7 +103,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ data }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-20 animate-fade-in">
+    <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1550px] mx-auto px-6 sm:px-10 lg:px-16 mb-20 animate-fade-in">
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-700/80 shadow-2xl relative overflow-hidden">
         
         {/* Glow ambient background */}

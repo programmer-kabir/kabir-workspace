@@ -9,7 +9,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
   return (
     <header className="sticky top-0 z-50 w-full glass-panel border-b transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <div className="w-full max-w-[1750px] mx-auto px-6 sm:px-10 lg:px-16 2xl:px-24 h-16 sm:h-20 flex items-center justify-between">
         
         {/* Brand Logo */}
         <a href="/" className="flex items-center gap-3 group">

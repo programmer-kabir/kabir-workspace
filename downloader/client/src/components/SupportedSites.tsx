@@ -72,7 +72,7 @@ export const SupportedSites: React.FC = () => {
 
   return (
     <section id="supported" className="py-16 sm:py-24 border-t border-slate-800/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1700px] mx-auto px-6 sm:px-10 lg:px-16 2xl:px-24">
         
         <div className="text-center max-w-3xl mx-auto mb-14">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold mb-4">

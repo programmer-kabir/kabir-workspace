@@ -28,7 +28,7 @@ export const HowItWorks: React.FC = () => {
 
   return (
     <section id="how-it-works" className="py-16 sm:py-24 border-t border-slate-800/80 bg-slate-950/40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1700px] mx-auto px-6 sm:px-10 lg:px-16 2xl:px-24">
         
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">

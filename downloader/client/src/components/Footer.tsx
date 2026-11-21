@@ -4,7 +4,7 @@ import { Download, ShieldCheck, Heart } from 'lucide-react';
 export const Footer: React.FC = () => {
   return (
     <footer className="border-t border-slate-800/80 bg-slate-950/80 text-slate-400 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1700px] mx-auto px-6 sm:px-10 lg:px-16 2xl:px-24">
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-800/60">
           <div className="flex items-center gap-3">

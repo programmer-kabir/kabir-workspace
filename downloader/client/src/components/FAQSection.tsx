@@ -37,7 +37,7 @@ export const FAQSection: React.FC = () => {
 
   return (
     <section id="faq" className="py-16 sm:py-24 border-t border-slate-800/80 bg-slate-950/40">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-6 sm:px-10 lg:px-16">
         
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold mb-3">

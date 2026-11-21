@@ -54,7 +54,7 @@ export const LiveStatsStrip: React.FC = () => {
   ];
 
   return (
-    <section className="relative max-w-5xl mx-auto px-4 sm:px-6 my-10">
+    <section className="relative w-full max-w-[1700px] mx-auto px-6 sm:px-10 lg:px-16 2xl:px-24 my-14">
       
       {/* Background ambient lighting */}
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl blur-2xl pointer-events-none" />

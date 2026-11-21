@@ -9,9 +9,7 @@ import {
   AlertCircle,
   Sparkles,
   Zap,
-  ShieldCheck,
-  Film,
-  Flame
+  Check
 } from 'lucide-react';
 import { detectLocalPlatform } from '../services/api';
 import { PlatformInfo } from '../types';
@@ -36,29 +34,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const [platform, setPlatform] = useState<PlatformInfo | null>(null);
   const [copiedNotification, setCopiedNotification] = useState(false);
 
-  // Curated demo samples for 1-click instant testing
-  const sampleLinks = [
-    {
-      label: 'YouTube (1080p HD)',
-      platform: 'youtube',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      style: 'bg-red-500/10 text-red-300 border-red-500/20 hover:border-red-500/50 hover:bg-red-500/20 shadow-sm shadow-red-500/10',
-      dotColor: '#EF4444'
-    },
-    {
-      label: 'TikTok (No Watermark)',
-      platform: 'tiktok',
-      url: 'https://www.tiktok.com/@scout2015/video/6718335390845095173',
-      style: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20 hover:border-cyan-500/50 hover:bg-cyan-500/20 shadow-sm shadow-cyan-500/10',
-      dotColor: '#06B6D4'
-    },
-    {
-      label: 'Instagram Reel',
-      platform: 'instagram',
-      url: 'https://www.instagram.com/reel/DOvzTywjPGN/',
-      style: 'bg-pink-500/10 text-pink-300 border-pink-500/20 hover:border-pink-500/50 hover:bg-pink-500/20 shadow-sm shadow-pink-500/10',
-      dotColor: '#EC4899'
-    }
+  // Supported platform compatibility badges
+  const supportedBadges = [
+    { name: 'TikTok', tag: 'No Watermark', color: '#00F2FE', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' },
+    { name: 'YouTube', tag: '1080p HD', color: '#FF0000', bg: 'bg-red-500/10 text-red-300 border-red-500/20' },
+    { name: 'Instagram', tag: 'Reels & Audio', color: '#E1306C', bg: 'bg-pink-500/10 text-pink-300 border-pink-500/20' },
+    { name: 'Facebook', tag: 'Watch & HD', color: '#1877F2', bg: 'bg-blue-500/10 text-blue-300 border-blue-500/20' },
+    { name: 'Twitter / X', tag: 'MP4 Clips', color: '#1DA1F2', bg: 'bg-sky-500/10 text-sky-300 border-sky-500/20' },
+    { name: 'Reddit', tag: 'With Sound', color: '#FF4500', bg: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
+    { name: 'Pinterest', tag: 'Video Pins', color: '#E60023', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/20' },
+    { name: '1,500+ Sites', tag: 'Universal', color: '#8B5CF6', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/20' }
   ];
 
   useEffect(() => {
@@ -99,18 +84,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     }
   };
 
-  const handleSampleClick = (sampleUrl: string) => {
-    clearError();
-    setUrl(sampleUrl);
-    onFetch(sampleUrl);
-  };
-
   return (
     <section id="downloader" className="relative pt-12 pb-16 sm:pt-20 sm:pb-24 overflow-hidden">
-      {/* Background glowing ambient orbs */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-gradient-to-tr from-indigo-600/20 via-purple-600/20 to-pink-500/10 blur-[130px] rounded-full pointer-events-none -z-10" />
+      {/* Background glowing ambient beam spanning full widescreen */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1300px] h-[550px] bg-gradient-to-tr from-indigo-600/20 via-purple-600/20 to-pink-500/10 blur-[160px] rounded-full pointer-events-none -z-10" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <div className="w-full max-w-[1650px] mx-auto px-4 sm:px-8 lg:px-16 text-center">
         
         {/* Top Feature Pill */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs sm:text-sm font-semibold mb-6 shadow-inner backdrop-blur-md">
@@ -119,129 +98,122 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
 
         {/* Main Headline */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
-          Download Videos from <br className="hidden sm:inline" />
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-4 sm:mb-6 leading-[1.12] max-w-5xl mx-auto">
+          Download Any Video in <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
-            Any Platform in Seconds
+            Highest Quality & Speed
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+        <p className="text-base sm:text-lg lg:text-xl text-slate-400 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
           Paste any public video link from <span className="text-slate-200 font-medium">TikTok, YouTube, Instagram Reels, Facebook, or Twitter</span>. Free, fast, and watermark-free.
         </p>
 
-        {/* Search & URL Input Box */}
-        <form onSubmit={handleSubmit} className="relative max-w-3xl mx-auto mb-4">
-          <div className="relative flex flex-col sm:flex-row items-center p-2 rounded-2xl glass-panel shadow-2xl shadow-indigo-500/10 border border-slate-700/60 focus-within:border-indigo-500/80 focus-within:ring-4 focus-within:ring-indigo-500/20 transition-all duration-300">
-            
-            {/* Left Platform Detector or Icon */}
-            <div className="hidden sm:flex items-center pl-3 pr-2 text-slate-400">
-              {platform && platform.id !== 'generic' ? (
-                <span 
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm flex items-center gap-1.5 transition-transform"
-                  style={{ backgroundColor: platform.color }}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {platform.badge}
-                </span>
-              ) : (
-                <Video className="w-5 h-5 text-slate-400" />
-              )}
-            </div>
+        {/* 🌟 Wide Prominent Downloader Input Console (Scaled for Widescreen) */}
+        <div className="relative max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full mx-auto mb-8">
+          <div className="relative p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl glass-panel shadow-2xl shadow-indigo-500/10 border border-slate-700/80 focus-within:border-indigo-500/80 focus-within:ring-4 focus-within:ring-indigo-500/20 transition-all duration-300">
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-2">
+              
+              {/* Left platform detector badge */}
+              <div className="hidden sm:flex items-center pl-4 pr-1 text-slate-400">
+                {platform && platform.id !== 'generic' ? (
+                  <span 
+                    className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-white shadow-sm flex items-center gap-1.5 transition-transform"
+                    style={{ backgroundColor: platform.color }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{platform.name}</span>
+                  </span>
+                ) : (
+                  <div className="w-9 h-9 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-indigo-400">
+                    <Video className="w-5 h-5" />
+                  </div>
+                )}
+              </div>
 
-            {/* Input Field */}
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                if (error) clearError();
-              }}
-              placeholder="Paste video URL here (e.g. https://www.tiktok.com/...)"
-              className="w-full bg-transparent px-3 py-3.5 sm:py-3 text-slate-100 placeholder:text-slate-500 text-sm sm:text-base outline-none focus:outline-none"
-              disabled={isLoading}
-            />
+              {/* Input Field */}
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  if (error) clearError();
+                }}
+                placeholder="Paste video URL here (e.g. https://www.tiktok.com/...)"
+                className="w-full bg-transparent px-3 py-4 sm:py-4.5 text-slate-100 placeholder:text-slate-500 text-sm sm:text-base lg:text-lg outline-none focus:outline-none"
+                disabled={isLoading}
+              />
 
-            {/* Quick Action Buttons inside bar */}
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end px-2 sm:px-0">
-              {/* Clear button */}
-              {url && (
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end px-1 sm:px-0">
+                {/* Clear button */}
+                {url && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="p-2.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800/80 transition-colors"
+                    title="Clear link"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Paste button */}
                 <button
                   type="button"
-                  onClick={handleClear}
-                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition-colors"
-                  title="Clear link"
+                  onClick={handlePaste}
+                  disabled={isLoading}
+                  className="flex items-center gap-1.5 px-4 py-3 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/70 rounded-xl sm:rounded-2xl transition-all"
+                  title="Paste from clipboard"
                 >
-                  <X className="w-4 h-4" />
+                  {copiedNotification ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-emerald-400 font-semibold">Pasted!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clipboard className="w-4 h-4 text-indigo-400" />
+                      <span>Paste</span>
+                    </>
+                  )}
                 </button>
-              )}
 
-              {/* Paste button */}
-              <button
-                type="button"
-                onClick={handlePaste}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 rounded-xl transition-all"
-                title="Paste from clipboard"
-              >
-                {copiedNotification ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400">Pasted!</span>
-                  </>
-                ) : (
-                  <>
-                    <Clipboard className="w-4 h-4 text-indigo-400" />
-                    <span>Paste</span>
-                  </>
-                )}
-              </button>
-
-              {/* Download / Fetch Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !url.trim()}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm sm:text-base text-white bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/25 transition-all duration-200 active:scale-95"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Download</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
+                {/* Download button */}
+                <button
+                  type="submit"
+                  disabled={isLoading || !url.trim()}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 sm:px-10 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base text-white bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/25 transition-all duration-200 active:scale-95"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Download</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
 
-        {/* 🔥 1-Click Quick Test Chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 my-5">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 pr-1">
-            <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span>Try Quick Sample:</span>
-          </span>
-
-          {sampleLinks.map((sample, idx) => (
-            <button
+        {/* 🌐 Clean Horizontal Supported Platforms Badge Row (Spanned naturally) */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-5xl xl:max-w-6xl mx-auto my-6">
+          {supportedBadges.map((badge, idx) => (
+            <span
               key={idx}
-              type="button"
-              onClick={() => handleSampleClick(sample.url)}
-              disabled={isLoading}
-              className={`group flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 ${sample.style}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all ${badge.bg}`}
             >
-              <span 
-                className="w-1.5 h-1.5 rounded-full" 
-                style={{ backgroundColor: sample.dotColor }} 
-              />
-              <span>{sample.label}</span>
-              <Sparkles className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
-            </button>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: badge.color }} />
+              <span>{badge.name}</span>
+              <span className="opacity-70 text-[10px] font-normal">• {badge.tag}</span>
+            </span>
           ))}
         </div>
 
@@ -262,10 +234,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         )}
 
-        {/* Bottom trust line */}
-        <p className="text-xs text-slate-500 mt-8">
-          ✓ Non-DRM public media only &nbsp;•&nbsp; ✓ No extensions needed &nbsp;•&nbsp; ✓ 100% Free & Unlimited
-        </p>
+        {/* ⚡ Clean Horizontal Feature Trust Row */}
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm text-slate-400 mt-8 pt-6 border-t border-slate-800/60 max-w-4xl xl:max-w-5xl mx-auto">
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>Watermark-Free</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Check className="w-4 h-4 text-indigo-400" />
+            <span>1080p & 4K Quality</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Check className="w-4 h-4 text-purple-400" />
+            <span>320kbps MP3 Audio</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Check className="w-4 h-4 text-pink-400" />
+            <span>100% Free & Unlimited</span>
+          </span>
+        </div>
 
       </div>
     </section>
