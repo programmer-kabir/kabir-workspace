@@ -9,20 +9,13 @@ import { HiSparkles } from 'react-icons/hi';
 import { toast } from 'sonner';
 import { soundFx } from '../utils/soundFx';
 import updateService from '../services/UpdateService';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 const SettingsView = ({ onNavigate }) => {
-  // Theme state
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem('cca_theme') || localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return document.documentElement.classList.contains('dark');
-  });
-
-  // Language state
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem('cca_lang') || 'en';
-  });
-
+  // Theme & Language Contexts
+  const { isDarkMode, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
 
   // Update check state
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -34,27 +27,16 @@ const SettingsView = ({ onNavigate }) => {
     }).catch(() => {});
   }, []);
 
-  // Toggle Theme
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    if (next) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('cca_theme', 'dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('cca_theme', 'light');
-      localStorage.setItem('theme', 'light');
-    }
+  // Handle Theme Toggle
+  const handleToggleTheme = () => {
+    toggleTheme();
     soundFx.play('pop');
-    toast.success(next ? 'Dark Mode Activated' : 'Light Mode Activated');
+    toast.success(!isDarkMode ? 'Dark Mode Activated' : 'Light Mode Activated');
   };
 
   // Toggle Language
   const handleLanguageChange = (newLang) => {
-    setLang(newLang);
-    localStorage.setItem('cca_lang', newLang);
+    setLanguage(newLang);
     soundFx.play('pop');
     toast.success(newLang === 'bn' ? 'ভাষা বাংলায় পরিবর্তিত হয়েছে' : 'Language set to English');
   };
@@ -127,23 +109,23 @@ const SettingsView = ({ onNavigate }) => {
               Dark Mode / Light Mode
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Currently active: <strong className="text-blue-600 dark:text-blue-400">{isDark ? 'Dark Theme' : 'Light Theme'}</strong>
+              Currently active: <strong className="text-blue-600 dark:text-blue-400">{isDarkMode ? 'Dark Theme' : 'Light Theme'}</strong>
             </p>
           </div>
 
           <button
             type="button"
-            onClick={toggleTheme}
+            onClick={handleToggleTheme}
             className={`relative inline-flex h-8 w-16 items-center rounded-full p-1 transition-colors cursor-pointer focus:outline-none shadow-inner ${
-              isDark ? 'bg-blue-600' : 'bg-slate-300'
+              isDarkMode ? 'bg-blue-600' : 'bg-slate-300'
             }`}
           >
             <span
               className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform flex items-center justify-center text-xs ${
-                isDark ? 'translate-x-8 text-slate-900' : 'translate-x-0 text-amber-500'
+                isDarkMode ? 'translate-x-8 text-slate-900' : 'translate-x-0 text-amber-500'
               }`}
             >
-              {isDark ? <FiMoon size={13} /> : <FiSun size={13} />}
+              {isDarkMode ? <FiMoon size={13} /> : <FiSun size={13} />}
             </span>
           </button>
         </div>
@@ -160,13 +142,13 @@ const SettingsView = ({ onNavigate }) => {
             type="button"
             onClick={() => handleLanguageChange('en')}
             className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3 cursor-pointer ${
-              lang === 'en'
+              language === 'en'
                 ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 shadow-xs'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }`}
           >
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm ${
-              lang === 'en' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+              language === 'en' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
             }`}>
               EN
             </div>
@@ -180,13 +162,13 @@ const SettingsView = ({ onNavigate }) => {
             type="button"
             onClick={() => handleLanguageChange('bn')}
             className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3 cursor-pointer ${
-              lang === 'bn'
+              language === 'bn'
                 ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 shadow-xs'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }`}
           >
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm ${
-              lang === 'bn' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+              language === 'bn' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
             }`}>
               বাং
             </div>

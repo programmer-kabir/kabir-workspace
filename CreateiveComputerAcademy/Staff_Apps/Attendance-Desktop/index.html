@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -11,9 +11,21 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('cca_theme') || localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
-<body class="bg-slate-950 text-slate-100 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

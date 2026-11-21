@@ -35,17 +35,17 @@ const AttendanceHistoryModal = ({ userId, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
-      <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
+      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
         {/* Modal Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FiCalendar className="text-sky-400" />
-            <h3 className="text-sm font-bold text-white">Attendance Log (Recent)</h3>
+            <FiCalendar className="text-sky-500 dark:text-sky-400" />
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Attendance Log (Recent)</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <FiX size={16} />
           </button>
@@ -65,13 +65,13 @@ const AttendanceHistoryModal = ({ userId, isOpen, onClose }) => {
             history.map((item, idx) => (
               <div
                 key={item.id || idx}
-                className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 flex items-center justify-between"
+                className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between"
               >
                 <div>
-                  <div className="text-xs font-bold text-white">
+                  <div className="text-xs font-bold text-slate-800 dark:text-white">
                     {item.date}
                   </div>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                     <span>In: {format12H(item.check_in)}</span>
                     <span>&bull;</span>
                     <span>Out: {format12H(item.check_out)}</span>
@@ -81,8 +81,8 @@ const AttendanceHistoryModal = ({ userId, isOpen, onClose }) => {
                 <div className="text-right">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     item.status === 'Present'
-                      ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20'
                   }`}>
                     {item.status || 'Present'}
                   </span>

@@ -35,6 +35,8 @@
 | **জাতীয় ছুটির দিনের ব্যানার ও লক** | `/attendance` | `AttendanceView.jsx` (`todayHoliday` ব্যানার ও হিস্ট্রি লক) | [x] সম্পন্ন ও লাইভ |
 | **দৈনিক মোটিভেশনাল কোটস টিকার** | `/` | `DashboardMotivationTicker.jsx` (`DashboardView`) | [x] সম্পন্ন ও লাইভ |
 | **প্রোফাইল ও কভার ইমেজ ক্রপার** | `/profile` | `ImageCropperModal.jsx` (`ProfileView`) | [x] সম্পন্ন ও লাইভ |
+| **সেন্ট্রাল বাইলিঙ্গুয়াল ভাষা ডিকশনারি** | সার্বিক অ্যাপ | `LanguageContext.jsx` + `DesktopSidebar.jsx` + `SettingsView.jsx` | [x] সম্পন্ন ও লাইভ |
+| **লাইট/ডার্ক থিম কন্টেক্সট ও পলিশ** | সার্বিক অ্যাপ | `ThemeContext.jsx` + `SettingsView.jsx` + `AttendanceHistoryModal` | [x] সম্পন্ন ও লাইভ |
 
 ---
 
@@ -123,8 +125,9 @@
 
 ---
 
-### 🟢 GAP 6: সেন্ট্রাল বাইলিঙ্গুয়াল ভাষা ডিকশনারি (LanguageContext Sync) — [সিস্টেম প্যারিটি]
+### 🟢 GAP 6: সেন্ট্রাল বাইলিঙ্গুয়াল ভাষা ডিকশনারি (LanguageContext Sync) — [x] COMPLETED
 - **যে পেজে সমস্যা:** সার্বিক অ্যাপ (সাইডবার, হেডার, এবং সকল পেজের লেবেল)
+- **ডেস্কটপ স্টেটাস:** ✅ **সম্পন্ন ও লাইভ** (`LanguageContext.jsx` তৈরি, `main.jsx`-এ `<LanguageProvider>` র‍্যাপ, `DesktopSidebar.jsx` ও সাব-আইটেমগুলোতে `t()` ইন্টিগ্রেশন, এবং `SettingsView.jsx`-এ রিয়েলটাইম ভাষা সিঙ্ক কার্যকর)।
 - **ওয়েব পোর্টালে যা আছে:**
   - `staff-frontend/src/context/LanguageContext.jsx`-এ বাংলা এবং ইংরেজির বিশাল ডিকশনারি রয়েছে (`t('dashboard')`, `t('tasks')`, `t('leave')` ইত্যাদি)।
   - সেটিংসে ভাষা পরিবর্তন করলে এক ক্লিকে পুরো ওয়েবসাইটের সকল টেক্সট বাংলায় রূপান্তরিত হয়ে যায়।
@@ -135,8 +138,9 @@
 
 ---
 
-### 🟢 GAP 7: লাইট মোড ও ডার্ক মোড কালার ইউনিফর্মিটি (Light Mode Refinement) — [ইউআই পলিশ]
+### 🟢 GAP 7: লাইট মোড ও ডার্ক মোড কালার ইউনিফর্মিটি (Light Mode Refinement) — [x] COMPLETED
 - **যে পেজে সমস্যা:** ডেস্কটপের বিভিন্ন ভিউ ও কার্ড ব্যাকগ্রাউন্ড
+- **ডেস্কটপ স্টেটাস:** ✅ **সম্পন্ন ও লাইভ** (`ThemeContext.jsx` তৈরি, `main.jsx`-এ `<ThemeProvider>` মাউন্ট, `index.html`-এ ডায়নামিক আর্লি স্ক্রিপ্ট এক্সিকিউশন, `SettingsView.jsx`-এ গ্লোবাল থিম টগল এবং `AttendanceHistoryModal.jsx` সহ অন্যান্য ভিউতে নিখুঁত লাইট/ডার্ক কালার অ্যাডাপ্টেশন নিশ্চিত সম্পন্ন)।
 - **ওয়েব পোর্টালে যা আছে:**
   - লাইট মোডে ব্যাকগ্রাউন্ড পিওর হোয়াইট (`bg-white`) ও সফট স্লেট বর্ডারে পরিচ্ছন্ন দেখায়।
 - **ডেস্কটপ অ্যাপে বর্তমান অবস্থা:**
@@ -156,8 +160,8 @@
 - [x] ধাপ ৩: জাতীয় ছুটির দিনের ব্যানার ও হিস্ট্রি লক যোগকরণ (`today_holiday` -> `AttendanceView.jsx`) ✅ (DONE)
 - [x] ধাপ ৪: দৈনিক মোটিভেশনাল কোটস টিকার যুক্তকরণ (`DashboardMotivationTicker.jsx` -> `DashboardView.jsx`) ✅ (DONE)
 - [x] ধাপ ৫: প্রোফাইল ফটো ও কভার ইমেজ ক্রপার মোডাল যুক্তকরণ (`ImageCropperModal.jsx` -> `ProfileView.jsx`) ✅ (DONE)
-- [ ] ধাপ ৬: সেন্ট্রাল LanguageContext ডিকশনারি সিঙ্ক (`LanguageContext.jsx` -> Desktop App & Sidebar)
-- [ ] ধাপ ৭: লাইট মোড কালার ইউনিফর্মিটি ও ফাইনাল পলিশ
+- [x] ধাপ ৬: সেন্ট্রাল LanguageContext ডিকশনারি সিঙ্ক (`LanguageContext.jsx` -> Desktop App & Sidebar) ✅ (DONE)
+- [x] ধাপ ৭: লাইট মোড কালার ইউনিফর্মিটি ও ফাইনাল পলিশ ✅ (DONE)
 ```
 
 ---
