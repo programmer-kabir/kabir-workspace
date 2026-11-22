@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { FiLoader, FiAlertTriangle, FiPhoneOff, FiCopy, FiCheck, FiShield } from 'react-icons/fi';
+import {
+  FiLoader, FiAlertTriangle, FiPhoneOff, FiCopy, FiCheck,
+  FiShield, FiRadio, FiVideo
+} from 'react-icons/fi';
 import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
@@ -82,11 +85,11 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
-            DEFAULT_BACKGROUND: '#0f172a',
+            DEFAULT_BACKGROUND: '#070b14',
             TOOLBAR_BUTTONS: [
               'microphone', 'camera', 'desktop', 'fullscreen',
               'fodeviceselection', 'hangup', 'chat', 'raisehand',
-              'videoquality', 'tileview', 'mute-everyone'
+              'videoquality', 'tileview', 'mute-everyone', 'settings'
             ]
           }
         };
@@ -145,42 +148,74 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-140px)] min-h-[550px] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
-      <div className="h-12 px-5 bg-slate-900/90 backdrop-blur-sm border-b border-slate-800 flex items-center justify-between shrink-0 z-20">
+    <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
+      
+      {/* Sub-header status bar */}
+      <div className="h-11 px-5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-xs font-black uppercase text-rose-500 tracking-wider">LIVE HOST</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            <span className="text-[11px] font-black uppercase text-rose-500 tracking-wider">SECURE STUDIO LINK</span>
           </div>
-          <span className="text-slate-600">|</span>
-          <span className="text-xs font-black text-white truncate max-w-xs">
+          <span className="text-slate-700">|</span>
+          <span className="text-xs font-bold text-slate-300 truncate max-w-xs md:max-w-md">
             {meetingTitle || 'Academy Host Room'}
           </span>
         </div>
 
-        <button
-          onClick={copyRoomLink}
-          className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
-        >
-          {copied ? <FiCheck size={13} className="text-emerald-400" /> : <FiCopy size={13} />}
-          <span>{copied ? 'Copied' : 'Share Link'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+            <FiShield size={10} />
+            <span>Attendance Logged</span>
+          </div>
+
+          <button
+            onClick={copyRoomLink}
+            className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+          >
+            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiCopy size={12} />}
+            <span>{copied ? 'Copied' : 'Share Link'}</span>
+          </button>
+        </div>
       </div>
 
-      <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+      {/* Jitsi Host Container */}
+      <div className="relative flex-1 w-full h-full bg-[#070b14] overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950 text-white">
-            <div className="w-12 h-12 rounded-2xl bg-primary-600/20 text-primary-400 flex items-center justify-center border border-primary-500/30">
-              <FiLoader className="w-6 h-6 animate-spin" />
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[#070b14] text-white p-6">
+            <div className="relative flex items-center justify-center">
+              <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/30">
+                <FiVideo className="w-7 h-7 animate-pulse" />
+              </div>
+              <span className="absolute -inset-2 rounded-3xl border border-rose-500/20 animate-ping opacity-40"></span>
             </div>
-            <p className="text-sm font-black">Initializing Admin Host Room...</p>
+            
+            <div className="text-center space-y-1">
+              <p className="text-sm font-black text-white tracking-wide">
+                Initializing CCA Studio Broadcast...
+              </p>
+              <p className="text-xs text-slate-400 font-medium">
+                Setting up WebRTC audio-video channels & attendance tracker
+              </p>
+            </div>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950 text-white p-6 text-center">
-            <FiAlertTriangle className="w-10 h-10 text-rose-500" />
-            <p className="text-sm font-bold text-rose-400">{error}</p>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#070b14] text-white p-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
+              <FiAlertTriangle className="w-7 h-7" />
+            </div>
+            <p className="text-sm font-bold text-rose-400 max-w-md">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Retry Connection
+            </button>
           </div>
         )}
 

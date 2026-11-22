@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { FiLoader, FiAlertTriangle, FiPhoneOff, FiCopy, FiCheck, FiShield } from 'react-icons/fi';
+import {
+  FiLoader, FiAlertTriangle, FiPhoneOff, FiCopy, FiCheck,
+  FiShield, FiRadio, FiVideo
+} from 'react-icons/fi';
+import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
@@ -8,11 +12,14 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onLeave }) {
   const containerRef = useRef(null);
   const jitsiApiRef = useRef(null);
+  const { language } = useLanguage();
+  const isBn = language === 'bn';
+
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Log Attendance Helper
+  // Background attendance logger (Join / Leave / Ping)
   const logAttendance = async (action) => {
     if (!currentUser?.id || !roomId) return;
     try {
@@ -59,11 +66,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         await loadJitsiScript();
         if (!isMounted || !containerRef.current) return;
 
-        // Container cleanup
+        // Clear container
         containerRef.current.innerHTML = '';
 
         const domain = 'meet.jit.si';
-        // Prefix room to avoid public collisions
         const cleanRoom = `CCA_ACADEMY_${roomId.replace(/[^a-zA-Z0-9_]/g, '')}`;
 
         const options = {
@@ -72,7 +78,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           height: '100%',
           parentNode: containerRef.current,
           userInfo: {
-            displayName: currentUser?.name || 'CCA Member',
+            displayName: currentUser?.name || 'Academy Staff',
             email: currentUser?.email || ''
           },
           configOverwrite: {
@@ -80,17 +86,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             startWithVideoMuted: false,
             prejoinPageEnabled: false,
             disableDeepLinking: true,
-            enableClosePage: false,
-            disableInviteFunctions: true
+            enableClosePage: false
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
-            DEFAULT_BACKGROUND: '#0f172a',
+            DEFAULT_BACKGROUND: '#070b14',
             TOOLBAR_BUTTONS: [
               'microphone', 'camera', 'desktop', 'fullscreen',
               'fodeviceselection', 'hangup', 'chat', 'raisehand',
-              'videoquality', 'tileview'
+              'videoquality', 'tileview', 'settings'
             ]
           }
         };
@@ -98,13 +103,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         const api = new window.JitsiMeetExternalAPI(domain, options);
         jitsiApiRef.current = api;
 
-        // Event listeners
         api.addEventListener('videoConferenceJoined', () => {
           if (!isMounted) return;
           setLoading(false);
           logAttendance('join');
 
-          // Keep alive ping every 60s
+          // Keep-alive heartbeat ping every 60s
           pingInterval = setInterval(() => {
             logAttendance('ping');
           }, 60000);
@@ -146,63 +150,86 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const copyRoomLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
-    toast.success('Meeting link copied to clipboard!');
+    toast.success(isBn ? 'মিটিং লিংক কপি হয়েছে!' : 'Meeting link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-140px)] min-h-[550px] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
+    <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
       
-      {/* Top Bar inside Meeting */}
-      <div className="h-12 px-5 bg-slate-900/90 backdrop-blur-sm border-b border-slate-800/80 flex items-center justify-between shrink-0 z-20">
+      {/* Sub-header status bar */}
+      <div className="h-11 px-5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-xs font-black uppercase text-rose-500 tracking-wider">LIVE</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            <span className="text-[11px] font-black uppercase text-rose-500 tracking-wider">
+              {isBn ? 'নিরাপদ কনফারেন্স' : 'SECURE STUDIO LINK'}
+            </span>
           </div>
-          <span className="text-slate-600 dark:text-slate-400">|</span>
-          <span className="text-xs font-black text-white truncate max-w-[200px] sm:max-w-xs">
-            {meetingTitle || 'Academy Meeting Room'}
+          <span className="text-slate-700">|</span>
+          <span className="text-xs font-bold text-slate-300 truncate max-w-xs md:max-w-md">
+            {meetingTitle || (isBn ? 'অ্যাকাডেমি রুম' : 'Academy Room')}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+            <FiShield size={10} />
+            <span>{isBn ? 'স্বয়ংক্রিয় হাজিরা সক্রিয়' : 'Attendance Logged'}</span>
+          </div>
+
           <button
             onClick={copyRoomLink}
             className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
-            title="Copy meeting URL to share"
           >
-            {copied ? <FiCheck size={13} className="text-emerald-400" /> : <FiCopy size={13} />}
-            <span className="hidden sm:inline">{copied ? 'Copied' : 'Share Link'}</span>
+            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiCopy size={12} />}
+            <span>{copied ? (isBn ? 'কপি হয়েছে' : 'Copied') : (isBn ? 'শেয়ার লিংক' : 'Share Link')}</span>
           </button>
         </div>
       </div>
 
-      {/* Conference Container */}
-      <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+      {/* Jitsi External API Parent Node */}
+      <div className="relative flex-1 w-full h-full bg-[#070b14] overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950 text-white">
-            <div className="w-12 h-12 rounded-2xl bg-primary-600/20 text-primary-400 flex items-center justify-center border border-primary-500/30">
-              <FiLoader className="w-6 h-6 animate-spin" />
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[#070b14] text-white p-6">
+            <div className="relative flex items-center justify-center">
+              <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/30">
+                <FiVideo className="w-7 h-7 animate-pulse" />
+              </div>
+              <span className="absolute -inset-2 rounded-3xl border border-rose-500/20 animate-ping opacity-40"></span>
             </div>
-            <div className="text-center">
-              <p className="text-sm font-black">Connecting to Secure Meeting Room...</p>
-              <p className="text-xs text-slate-500 mt-0.5">Setting up camera, microphone and WebRTC channels</p>
+            
+            <div className="text-center space-y-1">
+              <p className="text-sm font-black text-white tracking-wide">
+                {isBn ? 'অ্যাকাডেমি লাইভ স্টুডিওতে যুক্ত হচ্ছে...' : 'Connecting to CCA Live Studio...'}
+              </p>
+              <p className="text-xs text-slate-400 font-medium">
+                {isBn 
+                  ? 'অডিও-ভিডিও চ্যানেল সেটআপ ও উপস্থিতি ট্র্যাকার প্রস্তুত হচ্ছে'
+                  : 'Setting up audio-video channels & attendance tracker'}
+              </p>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950 text-white p-6 text-center">
-            <FiAlertTriangle className="w-10 h-10 text-rose-500" />
-            <p className="text-sm font-bold text-rose-400">{error}</p>
-            <p className="text-xs text-slate-500 max-w-sm">
-              Please check your internet connection or browser camera/microphone permissions.
-            </p>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#070b14] text-white p-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
+              <FiAlertTriangle className="w-7 h-7" />
+            </div>
+            <p className="text-sm font-bold text-rose-400 max-w-md">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              {isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry Connection'}
+            </button>
           </div>
         )}
 
-        {/* Jitsi External API Parent Node */}
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
