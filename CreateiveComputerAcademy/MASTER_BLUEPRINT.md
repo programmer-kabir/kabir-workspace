@@ -1,8 +1,8 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Blueprint
 
-**Generated / Updated:** November 21, 2026  
+**Generated / Updated:** November 22, 2026  
 **Role:** Lead Software Architect / Senior Full-Stack Developer Analysis  
-**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App with 100% Web Feature Parity), 1 PHP REST backend (410 endpoints across 32 domains), 96 baseline MySQL tables + dynamic runtime self-healing tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, Google Gemini AI integration, Team Feasts & Tours (`EventDbHelper`), Gamification & Career Rankings (`GamificationHelper`), Focus & Productivity Planner (`ProductivityHelper`, procedural `ambientSoundEngine`), Smart Finance & Mango Simulator, and Workspace Master Secrets Backup & 1-Click Restore Suite.
+**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App v2.1.0 with 100% Web Feature Parity), 1 PHP REST backend (410 endpoints across 32 domains), 96 baseline MySQL tables + dynamic runtime self-healing tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, Google Gemini AI integration, Team Feasts & Tours (`EventDbHelper`), Gamification & Career Rankings (`GamificationHelper`), Focus & Productivity Planner (`ProductivityHelper`, procedural `ambientSoundEngine`), Content Studio OS 🎬 (`ContentStudioView.jsx`), Interactive Boy Mascot & Wicker Harvest Basket (`MangoBreakTreeView.jsx`), Smart Finance & Mango Simulator, and Workspace Master Secrets Backup & 1-Click Restore Suite.
 
 No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
@@ -869,6 +869,18 @@ Described in Section 13.
   - `RESTORE_ALL_PROJECTS_SECRETS.ps1`: Single-click or PowerShell command extracting `KABIR_WORKSPACE_ALL_SECRETS_BACKUP.zip` directly into the workspace root on a new PC, restoring every `.env` into its exact project and subproject directory without typing.
 - **Multi-Tier Git Shield**:
   - Root `.gitignore` and child `.gitignore` rules ensure `*.zip`, `.env*`, and `*credentials*.json` are strictly prevented from accidental git commits.
+
+### 12.37 100% Staff Desktop App & Web Portal Parity Completion (v2.1.0)
+- **Assembly Line Content Studio (`/content-studio`)**: Complete 6-stage video production pipeline ported to desktop app (`ContentStudioView.jsx`, project pipeline modal, credit assignment, stages overview).
+- **Security Deposit Vault Card (`/payroll`)**: Integrated `SecurityDepositVaultCard.jsx` showing reserved salary deposit, refund eligibility threshold, and automated return tracking.
+- **National Holiday Banner & History Row Lock (`/attendance`)**: Official paid holiday banner, 3D clock "Holiday Overtime Mode", and dispute lock for approved holidays.
+- **Daily Motivational Quotes Ticker (`/`)**: `DashboardMotivationTicker.jsx` mounted below Executive Hero Banner with bilingual dynamic rotation.
+- **Interactive Profile & Cover Image Cropper (`/profile`)**: Dual modal image cropper (`react-easy-crop`, `cropImage.js`) with 1:1 circular profile crop and 16:9 / 3:1 cover crop.
+- **Central Bilingual Language System (`LanguageContext.jsx`)**: Ported dictionary with `bn` and `en` support, dynamic realtime toggle, and deep integration into sidebar and views.
+- **Dynamic Theme System (`ThemeContext.jsx`)**: Dark/light mode synchronization with pure white uniform light styling.
+- **Sidebar Ordering & Visual Alignment**: Identical menu item hierarchy, developer suite sequence, unified icons, and expanded accordion height (500px).
+- **Interactive Boy Mascot & Wicker Harvest Basket (`MangoBreakTreeView.jsx`)**: Vector SVG boy character ("আমের দিকে চেয়ে থাকা খোকা") with clicking bounce, thought bubble dialogue rotation, pop audio, and harvest wicker basket.
+- **Packaging & Distribution**: Built and signed `CCA-Staff-App-Setup.exe` (NSIS installer) and `CCA-Staff-App-Standalone.exe` (portable executable) v2.1.0 in `Staff_Apps/Attendance-Desktop/release`.
 
 ---
 
