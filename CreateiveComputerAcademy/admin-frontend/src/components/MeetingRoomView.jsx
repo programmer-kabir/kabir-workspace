@@ -96,6 +96,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   const [isSending, setIsSending] = useState(false);
   const [highlightedMsgId, setHighlightedMsgId] = useState(null);
 
+  // Remote Audio & Mic Management State
+  const [remoteMuteStates, setRemoteMuteStates] = useState({}); // userId -> boolean (true if muted)
+  const [unmutePrompt, setUnmutePrompt] = useState({ open: false, requestedBy: '' });
+
   // Determine exact host tier: 'host' (original creator), 'co_host' (promoted or developer/admin), or 'member'
   const getUserHostTier = useCallback((userId, role) => {
     if (!userId) return 'member';
@@ -198,6 +202,52 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
       prev.map(m => (m.id === messageId ? { ...m, is_pinned: isPinned } : m))
     );
   }, []);
+
+  // Unified DataChannel dispatcher for in-meeting chat, pins, lock, hosts & mic commands
+  const handleIncomingData = useCallback((data) => {
+    if (!data) return;
+    if (data.type === 'chat_message' && data.payload) {
+      handleIncomingMessage(data.payload);
+    } else if (data.type === 'pin_toggle' && data.payload) {
+      handlePinUpdate(data.payload.messageId, data.payload.isPinned);
+    } else if (data.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
+      setIsChatLocked(data.payload.isLocked);
+      toast.info(data.payload.isLocked ? '🔒 Host has locked the chat.' : '🔓 Host has unlocked the chat for everyone!');
+    } else if (data.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
+      setHostsList(data.payload.hosts);
+      if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
+        toast.success(data.payload.isPromoted ? '⭐ You have been promoted to Co-Host by the host!' : 'You are no longer a Co-Host.');
+      }
+    } else if (data.type === 'mute_all') {
+      if (Number(data.payload?.senderId) !== Number(currentUser?.id)) {
+        if (localStreamRef.current) {
+          localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+        setIsMuted(true);
+        toast.warning(`🔇 Host (${data.payload?.mutedBy || 'Host'}) has muted everyone.`);
+      }
+    } else if (data.type === 'force_mute') {
+      if (Number(data.payload?.targetUserId) === Number(currentUser?.id)) {
+        if (localStreamRef.current) {
+          localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+        setIsMuted(true);
+        toast.warning(`🔇 Host (${data.payload?.mutedBy || 'Host'}) has muted your microphone.`);
+      }
+    } else if (data.type === 'unmute_request') {
+      if (Number(data.payload?.targetUserId) === Number(currentUser?.id)) {
+        setUnmutePrompt({
+          open: true,
+          requestedBy: data.payload?.requestedBy || 'Host'
+        });
+      }
+    } else if (data.type === 'peer_mic_state' && data.payload?.userId) {
+      setRemoteMuteStates(prev => ({
+        ...prev,
+        [data.payload.userId]: Boolean(data.payload.isMuted)
+      }));
+    }
+  }, [currentUser?.id, handleIncomingMessage, handlePinUpdate]);
 
   // Fetch initial chat messages, hosts & lock state, poll periodically
   useEffect(() => {
@@ -325,21 +375,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         // Setup data channel listener for live in-meeting chat, pins, lock & host updates
         peer.on('connection', (conn) => {
           activeConnsRef.current[conn.peer] = conn;
-          conn.on('data', (data) => {
-            if (data?.type === 'chat_message' && data.payload) {
-              handleIncomingMessage(data.payload);
-            } else if (data?.type === 'pin_toggle' && data.payload) {
-              handlePinUpdate(data.payload.messageId, data.payload.isPinned);
-            } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
-              setIsChatLocked(data.payload.isLocked);
-              toast.info(data.payload.isLocked ? '🔒 Host has locked the chat.' : '🔓 Host has unlocked the chat for everyone!');
-            } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
-              setHostsList(data.payload.hosts);
-              if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
-                toast.success(data.payload.isPromoted ? '⭐ You have been promoted to Co-Host by the host!' : 'You are no longer a Co-Host.');
-              }
-            }
-          });
+          conn.on('data', handleIncomingData);
         });
 
         peer.on('open', async (id) => {
@@ -357,21 +393,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
               try {
                 const conn = peer.connect(p.peer_id);
                 activeConnsRef.current[p.peer_id] = conn;
-                conn.on('data', (data) => {
-                  if (data?.type === 'chat_message' && data.payload) {
-                    handleIncomingMessage(data.payload);
-                  } else if (data?.type === 'pin_toggle' && data.payload) {
-                    handlePinUpdate(data.payload.messageId, data.payload.isPinned);
-                  } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
-                    setIsChatLocked(data.payload.isLocked);
-                    toast.info(data.payload.isLocked ? '🔒 Host has locked the chat.' : '🔓 Host has unlocked the chat for everyone!');
-                  } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
-                    setHostsList(data.payload.hosts);
-                    if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
-                      toast.success(data.payload.isPromoted ? '⭐ You have been promoted to Co-Host!' : 'You are no longer a Co-Host.');
-                    }
-                  }
-                });
+                conn.on('data', handleIncomingData);
               } catch (e) {}
 
               // Initiate media call
@@ -440,17 +462,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
               try {
                 const conn = peer.connect(p.peer_id);
                 activeConnsRef.current[p.peer_id] = conn;
-                conn.on('data', (data) => {
-                  if (data?.type === 'chat_message' && data.payload) {
-                    handleIncomingMessage(data.payload);
-                  } else if (data?.type === 'pin_toggle' && data.payload) {
-                    handlePinUpdate(data.payload.messageId, data.payload.isPinned);
-                  } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
-                    setIsChatLocked(data.payload.isLocked);
-                  } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
-                    setHostsList(data.payload.hosts);
-                  }
-                });
+                conn.on('data', handleIncomingData);
               } catch (e) {}
 
               const call = peer.call(p.peer_id, localStreamRef.current, {
@@ -504,14 +516,89 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     };
   }, [roomId, currentUser?.id]); // STABLE: only runs once per roomId & currentUser
 
-  // Toggle Microphone
-  const toggleAudio = () => {
+  // Toggle Microphone (with real-time state broadcast)
+  const toggleAudio = (forceState) => {
     if (!localStreamRef.current) return;
     const audioTrack = localStreamRef.current.getAudioTracks()[0];
     if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setIsMuted(!audioTrack.enabled);
+      const nextEnabled = typeof forceState === 'boolean' ? forceState : !audioTrack.enabled;
+      audioTrack.enabled = nextEnabled;
+      const nextMuted = !nextEnabled;
+      setIsMuted(nextMuted);
+
+      // Broadcast mic state to all peers
+      Object.values(activeConnsRef.current).forEach(conn => {
+        try {
+          if (conn.open) {
+            conn.send({
+              type: 'peer_mic_state',
+              payload: { userId: currentUser?.id, isMuted: nextMuted }
+            });
+          }
+        } catch (e) {}
+      });
     }
+  };
+
+  // Host Action: Mute All participants
+  const handleMuteAll = () => {
+    if (!isMeHost) return;
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'mute_all',
+            payload: {
+              mutedBy: currentUser?.name || 'Host',
+              senderId: currentUser?.id
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    toast.success('🔇 All participants have been muted.');
+  };
+
+  // Host Action: Mute a single participant
+  const handleMuteParticipant = (targetUserId, targetName) => {
+    if (!isMeHost || !targetUserId) return;
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'force_mute',
+            payload: {
+              targetUserId,
+              mutedBy: currentUser?.name || 'Host'
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    setRemoteMuteStates(prev => ({ ...prev, [targetUserId]: true }));
+    toast.success(`🔇 Muted ${targetName}.`);
+  };
+
+  // Host Action: Request a participant to speak / unmute
+  const handleAskToUnmute = (targetUserId, targetName) => {
+    if (!isMeHost || !targetUserId) return;
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'unmute_request',
+            payload: {
+              targetUserId,
+              requestedBy: currentUser?.name || 'Host'
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    toast.info(`🎙️ Sent speaking request to ${targetName}.`);
   };
 
   // Toggle Camera
@@ -787,6 +874,18 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Mute All Action (Host / Co-Host Only) */}
+          {isMeHost && totalInRoom > 1 && (
+            <button
+              onClick={handleMuteAll}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-bold transition cursor-pointer shadow-sm"
+              title="Mute all participants at once"
+            >
+              <FiMicOff size={12} />
+              <span className="hidden sm:inline">Mute All</span>
+            </button>
+          )}
+
           {/* Participant Count Pill (Click to open list & promote co-hosts) */}
           <button
             onClick={() => setParticipantsModalOpen(true)}
@@ -865,6 +964,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                   <div className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0">
                     {remotePeerList.map(([peerId, remote]) => {
                       const remoteTier = getUserHostTier(remote.userId, remote.role);
+                      const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
                       return (
                         <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
                           <RemoteVideoTile
@@ -875,6 +975,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                             role={remote.role}
                             avatar={remote.avatar}
                             tier={remoteTier}
+                            isMuted={isRemoteMuted}
+                            canControlAudio={isMeHost}
+                            onMute={() => handleMuteParticipant(remote.userId, remote.userName)}
+                            onAskUnmute={() => handleAskToUnmute(remote.userId, remote.userName)}
                             canPromote={isMeHost}
                             onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                             compact
@@ -963,6 +1067,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                 {/* 🌟 REMOTE PARTICIPANT ZOOM CARDS */}
                 {remotePeerList.map(([peerId, remote]) => {
                   const remoteTier = getUserHostTier(remote.userId, remote.role);
+                  const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
                   return (
                     <RemoteVideoTile
                       key={peerId}
@@ -973,6 +1078,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       role={remote.role}
                       avatar={remote.avatar}
                       tier={remoteTier}
+                      isMuted={isRemoteMuted}
+                      canControlAudio={isMeHost}
+                      onMute={() => handleMuteParticipant(remote.userId, remote.userName)}
+                      onAskUnmute={() => handleAskToUnmute(remote.userId, remote.userName)}
                       canPromote={isMeHost}
                       onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                     />
@@ -1323,12 +1432,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                 <FiUsers className="text-emerald-400" size={18} />
                 <h3 className="text-sm font-black uppercase tracking-wider">Room Participants ({totalInRoom})</h3>
               </div>
-              <button
-                onClick={() => setParticipantsModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                <FiX size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                {isMeHost && totalInRoom > 1 && (
+                  <button
+                    onClick={handleMuteAll}
+                    className="flex items-center gap-1 px-3 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-sm"
+                    title="Mute all participants at once"
+                  >
+                    <FiMicOff size={12} />
+                    <span>Mute All</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setParticipantsModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <FiX size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Participant List */}
@@ -1364,15 +1485,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     <p className="text-[10px] text-slate-400">{currentUser?.roles?.[0] || 'Member'}</p>
                   </div>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                  Active
-                </span>
+                <div className="flex items-center gap-2">
+                  {isMuted ? (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20 flex items-center gap-1">
+                      <FiMicOff size={10} /> Muted
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 flex items-center gap-1">
+                      <FiMic size={10} /> Active
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Remote Participants Rows */}
               {remotePeerList.map(([peerId, remote]) => {
                 const remoteTier = getUserHostTier(remote.userId, remote.role);
                 const avatarUrl = getAvatarUrl(remote.avatar);
+                const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
 
                 return (
                   <div key={peerId} className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800">
@@ -1405,20 +1535,45 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       </div>
                     </div>
 
-                    {/* Host action button: Promote/Demote Co-Host (creator can never be demoted) */}
-                    {isMeHost && remote.userId && remoteTier !== 'host' ? (
-                      <button
-                        onClick={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer border ${
-                          remoteTier === 'co_host'
-                            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
-                            : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
-                        }`}
-                      >
-                        {remoteTier === 'co_host' ? <FiUserX size={12} /> : <FiUserPlus size={12} />}
-                        <span>{remoteTier === 'co_host' ? 'Remove Co-Host' : 'Make Co-Host ⭐'}</span>
-                      </button>
-                    ) : null}
+                    <div className="flex items-center gap-1.5">
+                      {/* Host Mic Control for this user */}
+                      {isMeHost && remote.userId && (
+                        isRemoteMuted ? (
+                          <button
+                            onClick={() => handleAskToUnmute(remote.userId, remote.userName)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition cursor-pointer"
+                            title="Ask user to unmute"
+                          >
+                            <FiMic size={11} />
+                            <span>Ask</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleMuteParticipant(remote.userId, remote.userName)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer"
+                            title="Mute this user"
+                          >
+                            <FiMicOff size={11} />
+                            <span>Mute</span>
+                          </button>
+                        )
+                      )}
+
+                      {/* Host action button: Promote/Demote Co-Host (creator can never be demoted) */}
+                      {isMeHost && remote.userId && remoteTier !== 'host' ? (
+                        <button
+                          onClick={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer border ${
+                            remoteTier === 'co_host'
+                              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                              : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {remoteTier === 'co_host' ? <FiUserX size={11} /> : <FiUserPlus size={11} />}
+                          <span>{remoteTier === 'co_host' ? 'Remove' : 'Co-Host'}</span>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -1438,6 +1593,42 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         </div>
       )}
 
+      {/* 🌟 UNMUTE REQUEST DIALOG POPUP (When Host asks user to speak) */}
+      {unmutePrompt?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-4 text-white">
+            <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 mx-auto flex items-center justify-center">
+              <FiMic size={24} className="animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-white">Speaking Request</h4>
+              <p className="text-xs text-slate-300 mt-1">
+                Host ({unmutePrompt.requestedBy}) would like you to unmute your microphone to speak.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-center pt-2">
+              <button
+                onClick={() => setUnmutePrompt({ open: false, requestedBy: '' })}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition cursor-pointer"
+              >
+                Stay Muted
+              </button>
+              <button
+                onClick={() => {
+                  toggleAudio(true);
+                  setUnmutePrompt({ open: false, requestedBy: '' });
+                  toast.success('🎙️ Microphone is now active.');
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-rose-600/30"
+              >
+                <FiMic size={14} />
+                <span>Unmute Mic</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1445,7 +1636,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
 // 🌟 ZOOM-STYLE REMOTE VIDEO TILE (With Host Crown & Quick Co-Host Button)
 function RemoteVideoTile({
   remotePeerId, stream, userId, userName, role, avatar,
-  compact = false, tier = 'member', canPromote = false, onToggleCoHost
+  compact = false, tier = 'member', isMuted = false,
+  canControlAudio = false, onMute, onAskUnmute,
+  canPromote = false, onToggleCoHost
 }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -1508,6 +1701,31 @@ function RemoteVideoTile({
         </div>
       )}
 
+      {/* Quick Remote Audio Control on Hover (Top-Left) */}
+      {canControlAudio && userId && !compact && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 left-3 flex items-center gap-1.5 z-10">
+          {isMuted ? (
+            <button
+              onClick={onAskUnmute}
+              className="px-2.5 py-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-emerald-500/40 text-[10px] font-bold text-emerald-300 hover:bg-emerald-600/20 cursor-pointer shadow-lg flex items-center gap-1"
+              title="Ask to Unmute"
+            >
+              <FiMic size={11} />
+              <span>Ask Unmute</span>
+            </button>
+          ) : (
+            <button
+              onClick={onMute}
+              className="px-2.5 py-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-rose-500/40 text-[10px] font-bold text-rose-400 hover:bg-rose-600/20 cursor-pointer shadow-lg flex items-center gap-1"
+              title="Mute Microphone"
+            >
+              <FiMicOff size={11} />
+              <span>Mute</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Zoom-Style Remote User Pill */}
       <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold">
         <span>{userName}</span>
@@ -1524,6 +1742,15 @@ function RemoteVideoTile({
             {role}
           </span>
         ) : null}
+        {isMuted ? (
+          <FiMicOff className="text-rose-500" size={12} title="Muted" />
+        ) : (
+          <span className="flex items-center gap-0.5" title="Unmuted">
+            <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
+            <span className="w-1 h-3.5 bg-emerald-400 animate-pulse [animation-delay:150ms]" />
+            <span className="w-1 h-1.5 bg-emerald-400 animate-pulse [animation-delay:300ms]" />
+          </span>
+        )}
       </div>
 
       {/* Quick Host Action on Hover (Top-Right) - Cannot demote primary creator */}
