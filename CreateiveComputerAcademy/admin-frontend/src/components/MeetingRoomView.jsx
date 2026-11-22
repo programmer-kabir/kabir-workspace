@@ -11,6 +11,15 @@ import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
+// Clean profile picture URL helper
+const getAvatarUrl = (pic) => {
+  if (!pic) return null;
+  if (pic.startsWith('http://') || pic.startsWith('https://')) return pic;
+  const base = API_BASE.endsWith('/') ? API_BASE : `${API_BASE}/`;
+  const cleanPath = pic.startsWith('/') ? pic.slice(1) : pic;
+  return `${base}${cleanPath}`;
+};
+
 // Fallback silent & blank MediaStream for environments without camera/mic hardware
 function createFallbackStream() {
   const canvas = document.createElement('canvas');
@@ -71,6 +80,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const [chatInput, setChatInput] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
+  const [highlightedMsgId, setHighlightedMsgId] = useState(null);
 
   // Background attendance logger (stable ref, never causes re-renders)
   const logAttendance = useCallback(async (action, pId) => {
@@ -138,6 +148,13 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     });
   }, []);
 
+  // Handle pin toggle from another peer
+  const handlePinUpdate = useCallback((messageId, isPinned) => {
+    setChatMessages(prev =>
+      prev.map(m => (m.id === messageId ? { ...m, is_pinned: isPinned } : m))
+    );
+  }, []);
+
   // Fetch initial chat messages & poll periodically
   useEffect(() => {
     if (!roomId) return;
@@ -162,12 +179,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     };
   }, [roomId]);
 
-  // Scroll to bottom of chat whenever messages change
+  // Scroll to bottom of chat whenever messages change (unless user scrolled up)
   useEffect(() => {
     if (chatOpen && chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [chatMessages, chatOpen]);
+  }, [chatMessages.length, chatOpen]);
 
   // 🌟 Main Conference Initialization (Runs ONCE per roomId/currentUser)
   useEffect(() => {
@@ -252,12 +269,14 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           }
         });
 
-        // Setup data channel listener for live in-meeting chat
+        // Setup data channel listener for live in-meeting chat & pins
         peer.on('connection', (conn) => {
           activeConnsRef.current[conn.peer] = conn;
           conn.on('data', (data) => {
             if (data?.type === 'chat_message' && data.payload) {
               handleIncomingMessage(data.payload);
+            } else if (data?.type === 'pin_toggle' && data.payload) {
+              handlePinUpdate(data.payload.messageId, data.payload.isPinned);
             }
           });
         });
@@ -278,6 +297,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 conn.on('data', (data) => {
                   if (data?.type === 'chat_message' && data.payload) {
                     handleIncomingMessage(data.payload);
+                  } else if (data?.type === 'pin_toggle' && data.payload) {
+                    handlePinUpdate(data.payload.messageId, data.payload.isPinned);
                   }
                 });
               } catch (e) {}
@@ -348,6 +369,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 conn.on('data', (data) => {
                   if (data?.type === 'chat_message' && data.payload) {
                     handleIncomingMessage(data.payload);
+                  } else if (data?.type === 'pin_toggle' && data.payload) {
+                    handlePinUpdate(data.payload.messageId, data.payload.isPinned);
                   }
                 });
               } catch (e) {}
@@ -507,6 +530,56 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     }
   };
 
+  // Pin or Unpin a message
+  const togglePinMessage = async (msg) => {
+    const nextPinned = Number(msg.is_pinned) === 1 ? 0 : 1;
+    const action = nextPinned === 1 ? 'pin' : 'unpin';
+
+    // Optimistic update
+    setChatMessages(prev =>
+      prev.map(m => (m.id === msg.id ? { ...m, is_pinned: nextPinned } : m))
+    );
+
+    try {
+      await axios.post(`${API_BASE}api/meetings/pin_message.php`, {
+        room_id: roomId,
+        message_id: msg.id,
+        user_id: currentUser?.id,
+        action
+      });
+
+      // Broadcast pin toggle to peers
+      Object.values(activeConnsRef.current).forEach(conn => {
+        try {
+          if (conn.open) {
+            conn.send({
+              type: 'pin_toggle',
+              payload: { messageId: msg.id, isPinned: nextPinned }
+            });
+          }
+        } catch (e) {}
+      });
+
+      toast.success(nextPinned === 1 ? '📌 Message pinned to top' : 'Message unpinned');
+    } catch (err) {
+      toast.error('Failed to update pin state.');
+      // Revert on error
+      setChatMessages(prev =>
+        prev.map(m => (m.id === msg.id ? { ...m, is_pinned: msg.is_pinned } : m))
+      );
+    }
+  };
+
+  // Scroll to a specific pinned message in chat
+  const scrollToMessage = (msgId) => {
+    const el = document.getElementById(`chat-msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMsgId(msgId);
+      setTimeout(() => setHighlightedMsgId(null), 2500);
+    }
+  };
+
   const copyRoomLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -516,6 +589,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
   const remotePeerList = Object.entries(remotePeers);
   const totalInRoom = 1 + remotePeerList.length;
+  const pinnedMessages = chatMessages.filter(m => Number(m.is_pinned) === 1);
 
   return (
     <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] bg-[#0c101b] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col select-none">
@@ -648,9 +722,17 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                   {/* Zoom-Style Video Off Avatar Card */}
                   {isVideoOff && (
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-rose-600/30 ring-4 ring-rose-500/20">
-                        {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                      </div>
+                      {currentUser?.profile_picture ? (
+                        <img
+                          src={getAvatarUrl(currentUser.profile_picture)}
+                          alt={currentUser.name}
+                          className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-rose-500/40 ring-4 ring-rose-500/20"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-rose-600/30 ring-4 ring-rose-500/20">
+                          {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                      )}
                       <div className="text-center">
                         <p className="text-sm font-bold text-white">{currentUser?.name || 'You'}</p>
                         <p className="text-[11px] text-slate-400 font-medium">Camera Off</p>
@@ -783,7 +865,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
         </div>
 
-        {/* 🌟 IN-MEETING LIVE CHAT DRAWER (Zoom Style) */}
+        {/* 🌟 IN-MEETING LIVE CHAT DRAWER (With Profile Avatars & Pin Message) */}
         {chatOpen && (
           <div className="w-80 md:w-96 h-full bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 animate-in slide-in-from-right duration-200">
             
@@ -805,10 +887,42 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
               </button>
             </div>
 
+            {/* 🌟 PINNED MESSAGE STICKY BANNER */}
+            {pinnedMessages.length > 0 && (
+              <div className="mx-3 mt-3 p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-2 text-white animate-in fade-in shrink-0">
+                <div
+                  onClick={() => scrollToMessage(pinnedMessages[0].id)}
+                  className="flex-1 cursor-pointer flex items-start gap-2 overflow-hidden group"
+                  title="Click to view pinned message"
+                >
+                  <span className="text-base leading-none">📌</span>
+                  <div className="overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                        Pinned Message
+                      </span>
+                      <span className="text-[10px] text-slate-400">• {pinnedMessages[0].user_name}</span>
+                    </div>
+                    <p className="text-xs text-slate-200 truncate mt-0.5 font-medium group-hover:text-amber-300 transition-colors">
+                      {pinnedMessages[0].message}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => togglePinMessage(pinnedMessages[0])}
+                  className="text-slate-400 hover:text-amber-400 p-1 rounded-md text-[10px] font-bold transition cursor-pointer"
+                  title="Unpin message"
+                >
+                  <FiX size={13} />
+                </button>
+              </div>
+            )}
+
             {/* Chat Message Stream */}
             <div
               ref={chatScrollRef}
-              className="flex-1 p-4 overflow-y-auto space-y-3.5 text-white text-xs scrollbar-thin scrollbar-thumb-slate-800"
+              className="flex-1 p-3 md:p-4 overflow-y-auto space-y-3.5 text-white text-xs scrollbar-thin scrollbar-thumb-slate-800"
             >
               {chatMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 gap-2 p-4">
@@ -821,31 +935,95 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
               ) : (
                 chatMessages.map((msg, i) => {
                   const isMe = msg.user_id === currentUser?.id;
+                  const isPinned = Number(msg.is_pinned) === 1;
+                  const avatarUrl = getAvatarUrl(msg.profile_picture);
+                  const isHighlighted = highlightedMsgId === msg.id;
+
                   return (
                     <div
                       key={msg.id || i}
-                      className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}
+                      id={`chat-msg-${msg.id}`}
+                      className={`group relative flex gap-2.5 transition-all p-1.5 rounded-2xl ${
+                        isHighlighted
+                          ? 'ring-2 ring-amber-400 bg-amber-500/20'
+                          : isPinned
+                          ? 'bg-amber-500/10 border border-amber-500/30'
+                          : 'hover:bg-slate-800/40'
+                      } ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
                     >
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                        <span className="font-bold text-slate-300">{isMe ? 'You' : msg.user_name}</span>
-                        {msg.user_role && (
-                          <span className="px-1.5 py-0.2 rounded bg-slate-800 text-[9px] text-slate-400">
-                            {msg.user_role}
-                          </span>
-                        )}
-                        <span>•</span>
-                        <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}</span>
+                      {/* 🌟 Profile Picture / Initial Avatar */}
+                      <div className="shrink-0 pt-0.5">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={msg.user_name}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-700/80 shadow-sm"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextElementSibling) {
+                                e.currentTarget.nextElementSibling.classList.remove('hidden');
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${
+                            avatarUrl ? 'hidden' : ''
+                          } ${
+                            isMe
+                              ? 'bg-gradient-to-tr from-rose-600 to-rose-400 text-white'
+                              : 'bg-gradient-to-tr from-indigo-600 to-slate-700 text-white'
+                          }`}
+                        >
+                          {msg.user_name ? msg.user_name.charAt(0).toUpperCase() : 'U'}
+                        </div>
                       </div>
 
-                      <div
-                        className={`px-3.5 py-2 rounded-2xl max-w-[85%] break-words ${
-                          isMe
-                            ? 'bg-rose-600 text-white rounded-br-none shadow-md shadow-rose-600/20'
-                            : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60'
-                        }`}
-                      >
-                        {msg.message}
+                      {/* Content Bubble */}
+                      <div className={`flex flex-col gap-1 max-w-[78%] ${isMe ? 'items-end' : 'items-start'}`}>
+                        {/* Name, Role, Time & Pin tag */}
+                        <div className={`flex items-center gap-1.5 text-[10px] text-slate-400 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <span className="font-bold text-slate-200">{isMe ? 'You' : msg.user_name}</span>
+                          {msg.user_role && (
+                            <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700/60 text-[9px] text-slate-300 font-medium">
+                              {msg.user_role}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>
+                            {msg.created_at
+                              ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : 'Now'}
+                          </span>
+                          {isPinned && (
+                            <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[9px] bg-amber-500/20 px-1.5 py-0.2 rounded-full border border-amber-500/40">
+                              📌 Pinned
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Message Text Bubble */}
+                        <div
+                          className={`relative px-3.5 py-2.5 rounded-2xl text-xs break-words leading-relaxed shadow-md ${
+                            isMe
+                              ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-tr-none'
+                              : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/80'
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
                       </div>
+
+                      {/* 🌟 Hover Pin/Unpin Action Button */}
+                      <button
+                        onClick={() => togglePinMessage(msg)}
+                        className={`opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer self-center shrink-0 ${
+                          isPinned ? '!opacity-100 text-amber-400' : 'text-slate-400 hover:text-amber-400'
+                        }`}
+                        title={isPinned ? 'Unpin message' : 'Pin message to top'}
+                      >
+                        📌
+                      </button>
                     </div>
                   );
                 })
@@ -884,6 +1062,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact = false }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
+  const avatarUrl = getAvatarUrl(avatar);
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -914,9 +1093,17 @@ function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact
       {/* Zoom-Style Video Off Avatar Card */}
       {!hasVideo && (
         <div className="flex flex-col items-center justify-center gap-2">
-          <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xl font-black text-white shadow-inner">
-            {userName ? userName.charAt(0).toUpperCase() : 'C'}
-          </div>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={userName}
+              className="w-16 h-16 rounded-full object-cover border border-slate-700 shadow-md ring-2 ring-slate-700/50"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xl font-black text-white shadow-inner">
+              {userName ? userName.charAt(0).toUpperCase() : 'C'}
+            </div>
+          )}
           {!compact && (
             <div className="text-center">
               <p className="text-xs font-bold text-white">{userName}</p>

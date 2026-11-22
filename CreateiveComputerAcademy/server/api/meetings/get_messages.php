@@ -34,7 +34,8 @@ try {
 
     if ($afterId > 0) {
         $stmt = $db->prepare("
-            SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message, mm.created_at,
+            SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message,
+                   mm.is_pinned, mm.pinned_by, mm.pinned_at, mm.created_at,
                    u.profile_picture
             FROM meeting_messages mm
             LEFT JOIN users u ON mm.user_id = u.id
@@ -44,7 +45,8 @@ try {
         $stmt->execute([':mid' => $meetingId, ':aid' => $afterId]);
     } else {
         $stmt = $db->prepare("
-            SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message, mm.created_at,
+            SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message,
+                   mm.is_pinned, mm.pinned_by, mm.pinned_at, mm.created_at,
                    u.profile_picture
             FROM meeting_messages mm
             LEFT JOIN users u ON mm.user_id = u.id

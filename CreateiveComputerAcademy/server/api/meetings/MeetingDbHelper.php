@@ -64,11 +64,25 @@ class MeetingDbHelper {
                 `user_name` VARCHAR(150) NOT NULL,
                 `user_role` VARCHAR(50) NULL DEFAULT 'Member',
                 `message` TEXT NOT NULL,
+                `is_pinned` TINYINT(1) NOT NULL DEFAULT 0,
+                `pinned_by` INT NULL,
+                `pinned_at` DATETIME NULL,
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                 INDEX (`meeting_id`),
                 INDEX (`user_id`),
+                INDEX (`is_pinned`),
                 INDEX (`created_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `is_pinned` TINYINT(1) NOT NULL DEFAULT 0 AFTER `message`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `pinned_by` INT NULL AFTER `is_pinned`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `pinned_at` DATETIME NULL AFTER `pinned_by`");
+            } catch (Throwable $e) {}
 
         } catch (Throwable $e) {
             error_log("MeetingDbHelper::ensureSchema error: " . $e->getMessage());

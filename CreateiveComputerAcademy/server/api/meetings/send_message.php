@@ -53,16 +53,26 @@ try {
 
     $newId = (int)$db->lastInsertId();
 
+    // Fetch user profile picture
+    $uStmt = $db->prepare("SELECT profile_picture FROM users WHERE id = :uid LIMIT 1");
+    $uStmt->execute([':uid' => $userId]);
+    $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+    $profilePic = $uRow['profile_picture'] ?? null;
+
     echo json_encode([
         "status"  => "success",
         "message" => [
-            "id"         => $newId,
-            "meeting_id" => $meetingId,
-            "user_id"    => $userId,
-            "user_name"  => $userName,
-            "user_role"  => $userRole,
-            "message"    => $message,
-            "created_at" => date('Y-m-d H:i:s')
+            "id"              => $newId,
+            "meeting_id"      => $meetingId,
+            "user_id"         => $userId,
+            "user_name"       => $userName,
+            "user_role"       => $userRole,
+            "profile_picture" => $profilePic,
+            "message"         => $message,
+            "is_pinned"       => 0,
+            "pinned_by"       => null,
+            "pinned_at"       => null,
+            "created_at"      => date('Y-m-d H:i:s')
         ]
     ]);
 
