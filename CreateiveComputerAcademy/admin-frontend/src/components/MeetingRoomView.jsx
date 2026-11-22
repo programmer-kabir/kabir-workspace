@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FiLoader, FiAlertTriangle, FiPhoneOff, FiCopy, FiCheck,
-  FiShield, FiRadio, FiVideo
+  FiShield, FiRadio, FiVideo, FiExternalLink
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 
@@ -14,6 +14,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
+
+  const cleanRoom = `CCA_ACADEMY_${(roomId || '').replace(/[^a-zA-Z0-9_]/g, '')}`;
+  const directRoomUrl = `https://meet.jit.si/${cleanRoom}`;
 
   const logAttendance = async (action) => {
     if (!currentUser?.id || !roomId) return;
@@ -31,6 +34,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   useEffect(() => {
     let pingInterval = null;
     let isMounted = true;
+    let fallbackTimer = null;
 
     const loadJitsiScript = () => {
       return new Promise((resolve, reject) => {
@@ -64,7 +68,6 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         containerRef.current.innerHTML = '';
 
         const domain = 'meet.jit.si';
-        const cleanRoom = `CCA_ACADEMY_${roomId.replace(/[^a-zA-Z0-9_]/g, '')}`;
 
         const options = {
           roomName: cleanRoom,
@@ -97,14 +100,22 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         const api = new window.JitsiMeetExternalAPI(domain, options);
         jitsiApiRef.current = api;
 
+        // Immediately log attendance for entering room
+        logAttendance('join');
+
+        pingInterval = setInterval(() => {
+          logAttendance('ping');
+        }, 60000);
+
+        // Remove loading overlay as soon as iframe mounts so user can see camera/mic & Join button!
+        fallbackTimer = setTimeout(() => {
+          if (isMounted) setLoading(false);
+        }, 1200);
+
         api.addEventListener('videoConferenceJoined', () => {
           if (!isMounted) return;
           setLoading(false);
           logAttendance('join');
-
-          pingInterval = setInterval(() => {
-            logAttendance('ping');
-          }, 60000);
         });
 
         api.addEventListener('videoConferenceLeft', () => {
@@ -129,6 +140,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
     return () => {
       isMounted = false;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       if (pingInterval) clearInterval(pingInterval);
       logAttendance('leave');
       if (jitsiApiRef.current) {
@@ -172,6 +184,17 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             <span>Attendance Logged</span>
           </div>
 
+          <a
+            href={directRoomUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+            title="Open WebRTC room in a standalone full window"
+          >
+            <FiExternalLink size={12} />
+            <span className="hidden sm:inline">Open in Tab</span>
+          </a>
+
           <button
             onClick={copyRoomLink}
             className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
@@ -185,7 +208,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       {/* Jitsi Host Container */}
       <div className="relative flex-1 w-full h-full bg-[#070b14] overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[#070b14] text-white p-6">
+          <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center gap-4 bg-[#070b14]/90 backdrop-blur-xs text-white p-6 transition-opacity duration-300">
             <div className="relative flex items-center justify-center">
               <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/30">
                 <FiVideo className="w-7 h-7 animate-pulse" />
@@ -210,12 +233,23 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
               <FiAlertTriangle className="w-7 h-7" />
             </div>
             <p className="text-sm font-bold text-rose-400 max-w-md">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
-            >
-              Retry Connection
-            </button>
+            <div className="flex gap-2 justify-center mt-2">
+              <a
+                href={directRoomUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <FiExternalLink size={13} />
+                <span>Open Direct in Browser</span>
+              </a>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Retry Connection
+              </button>
+            </div>
           </div>
         )}
 
