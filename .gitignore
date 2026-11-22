@@ -24,6 +24,12 @@
 
 # Database & Large Dumps
 **/*.sql
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.sqlite
+**/server/data/*
+!**/server/data/.gitkeep
 **/server/backups/*
 !**/server/backups/.htaccess
 !**/server/backups/.gitkeep

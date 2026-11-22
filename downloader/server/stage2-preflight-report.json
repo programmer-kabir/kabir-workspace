@@ -1,0 +1,61 @@
+{
+  "source": {
+    "activeEngine": "sqlite",
+    "integrityStatus": "ok",
+    "journalMode": "wal",
+    "foreignKeysStatus": "ENABLED",
+    "tableCount": 19,
+    "totalRecords": 2595,
+    "fileSizeHuman": "1056.0 KB",
+    "fileSizeBytes": 1081344,
+    "sha256": "255357a3855b872ecd84bae3689225584a31360e7f59582ad766df11f9b54d9e",
+    "tableCounts": {
+      "admin_audit_logs": 59,
+      "api_keys": 17,
+      "api_logs": 153,
+      "download_history": 247,
+      "download_jobs": 82,
+      "favorites": 0,
+      "login_history": 363,
+      "notifications": 227,
+      "password_resets": 0,
+      "payment_methods": 3,
+      "payment_transactions": 59,
+      "sessions": 267,
+      "subscription_plans": 3,
+      "subscriptions": 38,
+      "system_settings": 18,
+      "user_activity": 866,
+      "users": 177,
+      "webhook_deliveries": 0,
+      "webhooks": 16
+    }
+  },
+  "backup": {
+    "filename": "streamvault-backup-2026-11-22T10-46-59-227Z.sqlite",
+    "path": "C:\\Users\\CCA\\Desktop\\kabir-workspace\\downloader\\server\\backups\\streamvault-backup-2026-11-22T10-46-59-227Z.sqlite",
+    "sizeHuman": "1060.0 KB",
+    "sizeBytes": 1085440,
+    "integrity": "ok",
+    "sha256": "a58703210aa9606b82776607856c1b8471b7b5f12fef83fba06cf604c4f29acf",
+    "totalRecords": 2595,
+    "matchesSource": true
+  },
+  "uniqueConflicts": 0,
+  "storage": {
+    "estimatedDataSizeKB": "1146.30 KB",
+    "estimatedIndexKB": "364.39 KB",
+    "totalProjectedKB": "2878.70 KB",
+    "totalProjectedMB": "2.811 MB",
+    "freeTierQuotaMB": 512,
+    "percentUsed": "0.55%"
+  },
+  "dryRun": {
+    "totalSqliteRecords": 2595,
+    "totalConverted": 2595,
+    "totalMigrated": 0,
+    "totalErrors": 0,
+    "durationSeconds": "0.04",
+    "sourceUntouched": true
+  }
+}

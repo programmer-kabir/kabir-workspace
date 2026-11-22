@@ -5,8 +5,47 @@ import rateLimit from 'express-rate-limit';
 import os from 'os';
 import { extractMediaInfo, streamMedia } from './services/extractor.js';
 import { isValidHttpUrl, detectPlatform } from './utils/platformDetector.js';
+import { initDatabase } from './db/index.js';
+import { initQueueEngine } from './services/queueService.js';
+import authRoutes from './routes/authRoutes.js';
+import queueRoutes from './routes/queueRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import historyRoutes from './routes/historyRoutes.js';
+import favoriteRoutes from './routes/favoriteRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import apiV1Routes from './routes/apiV1Routes.js';
+import developerRoutes from './routes/developerRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import adminPaymentRoutes from './routes/adminPaymentRoutes.js';
+import adminSystemRoutes from './routes/adminSystemRoutes.js';
+import { checkAndExpireSubscriptions } from './db/index.js';
+import { connectMongo, isMongoConnected } from './db/mongo.js';
+import { getDbEngine } from './db/repositories/index.js';
+import { securityHeadersMiddleware, getCorsOptions } from './middleware/securityHeaders.js';
+import { validateEnvironment } from './utils/envValidator.js';
+import logger from './utils/logger.js';
 
 dotenv.config();
+
+// 0. Runtime Environment Validation
+try {
+  const envConfig = validateEnvironment();
+  if (envConfig.warnings.length > 0) {
+    envConfig.warnings.forEach(w => logger.warn(`Environment warning: ${w}`));
+  }
+} catch (envErr) {
+  logger.error('Fatal environment validation error', envErr);
+  process.exit(1);
+}
+
+// Initialize persistent SQLite Database & Queue Engine
+initDatabase();
+initQueueEngine();
+
+// Initialize MongoDB Atlas connection if configured (non-blocking)
+connectMongo().catch(err => {
+  logger.warn(`Non-blocking MongoDB initialization note: ${err.message}`);
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,24 +62,64 @@ function getLocalIp() {
   return 'localhost';
 }
 
-// Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// OWASP Production Security Headers
+app.use(securityHeadersMiddleware);
+
+// Strict Production CORS Validator
+app.use(cors(getCorsOptions()));
 app.use(express.json());
 
-// Basic Rate Limiting
+// Developer Public REST API v1 (carries its own plan-based sliding-window rate limiter)
+app.use('/api/v1', apiV1Routes);
+
+// Basic Rate Limiting for Web Client Endpoints
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute
+  max: 500, // 500 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests. Please slow down and try again in a minute.' }
 });
 
 app.use('/api/', apiLimiter);
+
+// Mount Modular API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/queue', queueRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/developer', developerRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/admin/payments', adminPaymentRoutes);
+app.use('/api/admin/system', adminSystemRoutes);
+
+// Periodic subscription expiration worker (runs every 15 minutes)
+setInterval(() => {
+  checkAndExpireSubscriptions();
+}, 15 * 60 * 1000);
+
+// Root & Health Check Endpoints
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  const engine = getDbEngine();
+  res.json({
+    status: 'healthy',
+    service: 'All-in-One Video Downloader Engine & Queue Service',
+    databaseEngine: engine,
+    database: engine === 'mongodb' ? 'connected (MongoDB Atlas)' : 'connected (node:sqlite WAL)',
+    mongodb: isMongoConnected() ? 'connected' : 'unconfigured / disconnected',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Network info for QR Code & Mobile Sync
 app.get('/api/network-info', (req, res) => {
@@ -52,16 +131,6 @@ app.get('/api/network-info', (req, res) => {
     port: PORT,
     isLocal,
     effectiveBaseUrl: isLocal ? `http://${lanIp}:${PORT}` : `${req.protocol}://${host}`
-  });
-});
-
-// Health Check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'All-in-One Video Downloader Engine',
-    uptime: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString()
   });
 });
 
@@ -158,6 +227,34 @@ app.get('/api/download', async (req, res) => {
   }
 });
 
+// 404 Handler for Unmatched API Endpoints
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API route not found: ${req.method} ${req.originalUrl}`
+  });
+});
+
+// Centralized Production Error Handler (OWASP recommended: suppresses stack traces)
+app.use((err, req, res, next) => {
+  logger.error('Unhandled server error', err, {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip
+  });
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const isProd = process.env.NODE_ENV === 'production';
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    error: isProd ? 'An internal error occurred. Please contact support if the issue persists.' : (err.message || 'Internal server error')
+  });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Video Downloader API Server running on http://0.0.0.0:${PORT}`);
+  logger.info(`Video Downloader API & Queue Server running on http://0.0.0.0:${PORT}`);
 });
