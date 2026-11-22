@@ -31,6 +31,14 @@ class MeetingDbHelper {
                 INDEX (`scheduled_start`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+            // Ensure is_chat_locked and hosts_json exist in academy_meetings
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `is_chat_locked` TINYINT(1) NOT NULL DEFAULT 1 AFTER `status`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `hosts_json` TEXT NULL AFTER `is_chat_locked`");
+            } catch (Throwable $e) {}
+
             // 2. Table: meeting_attendance_logs
             $db->exec("CREATE TABLE IF NOT EXISTS `meeting_attendance_logs` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,6 +102,40 @@ class MeetingDbHelper {
      */
     public static function generateRoomId($prefix = 'cca_meet') {
         return $prefix . '_' . substr(md5(uniqid(mt_rand(), true)), 0, 10);
+    }
+
+    /**
+     * Verify if a user is a Host / Co-Host of a meeting
+     */
+    public static function isUserHost($db, $meeting, $userId, $userRole = null) {
+        if (!$meeting || !$userId) return false;
+        // 1. Creator is always host
+        if (isset($meeting['created_by']) && (int)$meeting['created_by'] === (int)$userId) {
+            return true;
+        }
+        // 2. Admin or Developer is always host
+        if ($userRole && in_array(strtolower($userRole), ['admin', 'developer', 'superadmin'])) {
+            return true;
+        }
+        // Check user_roles table if role wasn't passed directly
+        if (!$userRole && $db) {
+            try {
+                $rStmt = $db->prepare("SELECT role FROM user_roles WHERE user_id = :uid LIMIT 1");
+                $rStmt->execute([':uid' => $userId]);
+                $rRow = $rStmt->fetch(PDO::FETCH_ASSOC);
+                if ($rRow && in_array(strtolower($rRow['role']), ['admin', 'developer', 'superadmin'])) {
+                    return true;
+                }
+            } catch (Throwable $e) {}
+        }
+        // 3. Check hosts_json
+        if (!empty($meeting['hosts_json'])) {
+            $hosts = is_array($meeting['hosts_json']) ? $meeting['hosts_json'] : json_decode($meeting['hosts_json'], true);
+            if (is_array($hosts) && in_array((int)$userId, array_map('intval', $hosts))) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 ?>

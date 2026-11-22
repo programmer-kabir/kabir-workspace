@@ -5,7 +5,8 @@ import {
   FiMic, FiMicOff, FiVideo, FiVideoOff, FiTv, FiPhoneOff,
   FiUsers, FiUser, FiCopy, FiCheck, FiShield, FiRadio,
   FiAlertTriangle, FiLoader, FiMaximize, FiMinimize,
-  FiMessageSquare, FiSend, FiX, FiCheckCircle
+  FiMessageSquare, FiSend, FiX, FiCheckCircle, FiLock,
+  FiUnlock, FiStar, FiUserCheck, FiUserPlus, FiUserX
 } from 'react-icons/fi';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
@@ -71,12 +72,18 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const chatScrollRef = useRef(null);
 
   const [myPeerId, setMyPeerId] = useState('');
-  const [remotePeers, setRemotePeers] = useState({}); // peerId -> { stream, userName, role, avatar, isScreen }
+  const [remotePeers, setRemotePeers] = useState({}); // peerId -> { stream, userId, userName, role, avatar, isScreen }
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [loadingMedia, setLoadingMedia] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  // Host & Permission State
+  const [hostsList, setHostsList] = useState([]); // array of user IDs
+  const [meetingCreatorId, setMeetingCreatorId] = useState(null);
+  const [isChatLocked, setIsChatLocked] = useState(true); // default locked at start!
+  const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
 
   // Live Chat state
   const [chatOpen, setChatOpen] = useState(false);
@@ -85,6 +92,20 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
   const [highlightedMsgId, setHighlightedMsgId] = useState(null);
+
+  // Helper to determine if a given user is a Host / Co-Host
+  const checkIsHost = useCallback((userId, role) => {
+    if (!userId) return false;
+    if (Number(currentUser?.id) === Number(userId)) {
+      const isRoleAdmin = currentUser?.roles?.some(r => ['admin', 'developer', 'superadmin'].includes(r.toLowerCase()));
+      if (isRoleAdmin) return true;
+    }
+    if (role && ['admin', 'developer', 'superadmin'].includes(role.toLowerCase())) return true;
+    if (meetingCreatorId && Number(meetingCreatorId) === Number(userId)) return true;
+    return hostsList.includes(Number(userId));
+  }, [currentUser?.id, currentUser?.roles, meetingCreatorId, hostsList]);
+
+  const isMeHost = checkIsHost(currentUser?.id, currentUser?.roles?.[0]);
 
   // Background attendance logger (stable ref, never causes re-renders)
   const logAttendance = useCallback(async (action, pId) => {
@@ -109,6 +130,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       ...prev,
       [remotePeerId]: {
         stream,
+        userId: peerInfo.userId || peerInfo.user_id || null,
         userName: peerInfo.userName || peerInfo.user_name || (isBn ? 'সহকর্মী' : 'CCA Colleague'),
         role: peerInfo.role || 'Member',
         avatar: peerInfo.avatar || peerInfo.profile_picture || null,
@@ -159,7 +181,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     );
   }, []);
 
-  // Fetch initial chat messages & poll periodically
+  // Fetch initial chat messages, hosts & lock state, poll periodically
   useEffect(() => {
     if (!roomId) return;
     let isMounted = true;
@@ -169,6 +191,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         const res = await axios.get(`${API_BASE}api/meetings/get_messages.php?room_id=${roomId}`);
         if (res.data?.status === 'success' && isMounted) {
           setChatMessages(res.data.messages || []);
+          if (typeof res.data.is_chat_locked !== 'undefined') {
+            setIsChatLocked(Number(res.data.is_chat_locked) === 1);
+          }
+          if (Array.isArray(res.data.hosts)) {
+            setHostsList(res.data.hosts.map(Number));
+          }
+          if (res.data.created_by) {
+            setMeetingCreatorId(Number(res.data.created_by));
+          }
         }
       } catch (err) {
         // silent catch
@@ -273,7 +304,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           }
         });
 
-        // Setup data channel listener for live in-meeting chat & pins
+        // Setup data channel listener for live in-meeting chat, pins, lock & host updates
         peer.on('connection', (conn) => {
           activeConnsRef.current[conn.peer] = conn;
           conn.on('data', (data) => {
@@ -281,6 +312,18 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
               handleIncomingMessage(data.payload);
             } else if (data?.type === 'pin_toggle' && data.payload) {
               handlePinUpdate(data.payload.messageId, data.payload.isPinned);
+            } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
+              setIsChatLocked(data.payload.isLocked);
+              toast.info(data.payload.isLocked 
+                ? (isBn ? '🔒 হোস্ট চ্যাট লক করেছেন।' : '🔒 Host has locked the chat.') 
+                : (isBn ? '🔓 হোস্ট সবার জন্য চ্যাট উন্মুক্ত করেছেন!' : '🔓 Host has unlocked the chat for everyone!'));
+            } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
+              setHostsList(data.payload.hosts);
+              if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
+                toast.success(data.payload.isPromoted 
+                  ? (isBn ? '⭐ হোস্ট আপনাকে কো-হোস্ট (Co-Host) হিসেবে নিযুক্ত করেছেন!' : '⭐ You have been promoted to Co-Host by the host!') 
+                  : (isBn ? 'কো-হোস্ট স্ট্যাটাস প্রত্যাহার করা হয়েছে।' : 'You are no longer a Co-Host.'));
+              }
             }
           });
         });
@@ -302,6 +345,18 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                     handleIncomingMessage(data.payload);
                   } else if (data?.type === 'pin_toggle' && data.payload) {
                     handlePinUpdate(data.payload.messageId, data.payload.isPinned);
+                  } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
+                    setIsChatLocked(data.payload.isLocked);
+                    toast.info(data.payload.isLocked 
+                      ? (isBn ? '🔒 হোস্ট চ্যাট লক করেছেন।' : '🔒 Host has locked the chat.') 
+                      : (isBn ? '🔓 হোস্ট সবার জন্য চ্যাট উন্মুক্ত করেছেন!' : '🔓 Host has unlocked the chat for everyone!'));
+                  } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
+                    setHostsList(data.payload.hosts);
+                    if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
+                      toast.success(data.payload.isPromoted 
+                        ? (isBn ? '⭐ হোস্ট আপনাকে কো-হোস্ট নিযুক্ত করেছেন!' : '⭐ You have been promoted to Co-Host!') 
+                        : (isBn ? 'কো-হোস্ট স্ট্যাটাস প্রত্যাহার করা হয়েছে।' : 'You are no longer a Co-Host.'));
+                    }
                   }
                 });
               } catch (e) {}
@@ -341,7 +396,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             if (isMounted) {
               const meta = incomingCall.metadata || {};
               addRemoteStream(callerId, remoteStream, {
-                userName: meta.userName || 'CCA Member',
+                userId: meta.userId || null,
+                userName: meta.userName || (isBn ? 'সহকর্মী' : 'CCA Member'),
                 role: meta.role || 'Participant',
                 avatar: meta.avatar || null
               });
@@ -373,6 +429,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                     handleIncomingMessage(data.payload);
                   } else if (data?.type === 'pin_toggle' && data.payload) {
                     handlePinUpdate(data.payload.messageId, data.payload.isPinned);
+                  } else if (data?.type === 'chat_lock_toggle' && typeof data.payload?.isLocked === 'boolean') {
+                    setIsChatLocked(data.payload.isLocked);
+                  } else if (data?.type === 'host_update' && Array.isArray(data.payload?.hosts)) {
+                    setHostsList(data.payload.hosts);
                   }
                 });
               } catch (e) {}
@@ -500,13 +560,18 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     const text = chatInput.trim();
     if (!text || !currentUser?.id || isSending) return;
 
+    if (isChatLocked && !isMeHost) {
+      toast.error(isBn ? 'চ্যাট বর্তমানে হোস্ট দ্বারা লক করা রয়েছে।' : 'Chat is currently locked by the host.');
+      return;
+    }
+
     setIsSending(true);
     try {
       const payload = {
         room_id: roomId,
         user_id: currentUser.id,
         user_name: currentUser.name || (isBn ? 'স্টাফ মেম্বার' : 'Staff Member'),
-        user_role: currentUser.roles?.[0] || 'Staff',
+        user_role: isMeHost ? 'Host' : (currentUser.roles?.[0] || 'Staff'),
         message: text
       };
 
@@ -526,18 +591,106 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         });
       }
     } catch (err) {
-      toast.error(isBn ? 'মেসেজ পাঠানো সম্ভব হয়নি।' : 'Failed to send message.');
+      toast.error(err.response?.data?.message || (isBn ? 'মেসেজ পাঠানো সম্ভব হয়নি।' : 'Failed to send message.'));
     } finally {
       setIsSending(false);
     }
   };
 
-  // Pin or Unpin a message
+  // Toggle Chat Lock (Host only)
+  const handleToggleChatLock = async () => {
+    if (!isMeHost) {
+      toast.error(isBn ? 'কেবল মিটিং হোস্ট চ্যাট লক বা আনলক করতে পারেন।' : 'Only meeting hosts can lock/unlock the chat.');
+      return;
+    }
+
+    const nextLocked = !isChatLocked;
+    setIsChatLocked(nextLocked);
+
+    try {
+      const res = await axios.post(`${API_BASE}api/meetings/toggle_chat_lock.php`, {
+        room_id: roomId,
+        user_id: currentUser?.id,
+        is_locked: nextLocked ? 1 : 0
+      });
+
+      if (res.data?.status === 'success') {
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({ type: 'chat_lock_toggle', payload: { isLocked: nextLocked } });
+            }
+          } catch (e) {}
+        });
+        toast.success(
+          nextLocked 
+            ? (isBn ? '🔒 চ্যাট এখন সাধারণ সদস্যদের জন্য লক করা হয়েছে।' : '🔒 Chat is now locked for participants.') 
+            : (isBn ? '🔓 চ্যাট সবার জন্য উন্মুক্ত করা হয়েছে!' : '🔓 Chat is now unlocked for everyone!')
+        );
+      }
+    } catch (err) {
+      setIsChatLocked(!nextLocked);
+      toast.error(isBn ? 'লক পরিবর্তন করা সম্ভব হয়নি।' : 'Failed to change chat lock state.');
+    }
+  };
+
+  // Promote or Demote Co-Host (Host only)
+  const handleToggleCoHost = async (targetUserId, targetName, isCurrentlyHost) => {
+    if (!isMeHost) {
+      toast.error(isBn ? 'কেবল মিটিং হোস্ট কো-হোস্ট নিযুক্ত করতে পারেন।' : 'Only meeting hosts can appoint co-hosts.');
+      return;
+    }
+
+    const action = isCurrentlyHost ? 'demote' : 'promote';
+
+    try {
+      const res = await axios.post(`${API_BASE}api/meetings/manage_host.php`, {
+        room_id: roomId,
+        requester_id: currentUser?.id,
+        target_user_id: targetUserId,
+        action
+      });
+
+      if (res.data?.status === 'success') {
+        const updatedHosts = (res.data.hosts || []).map(Number);
+        setHostsList(updatedHosts);
+
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({
+                type: 'host_update',
+                payload: {
+                  hosts: updatedHosts,
+                  targetUserId,
+                  isPromoted: action === 'promote'
+                }
+              });
+            }
+          } catch (e) {}
+        });
+
+        toast.success(
+          action === 'promote' 
+            ? `⭐ ${targetName} ${isBn ? 'এখন কো-হোস্ট!' : 'is now a Co-Host!'}` 
+            : `${targetName} ${isBn ? 'আর কো-হোস্ট নন।' : 'is no longer a Co-Host.'}`
+        );
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || (isBn ? 'কো-হোস্ট স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।' : 'Failed to update host privileges.'));
+    }
+  };
+
+  // Pin or Unpin a message (Host only)
   const togglePinMessage = async (msg) => {
+    if (!isMeHost) {
+      toast.error(isBn ? 'কেবল মিটিং হোস্ট মেসেজ পিন করতে পারেন।' : 'Only meeting hosts can pin messages.');
+      return;
+    }
+
     const nextPinned = Number(msg.is_pinned) === 1 ? 0 : 1;
     const action = nextPinned === 1 ? 'pin' : 'unpin';
 
-    // Optimistic update
     setChatMessages(prev =>
       prev.map(m => (m.id === msg.id ? { ...m, is_pinned: nextPinned } : m))
     );
@@ -550,7 +703,6 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         action
       });
 
-      // Broadcast pin toggle to peers
       Object.values(activeConnsRef.current).forEach(conn => {
         try {
           if (conn.open) {
@@ -569,7 +721,6 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       );
     } catch (err) {
       toast.error(isBn ? 'পিন আপডেট করা সম্ভব হয়নি।' : 'Failed to update pin state.');
-      // Revert on error
       setChatMessages(prev =>
         prev.map(m => (m.id === msg.id ? { ...m, is_pinned: msg.is_pinned } : m))
       );
@@ -616,13 +767,23 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           <span className="text-xs font-bold text-slate-200 truncate max-w-xs md:max-w-md">
             {meetingTitle || (isBn ? 'লাইভ কনফারেন্স রুম' : 'Creative Computer Academy Live Conference')}
           </span>
+          {isMeHost && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+              <FiStar size={10} className="fill-amber-400" /> {isBn ? 'হোস্ট নিয়ন্ত্রণ সক্রিয়' : 'Host Controls Active'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+          {/* Participant Count Pill (Click to open list & promote co-hosts) */}
+          <button
+            onClick={() => setParticipantsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-xs font-bold transition cursor-pointer"
+            title={isBn ? 'সদস্য তালিকা ও কো-হোস্ট পরিচালনা করুন' : 'Click to view & manage participants'}
+          >
             <FiUsers size={12} />
             <span>{totalInRoom} {isBn ? 'জন যুক্ত' : 'in room'}</span>
-          </div>
+          </button>
 
           <button
             onClick={copyRoomLink}
@@ -697,9 +858,13 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                         <RemoteVideoTile
                           remotePeerId={peerId}
                           stream={remote.stream}
+                          userId={remote.userId}
                           userName={remote.userName}
                           role={remote.role}
                           avatar={remote.avatar}
+                          isHost={checkIsHost(remote.userId, remote.role)}
+                          canPromote={isMeHost}
+                          onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, checkIsHost(remote.userId, remote.role))}
                           compact
                           isBn={isBn}
                         />
@@ -753,7 +918,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
                   {/* Local Badge Label (Zoom Style Bottom-Left) */}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
-                    <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isBn ? 'আপনি' : 'You'})</span>
+                    <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isMeHost ? (isBn ? 'হোস্ট' : 'Host') : (isBn ? 'আপনি' : 'You')})</span>
+                    {isMeHost && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30">
+                        ⭐ {isBn ? 'হোস্ট' : 'Host'}
+                      </span>
+                    )}
                     {isMuted ? (
                       <FiMicOff className="text-rose-500" size={13} />
                     ) : (
@@ -775,17 +945,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 </div>
 
                 {/* 🌟 REMOTE PARTICIPANT ZOOM CARDS */}
-                {remotePeerList.map(([peerId, remote]) => (
-                  <RemoteVideoTile
-                    key={peerId}
-                    remotePeerId={peerId}
-                    stream={remote.stream}
-                    userName={remote.userName}
-                    role={remote.role}
-                    avatar={remote.avatar}
-                    isBn={isBn}
-                  />
-                ))}
+                {remotePeerList.map(([peerId, remote]) => {
+                  const isRemoteHost = checkIsHost(remote.userId, remote.role);
+                  return (
+                    <RemoteVideoTile
+                      key={peerId}
+                      remotePeerId={peerId}
+                      stream={remote.stream}
+                      userId={remote.userId}
+                      userName={remote.userName}
+                      role={remote.role}
+                      avatar={remote.avatar}
+                      isHost={isRemoteHost}
+                      canPromote={isMeHost}
+                      onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, isRemoteHost)}
+                      isBn={isBn}
+                    />
+                  );
+                })}
 
               </div>
             )}
@@ -851,7 +1028,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 }`}
                 title="Open Live Chat"
               >
-                <FiMessageSquare size={18} />
+                <div className="relative">
+                  <FiMessageSquare size={18} />
+                  {isChatLocked && (
+                    <FiLock size={9} className="absolute -bottom-1 -right-1 text-amber-400" />
+                  )}
+                </div>
                 <span className="text-[10px] font-bold">{isBn ? 'লাইভ চ্যাট' : 'Chat'}</span>
                 {unreadCount > 0 && !chatOpen && (
                   <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black animate-bounce shadow">
@@ -877,11 +1059,11 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
         </div>
 
-        {/* 🌟 IN-MEETING LIVE CHAT DRAWER (With Profile Avatars & Pin Message) */}
+        {/* 🌟 IN-MEETING LIVE CHAT DRAWER */}
         {chatOpen && (
           <div className="w-80 md:w-96 h-full bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 animate-in slide-in-from-right duration-200">
             
-            {/* Chat Header */}
+            {/* Chat Header (With Host Lock/Unlock Controller) */}
             <div className="h-12 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 text-white shrink-0">
               <div className="flex items-center gap-2">
                 <FiMessageSquare size={16} className="text-indigo-400" />
@@ -892,13 +1074,41 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                   {chatMessages.length}
                 </span>
               </div>
-              <button
-                onClick={() => setChatOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                title="Close Chat"
-              >
-                <FiX size={16} />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* 🌟 Host Lock/Unlock Toggle */}
+                {isMeHost ? (
+                  <button
+                    onClick={handleToggleChatLock}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer border ${
+                      isChatLocked
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                    }`}
+                    title={isChatLocked ? 'Click to Unlock Chat for Everyone' : 'Click to Lock Chat for Host Only'}
+                  >
+                    {isChatLocked ? <FiLock size={11} /> : <FiUnlock size={11} />}
+                    <span>{isChatLocked ? (isBn ? 'লকড' : 'Locked') : (isBn ? 'আনলকড' : 'Unlocked')}</span>
+                  </button>
+                ) : (
+                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium border ${
+                    isChatLocked
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    {isChatLocked ? <FiLock size={10} /> : <FiUnlock size={10} />}
+                    <span>{isChatLocked ? (isBn ? 'হোস্ট কেবল' : 'Host Only') : (isBn ? 'উন্মুক্ত' : 'Public')}</span>
+                  </span>
+                )}
+
+                <button
+                  onClick={() => setChatOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  title="Close Chat"
+                >
+                  <FiX size={16} />
+                </button>
+              </div>
             </div>
 
             {/* 🌟 PINNED MESSAGE STICKY BANNER */}
@@ -923,13 +1133,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                   </div>
                 </div>
 
-                <button
-                  onClick={() => togglePinMessage(pinnedMessages[0])}
-                  className="text-slate-400 hover:text-amber-400 p-1 rounded-md text-[10px] font-bold transition cursor-pointer"
-                  title={isBn ? 'আনপিন করুন' : 'Unpin message'}
-                >
-                  <FiX size={13} />
-                </button>
+                {/* Only Host can unpin */}
+                {isMeHost && (
+                  <button
+                    onClick={() => togglePinMessage(pinnedMessages[0])}
+                    className="text-slate-400 hover:text-amber-400 p-1 rounded-md text-[10px] font-bold transition cursor-pointer"
+                    title={isBn ? 'আনপিন করুন' : 'Unpin message'}
+                  >
+                    <FiX size={13} />
+                  </button>
+                )}
               </div>
             )}
 
@@ -945,12 +1158,14 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                   </div>
                   <p className="font-bold text-slate-300">{isBn ? 'এখনও কোনো মেসেজ নেই' : 'No messages yet'}</p>
                   <p className="text-[11px] text-slate-500">
-                    {isBn ? 'এখানে পাঠানো মেসেজ মিটিংয়ের সবাই দেখতে পাবেন।' : 'Messages sent here are visible to everyone in this meeting.'}
+                    {isChatLocked 
+                      ? (isBn ? 'চ্যাট বর্তমানে হোস্ট দ্বারা লক করা রয়েছে। কেবল হোস্ট মেসেজ দিতে পারেন।' : 'Chat is currently locked by the host. Only hosts can post.')
+                      : (isBn ? 'এখানে পাঠানো মেসেজ মিটিংয়ের সবাই দেখতে পাবেন।' : 'Messages sent here are visible to everyone in this meeting.')}
                   </p>
                 </div>
               ) : (
                 chatMessages.map((msg, i) => {
-                  const isMe = msg.user_id === currentUser?.id;
+                  const isMe = Number(msg.user_id) === Number(currentUser?.id);
                   const isPinned = Number(msg.is_pinned) === 1;
                   const avatarUrl = getAvatarUrl(msg.profile_picture);
                   const isHighlighted = highlightedMsgId === msg.id;
@@ -1030,39 +1245,54 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                         </div>
                       </div>
 
-                      {/* 🌟 Hover Pin/Unpin Action Button */}
-                      <button
-                        onClick={() => togglePinMessage(msg)}
-                        className={`opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer self-center shrink-0 ${
-                          isPinned ? '!opacity-100 text-amber-400' : 'text-slate-400 hover:text-amber-400'
-                        }`}
-                        title={isPinned ? (isBn ? 'আনপিন করুন' : 'Unpin message') : (isBn ? 'উপরে পিন করুন' : 'Pin message to top')}
-                      >
-                        📌
-                      </button>
+                      {/* 🌟 Hover Pin/Unpin Action Button (ONLY FOR HOSTS) */}
+                      {isMeHost && (
+                        <button
+                          onClick={() => togglePinMessage(msg)}
+                          className={`opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer self-center shrink-0 ${
+                            isPinned ? '!opacity-100 text-amber-400' : 'text-slate-400 hover:text-amber-400'
+                          }`}
+                          title={isPinned ? (isBn ? 'আনপিন করুন' : 'Unpin message') : (isBn ? 'উপরে পিন করুন' : 'Pin message to top')}
+                        >
+                          📌
+                        </button>
+                      )}
                     </div>
                   );
                 })
               )}
             </div>
 
-            {/* Chat Message Input Footer */}
+            {/* Chat Message Input Footer (With Lock Awareness) */}
             <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center gap-2 shrink-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder={isBn ? 'সবার উদ্দেশ্যে মেসেজ লিখুন...' : 'Type a message to everyone...'}
-                className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
-              />
-              <button
-                type="submit"
-                disabled={!chatInput.trim() || isSending}
-                className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Send Message"
-              >
-                {isSending ? <FiLoader className="animate-spin" size={15} /> : <FiSend size={15} />}
-              </button>
+              {isChatLocked && !isMeHost ? (
+                <div className="flex-1 py-2 px-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2 text-amber-300 text-xs">
+                  <FiLock size={14} className="shrink-0" />
+                  <span className="truncate">{isBn ? 'চ্যাট হোস্ট দ্বারা লক করা রয়েছে।' : 'Chat is locked by host. Only hosts can post.'}</span>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={
+                      isChatLocked 
+                        ? (isBn ? '[হোস্ট ব্রডকাস্ট] বার্তা লিখুন...' : '[Host Broadcast] Type a message...') 
+                        : (isBn ? 'সবার উদ্দেশ্যে মেসেজ লিখুন...' : 'Type a message to everyone...')
+                    }
+                    className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim() || isSending}
+                    className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Send Message"
+                  >
+                    {isSending ? <FiLoader className="animate-spin" size={15} /> : <FiSend size={15} />}
+                  </button>
+                </>
+              )}
             </form>
 
           </div>
@@ -1070,12 +1300,134 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
       </div>
 
+      {/* 🌟 PARTICIPANTS & CO-HOST MANAGEMENT MODAL */}
+      {participantsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-4 text-white">
+            
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <FiUsers className="text-emerald-400" size={18} />
+                <h3 className="text-sm font-black uppercase tracking-wider">
+                  {isBn ? `রুমের সদস্যবৃন্দ (${totalInRoom})` : `Room Participants (${totalInRoom})`}
+                </h3>
+              </div>
+              <button
+                onClick={() => setParticipantsModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+
+            {/* Participant List */}
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+              
+              {/* Local User Row */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center gap-3">
+                  {currentUser?.profile_picture ? (
+                    <img
+                      src={getAvatarUrl(currentUser.profile_picture)}
+                      alt={currentUser.name}
+                      className="w-9 h-9 rounded-full object-cover border border-slate-700"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 flex items-center justify-center text-xs font-black">
+                      {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isBn ? 'আপনি' : 'You'})</span>
+                      {isMeHost && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40">
+                          ⭐ {isBn ? 'হোস্ট' : 'Host'}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-slate-400">{currentUser?.roles?.[0] || 'Member'}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                  {isBn ? 'সক্রিয়' : 'Active'}
+                </span>
+              </div>
+
+              {/* Remote Participants Rows */}
+              {remotePeerList.map(([peerId, remote]) => {
+                const isRemoteHost = checkIsHost(remote.userId, remote.role);
+                const avatarUrl = getAvatarUrl(remote.avatar);
+
+                return (
+                  <div key={peerId} className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                    <div className="flex items-center gap-3">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={remote.userName}
+                          className="w-9 h-9 rounded-full object-cover border border-slate-700"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-black text-white">
+                          {remote.userName ? remote.userName.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>{remote.userName}</span>
+                          {isRemoteHost && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40">
+                              ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400">{remote.role || 'Member'}</p>
+                      </div>
+                    </div>
+
+                    {/* Host action button: Promote/Demote Co-Host */}
+                    {isMeHost && remote.userId ? (
+                      <button
+                        onClick={() => handleToggleCoHost(remote.userId, remote.userName, isRemoteHost)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer border ${
+                          isRemoteHost
+                            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                            : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        {isRemoteHost ? <FiUserX size={12} /> : <FiUserPlus size={12} />}
+                        <span>{isRemoteHost ? (isBn ? 'কো-হোস্ট বাদ দিন' : 'Remove Co-Host') : (isBn ? 'কো-হোস্ট বানান ⭐' : 'Make Co-Host ⭐')}</span>
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setParticipantsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                {isBn ? 'বন্ধ করুন' : 'Close'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
-// 🌟 ZOOM-STYLE REMOTE VIDEO TILE
-function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact = false, isBn = false }) {
+// 🌟 ZOOM-STYLE REMOTE VIDEO TILE (With Host Crown & Quick Co-Host Button)
+function RemoteVideoTile({
+  remotePeerId, stream, userId, userName, role, avatar,
+  compact = false, isHost = false, canPromote = false, onToggleCoHost, isBn = false
+}) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
   const avatarUrl = getAvatarUrl(avatar);
@@ -1096,9 +1448,10 @@ function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact
   }, [stream]);
 
   return (
-    <div className={`relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-center w-full h-full ${
-      compact ? 'rounded-xl' : ''
-    }`}>
+    <div className={`group relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl flex items-center justify-center w-full h-full ${
+      isHost ? 'border-amber-500/40' : 'border-slate-800'
+    } ${compact ? 'rounded-xl' : ''}`}>
+      
       <video
         ref={videoRef}
         autoPlay
@@ -1134,12 +1487,29 @@ function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact
       {/* Zoom-Style Remote User Pill */}
       <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold">
         <span>{userName}</span>
-        {role && (
+        {isHost ? (
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+            ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
+          </span>
+        ) : role ? (
           <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-normal">
             {role}
           </span>
-        )}
+        ) : null}
       </div>
+
+      {/* Quick Host Action on Hover (Top-Right) */}
+      {canPromote && userId && !compact && (
+        <button
+          onClick={onToggleCoHost}
+          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1"
+          title={isHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
+        >
+          <FiStar size={11} className={isHost ? 'fill-amber-400' : ''} />
+          <span>{isHost ? (isBn ? 'পদবী কাটুন' : 'Demote') : (isBn ? 'কো-হোস্ট বানান' : 'Make Co-Host')}</span>
+        </button>
+      )}
+
     </div>
   );
 }

@@ -26,13 +26,21 @@ if (empty($roomId) || !$messageId || !$userId) {
 }
 
 try {
-    $mStmt = $db->prepare("SELECT id FROM academy_meetings WHERE room_id = :rid LIMIT 1");
+    $mStmt = $db->prepare("SELECT id, created_by, hosts_json FROM academy_meetings WHERE room_id = :rid LIMIT 1");
     $mStmt->execute([':rid' => $roomId]);
     $meeting = $mStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$meeting) {
         http_response_code(404);
         echo json_encode(["status" => "error", "message" => "Meeting not found."]);
+        exit;
+    }
+
+    // Verify user is Host or Co-Host
+    $isHost = MeetingDbHelper::isUserHost($db, $meeting, $userId);
+    if (!$isHost) {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Only meeting hosts or co-hosts can pin messages."]);
         exit;
     }
 

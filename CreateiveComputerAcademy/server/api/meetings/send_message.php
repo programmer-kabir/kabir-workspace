@@ -27,7 +27,7 @@ if (empty($roomId) || !$userId || empty($message)) {
 }
 
 try {
-    $mStmt = $db->prepare("SELECT id FROM academy_meetings WHERE room_id = :rid LIMIT 1");
+    $mStmt = $db->prepare("SELECT id, created_by, hosts_json, is_chat_locked FROM academy_meetings WHERE room_id = :rid LIMIT 1");
     $mStmt->execute([':rid' => $roomId]);
     $meeting = $mStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -38,6 +38,17 @@ try {
     }
 
     $meetingId = (int)$meeting['id'];
+    $isChatLocked = isset($meeting['is_chat_locked']) ? (int)$meeting['is_chat_locked'] : 1;
+
+    // If chat is locked, only Hosts / Co-Hosts can send messages
+    if ($isChatLocked === 1) {
+        $isHost = MeetingDbHelper::isUserHost($db, $meeting, $userId, $userRole);
+        if (!$isHost) {
+            http_response_code(403);
+            echo json_encode(["status" => "error", "message" => "Chat is currently locked by the host."]);
+            exit;
+        }
+    }
 
     $insStmt = $db->prepare("
         INSERT INTO meeting_messages (meeting_id, user_id, user_name, user_role, message, created_at)

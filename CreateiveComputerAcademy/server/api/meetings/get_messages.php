@@ -20,7 +20,7 @@ if (empty($roomId)) {
 }
 
 try {
-    $mStmt = $db->prepare("SELECT id FROM academy_meetings WHERE room_id = :rid LIMIT 1");
+    $mStmt = $db->prepare("SELECT id, created_by, hosts_json, is_chat_locked FROM academy_meetings WHERE room_id = :rid LIMIT 1");
     $mStmt->execute([':rid' => $roomId]);
     $meeting = $mStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,6 +31,14 @@ try {
     }
 
     $meetingId = (int)$meeting['id'];
+    $isChatLocked = isset($meeting['is_chat_locked']) ? (int)$meeting['is_chat_locked'] : 1;
+
+    $hosts = !empty($meeting['hosts_json']) ? json_decode($meeting['hosts_json'], true) : [];
+    if (!is_array($hosts)) $hosts = [];
+    $hosts = array_map('intval', $hosts);
+    if (!in_array((int)$meeting['created_by'], $hosts)) {
+        $hosts[] = (int)$meeting['created_by'];
+    }
 
     if ($afterId > 0) {
         $stmt = $db->prepare("
@@ -60,8 +68,11 @@ try {
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
-        "status"   => "success",
-        "messages" => $messages
+        "status"         => "success",
+        "is_chat_locked" => $isChatLocked,
+        "hosts"          => $hosts,
+        "created_by"     => (int)$meeting['created_by'],
+        "messages"       => $messages
     ]);
 
 } catch (PDOException $e) {
