@@ -3,12 +3,13 @@ import axios from 'axios';
 import {
   FiCalendar, FiClock, FiUser, FiEdit2, FiCheckCircle,
   FiXCircle, FiAlertTriangle, FiLoader, FiSave, FiX, FiChevronLeft, FiChevronRight,
-  FiSmartphone, FiMonitor, FiShield, FiMapPin
+  FiSmartphone, FiMonitor, FiShield, FiMapPin, FiZap, FiLogOut
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import AttendanceDeviceDetailsModal from '../components/AttendanceDeviceDetailsModal';
 import BreakRequestsWidget from '../components/BreakRequestsWidget';
+import MasterProxyPunchModal from '../components/MasterProxyPunchModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -187,6 +188,9 @@ const DailyRoster = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [viewingDeviceStaff, setViewingDeviceStaff] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [proxyModalOpen, setProxyModalOpen] = useState(false);
+  const [proxyTargetStaff, setProxyTargetStaff] = useState(null);
+  const [quickPunchLoadingId, setQuickPunchLoadingId] = useState(null);
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
@@ -203,6 +207,32 @@ const DailyRoster = () => {
   }, [date]);
 
   useEffect(() => { fetchRoster(); }, [fetchRoster]);
+
+  const handleQuickPunch = async (staff, punchType) => {
+    setQuickPunchLoadingId(staff.user_id);
+    try {
+      const token = localStorage.getItem('cca_admin_token') || localStorage.getItem('cca_token') || '';
+      const res = await axios.post(`${API_BASE}api/admin/attendance/proxy_punch.php`, {
+        token,
+        admin_id: currentUser?.id,
+        operator_id: currentUser?.id,
+        target_user_id: staff.user_id,
+        punch_type: punchType,
+        punch_date: date,
+        reason: 'System Maintenance / সাইট আপডেট চলছে'
+      });
+      if (res.data.status === 'success') {
+        toast.success(res.data.message || `${punchType === 'check_in' ? 'Check-in' : 'Check-out'} recorded for ${staff.name}!`);
+        fetchRoster();
+      } else {
+        toast.error(res.data.message || 'Failed to record attendance.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Server error. Please try again.');
+    } finally {
+      setQuickPunchLoadingId(null);
+    }
+  };
 
   const changeDate = (delta) => {
     const d = new Date(date);
@@ -244,35 +274,48 @@ const DailyRoster = () => {
           </p>
         </div>
 
-        {/* Date Navigator */}
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-1.5 shadow-sm">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Quick Proxy Punch Action Button */}
           <button
-            onClick={() => changeDate(-1)}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
+            onClick={() => { setProxyTargetStaff(null); setProxyModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
+            title="Admin & Developer Master Proxy Attendance Hub"
           >
-            <FiChevronLeft size={18} />
+            <FiZap size={16} className="text-amber-300 animate-pulse" />
+            <span>Proxy Punch Hub</span>
           </button>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="bg-transparent text-sm font-bold text-slate-800 dark:text-white outline-none cursor-pointer px-1"
-          />
-          <button
-            onClick={() => changeDate(1)}
-            disabled={isToday}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"
-          >
-            <FiChevronRight size={18} />
-          </button>
-          {!isToday && (
+
+          {/* Date Navigator */}
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-1.5 shadow-sm">
             <button
-              onClick={() => setDate(new Date().toISOString().split('T')[0])}
-              className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 px-2.5 py-1.5 rounded-lg transition-colors"
+              onClick={() => changeDate(-1)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
             >
-              Today
+              <FiChevronLeft size={18} />
             </button>
-          )}
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="bg-transparent text-sm font-bold text-slate-800 dark:text-white outline-none cursor-pointer px-1"
+            >
+            </input>
+            <button
+              onClick={() => changeDate(1)}
+              disabled={isToday}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"
+            >
+              <FiChevronRight size={18} />
+            </button>
+            {!isToday && (
+              <button
+                onClick={() => setDate(new Date().toISOString().split('T')[0])}
+                className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                Today
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -348,7 +391,7 @@ const DailyRoster = () => {
                   <th className="text-left px-4 py-4 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Net Work</th>
                   <th className="text-left px-4 py-4 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
                   <th className="text-left px-4 py-4 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Device & Location</th>
-                  <th className="text-center px-4 py-4 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Edit</th>
+                  <th className="text-center px-4 py-4 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Actions / প্রক্সি পাঞ্চ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
@@ -378,9 +421,20 @@ const DailyRoster = () => {
                       </td>
                       {/* Check-In */}
                       <td className="px-4 py-4">
-                        <span className={`text-sm font-bold font-mono ${staff.check_in ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>
-                          {fmt(staff.check_in)}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`text-sm font-bold font-mono ${staff.check_in ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>
+                            {fmt(staff.check_in)}
+                          </span>
+                          {Number(staff.is_admin_override) === 1 && (
+                            <span 
+                              className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-800/40 px-1.5 py-0.5 rounded-md cursor-help shadow-2xs" 
+                              title={`Proxy Override by Admin/Dev${staff.admin_override_reason ? ': ' + staff.admin_override_reason : ''}${staff.punched_by_name ? ' (' + staff.punched_by_name + ')' : ''}`}
+                            >
+                              <FiZap size={9} className="text-purple-500 shrink-0" />
+                              Proxy
+                            </span>
+                          )}
+                        </div>
                       </td>
                       {/* Check-Out */}
                       <td className="px-4 py-4">
@@ -457,15 +511,61 @@ const DailyRoster = () => {
                           <span className="text-slate-300 dark:text-slate-600 text-sm font-mono">—</span>
                         )}
                       </td>
-                      {/* Edit */}
+                      {/* Actions */}
                       <td className="px-4 py-4 text-center">
-                        <button
-                          onClick={() => setEditingStaff(staff)}
-                          className="p-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
-                          title="Edit Attendance"
-                        >
-                          <FiEdit2 size={15} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* If absent: Quick In button */}
+                          {!staff.check_in && (
+                            <button
+                              onClick={() => handleQuickPunch(staff, 'check_in')}
+                              disabled={quickPunchLoadingId === staff.user_id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-black bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                              title="Quick Punch In (সাইট আপডেটের কারণে প্রক্সি চেক-ইন)"
+                            >
+                              {quickPunchLoadingId === staff.user_id ? (
+                                <FiLoader className="animate-spin text-emerald-600" size={13} />
+                              ) : (
+                                <FiCheckCircle className="text-emerald-600" size={13} />
+                              )}
+                              <span>In</span>
+                            </button>
+                          )}
+
+                          {/* If in office: Quick Out button */}
+                          {staff.check_in && !staff.check_out && (
+                            <button
+                              onClick={() => handleQuickPunch(staff, 'check_out')}
+                              disabled={quickPunchLoadingId === staff.user_id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-black bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                              title="Quick Punch Out (সাইট আপডেটের কারণে প্রক্সি চেক-আউট)"
+                            >
+                              {quickPunchLoadingId === staff.user_id ? (
+                                <FiLoader className="animate-spin text-rose-600" size={13} />
+                              ) : (
+                                <FiLogOut className="text-rose-600" size={13} />
+                              )}
+                              <span>Out</span>
+                            </button>
+                          )}
+
+                          {/* Master Proxy Modal Button for this staff */}
+                          <button
+                            onClick={() => { setProxyTargetStaff(staff); setProxyModalOpen(true); }}
+                            className="p-1.5 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 rounded-xl transition-all cursor-pointer shadow-2xs"
+                            title="Open Master Proxy Punch Dialog for this staff"
+                          >
+                            <FiZap size={14} />
+                          </button>
+
+                          {/* Edit Attendance Button */}
+                          <button
+                            onClick={() => setEditingStaff(staff)}
+                            className="p-1.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors cursor-pointer"
+                            title="Edit Attendance Timestamps"
+                          >
+                            <FiEdit2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -497,6 +597,17 @@ const DailyRoster = () => {
           date={date}
         />
       )}
+
+      {/* Master Proxy Punch Modal */}
+      <MasterProxyPunchModal
+        isOpen={proxyModalOpen}
+        onClose={() => { setProxyModalOpen(false); setProxyTargetStaff(null); }}
+        onSuccess={() => { fetchRoster(); }}
+        staffList={rosterData}
+        preselectedStaff={proxyTargetStaff}
+        currentDate={date}
+        adminId={currentUser?.id}
+      />
     </div>
   );
 };

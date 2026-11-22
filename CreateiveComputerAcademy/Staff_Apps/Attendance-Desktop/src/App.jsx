@@ -31,6 +31,7 @@ import SettingsView from './components/SettingsView';
 import DeveloperConsoleView from './components/DeveloperConsoleView';
 import DeveloperEvents from './components/DeveloperEvents';
 import MangoVaultManager from './components/MangoVaultManager';
+import DeveloperProxyAttendance from './components/DeveloperProxyAttendance';
 import BreakLockOverlay from './components/BreakLockOverlay';
 import BreakRequestModal from './components/BreakRequestModal';
 import CommandPalette from './components/CommandPalette';
@@ -291,7 +292,8 @@ function App() {
     '/developer/database': 'Database & Cache Cleaner',
     '/developer/editor': 'Server Code Editor',
     '/developer/events': 'Team Events & Feasts Manager',
-    '/developer/mango-vault': 'Mango Vault & Overtime Debt Manager'
+    '/developer/mango-vault': 'Mango Vault & Overtime Debt Manager',
+    '/developer/proxy-attendance': 'Proxy Attendance & Master Punch Hub'
   };
 
   const renderTabContent = () => {
@@ -457,6 +459,14 @@ function App() {
       return (
         <div className="flex-1 w-full mx-auto">
           <MangoVaultManager onNavigate={setActiveTab} />
+        </div>
+      );
+    }
+
+    if (activeTab === '/developer/proxy-attendance') {
+      return (
+        <div className="flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8">
+          <DeveloperProxyAttendance onNavigate={setActiveTab} />
         </div>
       );
     }

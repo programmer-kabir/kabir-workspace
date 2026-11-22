@@ -28,6 +28,7 @@ const CommunityFeed = React.lazy(() => import('./pages/CommunityFeed'));
 const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
 const DeveloperEvents = React.lazy(() => import('./pages/DeveloperEvents'));
 const MangoVaultManager = React.lazy(() => import('./pages/MangoVaultManager'));
+const DeveloperProxyAttendance = React.lazy(() => import('./pages/DeveloperProxyAttendance'));
 const DesktopAppDownload = React.lazy(() => import('./pages/DesktopAppDownload'));
 const MyWorkstation = React.lazy(() => import('./pages/MyWorkstation'));
 const CareerRankings = React.lazy(() => import('./pages/CareerRankings'));
@@ -278,6 +279,13 @@ function App() {
                 <DeveloperRoute>
                   <AuthenticatedLayout>
                     <MangoVaultManager />
+                  </AuthenticatedLayout>
+                </DeveloperRoute>
+              } />
+              <Route path="/developer/proxy-attendance" element={
+                <DeveloperRoute>
+                  <AuthenticatedLayout>
+                    <DeveloperProxyAttendance />
                   </AuthenticatedLayout>
                 </DeveloperRoute>
               } />

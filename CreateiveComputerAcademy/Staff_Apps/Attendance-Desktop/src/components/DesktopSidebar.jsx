@@ -79,6 +79,7 @@ const DesktopSidebar = ({
     { name: 'Overview', path: '/developer', icon: <FiActivity size={14} />, transKey: 'dev_overview' },
     { name: 'Team Events & Feasts', path: '/developer/events', icon: <FiCalendar size={14} />, transKey: 'dev_events' },
     { name: 'Mango Vault & Leaves 🥭', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span>, transKey: 'dev_mango_vault' },
+    { name: 'Proxy Attendance ⚡', path: '/developer/proxy-attendance', icon: <FiCheckCircle size={14} className="text-emerald-500" />, transKey: 'dev_proxy_attendance' },
     { name: 'User Impersonator', path: '/developer/impersonate', icon: <FiUsers size={14} />, transKey: 'dev_impersonate' },
     { name: 'System Logs', path: '/developer/logs', icon: <FiFileText size={14} />, transKey: 'dev_logs' },
     { name: 'API & Sockets', path: '/developer/api-tester', icon: <FiRadio size={14} />, transKey: 'dev_api_tester' },

@@ -1,9 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
     FiUsers,
     FiSearch,
     FiUserCheck,
     FiRefreshCw,
+    FiZap,
 } from 'react-icons/fi';
 
 const ImpersonatorTab = ({
@@ -169,23 +171,33 @@ const ImpersonatorTab = ({
                                         </div>
                                     </div>
 
-                                    {/* Action Button */}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleImpersonate(u)}
-                                        disabled={isCurrent || isBusy}
-                                        className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-xs ${isCurrent
-                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                                            : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/20 active:scale-98'
-                                            }`}
-                                    >
-                                        {isBusy ? (
-                                            <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                            <FiUserCheck className="w-3.5 h-3.5" />
-                                        )}
-                                        <span>{isCurrent ? 'Current Session' : `Login As ${u.name.split(' ')[0]}`}</span>
-                                    </button>
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleImpersonate(u)}
+                                            disabled={isCurrent || isBusy}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-xs ${isCurrent
+                                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                                : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/20 active:scale-98'
+                                                }`}
+                                        >
+                                            {isBusy ? (
+                                                <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <FiUserCheck className="w-3.5 h-3.5" />
+                                            )}
+                                            <span>{isCurrent ? 'Current Session' : `Login As ${u.name.split(' ')[0]}`}</span>
+                                        </button>
+
+                                        <Link
+                                            to="/developer/proxy-attendance"
+                                            className="px-2.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center shrink-0"
+                                            title="Open Proxy Attendance Punch for this staff"
+                                        >
+                                            <FiZap className="w-3.5 h-3.5" />
+                                        </Link>
+                                    </div>
                                 </div>
                             );
                         })}

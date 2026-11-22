@@ -91,6 +91,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'Overview', transKey: 'dev_overview', path: '/developer', icon: <FiActivity size={14} /> },
     { name: 'Team Events & Feasts', transKey: 'dev_events', path: '/developer/events', icon: <FiCalendar size={14} /> },
     { name: 'Mango Vault & Leaves 🥭', transKey: 'dev_mango_vault', path: '/developer/mango-vault', icon: <span className="text-xs">🥭</span> },
+    { name: 'Proxy Attendance ⚡', transKey: 'dev_proxy_attendance', path: '/developer/proxy-attendance', icon: <FiCheckCircle size={14} className="text-emerald-500" /> },
     { name: 'User Impersonator', transKey: 'dev_impersonate', path: '/developer/impersonate', icon: <FiUsers size={14} /> },
     { name: 'System Logs', transKey: 'dev_logs', path: '/developer/logs', icon: <FiFileText size={14} /> },
     { name: 'API & Sockets', transKey: 'dev_api_tester', path: '/developer/api-tester', icon: <FiRadio size={14} /> },

@@ -2,6 +2,7 @@
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
 require_once '../../attendance/AttendanceSecurityHelper.php';
+require_once '../attendance/AttendanceDbHelper.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -10,6 +11,7 @@ date_default_timezone_set('Asia/Dhaka');
 $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
 AttendanceSecurityHelper::ensureTables($db);
+AttendanceDbHelper::ensureSchema($db);
 
 try {
     // Get all active staff with their shift info
@@ -26,11 +28,16 @@ try {
             a.check_in,
             a.check_out,
             a.status as attendance_status,
-            COALESCE(a.is_forgotten_checkout, 0) as is_forgotten_checkout
+            COALESCE(a.is_forgotten_checkout, 0) as is_forgotten_checkout,
+            COALESCE(a.is_admin_override, 0) as is_admin_override,
+            a.punched_by_user_id,
+            a.admin_override_reason,
+            op.name as punched_by_name
         FROM users u
         INNER JOIN user_roles ur ON u.id = ur.user_id
         LEFT JOIN employees e ON u.id = e.user_id
         LEFT JOIN attendance a ON u.id = a.user_id AND a.date = :date
+        LEFT JOIN users op ON a.punched_by_user_id = op.id
         WHERE ur.role IN ('staff', 'manager', 'instructor') AND u.status = 'active'
         ORDER BY u.name ASC
     ";
