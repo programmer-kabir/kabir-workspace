@@ -14,6 +14,7 @@
     "autoprefixer": "^10.5.4",
     "axios": "^1.19.0",
     "framer-motion": "^13.1.0",
+    "peerjs": "^1.5.5",
     "postcss": "^8.5.26",
     "pusher-js": "^8.6.0",
     "react": "^19.2.8",

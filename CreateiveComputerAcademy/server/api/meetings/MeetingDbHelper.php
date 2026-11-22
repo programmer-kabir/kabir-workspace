@@ -36,14 +36,25 @@ class MeetingDbHelper {
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
                 `meeting_id` INT NOT NULL,
                 `user_id` INT NOT NULL,
+                `peer_id` VARCHAR(128) NULL,
                 `joined_at` DATETIME NOT NULL,
                 `left_at` DATETIME NULL,
                 `duration_minutes` INT NOT NULL DEFAULT 0,
+                `last_ping` DATETIME NULL,
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                 INDEX (`meeting_id`),
                 INDEX (`user_id`),
+                INDEX (`peer_id`),
                 INDEX (`joined_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+            // Ensure peer_id exists if table already existed
+            try {
+                $db->exec("ALTER TABLE `meeting_attendance_logs` ADD COLUMN `peer_id` VARCHAR(128) NULL AFTER `user_id`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_attendance_logs` ADD COLUMN `last_ping` DATETIME NULL AFTER `duration_minutes`");
+            } catch (Throwable $e) {}
 
         } catch (Throwable $e) {
             error_log("MeetingDbHelper::ensureSchema error: " . $e->getMessage());
