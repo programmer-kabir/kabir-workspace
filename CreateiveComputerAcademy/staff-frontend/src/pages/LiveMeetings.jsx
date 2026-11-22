@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FiRadio, FiCalendar, FiClock, FiUsers, FiUser, FiArrowRight,
   FiRefreshCw, FiLoader, FiPlay, FiCheckCircle, FiShield,
-  FiVideo, FiSearch, FiCopy, FiCheck
+  FiVideo, FiSearch, FiCopy, FiCheck, FiInfo, FiPlus
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -23,6 +23,22 @@ export default function LiveMeetings() {
   const [scheduledMeetings, setScheduledMeetings] = useState([]);
   const [pastMeetings, setPastMeetings] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Can manage meetings (Admin, Developer, Manager)
+  const canManage = currentUser?.roles &&
+    currentUser.roles.some(r => ['admin', 'developer', 'manager'].includes(r));
+
+  // Modals
+  const [instantModalOpen, setInstantModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [createdMeetingSuccess, setCreatedMeetingSuccess] = useState(null);
+
+  // Form states
+  const [title, setTitle] = useState('');
+  const [agenda, setAgenda] = useState('');
+  const [scheduledStart, setScheduledStart] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchMeetings = useCallback(async () => {
     setLoading(true);
@@ -45,6 +61,100 @@ export default function LiveMeetings() {
     const poll = setInterval(fetchMeetings, 20000);
     return () => clearInterval(poll);
   }, [fetchMeetings]);
+
+  // Handle Launch Instant
+  const handleLaunchInstant = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error(isBn ? 'মিটিংয়ের শিরোনাম আবশ্যক।' : 'Meeting title is required.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('cca_token') || localStorage.getItem('cca_admin_token') || '';
+      const res = await axios.post(`${API_BASE}api/meetings/create_meeting.php`, {
+        token,
+        admin_id: currentUser?.id,
+        user_id: currentUser?.id,
+        title: title.trim(),
+        agenda: agenda.trim() || null,
+        meeting_type: 'instant'
+      });
+
+      if (res.data.status === 'success') {
+        toast.success(isBn ? 'ইনস্ট্যান্ট মিটিং শুরু হয়েছে!' : 'Instant conference launched!');
+        setInstantModalOpen(false);
+        const createdTitle = title.trim();
+        const createdAgenda = agenda.trim() || null;
+        setTitle('');
+        setAgenda('');
+        fetchMeetings();
+        setCreatedMeetingSuccess({
+          room_id: res.data.room_id,
+          title: res.data.title || createdTitle,
+          agenda: createdAgenda,
+          type: 'instant',
+          meeting_url: `${window.location.origin}/meetings/${res.data.room_id}`
+        });
+      } else {
+        toast.error(res.data.message || 'Failed to start meeting.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Server error.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle Schedule Meeting
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !scheduledStart) {
+      toast.error(isBn ? 'শিরোনাম ও তারিখ/সময় আবশ্যক।' : 'Title and Scheduled Date/Time are required.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('cca_token') || localStorage.getItem('cca_admin_token') || '';
+      const res = await axios.post(`${API_BASE}api/meetings/create_meeting.php`, {
+        token,
+        admin_id: currentUser?.id,
+        user_id: currentUser?.id,
+        title: title.trim(),
+        agenda: agenda.trim() || null,
+        meeting_type: 'scheduled',
+        scheduled_start: scheduledStart.replace('T', ' ') + ':00'
+      });
+
+      if (res.data.status === 'success') {
+        toast.success(isBn ? 'মিটিং সফলভাবে শিডিউল করা হয়েছে!' : 'Meeting scheduled successfully!');
+        setScheduleModalOpen(false);
+        const schedTitle = title.trim();
+        const schedAgenda = agenda.trim() || null;
+        const schedTime = scheduledStart;
+        setTitle('');
+        setAgenda('');
+        setScheduledStart('');
+        fetchMeetings();
+        setCreatedMeetingSuccess({
+          room_id: res.data.room_id,
+          title: res.data.title || schedTitle,
+          agenda: schedAgenda,
+          type: 'scheduled',
+          scheduled_start: schedTime,
+          meeting_url: `${window.location.origin}/meetings/${res.data.room_id}`
+        });
+      } else {
+        toast.error(res.data.message || 'Failed to schedule meeting.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Server error.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const copyRoomId = (roomId) => {
     navigator.clipboard.writeText(roomId);
@@ -137,15 +247,34 @@ export default function LiveMeetings() {
           </div>
         </div>
 
-        {/* Sync bar */}
-        <div className="relative z-10 flex items-center justify-between pt-5 mt-5 border-t border-white/10">
-          <span className="text-xs text-slate-400">
-            {isBn ? 'স্ট্যাটাস প্রতি ২০ সেকেন্ড পর পর স্বয়ংক্রিয়ভাবে রিফ্রেশ হয়' : 'Live meetings refresh automatically every 20 seconds'}
-          </span>
+        {/* Action Controls & Sync Bar */}
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pt-6 mt-6 border-t border-white/10">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {canManage && (
+              <>
+                <button
+                  onClick={() => setInstantModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-400 text-white font-black rounded-2xl text-xs shadow-lg shadow-rose-500/25 transition-all transform active:scale-95 cursor-pointer"
+                >
+                  <FiPlay size={13} className="fill-current" />
+                  <span>{isBn ? '⚡ ইনস্ট্যান্ট মিটিং শুরু করুন' : '⚡ Start Instant Meeting'}</span>
+                </button>
+
+                <button
+                  onClick={() => setScheduleModalOpen(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 bg-white/10 hover:bg-white/15 backdrop-blur-md text-white font-bold rounded-2xl text-xs border border-white/15 shadow-sm transition-all transform active:scale-95 cursor-pointer"
+                >
+                  <FiCalendar size={13} />
+                  <span>{isBn ? '📅 শিডিউল করুন' : '📅 Schedule Meeting'}</span>
+                </button>
+              </>
+            )}
+          </div>
+
           <button
             onClick={fetchMeetings}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-white/10 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-white/10 transition cursor-pointer"
           >
             <FiRefreshCw size={12} className={loading ? 'animate-spin text-rose-400' : ''} />
             <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
@@ -359,6 +488,261 @@ export default function LiveMeetings() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL: LAUNCH INSTANT MEETING (STAFF/DEV) */}
+      {instantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
+                  <FiRadio size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    {isBn ? 'ইনস্ট্যান্ট মিটিং শুরু করুন' : 'Start Instant Conference'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {isBn ? 'তাৎক্ষণিক রুম চালু হবে ও স্টাফদের কাছে রিং যাবে' : 'Launch now with immediate staff notification'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setInstantModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleLaunchInstant} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  {isBn ? 'মিটিংয়ের শিরোনাম *' : 'Meeting Title *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={isBn ? 'যেমন: ডিজাইন পর্যালোচনা ও টিম মিটিং' : 'e.g. Design Review & Standup'}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  {isBn ? 'আলোচনার বিষয় / নোট (ঐচ্ছিক)' : 'Agenda / Notes (Optional)'}
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={isBn ? 'মিটিংয়ের বিষয়বস্তু...' : 'Key talking points or topics...'}
+                  value={agenda}
+                  onChange={(e) => setAgenda(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500 resize-none transition"
+                />
+              </div>
+
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-700 dark:text-rose-300 text-[11px] flex items-start gap-2.5">
+                <FiInfo size={16} className="shrink-0 mt-0.5 text-rose-500" />
+                <span>
+                  {isBn 
+                    ? 'মিটিং চালু হওয়ার সাথে সাথে অ্যাকাডেমির সকল সক্রিয় সদস্যের কাছে জয়েন লিংকসহ নোটিফিকেশন যাবে।'
+                    : 'All active staff members will immediately receive a live broadcast chime with a 1-click Join link.'}
+                </span>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setInstantModalOpen(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl cursor-pointer transition"
+                >
+                  {isBn ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-xl shadow-lg shadow-rose-600/30 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? (isBn ? 'চালু হচ্ছে...' : 'Launching...') : (isBn ? '🚀 মিটিং চালু করুন' : '🚀 Launch Room Now')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📅 MODAL: SCHEDULE MEETING (STAFF/DEV) */}
+      {scheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center border border-sky-500/20">
+                  <FiCalendar size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    {isBn ? 'মিটিং শিডিউল করুন' : 'Schedule Academy Meeting'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {isBn ? 'ভবিষ্যতের জন্য নির্দিষ্ট সময় নির্ধারণ করুন' : 'Set a future date and time for your team'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setScheduleModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  {isBn ? 'মিটিংয়ের শিরোনাম *' : 'Meeting Title *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={isBn ? 'যেমন: মাসিক প্রজেক্ট ব্রিফিং' : 'e.g. Monthly Staff Review & Roadmap'}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  {isBn ? 'নির্ধারিত তারিখ ও সময় *' : 'Scheduled Date & Time *'}
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={scheduledStart}
+                  onChange={(e) => setScheduledStart(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  {isBn ? 'আলোচনার বিষয় (ঐচ্ছিক)' : 'Agenda / Notes (Optional)'}
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder={isBn ? 'বিষয়বস্তুর বিবরণ...' : 'Discussion points...'}
+                  value={agenda}
+                  onChange={(e) => setAgenda(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500 resize-none transition"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl cursor-pointer transition"
+                >
+                  {isBn ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-black rounded-xl shadow-md transition disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? (isBn ? 'সংরক্ষণ হচ্ছে...' : 'Scheduling...') : (isBn ? 'শিডিউল নিশ্চিত করুন' : 'Save Schedule')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🎉 MODAL: MEETING CREATED SUCCESS POPUP */}
+      {createdMeetingSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6 md:p-7 text-center relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="pointer-events-none absolute -right-12 -top-12 w-44 h-44 rounded-full bg-rose-500/15 blur-2xl" />
+            <div className="pointer-events-none absolute -left-12 -bottom-12 w-44 h-44 rounded-full bg-emerald-500/15 blur-2xl" />
+
+            {/* Success Icon */}
+            <div className="relative mx-auto w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-4 animate-bounce">
+              <FiCheck size={32} className="stroke-[3]" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-2">
+              <span>{isBn ? '🎉 মিটিং সফলভাবে তৈরি হয়েছে' : '🎉 Meeting Created Successfully'}</span>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 dark:text-white">
+              {createdMeetingSuccess.title}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              {createdMeetingSuccess.type === 'instant' 
+                ? (isBn ? 'লাইভ কনফারেন্স সক্রিয় হয়েছে ও সকল সদস্যকে নোটিফিকেশন পাঠানো হয়েছে!' : 'Live studio broadcast is active and all staff have received an instant chime!')
+                : (isBn ? 'মিটিংটি সফলভাবে শিডিউল করা হয়েছে।' : 'Meeting has been successfully scheduled into the academy calendar.')}
+            </p>
+
+            {/* Room ID & Link Card */}
+            <div className="my-5 p-4 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700/80 text-left space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {isBn ? 'মিটিং রুম আইডি' : 'Meeting Room ID'}
+                </span>
+                <span className="font-mono font-bold text-slate-800 dark:text-white">{createdMeetingSuccess.room_id}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={createdMeetingSuccess.meeting_url}
+                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 dark:text-slate-300 outline-none"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdMeetingSuccess.meeting_url);
+                    setLinkCopied(true);
+                    toast.success(isBn ? 'মিটিং লিংক কপি হয়েছে!' : 'Meeting link copied to clipboard!');
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  {linkCopied ? <FiCheck size={13} className="text-emerald-400" /> : <FiCopy size={13} />}
+                  <span>{linkCopied ? (isBn ? 'কপি হয়েছে' : 'Copied!') : (isBn ? 'কপি' : 'Copy')}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => setCreatedMeetingSuccess(null)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                {isBn ? 'বন্ধ করুন ও এখানেই থাকুন' : 'Close & Stay Here'}
+              </button>
+
+              {createdMeetingSuccess.type === 'instant' && (
+                <button
+                  onClick={() => {
+                    const rid = createdMeetingSuccess.room_id;
+                    setCreatedMeetingSuccess(null);
+                    navigate(`/meetings/${rid}`);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-xl text-xs shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <FiPlay size={13} className="fill-current" />
+                  <span>{isBn ? 'এখনই রুমে যোগ দিন' : 'Enter Room Now'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

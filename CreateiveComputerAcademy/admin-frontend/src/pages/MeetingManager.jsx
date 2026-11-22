@@ -27,10 +27,12 @@ export default function MeetingManager() {
   // Modals
   const [instantModalOpen, setInstantModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [createdMeetingSuccess, setCreatedMeetingSuccess] = useState(null);
   const [selectedMeetingForAttendees, setSelectedMeetingForAttendees] = useState(null);
   const [attendees, setAttendees] = useState([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -83,9 +85,18 @@ export default function MeetingManager() {
       if (res.data.status === 'success') {
         toast.success('Instant conference launched! Alerting all staff members...');
         setInstantModalOpen(false);
+        const createdTitle = title.trim();
+        const createdAgenda = agenda.trim() || null;
         setTitle('');
         setAgenda('');
-        navigate(`/meetings/${res.data.room_id}`);
+        fetchMeetings();
+        setCreatedMeetingSuccess({
+          room_id: res.data.room_id,
+          title: res.data.title || createdTitle,
+          agenda: createdAgenda,
+          type: 'instant',
+          meeting_url: `${window.location.origin}/meetings/${res.data.room_id}`
+        });
       } else {
         toast.error(res.data.message || 'Failed to start meeting.');
       }
@@ -120,10 +131,21 @@ export default function MeetingManager() {
       if (res.data.status === 'success') {
         toast.success('Meeting scheduled successfully!');
         setScheduleModalOpen(false);
+        const schedTitle = title.trim();
+        const schedAgenda = agenda.trim() || null;
+        const schedTime = scheduledStart;
         setTitle('');
         setAgenda('');
         setScheduledStart('');
         fetchMeetings();
+        setCreatedMeetingSuccess({
+          room_id: res.data.room_id,
+          title: res.data.title || schedTitle,
+          agenda: schedAgenda,
+          type: 'scheduled',
+          scheduled_start: schedTime,
+          meeting_url: `${window.location.origin}/meetings/${res.data.room_id}`
+        });
       } else {
         toast.error(res.data.message || 'Failed to schedule meeting.');
       }
@@ -823,6 +845,87 @@ export default function MeetingManager() {
                     </div>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎉 MODAL: MEETING CREATED SUCCESS POPUP */}
+      {createdMeetingSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6 md:p-7 text-center relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="pointer-events-none absolute -right-12 -top-12 w-44 h-44 rounded-full bg-rose-500/15 blur-2xl" />
+            <div className="pointer-events-none absolute -left-12 -bottom-12 w-44 h-44 rounded-full bg-emerald-500/15 blur-2xl" />
+
+            {/* Success Icon */}
+            <div className="relative mx-auto w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-4 animate-bounce">
+              <FiCheck size={32} className="stroke-[3]" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-2">
+              <span>🎉 Meeting Created Successfully</span>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 dark:text-white">
+              {createdMeetingSuccess.title}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              {createdMeetingSuccess.type === 'instant' 
+                ? 'Live studio broadcast is active and all staff members have received an instant notification chime!' 
+                : 'Meeting has been successfully scheduled into the academy calendar.'}
+            </p>
+
+            {/* Room ID & Link Card */}
+            <div className="my-5 p-4 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700/80 text-left space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Meeting Room ID</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-white">{createdMeetingSuccess.room_id}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={createdMeetingSuccess.meeting_url}
+                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 dark:text-slate-300 outline-none"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdMeetingSuccess.meeting_url);
+                    setLinkCopied(true);
+                    toast.success('Meeting link copied to clipboard!');
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  {linkCopied ? <FiCheck size={13} className="text-emerald-400" /> : <FiCopy size={13} />}
+                  <span>{linkCopied ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => setCreatedMeetingSuccess(null)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Close & Stay Here
+              </button>
+
+              {createdMeetingSuccess.type === 'instant' && (
+                <button
+                  onClick={() => {
+                    const rid = createdMeetingSuccess.room_id;
+                    setCreatedMeetingSuccess(null);
+                    navigate(`/meetings/${rid}`);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-xl text-xs shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <FiPlay size={13} className="fill-current" />
+                  <span>Enter Room Now</span>
+                </button>
               )}
             </div>
           </div>

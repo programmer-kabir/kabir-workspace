@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
+import GlobalLiveMeetingAlert from '../components/GlobalLiveMeetingAlert';
 import { useAuth } from '../context/AuthContext';
 import { toast, Toaster } from 'sonner';
 import { showLuxuryToast } from '../components/LuxuryToast';
@@ -130,6 +131,9 @@ const AdminLayout = ({ children }) => {
         <main className={`flex-1 min-h-0 ${isMessagesPage ? 'overflow-hidden ' : 'overflow-y-auto custom-scrollbar p-8 '} dark:bg-slate-900`}>
           {children}
         </main>
+
+        {/* Global Floating Live Meeting Alert */}
+        <GlobalLiveMeetingAlert />
       </div>
     </div>
   );

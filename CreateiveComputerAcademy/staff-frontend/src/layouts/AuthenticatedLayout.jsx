@@ -13,6 +13,7 @@ import HeaderProfileDropdown from '../components/HeaderProfileDropdown';
 import CommandPalette from '../components/CommandPalette';
 import BreakRequestModal from '../components/BreakRequestModal';
 import BreakLockOverlay from '../components/BreakLockOverlay';
+import GlobalLiveMeetingAlert from '../components/GlobalLiveMeetingAlert';
 import { Toaster, toast } from 'sonner';
 import LuxuryToastContainer, { showLuxuryToast } from '../components/LuxuryToast';
 import Pusher from 'pusher-js';
@@ -305,6 +306,9 @@ const AuthenticatedLayout = ({ children }) => {
             {children}
           </div>
         </main>
+
+        {/* Global Floating Live Meeting Alert */}
+        <GlobalLiveMeetingAlert />
 
         {/* Sleek Mobile Bottom Navigation Bar */}
         <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
