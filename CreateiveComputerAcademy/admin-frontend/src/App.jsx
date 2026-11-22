@@ -42,6 +42,8 @@ import ServerCodeEditor from './pages/ServerCodeEditor';
 import NotFound from './pages/NotFound';
 import TeamEvents from './pages/TeamEvents';
 import HolidaysManagement from './pages/HolidaysManagement';
+import MeetingManager from './pages/MeetingManager';
+import AdminMeetingRoom from './pages/AdminMeetingRoom';
 // Mock empty pages to avoid errors
 const Placeholder = ({ title }) => (
   <div className="flex items-center justify-center h-full bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[400px]">
@@ -115,6 +117,18 @@ function App() {
           <Route path="/reviewers" element={
             <ProtectedRoute>
               <AdminLayout><ReviewerDirectory /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/meetings" element={
+            <ProtectedRoute>
+              <AdminLayout><MeetingManager /></AdminLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/meetings/:roomId" element={
+            <ProtectedRoute>
+              <AdminLayout><AdminMeetingRoom /></AdminLayout>
             </ProtectedRoute>
           } />
 

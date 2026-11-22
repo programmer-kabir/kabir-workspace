@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
-import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud, FiCode, FiFilm, FiUser } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiCheckSquare, FiClock, FiCalendar, FiSettings, FiLogOut, FiBarChart2, FiMessageSquare, FiDatabase, FiChevronDown, FiBookOpen, FiLayers, FiAward, FiVideo, FiDollarSign, FiShare2, FiMonitor, FiHardDrive, FiDownloadCloud, FiCode, FiFilm, FiUser, FiRadio } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -118,6 +118,7 @@ const AdminSidebar = ({ isOpen = true }) => {
     { name: 'Community Wall', path: '/community', icon: <FiShare2 size={18} className="text-violet-500" /> },
     { name: 'Team Feasts & Tours 🎉', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { name: 'Academy Feed / Blog', path: '/blogs', icon: <FiBookOpen size={18} className="text-indigo-500" /> },
+    { name: 'Live Meetings 🎙️', path: '/meetings', icon: <FiRadio size={18} className="text-rose-500" /> },
     { name: 'Message', path: '/messages', icon: <FiMessageSquare size={18} /> },
     { name: 'Brand Kit & Assets', path: '/brand-resources', icon: <HiSparkles size={18} className="text-amber-400" /> },
     { name: 'Database Manager', path: '/database', icon: <FiDatabase size={18} /> },

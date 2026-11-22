@@ -29,6 +29,8 @@ const DeveloperConsole = React.lazy(() => import('./pages/DeveloperConsole'));
 const DeveloperEvents = React.lazy(() => import('./pages/DeveloperEvents'));
 const MangoVaultManager = React.lazy(() => import('./pages/MangoVaultManager'));
 const DeveloperProxyAttendance = React.lazy(() => import('./pages/DeveloperProxyAttendance'));
+const LiveMeetings = React.lazy(() => import('./pages/LiveMeetings'));
+const MeetingRoom = React.lazy(() => import('./pages/MeetingRoom'));
 const DesktopAppDownload = React.lazy(() => import('./pages/DesktopAppDownload'));
 const MyWorkstation = React.lazy(() => import('./pages/MyWorkstation'));
 const CareerRankings = React.lazy(() => import('./pages/CareerRankings'));
@@ -57,6 +59,20 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <Messages />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/meetings" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <LiveMeetings />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/meetings/:roomId" element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <MeetingRoom />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               } />
