@@ -5,7 +5,7 @@
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
 require_once '../../notifications/notification_helper.php';
-require_once '../attendance/AttendanceDbHelper.php';
+require_once '../../attendance/AttendanceDbHelper.php';
 require_once '../../attendance/AttendanceSecurityHelper.php';
 
 $database = new Database();

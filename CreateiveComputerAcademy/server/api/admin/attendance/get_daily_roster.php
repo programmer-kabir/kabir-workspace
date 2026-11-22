@@ -2,7 +2,7 @@
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
 require_once '../../attendance/AttendanceSecurityHelper.php';
-require_once '../attendance/AttendanceDbHelper.php';
+require_once '../../attendance/AttendanceDbHelper.php';
 
 $database = new Database();
 $db = $database->getConnection();

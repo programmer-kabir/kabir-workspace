@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-  FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
+  FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText, FiCheckCircle,
   FiMessageSquare, FiSettings, FiX, FiCoffee, FiBookOpen, FiVideo,
   FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiCheckSquare
 } from 'react-icons/fi';

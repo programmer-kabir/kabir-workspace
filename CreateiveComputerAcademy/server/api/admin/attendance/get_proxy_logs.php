@@ -2,7 +2,7 @@
 // get_proxy_logs.php - Fetch Proxy Attendance Audit Trail
 require_once '../../../config/cors.php';
 require_once '../../../config/database.php';
-require_once '../attendance/AttendanceDbHelper.php';
+require_once '../../attendance/AttendanceDbHelper.php';
 
 $database = new Database();
 $db = $database->getConnection();
