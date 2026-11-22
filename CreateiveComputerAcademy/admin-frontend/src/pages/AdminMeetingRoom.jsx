@@ -155,6 +155,7 @@ export default function AdminMeetingRoom() {
       <MeetingRoomView
         roomId={roomId}
         meetingTitle={meeting?.title || 'CCA Studio Broadcast'}
+        creatorId={meeting?.created_by}
         currentUser={currentUser}
         onLeave={() => navigate('/meetings')}
       />

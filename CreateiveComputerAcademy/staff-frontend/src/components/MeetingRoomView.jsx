@@ -59,7 +59,7 @@ function createFallbackStream() {
   return new MediaStream(tracks);
 }
 
-export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onLeave }) {
+export default function MeetingRoomView({ roomId, meetingTitle, creatorId, currentUser, onLeave }) {
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
@@ -81,9 +81,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
   // Host & Permission State
   const [hostsList, setHostsList] = useState([]); // array of user IDs
-  const [meetingCreatorId, setMeetingCreatorId] = useState(null);
+  const [meetingCreatorId, setMeetingCreatorId] = useState(creatorId ? Number(creatorId) : null);
   const [isChatLocked, setIsChatLocked] = useState(true); // default locked at start!
   const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
+
+  // Keep creatorId synced if passed as prop
+  useEffect(() => {
+    if (creatorId) {
+      setMeetingCreatorId(Number(creatorId));
+    }
+  }, [creatorId]);
 
   // Live Chat state
   const [chatOpen, setChatOpen] = useState(false);
@@ -93,19 +100,34 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const [isSending, setIsSending] = useState(false);
   const [highlightedMsgId, setHighlightedMsgId] = useState(null);
 
-  // Helper to determine if a given user is a Host / Co-Host
-  const checkIsHost = useCallback((userId, role) => {
-    if (!userId) return false;
-    if (Number(currentUser?.id) === Number(userId)) {
-      const isRoleAdmin = currentUser?.roles?.some(r => ['admin', 'developer', 'superadmin'].includes(r.toLowerCase()));
-      if (isRoleAdmin) return true;
+  // Determine exact host tier: 'host' (original creator), 'co_host' (promoted or developer/admin), or 'member'
+  const getUserHostTier = useCallback((userId, role) => {
+    if (!userId) return 'member';
+    const numId = Number(userId);
+
+    // 1. Primary meeting creator is always the main 'host'
+    if (meetingCreatorId && numId === Number(meetingCreatorId)) {
+      return 'host';
     }
-    if (role && ['admin', 'developer', 'superadmin'].includes(role.toLowerCase())) return true;
-    if (meetingCreatorId && Number(meetingCreatorId) === Number(userId)) return true;
-    return hostsList.includes(Number(userId));
+
+    // 2. Appointed Co-Hosts or Developer/Admin joining
+    if (hostsList.includes(numId)) {
+      return 'co_host';
+    }
+    if (Number(currentUser?.id) === numId) {
+      const isSuper = currentUser?.roles?.some(r => ['admin', 'developer', 'superadmin'].includes(r.toLowerCase()));
+      if (isSuper) return 'co_host';
+    }
+    if (role && ['admin', 'developer', 'superadmin'].includes(role.toLowerCase())) {
+      return 'co_host';
+    }
+
+    return 'member';
   }, [currentUser?.id, currentUser?.roles, meetingCreatorId, hostsList]);
 
-  const isMeHost = checkIsHost(currentUser?.id, currentUser?.roles?.[0]);
+  const myHostTier = getUserHostTier(currentUser?.id, currentUser?.roles?.[0]);
+  const isMeHost = myHostTier === 'host' || myHostTier === 'co_host';
+  const isMePrimaryHost = myHostTier === 'host';
 
   // Background attendance logger (stable ref, never causes re-renders)
   const logAttendance = useCallback(async (action, pId) => {
@@ -332,6 +354,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           if (!isMounted) return;
           // Log join & fetch current active peers
           const res = await logAttendance('join', id);
+          if (res?.created_by) setMeetingCreatorId(Number(res.created_by));
+          if (Array.isArray(res?.hosts)) setHostsList(res.hosts.map(Number));
+          if (typeof res?.is_chat_locked !== 'undefined') setIsChatLocked(Boolean(res.is_chat_locked));
           const activePeers = res?.active_peers || [];
 
           // Connect to each existing peer in the room
@@ -767,11 +792,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           <span className="text-xs font-bold text-slate-200 truncate max-w-xs md:max-w-md">
             {meetingTitle || (isBn ? 'লাইভ কনফারেন্স রুম' : 'Creative Computer Academy Live Conference')}
           </span>
-          {isMeHost && (
+          {myHostTier === 'host' ? (
             <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider">
-              <FiStar size={10} className="fill-amber-400" /> {isBn ? 'হোস্ট নিয়ন্ত্রণ সক্রিয়' : 'Host Controls Active'}
+              👑 {isBn ? 'হোস্ট নিয়ন্ত্রণ সক্রিয়' : 'HOST CONTROLS ACTIVE'}
             </span>
-          )}
+          ) : myHostTier === 'co_host' ? (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+              ⭐ {isBn ? 'কো-হোস্ট নিয়ন্ত্রণ সক্রিয়' : 'CO-HOST CONTROLS ACTIVE'}
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -853,23 +882,26 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 {/* Filmstrip of Participants (Zoom Style) */}
                 {remotePeerList.length > 0 && (
                   <div className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0">
-                    {remotePeerList.map(([peerId, remote]) => (
-                      <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
-                        <RemoteVideoTile
-                          remotePeerId={peerId}
-                          stream={remote.stream}
-                          userId={remote.userId}
-                          userName={remote.userName}
-                          role={remote.role}
-                          avatar={remote.avatar}
-                          isHost={checkIsHost(remote.userId, remote.role)}
-                          canPromote={isMeHost}
-                          onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, checkIsHost(remote.userId, remote.role))}
-                          compact
-                          isBn={isBn}
-                        />
-                      </div>
-                    ))}
+                    {remotePeerList.map(([peerId, remote]) => {
+                      const remoteTier = getUserHostTier(remote.userId, remote.role);
+                      return (
+                        <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
+                          <RemoteVideoTile
+                            remotePeerId={peerId}
+                            stream={remote.stream}
+                            userId={remote.userId}
+                            userName={remote.userName}
+                            role={remote.role}
+                            avatar={remote.avatar}
+                            tier={remoteTier}
+                            canPromote={isMeHost}
+                            onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
+                            compact
+                            isBn={isBn}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -918,12 +950,19 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
                   {/* Local Badge Label (Zoom Style Bottom-Left) */}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
-                    <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isMeHost ? (isBn ? 'হোস্ট' : 'Host') : (isBn ? 'আপনি' : 'You')})</span>
-                    {isMeHost && (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30">
-                        ⭐ {isBn ? 'হোস্ট' : 'Host'}
+                    <span>
+                      {currentUser?.name || (isBn ? 'আপনি' : 'You')}{' '}
+                      ({myHostTier === 'host' ? (isBn ? 'হোস্ট' : 'Host') : myHostTier === 'co_host' ? (isBn ? 'কো-হোস্ট' : 'Co-Host') : (isBn ? 'আপনি' : 'You')})
+                    </span>
+                    {myHostTier === 'host' ? (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                        👑 {isBn ? 'হোস্ট' : 'Host'}
                       </span>
-                    )}
+                    ) : myHostTier === 'co_host' ? (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40 flex items-center gap-1">
+                        ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
+                      </span>
+                    ) : null}
                     {isMuted ? (
                       <FiMicOff className="text-rose-500" size={13} />
                     ) : (
@@ -946,7 +985,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
                 {/* 🌟 REMOTE PARTICIPANT ZOOM CARDS */}
                 {remotePeerList.map(([peerId, remote]) => {
-                  const isRemoteHost = checkIsHost(remote.userId, remote.role);
+                  const remoteTier = getUserHostTier(remote.userId, remote.role);
                   return (
                     <RemoteVideoTile
                       key={peerId}
@@ -956,9 +995,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                       userName={remote.userName}
                       role={remote.role}
                       avatar={remote.avatar}
-                      isHost={isRemoteHost}
+                      tier={remoteTier}
                       canPromote={isMeHost}
-                      onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, isRemoteHost)}
+                      onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                       isBn={isBn}
                     />
                   );
@@ -1340,11 +1379,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                   <div>
                     <p className="text-xs font-bold text-white flex items-center gap-1.5">
                       <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isBn ? 'আপনি' : 'You'})</span>
-                      {isMeHost && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40">
-                          ⭐ {isBn ? 'হোস্ট' : 'Host'}
+                      {myHostTier === 'host' ? (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                          👑 {isBn ? 'হোস্ট' : 'Host'}
                         </span>
-                      )}
+                      ) : myHostTier === 'co_host' ? (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40 flex items-center gap-1">
+                          ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
+                        </span>
+                      ) : null}
                     </p>
                     <p className="text-[10px] text-slate-400">{currentUser?.roles?.[0] || 'Member'}</p>
                   </div>
@@ -1356,7 +1399,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
               {/* Remote Participants Rows */}
               {remotePeerList.map(([peerId, remote]) => {
-                const isRemoteHost = checkIsHost(remote.userId, remote.role);
+                const remoteTier = getUserHostTier(remote.userId, remote.role);
                 const avatarUrl = getAvatarUrl(remote.avatar);
 
                 return (
@@ -1376,28 +1419,32 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                       <div>
                         <p className="text-xs font-bold text-white flex items-center gap-1.5">
                           <span>{remote.userName}</span>
-                          {isRemoteHost && (
-                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40">
+                          {remoteTier === 'host' ? (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                              👑 {isBn ? 'হোস্ট' : 'Host'}
+                            </span>
+                          ) : remoteTier === 'co_host' ? (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-500/40 flex items-center gap-1">
                               ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
                             </span>
-                          )}
+                          ) : null}
                         </p>
                         <p className="text-[10px] text-slate-400">{remote.role || 'Member'}</p>
                       </div>
                     </div>
 
-                    {/* Host action button: Promote/Demote Co-Host */}
-                    {isMeHost && remote.userId ? (
+                    {/* Host action button: Promote/Demote Co-Host (cannot demote primary meeting creator) */}
+                    {isMeHost && remote.userId && remoteTier !== 'host' ? (
                       <button
-                        onClick={() => handleToggleCoHost(remote.userId, remote.userName, isRemoteHost)}
+                        onClick={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer border ${
-                          isRemoteHost
+                          remoteTier === 'co_host'
                             ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
                             : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
                         }`}
                       >
-                        {isRemoteHost ? <FiUserX size={12} /> : <FiUserPlus size={12} />}
-                        <span>{isRemoteHost ? (isBn ? 'কো-হোস্ট বাদ দিন' : 'Remove Co-Host') : (isBn ? 'কো-হোস্ট বানান ⭐' : 'Make Co-Host ⭐')}</span>
+                        {remoteTier === 'co_host' ? <FiUserX size={12} /> : <FiUserPlus size={12} />}
+                        <span>{remoteTier === 'co_host' ? (isBn ? 'কো-হোস্ট বাদ দিন' : 'Remove Co-Host') : (isBn ? 'কো-হোস্ট বানান ⭐' : 'Make Co-Host ⭐')}</span>
                       </button>
                     ) : null}
                   </div>
@@ -1426,7 +1473,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 // 🌟 ZOOM-STYLE REMOTE VIDEO TILE (With Host Crown & Quick Co-Host Button)
 function RemoteVideoTile({
   remotePeerId, stream, userId, userName, role, avatar,
-  compact = false, isHost = false, canPromote = false, onToggleCoHost, isBn = false
+  compact = false, tier = 'member', canPromote = false, onToggleCoHost, isBn = false
 }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -1447,9 +1494,12 @@ function RemoteVideoTile({
     }
   }, [stream]);
 
+  const isHost = tier === 'host';
+  const isCoHost = tier === 'co_host';
+
   return (
     <div className={`group relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl flex items-center justify-center w-full h-full ${
-      isHost ? 'border-amber-500/40' : 'border-slate-800'
+      isHost ? 'border-amber-400/60 ring-1 ring-amber-400/20' : isCoHost ? 'border-amber-500/40' : 'border-slate-800'
     } ${compact ? 'rounded-xl' : ''}`}>
       
       <video
@@ -1466,10 +1516,14 @@ function RemoteVideoTile({
             <img
               src={avatarUrl}
               alt={userName}
-              className="w-16 h-16 rounded-full object-cover border border-slate-700 shadow-md ring-2 ring-slate-700/50"
+              className={`w-16 h-16 rounded-full object-cover border shadow-md ring-2 ${
+                isHost ? 'border-amber-400 ring-amber-400/40' : isCoHost ? 'border-amber-500/60 ring-amber-500/20' : 'border-slate-700 ring-slate-700/50'
+              }`}
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xl font-black text-white shadow-inner">
+            <div className={`w-16 h-16 rounded-full border flex items-center justify-center text-xl font-black text-white shadow-inner ${
+              isHost ? 'bg-amber-600/30 border-amber-400 text-amber-200' : isCoHost ? 'bg-amber-600/20 border-amber-500/60 text-amber-300' : 'bg-slate-800 border-slate-700 text-white'
+            }`}>
               {userName ? userName.charAt(0).toUpperCase() : 'C'}
             </div>
           )}
@@ -1488,7 +1542,11 @@ function RemoteVideoTile({
       <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold">
         <span>{userName}</span>
         {isHost ? (
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
+            👑 {isBn ? 'হোস্ট' : 'Host'}
+          </span>
+        ) : isCoHost ? (
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 flex items-center gap-1">
             ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
           </span>
         ) : role ? (
@@ -1498,15 +1556,15 @@ function RemoteVideoTile({
         ) : null}
       </div>
 
-      {/* Quick Host Action on Hover (Top-Right) */}
-      {canPromote && userId && !compact && (
+      {/* Quick Host Action on Hover (Top-Right) - Cannot demote primary creator */}
+      {canPromote && userId && !compact && tier !== 'host' && (
         <button
           onClick={onToggleCoHost}
           className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1"
-          title={isHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
+          title={isCoHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
         >
-          <FiStar size={11} className={isHost ? 'fill-amber-400' : ''} />
-          <span>{isHost ? (isBn ? 'পদবী কাটুন' : 'Demote') : (isBn ? 'কো-হোস্ট বানান' : 'Make Co-Host')}</span>
+          <FiStar size={11} className={isCoHost ? 'fill-amber-400' : ''} />
+          <span>{isCoHost ? (isBn ? 'পদবী কাটুন' : 'Remove Co-Host') : (isBn ? 'কো-হোস্ট বানান' : 'Make Co-Host')}</span>
         </button>
       )}
 

@@ -164,6 +164,7 @@ export default function MeetingRoom() {
       <MeetingRoomView
         roomId={roomId}
         meetingTitle={meeting?.title || (isBn ? 'অ্যাকাডেমি কনফারেন্স' : 'Creative Computer Academy Conference')}
+        creatorId={meeting?.created_by}
         currentUser={currentUser}
         onLeave={() => navigate('/meetings')}
       />

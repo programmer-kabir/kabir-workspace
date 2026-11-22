@@ -27,7 +27,7 @@ if (empty($roomId) || !$userId) {
 
 try {
     // Resolve meeting ID
-    $mStmt = $db->prepare("SELECT id, status, title FROM academy_meetings WHERE room_id = :rid LIMIT 1");
+    $mStmt = $db->prepare("SELECT id, status, title, created_by, hosts_json, is_chat_locked FROM academy_meetings WHERE room_id = :rid LIMIT 1");
     $mStmt->execute([':rid' => $roomId]);
     $meeting = $mStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -134,12 +134,22 @@ try {
     $peersStmt->execute([':mid' => $meetingId, ':uid' => $userId]);
     $activePeers = $peersStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $hosts = !empty($meeting['hosts_json']) ? json_decode($meeting['hosts_json'], true) : [];
+    if (!is_array($hosts)) $hosts = [];
+    $hosts = array_map('intval', $hosts);
+    if (!empty($meeting['created_by']) && !in_array((int)$meeting['created_by'], $hosts)) {
+        $hosts[] = (int)$meeting['created_by'];
+    }
+
     echo json_encode([
-        "status"       => "success",
-        "action"       => $action,
-        "meeting_id"   => $meetingId,
-        "room_id"      => $roomId,
-        "active_peers" => $activePeers
+        "status"         => "success",
+        "action"         => $action,
+        "meeting_id"     => $meetingId,
+        "room_id"        => $roomId,
+        "created_by"     => !empty($meeting['created_by']) ? (int)$meeting['created_by'] : null,
+        "hosts"          => $hosts,
+        "is_chat_locked" => isset($meeting['is_chat_locked']) ? (int)$meeting['is_chat_locked'] : 1,
+        "active_peers"   => $activePeers
     ]);
 
 } catch (PDOException $e) {
