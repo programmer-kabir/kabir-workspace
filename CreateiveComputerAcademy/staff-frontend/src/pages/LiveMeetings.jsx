@@ -82,7 +82,7 @@ export default function LiveMeetings() {
         meeting_type: 'instant'
       });
 
-      if (res.data.status === 'success') {
+      if (res.data.status === 'success' || res.data.room_id || res.data.status === 'active') {
         toast.success(isBn ? 'ইনস্ট্যান্ট মিটিং শুরু হয়েছে!' : 'Instant conference launched!');
         setInstantModalOpen(false);
         const createdTitle = title.trim();
@@ -128,7 +128,7 @@ export default function LiveMeetings() {
         scheduled_start: scheduledStart.replace('T', ' ') + ':00'
       });
 
-      if (res.data.status === 'success') {
+      if (res.data.status === 'success' || res.data.room_id || res.data.status === 'active') {
         toast.success(isBn ? 'মিটিং সফলভাবে শিডিউল করা হয়েছে!' : 'Meeting scheduled successfully!');
         setScheduleModalOpen(false);
         const schedTitle = title.trim();

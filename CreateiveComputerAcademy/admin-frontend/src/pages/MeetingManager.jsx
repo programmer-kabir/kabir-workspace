@@ -82,7 +82,7 @@ export default function MeetingManager() {
         meeting_type: 'instant'
       });
 
-      if (res.data.status === 'success') {
+      if (res.data.status === 'success' || res.data.room_id || res.data.status === 'active') {
         toast.success('Instant conference launched! Alerting all staff members...');
         setInstantModalOpen(false);
         const createdTitle = title.trim();
@@ -128,7 +128,7 @@ export default function MeetingManager() {
         scheduled_start: scheduledStart.replace('T', ' ') + ':00'
       });
 
-      if (res.data.status === 'success') {
+      if (res.data.status === 'success' || res.data.room_id || res.data.status === 'active') {
         toast.success('Meeting scheduled successfully!');
         setScheduleModalOpen(false);
         const schedTitle = title.trim();

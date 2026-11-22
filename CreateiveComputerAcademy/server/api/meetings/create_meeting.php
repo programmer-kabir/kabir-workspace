@@ -133,12 +133,12 @@ try {
     }
 
     echo json_encode([
-        "status"     => "success",
-        "message"    => ($meetingType === 'instant') ? "Instant meeting started successfully!" : "Meeting scheduled successfully!",
-        "meeting_id" => $meetingId,
-        "room_id"    => $roomId,
-        "title"      => $title,
-        "status"     => $status
+        "status"         => "success",
+        "message"        => ($meetingType === 'instant') ? "Instant meeting started successfully!" : "Meeting scheduled successfully!",
+        "meeting_id"     => $meetingId,
+        "room_id"        => $roomId,
+        "title"          => $title,
+        "meeting_status" => $status
     ]);
 
 } catch (PDOException $e) {
