@@ -111,10 +111,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
       return 'co_host';
     }
     if (Number(currentUser?.id) === numId) {
-      const isSuper = currentUser?.roles?.some(r => ['admin', 'developer', 'superadmin'].includes(r.toLowerCase()));
+      const isSuper = currentUser?.roles?.some(r => ['admin', 'developer', 'superadmin', 'dev'].includes(r.toLowerCase()));
       if (isSuper) return 'co_host';
     }
-    if (role && ['admin', 'developer', 'superadmin'].includes(role.toLowerCase())) {
+    if (role && ['admin', 'developer', 'superadmin', 'dev'].includes(role.toLowerCase())) {
       return 'co_host';
     }
 

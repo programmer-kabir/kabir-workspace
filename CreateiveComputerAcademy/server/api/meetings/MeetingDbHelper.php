@@ -114,17 +114,19 @@ class MeetingDbHelper {
             return true;
         }
         // 2. Admin or Developer is always host
-        if ($userRole && in_array(strtolower($userRole), ['admin', 'developer', 'superadmin'])) {
+        if ($userRole && in_array(strtolower($userRole), ['admin', 'developer', 'superadmin', 'dev'])) {
             return true;
         }
         // Check user_roles table if role wasn't passed directly
         if (!$userRole && $db) {
             try {
-                $rStmt = $db->prepare("SELECT role FROM user_roles WHERE user_id = :uid LIMIT 1");
+                $rStmt = $db->prepare("SELECT role FROM user_roles WHERE user_id = :uid");
                 $rStmt->execute([':uid' => $userId]);
-                $rRow = $rStmt->fetch(PDO::FETCH_ASSOC);
-                if ($rRow && in_array(strtolower($rRow['role']), ['admin', 'developer', 'superadmin'])) {
-                    return true;
+                $rRows = $rStmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rRows as $rRow) {
+                    if (in_array(strtolower($rRow['role']), ['admin', 'developer', 'superadmin', 'dev'])) {
+                        return true;
+                    }
                 }
             } catch (Throwable $e) {}
         }
