@@ -226,6 +226,58 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           ? (isBn ? '⭐ হোস্ট আপনাকে কো-হোস্ট (Co-Host) হিসেবে নিযুক্ত করেছেন!' : '⭐ You have been promoted to Co-Host by the host!') 
           : (isBn ? 'কো-হোস্ট স্ট্যাটাস প্রত্যাহার করা হয়েছে।' : 'You are no longer a Co-Host.'));
       }
+    } else if (data.type === 'set_mic_state' && data.payload) {
+      // Direct remote mic control from host/co-host
+      if (Number(data.payload.targetUserId) === Number(currentUser?.id)) {
+        const nextMuted = Boolean(data.payload.isMuted);
+        if (localStreamRef.current) {
+          localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !nextMuted; });
+        }
+        setIsMuted(nextMuted);
+        if (nextMuted) {
+          toast.warning(isBn 
+            ? `🔇 হোস্ট (${data.payload.toggledBy || 'Host'}) আপনার মাইক মিউট করেছেন।` 
+            : `🔇 Host (${data.payload.toggledBy || 'Host'}) has muted your microphone.`);
+        } else {
+          toast.success(isBn 
+            ? `🎙️ হোস্ট (${data.payload.toggledBy || 'Host'}) আপনার মাইক চালু করেছেন!` 
+            : `🎙️ Host (${data.payload.toggledBy || 'Host'}) has unmuted your microphone!`);
+        }
+
+        // Broadcast to all other peers so their UI updates
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({
+                type: 'peer_mic_state',
+                payload: { userId: currentUser?.id, isMuted: nextMuted }
+              });
+            }
+          } catch (e) {}
+        });
+      }
+    } else if (data.type === 'unmute_all') {
+      // Unmute all triggered by host
+      if (Number(data.payload?.senderId) !== Number(currentUser?.id)) {
+        if (localStreamRef.current) {
+          localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
+        }
+        setIsMuted(false);
+        toast.success(isBn 
+          ? `🎙️ হোস্ট (${data.payload?.unmutedBy || 'Host'}) সবার মাইক চালু করেছেন!` 
+          : `🎙️ Host (${data.payload?.unmutedBy || 'Host'}) has unmuted everyone!`);
+
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({
+                type: 'peer_mic_state',
+                payload: { userId: currentUser?.id, isMuted: false }
+              });
+            }
+          } catch (e) {}
+        });
+      }
     } else if (data.type === 'mute_all') {
       // Force mute if we are not the sender
       if (Number(data.payload?.senderId) !== Number(currentUser?.id)) {
@@ -236,6 +288,17 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         toast.warning(isBn 
           ? `🔇 হোস্ট (${data.payload?.mutedBy || 'Host'}) সবাইকে মিউট করেছেন।` 
           : `🔇 Host (${data.payload?.mutedBy || 'Host'}) has muted everyone.`);
+
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({
+                type: 'peer_mic_state',
+                payload: { userId: currentUser?.id, isMuted: true }
+              });
+            }
+          } catch (e) {}
+        });
       }
     } else if (data.type === 'force_mute') {
       if (Number(data.payload?.targetUserId) === Number(currentUser?.id)) {
@@ -311,22 +374,32 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     const startConference = async () => {
       try {
         setLoadingMedia(true);
-        // 1. Acquire Local Camera & Microphone with graceful fallback
+        // 1. Acquire Local Camera & Microphone with timeout and graceful fallback
         let stream = null;
         try {
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const timeoutPromise = (ms) => new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Media access timeout')), ms)
+            );
+
             try {
-              stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: true
-              });
+              stream = await Promise.race([
+                navigator.mediaDevices.getUserMedia({
+                  video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                  audio: true
+                }),
+                timeoutPromise(4000)
+              ]);
             } catch (mediaErr) {
-              console.warn('Full camera/mic access failed, trying audio only:', mediaErr);
+              console.warn('Full camera/mic access failed or timed out, trying audio only:', mediaErr);
+              setIsVideoOff(true);
               try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                setIsVideoOff(true);
+                stream = await Promise.race([
+                  navigator.mediaDevices.getUserMedia({ audio: true, video: false }),
+                  timeoutPromise(3000)
+                ]);
               } catch (audioErr) {
-                console.warn('Audio-only failed, falling back to view/listen stream:', audioErr);
+                console.warn('Audio-only failed or timed out, falling back to view/listen stream:', audioErr);
                 stream = createFallbackStream();
                 setIsVideoOff(true);
                 setIsMuted(true);
@@ -567,48 +640,85 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
       } catch (e) {}
     });
 
-    toast.success(isBn ? '🔇 সবাইকে মিউট করা হয়েছে।' : '🔇 All participants have been muted.');
+    setRemoteMuteStates(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(uid => { updated[uid] = true; });
+      return updated;
+    });
+
+    toast.warning(isBn ? '🔇 সবাইকে মিউট করা হয়েছে।' : '🔇 All participants have been muted.');
   };
 
-  // Host Action: Mute a single participant
+  // Host Action: Unmute All participants
+  const handleUnmuteAll = () => {
+    if (!isMeHost) return;
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'unmute_all',
+            payload: {
+              unmutedBy: currentUser?.name || 'Host',
+              senderId: currentUser?.id
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    setRemoteMuteStates(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(uid => { updated[uid] = false; });
+      return updated;
+    });
+
+    toast.success(isBn ? '🎙️ সবার মাইক চালু করা হয়েছে।' : '🎙️ All participants have been unmuted.');
+  };
+
+  // Host Action: Direct 1-Click Bidirectional Mic Toggle (Mute ⇄ Unmute anytime)
+  const handleToggleParticipantMic = (targetUserId, targetName, currentMutedState) => {
+    if (!isMeHost || !targetUserId) return;
+    const nextMuted = !currentMutedState;
+
+    // Optimistic UI state update
+    setRemoteMuteStates(prev => ({ ...prev, [targetUserId]: nextMuted }));
+
+    // Broadcast set_mic_state to target peer
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'set_mic_state',
+            payload: {
+              targetUserId,
+              isMuted: nextMuted,
+              toggledBy: currentUser?.name || 'Host'
+            }
+          });
+          // Also broadcast peer mic state update to room
+          conn.send({
+            type: 'peer_mic_state',
+            payload: { userId: targetUserId, isMuted: nextMuted }
+          });
+        }
+      } catch (e) {}
+    });
+
+    if (nextMuted) {
+      toast.warning(isBn ? `🔇 ${targetName}-কে মিউট করা হয়েছে।` : `🔇 Muted ${targetName}.`);
+    } else {
+      toast.success(isBn ? `🎙️ ${targetName}-এর মাইক চালু করা হয়েছে।` : `🎙️ Unmuted ${targetName}.`);
+    }
+  };
+
+  // Host Action: Legacy single mute fallback
   const handleMuteParticipant = (targetUserId, targetName) => {
-    if (!isMeHost || !targetUserId) return;
-    Object.values(activeConnsRef.current).forEach(conn => {
-      try {
-        if (conn.open) {
-          conn.send({
-            type: 'force_mute',
-            payload: {
-              targetUserId,
-              mutedBy: currentUser?.name || 'Host'
-            }
-          });
-        }
-      } catch (e) {}
-    });
-
-    setRemoteMuteStates(prev => ({ ...prev, [targetUserId]: true }));
-    toast.success(isBn ? `🔇 ${targetName}-কে মিউট করা হয়েছে।` : `🔇 Muted ${targetName}.`);
+    handleToggleParticipantMic(targetUserId, targetName, false);
   };
 
-  // Host Action: Request a participant to speak / unmute
+  // Host Action: Legacy ask to speak fallback
   const handleAskToUnmute = (targetUserId, targetName) => {
-    if (!isMeHost || !targetUserId) return;
-    Object.values(activeConnsRef.current).forEach(conn => {
-      try {
-        if (conn.open) {
-          conn.send({
-            type: 'unmute_request',
-            payload: {
-              targetUserId,
-              requestedBy: currentUser?.name || 'Host'
-            }
-          });
-        }
-      } catch (e) {}
-    });
-
-    toast.info(isBn ? `🎙️ ${targetName}-কে কথা বলার অনুরোধ পাঠানো হয়েছে।` : `🎙️ Sent speaking request to ${targetName}.`);
+    handleToggleParticipantMic(targetUserId, targetName, true);
   };
 
   // Toggle Camera
@@ -892,16 +1002,26 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Mute All Action (Host / Co-Host Only) */}
+          {/* Mute All & Unmute All Actions (Host / Co-Host Only) */}
           {isMeHost && totalInRoom > 1 && (
-            <button
-              onClick={handleMuteAll}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-bold transition cursor-pointer shadow-sm"
-              title={isBn ? 'মিটিংয়ের সবাইকে একসাথে মিউট করুন' : 'Mute all participants at once'}
-            >
-              <FiMicOff size={12} />
-              <span className="hidden sm:inline">{isBn ? 'সবাইকে মিউট' : 'Mute All'}</span>
-            </button>
+            <div className="hidden sm:flex items-center gap-1 bg-slate-900/90 border border-slate-800 rounded-full p-0.5 shadow-sm">
+              <button
+                onClick={handleMuteAll}
+                className="flex items-center gap-1 px-3 py-1 rounded-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-bold transition cursor-pointer"
+                title={isBn ? 'মিটিংয়ের সবাইকে একসাথে মিউট করুন' : 'Mute all participants at once'}
+              >
+                <FiMicOff size={12} />
+                <span>{isBn ? 'সবাই মিউট' : 'Mute All'}</span>
+              </button>
+              <button
+                onClick={handleUnmuteAll}
+                className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold transition cursor-pointer"
+                title={isBn ? 'মিটিংয়ের সবার মাইক চালু করুন' : 'Unmute all participants'}
+              >
+                <FiMic size={12} />
+                <span>{isBn ? 'সবাই আনমিউট' : 'Unmute All'}</span>
+              </button>
+            </div>
           )}
 
           {/* Participant Count Pill (Click to open list & promote co-hosts) */}
@@ -932,13 +1052,31 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           
           {/* Subtle loading spinner during initial 1-second connect only */}
           {loadingMedia && (
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-[#070b14]/90 backdrop-blur-sm text-white">
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-[#070b14]/90 backdrop-blur-sm text-white p-4 text-center">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
                 <FiRadio className="w-6 h-6 animate-pulse" />
               </div>
               <p className="text-xs font-bold text-slate-300">
                 {isBn ? 'সিসিএ স্টুডিওতে যুক্ত হওয়া হচ্ছে...' : 'Connecting to CCA Video Studio...'}
               </p>
+              <p className="text-[11px] text-slate-500 max-w-xs">
+                {isBn ? 'ক্যামেরা ও মাইক্রোফোন লোড হতে দেরি হলে সরাসরি যুক্ত হন' : 'If camera takes time, you can join immediately'}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!localStreamRef.current) {
+                    const fallback = createFallbackStream();
+                    localStreamRef.current = fallback;
+                    setIsVideoOff(true);
+                    setIsMuted(true);
+                  }
+                  setLoadingMedia(false);
+                }}
+                className="mt-1 px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-md"
+              >
+                <span>🚀 {isBn ? 'সরাসরি প্রবেশ করুন (লিসেন অনলি)' : 'Skip & Join (Listen-Only)'}</span>
+              </button>
             </div>
           )}
 
@@ -997,8 +1135,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                             tier={remoteTier}
                             isMuted={isRemoteMuted}
                             canControlAudio={isMeHost}
-                            onMute={() => handleMuteParticipant(remote.userId, remote.userName)}
-                            onAskUnmute={() => handleAskToUnmute(remote.userId, remote.userName)}
+                            onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                             canPromote={isMeHost}
                             onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                             compact
@@ -1104,8 +1241,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       tier={remoteTier}
                       isMuted={isRemoteMuted}
                       canControlAudio={isMeHost}
-                      onMute={() => handleMuteParticipant(remote.userId, remote.userName)}
-                      onAskUnmute={() => handleAskToUnmute(remote.userId, remote.userName)}
+                      onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                       canPromote={isMeHost}
                       onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                       isBn={isBn}
@@ -1463,14 +1599,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
               </div>
               <div className="flex items-center gap-2">
                 {isMeHost && totalInRoom > 1 && (
-                  <button
-                    onClick={handleMuteAll}
-                    className="flex items-center gap-1 px-3 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-sm"
-                    title={isBn ? 'মিটিংয়ের সবাইকে একসাথে মিউট করুন' : 'Mute all participants at once'}
-                  >
-                    <FiMicOff size={12} />
-                    <span>{isBn ? 'সবাইকে মিউট' : 'Mute All'}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={handleMuteAll}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-sm"
+                      title={isBn ? 'মিটিংয়ের সবাইকে একসাথে মিউট করুন' : 'Mute all participants at once'}
+                    >
+                      <FiMicOff size={12} />
+                      <span>{isBn ? 'সবাই মিউট' : 'Mute All'}</span>
+                    </button>
+                    <button
+                      onClick={handleUnmuteAll}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer shadow-sm"
+                      title={isBn ? 'মিটিংয়ের সবার মাইক চালু করুন' : 'Unmute all participants'}
+                    >
+                      <FiMic size={12} />
+                      <span>{isBn ? 'সবাই আনমিউট' : 'Unmute All'}</span>
+                    </button>
+                  </div>
                 )}
                 <button
                   onClick={() => setParticipantsModalOpen(false)}
@@ -1565,27 +1711,20 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {/* Host Mic Control for this user */}
+                      {/* Host Mic Control for this user - 1-Click Bidirectional Mute ⇄ Unmute */}
                       {isMeHost && remote.userId && (
-                        isRemoteMuted ? (
-                          <button
-                            onClick={() => handleAskToUnmute(remote.userId, remote.userName)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition cursor-pointer"
-                            title={isBn ? 'কথা বলার অনুরোধ পাঠান' : 'Ask user to unmute'}
-                          >
-                            <FiMic size={11} />
-                            <span>{isBn ? 'অনুরোধ' : 'Ask'}</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleMuteParticipant(remote.userId, remote.userName)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer"
-                            title={isBn ? 'ইউজারকে মিউট করুন' : 'Mute this user'}
-                          >
-                            <FiMicOff size={11} />
-                            <span>{isBn ? 'মিউট' : 'Mute'}</span>
-                          </button>
-                        )
+                        <button
+                          onClick={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition cursor-pointer shadow-sm ${
+                            isRemoteMuted
+                              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40 hover:border-emerald-400'
+                              : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/40 hover:border-rose-400'
+                          }`}
+                          title={isRemoteMuted ? (isBn ? 'মাইক চালু করুন (আনমিউট)' : 'Unmute microphone') : (isBn ? 'মাইক বন্ধ করুন (মিউট)' : 'Mute microphone')}
+                        >
+                          {isRemoteMuted ? <FiMic size={11} className="text-emerald-400" /> : <FiMicOff size={11} className="text-rose-400" />}
+                          <span>{isRemoteMuted ? (isBn ? 'আনমিউট' : 'Unmute') : (isBn ? 'মিউট' : 'Mute')}</span>
+                        </button>
                       )}
 
                       {/* Host action button: Promote/Demote Co-Host (cannot demote primary meeting creator) */}
@@ -1670,7 +1809,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
 function RemoteVideoTile({
   remotePeerId, stream, userId, userName, role, avatar,
   compact = false, tier = 'member', isMuted = false,
-  canControlAudio = false, onMute, onAskUnmute,
+  canControlAudio = false, onToggleMic,
   canPromote = false, onToggleCoHost, isBn = false
 }) {
   const videoRef = useRef(null);
@@ -1736,33 +1875,26 @@ function RemoteVideoTile({
         </div>
       )}
 
-      {/* Quick Remote Audio Control on Hover (Top-Left) */}
-      {canControlAudio && userId && !compact && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 left-3 flex items-center gap-1.5 z-10">
-          {isMuted ? (
-            <button
-              onClick={onAskUnmute}
-              className="px-2.5 py-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-emerald-500/40 text-[10px] font-bold text-emerald-300 hover:bg-emerald-600/20 cursor-pointer shadow-lg flex items-center gap-1"
-              title={isBn ? 'কথা বলতে অনুরোধ করুন' : 'Ask to Unmute'}
-            >
-              <FiMic size={11} />
-              <span>{isBn ? 'অনুরোধ' : 'Ask Unmute'}</span>
-            </button>
-          ) : (
-            <button
-              onClick={onMute}
-              className="px-2.5 py-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-rose-500/40 text-[10px] font-bold text-rose-400 hover:bg-rose-600/20 cursor-pointer shadow-lg flex items-center gap-1"
-              title={isBn ? 'মাইক্রোফোন মিউট করুন' : 'Mute Microphone'}
-            >
-              <FiMicOff size={11} />
-              <span>{isBn ? 'মিউট' : 'Mute'}</span>
-            </button>
-          )}
+      {/* Quick Remote Audio Control for Host (Top-Left) */}
+      {canControlAudio && userId && (
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
+          <button
+            onClick={onToggleMic}
+            className={`px-2.5 py-1 rounded-xl backdrop-blur-md text-[10px] font-bold cursor-pointer shadow-lg flex items-center gap-1 transition-all ${
+              isMuted
+                ? 'bg-slate-950/85 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 hover:border-emerald-400 ring-1 ring-emerald-500/20'
+                : 'bg-slate-950/85 hover:bg-rose-600/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 ring-1 ring-rose-500/20'
+            }`}
+            title={isMuted ? (isBn ? 'মাইক চালু করুন (আনমিউট)' : 'Unmute microphone') : (isBn ? 'মাইক বন্ধ করুন (মিউট)' : 'Mute microphone')}
+          >
+            {isMuted ? <FiMic size={11} className="text-emerald-400" /> : <FiMicOff size={11} className="text-rose-400" />}
+            <span>{isMuted ? (isBn ? 'আনমিউট' : 'Unmute') : (isBn ? 'মিউট' : 'Mute')}</span>
+          </button>
         </div>
       )}
 
       {/* Zoom-Style Remote User Pill */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold">
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold z-10">
         <span>{userName}</span>
         {isHost ? (
           <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
@@ -1777,14 +1909,32 @@ function RemoteVideoTile({
             {role}
           </span>
         ) : null}
-        {isMuted ? (
-          <FiMicOff className="text-rose-500" size={12} title={isBn ? 'মাইক বন্ধ' : 'Muted'} />
+        {canControlAudio ? (
+          <button
+            onClick={onToggleMic}
+            className="cursor-pointer hover:scale-115 transition-transform p-0.5 rounded"
+            title={isMuted ? (isBn ? 'আনমিউট করতে ক্লিক করুন' : 'Click to Unmute') : (isBn ? 'মিউট করতে ক্লিক করুন' : 'Click to Mute')}
+          >
+            {isMuted ? (
+              <FiMicOff className="text-rose-500" size={13} />
+            ) : (
+              <span className="flex items-center gap-0.5">
+                <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
+                <span className="w-1 h-3.5 bg-emerald-400 animate-pulse [animation-delay:150ms]" />
+                <span className="w-1 h-1.5 bg-emerald-400 animate-pulse [animation-delay:300ms]" />
+              </span>
+            )}
+          </button>
         ) : (
-          <span className="flex items-center gap-0.5" title={isBn ? 'মাইক চালু' : 'Unmuted'}>
-            <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
-            <span className="w-1 h-3.5 bg-emerald-400 animate-pulse [animation-delay:150ms]" />
-            <span className="w-1 h-1.5 bg-emerald-400 animate-pulse [animation-delay:300ms]" />
-          </span>
+          isMuted ? (
+            <FiMicOff className="text-rose-500" size={12} title={isBn ? 'মাইক বন্ধ' : 'Muted'} />
+          ) : (
+            <span className="flex items-center gap-0.5" title={isBn ? 'মাইক চালু' : 'Unmuted'}>
+              <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
+              <span className="w-1 h-3.5 bg-emerald-400 animate-pulse [animation-delay:150ms]" />
+              <span className="w-1 h-1.5 bg-emerald-400 animate-pulse [animation-delay:300ms]" />
+            </span>
+          )
         )}
       </div>
 
@@ -1792,7 +1942,7 @@ function RemoteVideoTile({
       {canPromote && userId && !compact && tier !== 'host' && (
         <button
           onClick={onToggleCoHost}
-          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1"
+          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1 z-20"
           title={isCoHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
         >
           <FiStar size={11} className={isCoHost ? 'fill-amber-400' : ''} />
