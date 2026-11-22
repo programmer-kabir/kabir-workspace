@@ -4,7 +4,8 @@ import Peer from 'peerjs';
 import {
   FiMic, FiMicOff, FiVideo, FiVideoOff, FiTv, FiPhoneOff,
   FiUsers, FiUser, FiCopy, FiCheck, FiShield, FiRadio,
-  FiAlertTriangle, FiLoader, FiMaximize, FiMinimize
+  FiAlertTriangle, FiLoader, FiMaximize, FiMinimize,
+  FiMessageSquare, FiSend, FiX, FiCheckCircle
 } from 'react-icons/fi';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
@@ -56,31 +57,41 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const localStreamRef = useRef(null);
   const peerInstanceRef = useRef(null);
   const activeCallsRef = useRef({}); // peerId -> call object
+  const activeConnsRef = useRef({}); // peerId -> data connection
+  const myPeerIdRef = useRef('');
+  const chatScrollRef = useRef(null);
 
   const [myPeerId, setMyPeerId] = useState('');
-  const [remotePeers, setRemotePeers] = useState({}); // peerId -> { stream, userName, role, avatar }
+  const [remotePeers, setRemotePeers] = useState({}); // peerId -> { stream, userName, role, avatar, isScreen }
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [loadingMedia, setLoadingMedia] = useState(true);
-  const [permissionError, setPermissionError] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Background attendance logger
+  // Live Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isSending, setIsSending] = useState(false);
+
+  // Background attendance logger (stable ref, never causes re-renders)
   const logAttendance = useCallback(async (action, pId) => {
     if (!currentUser?.id || !roomId) return;
     try {
+      const currentPid = pId || myPeerIdRef.current;
       const res = await axios.post(`${API_BASE}api/meetings/log_attendance.php`, {
         room_id: roomId,
         user_id: currentUser.id,
         action,
-        peer_id: pId || myPeerId
+        peer_id: currentPid
       });
       return res.data;
     } catch (err) {
       console.warn(`Attendance sync (${action}) warning:`, err.message);
     }
-  }, [currentUser?.id, roomId, myPeerId]);
+  }, [currentUser?.id, roomId]);
 
   // Handle incoming remote stream
   const addRemoteStream = useCallback((remotePeerId, stream, peerInfo = {}) => {
@@ -90,7 +101,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         stream,
         userName: peerInfo.userName || peerInfo.user_name || (isBn ? 'সহকর্মী' : 'CCA Colleague'),
         role: peerInfo.role || 'Member',
-        avatar: peerInfo.avatar || peerInfo.profile_picture || null
+        avatar: peerInfo.avatar || peerInfo.profile_picture || null,
+        isScreen: Boolean(peerInfo.isScreen)
       }
     }));
   }, [isBn]);
@@ -106,9 +118,62 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       try { activeCallsRef.current[remotePeerId].close(); } catch (e) {}
       delete activeCallsRef.current[remotePeerId];
     }
+    if (activeConnsRef.current[remotePeerId]) {
+      try { activeConnsRef.current[remotePeerId].close(); } catch (e) {}
+      delete activeConnsRef.current[remotePeerId];
+    }
   }, []);
 
-  // Initialize Local Media & PeerJS
+  // Receive a chat message
+  const handleIncomingMessage = useCallback((msgObj) => {
+    setChatMessages(prev => {
+      if (prev.some(m => m.id === msgObj.id || (m.created_at === msgObj.created_at && m.user_id === msgObj.user_id && m.message === msgObj.message))) {
+        return prev;
+      }
+      return [...prev, msgObj];
+    });
+
+    setChatOpen(isOpen => {
+      if (!isOpen) {
+        setUnreadCount(c => c + 1);
+        toast.info(`💬 ${msgObj.user_name}: ${msgObj.message.substring(0, 30)}...`);
+      }
+      return isOpen;
+    });
+  }, []);
+
+  // Fetch initial chat messages & poll periodically
+  useEffect(() => {
+    if (!roomId) return;
+    let isMounted = true;
+
+    const fetchMessages = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}api/meetings/get_messages.php?room_id=${roomId}`);
+        if (res.data?.status === 'success' && isMounted) {
+          setChatMessages(res.data.messages || []);
+        }
+      } catch (err) {
+        // silent catch
+      }
+    };
+
+    fetchMessages();
+    const chatInterval = setInterval(fetchMessages, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(chatInterval);
+    };
+  }, [roomId]);
+
+  // Scroll to bottom of chat whenever messages change
+  useEffect(() => {
+    if (chatOpen && chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatOpen]);
+
+  // 🌟 Main Conference Initialization (Runs ONCE per roomId/currentUser)
   useEffect(() => {
     let isMounted = true;
     let peer = null;
@@ -136,6 +201,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
                 stream = createFallbackStream();
                 setIsVideoOff(true);
                 setIsMuted(true);
+                toast.info(isBn ? 'লিসেন ও ভিউ মোডে যুক্ত হয়েছেন (ক্যামেরা/মাইক্রোফোন পাওয়া যায়নি)।' : 'Joined in Listen & View mode (no active microphone or camera found).');
               }
             }
           } else {
@@ -144,7 +210,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             setIsMuted(true);
           }
         } catch (setupErr) {
-          console.warn('Media setup fallback:', setupErr);
+          console.warn('Device acquisition fallback:', setupErr);
           stream = createFallbackStream();
           setIsVideoOff(true);
           setIsMuted(true);
@@ -160,10 +226,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           localVideoRef.current.srcObject = stream;
         }
 
+        // Ready: clear loading screen immediately
         setLoadingMedia(false);
 
         // 2. Initialize PeerJS client with Google STUN servers
         const generatedPeerId = `cca_${roomId.replace(/[^a-zA-Z0-9]/g, '')}_u${currentUser?.id || 2}_${Math.floor(1000 + Math.random() * 9000)}`;
+        myPeerIdRef.current = generatedPeerId;
         setMyPeerId(generatedPeerId);
 
         peer = new Peer(generatedPeerId, {
@@ -188,6 +256,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           }
         });
 
+        // Setup data channel listener for live in-meeting chat
+        peer.on('connection', (conn) => {
+          activeConnsRef.current[conn.peer] = conn;
+          conn.on('data', (data) => {
+            if (data?.type === 'chat_message' && data.payload) {
+              handleIncomingMessage(data.payload);
+            }
+          });
+        });
+
         peer.on('open', async (id) => {
           if (!isMounted) return;
           // Log join & fetch current active peers
@@ -197,6 +275,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           // Connect to each existing peer in the room
           activePeers.forEach(p => {
             if (p.peer_id && p.peer_id !== id && !activeCallsRef.current[p.peer_id]) {
+              try {
+                const conn = peer.connect(p.peer_id);
+                activeConnsRef.current[p.peer_id] = conn;
+                conn.on('data', (data) => {
+                  if (data?.type === 'chat_message' && data.payload) {
+                    handleIncomingMessage(data.payload);
+                  }
+                });
+              } catch (e) {}
+
               const call = peer.call(p.peer_id, stream, {
                 metadata: {
                   userId: currentUser?.id,
@@ -224,7 +312,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
         // Answer incoming calls from new participants
         peer.on('call', (incomingCall) => {
-          incomingCall.answer(stream);
+          incomingCall.answer(localStreamRef.current || stream);
           const callerId = incomingCall.peer;
           activeCallsRef.current[callerId] = incomingCall;
 
@@ -256,6 +344,16 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
           // Connect to any new peers who just entered
           peers.forEach(p => {
             if (p.peer_id && p.peer_id !== peer.id && !activeCallsRef.current[p.peer_id]) {
+              try {
+                const conn = peer.connect(p.peer_id);
+                activeConnsRef.current[p.peer_id] = conn;
+                conn.on('data', (data) => {
+                  if (data?.type === 'chat_message' && data.payload) {
+                    handleIncomingMessage(data.payload);
+                  }
+                });
+              } catch (e) {}
+
               const call = peer.call(p.peer_id, localStreamRef.current, {
                 metadata: {
                   userId: currentUser?.id,
@@ -281,7 +379,6 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       } catch (err) {
         if (!isMounted) return;
         console.error('Conference Init Error:', err);
-        setPermissionError(err.message || 'Media devices error');
         setLoadingMedia(false);
       }
     };
@@ -306,7 +403,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         try { peerInstanceRef.current.destroy(); } catch (e) {}
       }
     };
-  }, [roomId, currentUser?.id, addRemoteStream, removeRemoteStream, logAttendance, isBn]);
+  }, [roomId, currentUser?.id]); // STABLE: only runs once per roomId & currentUser
 
   // Toggle Microphone
   const toggleAudio = () => {
@@ -328,7 +425,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     }
   };
 
-  // Screen Share
+  // Screen Share (Zoom Style)
   const toggleScreenShare = async () => {
     try {
       if (!isScreenSharing) {
@@ -350,6 +447,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         };
 
         setIsScreenSharing(true);
+        toast.success(isBn ? '🖥️ আপনি স্ক্রিন শেয়ার করছেন' : '🖥️ You are now sharing your screen');
       } else {
         revertToCamera();
       }
@@ -370,6 +468,45 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
       }
     }
     setIsScreenSharing(false);
+    toast.info(isBn ? 'স্ক্রিন শেয়ার বন্ধ হয়েছে।' : 'Screen share stopped. Switched back to camera.');
+  };
+
+  // Send a live chat message
+  const handleSendMessage = async (e) => {
+    e?.preventDefault();
+    const text = chatInput.trim();
+    if (!text || !currentUser?.id || isSending) return;
+
+    setIsSending(true);
+    try {
+      const payload = {
+        room_id: roomId,
+        user_id: currentUser.id,
+        user_name: currentUser.name || (isBn ? 'স্টাফ মেম্বার' : 'Staff Member'),
+        user_role: currentUser.roles?.[0] || 'Staff',
+        message: text
+      };
+
+      const res = await axios.post(`${API_BASE}api/meetings/send_message.php`, payload);
+      if (res.data?.status === 'success' && res.data.message) {
+        const newMsg = res.data.message;
+        setChatMessages(prev => [...prev, newMsg]);
+        setChatInput('');
+
+        // Broadcast to all connected peers via DataChannel
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({ type: 'chat_message', payload: newMsg });
+            }
+          } catch (e) {}
+        });
+      }
+    } catch (err) {
+      toast.error(isBn ? 'মেসেজ পাঠানো সম্ভব হয়নি।' : 'Failed to send message.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const copyRoomLink = () => {
@@ -383,7 +520,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   const totalInRoom = 1 + remotePeerList.length;
 
   return (
-    <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col select-none">
+    <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] bg-[#0c101b] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col select-none">
       
       {/* 🌟 Top Navigation Bar */}
       <div className="h-12 px-5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 z-20 text-white">
@@ -419,169 +556,335 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         </div>
       </div>
 
-      {/* 🌟 Main Video Conference Stage */}
-      <div className="relative flex-1 w-full h-full bg-[#070b14] p-3 md:p-5 overflow-hidden flex flex-col justify-between">
+      {/* 🌟 Main Body (Video Stage + Optional Chat Drawer) */}
+      <div className="relative flex-1 w-full h-full flex overflow-hidden">
         
-        {/* Loading Media Screen */}
-        {loadingMedia && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-[#070b14] text-white">
-            <div className="relative flex items-center justify-center">
-              <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/30">
-                <FiRadio className="w-7 h-7 animate-pulse" />
-              </div>
-              <span className="absolute -inset-2 rounded-3xl border border-rose-500/20 animate-ping opacity-40"></span>
-            </div>
-            <div className="text-center space-y-1">
-              <p className="text-sm font-black text-white">
-                {isBn ? 'সিসিএ ইন-হাউস ভিডিও স্টুডিও চালু হচ্ছে...' : 'Starting CCA Native Video Studio...'}
-              </p>
-              <p className="text-xs text-slate-400">
-                {isBn ? 'ক্যামেরা ও মাইক্রোফোন সংযোগ নেওয়া হচ্ছে' : 'Requesting camera & microphone access'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Permission Denied Error Screen */}
-        {permissionError && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#070b14] text-white p-6 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
-              <FiAlertTriangle className="w-7 h-7" />
-            </div>
-            <p className="text-sm font-bold text-rose-400 max-w-md">{permissionError}</p>
-            <p className="text-xs text-slate-400 max-w-sm">
-              {isBn 
-                ? 'ব্রাউজারের অ্যাড্রেস বারের ক্যামেরা/মাইক আইকনে ক্লিক করে "Allow" দিন, তারপর আবার চেষ্টা করুন।'
-                : 'Please click the camera/mic icon in your browser address bar and choose "Allow", then retry.'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-3 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition cursor-pointer"
-            >
-              {isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry Camera Access'}
-            </button>
-          </div>
-        )}
-
-        {/* 🌟 Dynamic Responsive Video Grid */}
-        <div className={`w-full h-[calc(100%-80px)] grid gap-3 md:gap-4 ${
-          totalInRoom === 1 ? 'grid-cols-1' :
-          totalInRoom === 2 ? 'grid-cols-1 md:grid-cols-2' :
-          totalInRoom <= 4 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
-        }`}>
+        {/* 🌟 VIDEO CONFERENCE STAGE */}
+        <div className="relative flex-1 h-full bg-[#070b14] p-3 md:p-5 flex flex-col justify-between overflow-hidden">
           
-          {/* LOCAL USER TILE */}
-          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-center group">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
-            />
+          {/* Subtle loading spinner during initial 1-second connect only */}
+          {loadingMedia && (
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-[#070b14]/90 backdrop-blur-sm text-white">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
+                <FiRadio className="w-6 h-6 animate-pulse" />
+              </div>
+              <p className="text-xs font-bold text-slate-300">
+                {isBn ? 'সিসিএ স্টুডিওতে যুক্ত হওয়া হচ্ছে...' : 'Connecting to CCA Video Studio...'}
+              </p>
+            </div>
+          )}
 
-            {/* Video Off Placeholder */}
-            {isVideoOff && (
-              <div className="flex flex-col items-center justify-center gap-3">
-                <div className="w-20 h-20 rounded-full bg-rose-600/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-2xl font-black shadow-inner">
-                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+          {/* 🌟 SCREEN SHARING BANNER (When active) */}
+          {isScreenSharing && (
+            <div className="mb-3 px-4 py-2 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-between text-white animate-in fade-in">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{isBn ? 'আপনি বর্তমানে সবার সাথে আপনার স্ক্রিন শেয়ার করছেন' : 'You are currently sharing your screen with everyone'}</span>
+              </div>
+              <button
+                onClick={revertToCamera}
+                className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition cursor-pointer"
+              >
+                {isBn ? 'শেয়ার বন্ধ করুন' : 'Stop Presenting'}
+              </button>
+            </div>
+          )}
+
+          {/* 🌟 ZOOM-STYLE GALLERY GRID (When NOT sharing screen, or when presenting) */}
+          <div className="relative flex-1 w-full h-[calc(100%-70px)] overflow-hidden flex items-center justify-center">
+            
+            {/* If Local User is Screen Sharing: Big Stage + Mini Filmstrip */}
+            {isScreenSharing ? (
+              <div className="w-full h-full flex flex-col md:flex-row gap-3">
+                {/* Main Screen Stream Tile */}
+                <div className="flex-1 h-full rounded-2xl md:rounded-3xl overflow-hidden bg-black border border-slate-800 shadow-2xl relative flex items-center justify-center">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md text-white text-xs font-bold flex items-center gap-2 border border-slate-700">
+                    <FiTv className="text-emerald-400" size={13} />
+                    <span>{isBn ? 'আপনার শেয়ারকৃত স্ক্রিন' : 'Your Shared Screen'}</span>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-slate-400">
-                  {isBn ? 'ক্যামেরা বন্ধ রয়েছে' : 'Camera Turned Off'}
-                </span>
+
+                {/* Filmstrip of Participants (Zoom Style) */}
+                {remotePeerList.length > 0 && (
+                  <div className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0">
+                    {remotePeerList.map(([peerId, remote]) => (
+                      <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
+                        <RemoteVideoTile
+                          remotePeerId={peerId}
+                          stream={remote.stream}
+                          userName={remote.userName}
+                          role={remote.role}
+                          avatar={remote.avatar}
+                          compact
+                          isBn={isBn}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Standard Gallery Grid (Zoom Style) */
+              <div className={`w-full h-full grid gap-3 md:gap-4 p-1 ${
+                totalInRoom === 1 ? 'grid-cols-1 max-w-4xl mx-auto' :
+                totalInRoom === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                totalInRoom <= 4 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
+              }`}>
+                
+                {/* 🌟 LOCAL USER ZOOM CARD */}
+                <div className={`relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl flex items-center justify-center group ${
+                  !isMuted ? 'border-rose-500/40 ring-1 ring-rose-500/20' : 'border-slate-800'
+                }`}>
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
+                  />
+
+                  {/* Zoom-Style Video Off Avatar Card */}
+                  {isVideoOff && (
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-rose-600/30 ring-4 ring-rose-500/20">
+                        {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-white">{currentUser?.name || (isBn ? 'আপনি' : 'You')}</p>
+                        <p className="text-[11px] text-slate-400 font-medium">
+                          {isBn ? 'ক্যামেরা বন্ধ রয়েছে' : 'Camera Off'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Local Badge Label (Zoom Style Bottom-Left) */}
+                  <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
+                    <span>{currentUser?.name || (isBn ? 'আপনি' : 'You')} ({isBn ? 'আপনি' : 'You'})</span>
+                    {isMuted ? (
+                      <FiMicOff className="text-rose-500" size={13} />
+                    ) : (
+                      <span className="flex items-center gap-0.5">
+                        <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
+                        <span className="w-1 h-3.5 bg-emerald-400 animate-pulse [animation-delay:150ms]" />
+                        <span className="w-1 h-1.5 bg-emerald-400 animate-pulse [animation-delay:300ms]" />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Waiting hint if alone in room */}
+                  {totalInRoom === 1 && (
+                    <div className="absolute top-4 right-4 bg-slate-950/85 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-lg">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                      <span>{isBn ? 'অন্যান্য সদস্যের যোগদানের জন্য অপেক্ষা করা হচ্ছে...' : 'Waiting for team members to join...'}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 🌟 REMOTE PARTICIPANT ZOOM CARDS */}
+                {remotePeerList.map(([peerId, remote]) => (
+                  <RemoteVideoTile
+                    key={peerId}
+                    remotePeerId={peerId}
+                    stream={remote.stream}
+                    userName={remote.userName}
+                    role={remote.role}
+                    avatar={remote.avatar}
+                    isBn={isBn}
+                  />
+                ))}
+
               </div>
             )}
 
-            {/* Local Badge Label */}
-            <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
-              <span>{currentUser?.name || 'You'} ({isBn ? 'আপনি' : 'You'})</span>
-              {isMuted ? (
-                <FiMicOff className="text-rose-500" size={13} />
+          </div>
+
+          {/* 🌟 FLOATING ZOOM-STYLE CONTROL DOCK */}
+          <div className="w-full flex items-center justify-center z-20 pt-2 shrink-0">
+            <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2.5 rounded-2xl bg-slate-900/90 backdrop-blur-2xl border border-slate-800 shadow-2xl">
+              
+              {/* Mic Toggle Button */}
+              <button
+                onClick={toggleAudio}
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  isMuted
+                    ? 'bg-rose-500/20 text-rose-500 hover:bg-rose-500/30'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+              >
+                {isMuted ? <FiMicOff size={18} /> : <FiMic size={18} />}
+                <span className="text-[10px] font-bold">{isMuted ? (isBn ? 'আনমিউট' : 'Unmute') : (isBn ? 'মিউট' : 'Mute')}</span>
+              </button>
+
+              {/* Video Toggle Button */}
+              <button
+                onClick={toggleVideo}
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  isVideoOff
+                    ? 'bg-rose-500/20 text-rose-500 hover:bg-rose-500/30'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={isVideoOff ? 'Start Camera' : 'Stop Camera'}
+              >
+                {isVideoOff ? <FiVideoOff size={18} /> : <FiVideo size={18} />}
+                <span className="text-[10px] font-bold">{isVideoOff ? (isBn ? 'ভিডিও চালু' : 'Start Video') : (isBn ? 'ভিডিও বন্ধ' : 'Stop Video')}</span>
+              </button>
+
+              {/* Screen Share Button */}
+              <button
+                onClick={toggleScreenShare}
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  isScreenSharing
+                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 ring-1 ring-emerald-500/40'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
+              >
+                <FiTv size={18} className={isScreenSharing ? 'text-emerald-400' : 'text-emerald-500'} />
+                <span className="text-[10px] font-bold">{isScreenSharing ? (isBn ? 'শেয়ার বন্ধ' : 'Stop Share') : (isBn ? 'স্ক্রিন শেয়ার' : 'Share')}</span>
+              </button>
+
+              {/* In-Meeting Live Chat Button */}
+              <button
+                onClick={() => {
+                  setChatOpen(!chatOpen);
+                  if (!chatOpen) setUnreadCount(0);
+                }}
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  chatOpen
+                    ? 'bg-indigo-600/30 text-indigo-400 ring-1 ring-indigo-500/40'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title="Open Live Chat"
+              >
+                <FiMessageSquare size={18} />
+                <span className="text-[10px] font-bold">{isBn ? 'লাইভ চ্যাট' : 'Chat'}</span>
+                {unreadCount > 0 && !chatOpen && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black animate-bounce shadow">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <div className="h-7 w-px bg-slate-800 mx-1" />
+
+              {/* Leave Room Button */}
+              <button
+                onClick={onLeave}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-600/30 transition cursor-pointer active:scale-95"
+                title="Leave this meeting"
+              >
+                <FiPhoneOff size={15} />
+                <span>{isBn ? 'বের হন' : 'Leave'}</span>
+              </button>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* 🌟 IN-MEETING LIVE CHAT DRAWER (Zoom Style) */}
+        {chatOpen && (
+          <div className="w-80 md:w-96 h-full bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 animate-in slide-in-from-right duration-200">
+            
+            {/* Chat Header */}
+            <div className="h-12 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 text-white shrink-0">
+              <div className="flex items-center gap-2">
+                <FiMessageSquare size={16} className="text-indigo-400" />
+                <span className="text-xs font-black uppercase tracking-wider">
+                  {isBn ? 'ইন-মিটিং লাইভ চ্যাট' : 'In-Meeting Chat'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-bold text-slate-400">
+                  {chatMessages.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setChatOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                title="Close Chat"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+
+            {/* Chat Message Stream */}
+            <div
+              ref={chatScrollRef}
+              className="flex-1 p-4 overflow-y-auto space-y-3.5 text-white text-xs scrollbar-thin scrollbar-thumb-slate-800"
+            >
+              {chatMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 gap-2 p-4">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800/60 flex items-center justify-center text-slate-400">
+                    <FiMessageSquare size={20} />
+                  </div>
+                  <p className="font-bold text-slate-300">{isBn ? 'এখনও কোনো মেসেজ নেই' : 'No messages yet'}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {isBn ? 'এখানে পাঠানো মেসেজ মিটিংয়ের সবাই দেখতে পাবেন।' : 'Messages sent here are visible to everyone in this meeting.'}
+                  </p>
+                </div>
               ) : (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                chatMessages.map((msg, i) => {
+                  const isMe = msg.user_id === currentUser?.id;
+                  return (
+                    <div
+                      key={msg.id || i}
+                      className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                        <span className="font-bold text-slate-300">{isMe ? (isBn ? 'আপনি' : 'You') : msg.user_name}</span>
+                        {msg.user_role && (
+                          <span className="px-1.5 py-0.2 rounded bg-slate-800 text-[9px] text-slate-400">
+                            {msg.user_role}
+                          </span>
+                        )}
+                        <span>•</span>
+                        <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}</span>
+                      </div>
+
+                      <div
+                        className={`px-3.5 py-2 rounded-2xl max-w-[85%] break-words ${
+                          isMe
+                            ? 'bg-rose-600 text-white rounded-br-none shadow-md shadow-rose-600/20'
+                            : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60'
+                        }`}
+                      >
+                        {msg.message}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
 
-            {/* Waiting for other members hint if alone */}
-            {totalInRoom === 1 && (
-              <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-3.5 py-2 rounded-2xl flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>{isBn ? 'অন্যান্য সদস্যের যোগদানের জন্য অপেক্ষা করা হচ্ছে...' : 'Waiting for other team members to join...'}</span>
-              </div>
-            )}
-          </div>
-
-          {/* REMOTE USERS TILES */}
-          {remotePeerList.map(([peerId, remote]) => (
-            <RemoteVideoTile
-              key={peerId}
-              remotePeerId={peerId}
-              stream={remote.stream}
-              userName={remote.userName}
-              role={remote.role}
-              avatar={remote.avatar}
-            />
-          ))}
-
-        </div>
-
-        {/* 🌟 Floating Glass Controls Bar */}
-        <div className="w-full flex items-center justify-center z-20 pt-2">
-          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 shadow-2xl">
-            
-            {/* Mic Button */}
-            <button
-              onClick={toggleAudio}
-              className={`p-3 rounded-xl transition cursor-pointer flex items-center justify-center ${
-                isMuted
-                  ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30 hover:bg-rose-500/30'
-                  : 'bg-slate-800 hover:bg-slate-700 text-white'
-              }`}
-              title={isMuted ? (isBn ? 'মাইক্রোফোন চালু করুন' : 'Unmute Microphone') : (isBn ? 'মাইক্রোফোন মিউট করুন' : 'Mute Microphone')}
-            >
-              {isMuted ? <FiMicOff size={18} /> : <FiMic size={18} />}
-            </button>
-
-            {/* Video Button */}
-            <button
-              onClick={toggleVideo}
-              className={`p-3 rounded-xl transition cursor-pointer flex items-center justify-center ${
-                isVideoOff
-                  ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30 hover:bg-rose-500/30'
-                  : 'bg-slate-800 hover:bg-slate-700 text-white'
-              }`}
-              title={isVideoOff ? (isBn ? 'ক্যামেরা চালু করুন' : 'Start Camera') : (isBn ? 'ক্যামেরা বন্ধ করুন' : 'Stop Camera')}
-            >
-              {isVideoOff ? <FiVideoOff size={18} /> : <FiVideo size={18} />}
-            </button>
-
-            {/* Screen Share Button */}
-            <button
-              onClick={toggleScreenShare}
-              className={`p-3 rounded-xl transition cursor-pointer flex items-center justify-center ${
-                isScreenSharing
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/40'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-              }`}
-              title={isScreenSharing ? (isBn ? 'স্ক্রিন শেয়ার বন্ধ করুন' : 'Stop Screen Sharing') : (isBn ? 'স্ক্রিন শেয়ার করুন' : 'Share Screen')}
-            >
-              <FiTv size={18} />
-            </button>
-
-            <div className="h-6 w-px bg-slate-800 mx-1" />
-
-            {/* Leave Room Button */}
-            <button
-              onClick={onLeave}
-              className="flex items-center gap-2 px-4 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-600/30 transition cursor-pointer active:scale-95"
-              title={isBn ? 'রুম ত্যাগ করুন' : 'Leave this meeting'}
-            >
-              <FiPhoneOff size={16} />
-              <span>{isBn ? 'ত্যাগ করুন' : 'Leave Studio'}</span>
-            </button>
+            {/* Chat Message Input Footer */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center gap-2 shrink-0">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder={isBn ? 'সবার উদ্দেশ্যে মেসেজ লিখুন...' : 'Type a message to everyone...'}
+                className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || isSending}
+                className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Send Message"
+              >
+                {isSending ? <FiLoader className="animate-spin" size={15} /> : <FiSend size={15} />}
+              </button>
+            </form>
 
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -589,8 +892,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
   );
 }
 
-// Subcomponent for each remote peer video
-function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar }) {
+// 🌟 ZOOM-STYLE REMOTE VIDEO TILE
+function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar, compact = false, isBn = false }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
 
@@ -610,7 +913,9 @@ function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar }) {
   }, [stream]);
 
   return (
-    <div className="relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-center">
+    <div className={`relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-center w-full h-full ${
+      compact ? 'rounded-xl' : ''
+    }`}>
       <video
         ref={videoRef}
         autoPlay
@@ -618,21 +923,28 @@ function RemoteVideoTile({ remotePeerId, stream, userName, role, avatar }) {
         className={`w-full h-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
       />
 
-      {/* Placeholder when peer's camera is off */}
+      {/* Zoom-Style Video Off Avatar Card */}
       {!hasVideo && (
-        <div className="flex flex-col items-center justify-center gap-3">
-          <div className="w-20 h-20 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xl font-black text-white shadow-inner">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xl font-black text-white shadow-inner">
             {userName ? userName.charAt(0).toUpperCase() : 'C'}
           </div>
-          <span className="text-xs font-bold text-slate-400">{userName} (Camera Off)</span>
+          {!compact && (
+            <div className="text-center">
+              <p className="text-xs font-bold text-white">{userName}</p>
+              <p className="text-[10px] text-slate-400">
+                {isBn ? 'ক্যামেরা বন্ধ' : 'Camera Off'}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Remote User Label */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
+      {/* Zoom-Style Remote User Pill */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold">
         <span>{userName}</span>
         {role && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-normal">
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-normal">
             {role}
           </span>
         )}

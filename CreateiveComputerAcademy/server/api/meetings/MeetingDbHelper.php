@@ -56,6 +56,20 @@ class MeetingDbHelper {
                 $db->exec("ALTER TABLE `meeting_attendance_logs` ADD COLUMN `last_ping` DATETIME NULL AFTER `duration_minutes`");
             } catch (Throwable $e) {}
 
+            // 3. Table: meeting_messages (Live In-Meeting Chat)
+            $db->exec("CREATE TABLE IF NOT EXISTS `meeting_messages` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `meeting_id` INT NOT NULL,
+                `user_id` INT NOT NULL,
+                `user_name` VARCHAR(150) NOT NULL,
+                `user_role` VARCHAR(50) NULL DEFAULT 'Member',
+                `message` TEXT NOT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (`meeting_id`),
+                INDEX (`user_id`),
+                INDEX (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
         } catch (Throwable $e) {
             error_log("MeetingDbHelper::ensureSchema error: " . $e->getMessage());
         }
