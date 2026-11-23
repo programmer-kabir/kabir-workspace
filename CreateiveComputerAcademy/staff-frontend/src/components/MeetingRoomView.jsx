@@ -104,6 +104,30 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   const [remoteMuteStates, setRemoteMuteStates] = useState({}); // userId -> boolean (true if muted)
   const [unmutePrompt, setUnmutePrompt] = useState({ open: false, requestedBy: '' });
 
+  // ✋ Raise Hand State
+  const [isHandRaised, setIsHandRaised] = useState(false);
+  const [raisedHands, setRaisedHands] = useState({}); // userId -> { userName, raisedAt }
+
+  // Pleasant audio chime when a participant raises their hand (Host notification)
+  const playHandRaiseChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {}
+  }, []);
+
   // Determine exact host tier: 'host' (original creator), 'co_host' (promoted or developer/admin), or 'member'
   const getUserHostTier = useCallback((userId, role) => {
     if (!userId) return 'member';
@@ -322,8 +346,40 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         ...prev,
         [data.payload.userId]: Boolean(data.payload.isMuted)
       }));
+    } else if (data.type === 'raise_hand' && data.payload) {
+      const { userId, userName, isRaised, raisedAt, loweredBy } = data.payload;
+      const numUserId = Number(userId);
+
+      setRaisedHands(prev => {
+        const updated = { ...prev };
+        if (isRaised) {
+          updated[numUserId] = {
+            userName: userName || 'Participant',
+            raisedAt: raisedAt || Date.now()
+          };
+        } else {
+          delete updated[numUserId];
+        }
+        return updated;
+      });
+
+      if (numUserId === Number(currentUser?.id)) {
+        setIsHandRaised(Boolean(isRaised));
+        if (!isRaised && loweredBy) {
+          toast.info(isBn 
+            ? `হোস্ট (${loweredBy}) আপনার হাত নামিয়ে দিয়েছেন।` 
+            : `Host (${loweredBy}) lowered your hand.`);
+        }
+      }
+
+      if (isRaised && numUserId !== Number(currentUser?.id) && isMeHost) {
+        playHandRaiseChime();
+        toast.info(isBn 
+          ? `✋ ${userName || 'মেম্বার'} কথা বলার জন্য হাত তুলেছেন!` 
+          : `✋ ${userName || 'Participant'} raised hand to speak!`);
+      }
     }
-  }, [currentUser?.id, isBn, handleIncomingMessage, handlePinUpdate]);
+  }, [currentUser?.id, currentUser?.name, isBn, isMeHost, playHandRaiseChime, handleIncomingMessage, handlePinUpdate]);
 
   // Fetch initial chat messages, hosts & lock state, poll periodically
   useEffect(() => {
@@ -708,7 +764,82 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
       toast.warning(isBn ? `🔇 ${targetName}-কে মিউট করা হয়েছে।` : `🔇 Muted ${targetName}.`);
     } else {
       toast.success(isBn ? `🎙️ ${targetName}-এর মাইক চালু করা হয়েছে।` : `🎙️ Unmuted ${targetName}.`);
+      // Auto-lower hand if participant had raised hand
+      if (raisedHands[targetUserId]) {
+        handleLowerHand(targetUserId, targetName);
+      }
     }
+  };
+
+  // ✋ Participant Action: Toggle Raise Hand
+  const toggleRaiseHand = () => {
+    const nextRaised = !isHandRaised;
+    setIsHandRaised(nextRaised);
+
+    setRaisedHands(prev => {
+      const updated = { ...prev };
+      if (nextRaised) {
+        updated[currentUser?.id] = {
+          userName: currentUser?.name || 'You',
+          raisedAt: Date.now()
+        };
+      } else {
+        delete updated[currentUser?.id];
+      }
+      return updated;
+    });
+
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'raise_hand',
+            payload: {
+              userId: currentUser?.id,
+              userName: currentUser?.name || 'Participant',
+              isRaised: nextRaised,
+              raisedAt: Date.now()
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    if (nextRaised) {
+      toast.success(isBn ? '✋ আপনি কথা বলার জন্য হাত তুলেছেন।' : '✋ You raised your hand to speak.');
+    } else {
+      toast.info(isBn ? 'হাত নামিয়ে নেওয়া হয়েছে।' : 'Hand lowered.');
+    }
+  };
+
+  // ✋ Host Action: Lower a participant's hand
+  const handleLowerHand = (targetUserId, targetName) => {
+    if (!isMeHost || !targetUserId) return;
+    const numId = Number(targetUserId);
+
+    setRaisedHands(prev => {
+      const updated = { ...prev };
+      delete updated[numId];
+      return updated;
+    });
+
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'raise_hand',
+            payload: {
+              userId: numId,
+              userName: targetName,
+              isRaised: false,
+              loweredBy: currentUser?.name || 'Host'
+            }
+          });
+        }
+      } catch (e) {}
+    });
+
+    toast.info(isBn ? `✋ ${targetName}-এর হাত নামিয়ে দেওয়া হয়েছে।` : `✋ Lowered ${targetName}'s hand.`);
   };
 
   // Host Action: Legacy single mute fallback
@@ -1134,6 +1265,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                             avatar={remote.avatar}
                             tier={remoteTier}
                             isMuted={isRemoteMuted}
+                            isHandRaised={Boolean(raisedHands[remote.userId])}
                             canControlAudio={isMeHost}
                             onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                             canPromote={isMeHost}
@@ -1190,6 +1322,14 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     </div>
                   )}
 
+                  {/* ✋ Local User Raised Hand Badge */}
+                  {isHandRaised && (
+                    <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/25 backdrop-blur-md border border-amber-500/60 text-amber-300 text-xs font-bold animate-bounce shadow-xl">
+                      <span className="text-sm">✋</span>
+                      <span>{isBn ? 'আপনার হাত তোলা' : 'Hand Raised'}</span>
+                    </div>
+                  )}
+
                   {/* Local Badge Label (Zoom Style Bottom-Left) */}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
                     <span>
@@ -1240,6 +1380,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       avatar={remote.avatar}
                       tier={remoteTier}
                       isMuted={isRemoteMuted}
+                      isHandRaised={Boolean(raisedHands[remote.userId])}
                       canControlAudio={isMeHost}
                       onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                       canPromote={isMeHost}
@@ -1325,6 +1466,22 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     {unreadCount}
                   </span>
                 )}
+              </button>
+
+              {/* ✋ Raise Hand / Lower Hand Button */}
+              <button
+                onClick={toggleRaiseHand}
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  isHandRaised
+                    ? 'bg-amber-500/25 text-amber-300 ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/20 animate-pulse'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={isHandRaised ? (isBn ? 'হাত নামিয়ে নিন' : 'Lower Hand') : (isBn ? 'কথা বলার জন্য হাত তুলুন' : 'Raise Hand to Speak')}
+              >
+                <span className="text-lg leading-none select-none">✋</span>
+                <span className="text-[10px] font-bold">
+                  {isHandRaised ? (isBn ? 'হাত নামান' : 'Hand Up') : (isBn ? 'হাত তুলুন' : 'Raise Hand')}
+                </span>
               </button>
 
               <div className="h-7 w-px bg-slate-800 mx-1" />
@@ -1630,6 +1787,74 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
             {/* Participant List */}
             <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
               
+              {/* ✋ Raised Hands Priority Section (When any member raises hand) */}
+              {Object.keys(raisedHands).length > 0 && (
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm">✋</span>
+                      <span>{isBn ? 'কথা বলতে হাত তুলেছেন' : 'Raised Hands to Speak'} ({Object.keys(raisedHands).length})</span>
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {Object.entries(raisedHands).map(([uId, hand]) => {
+                      const numId = Number(uId);
+                      const isSelf = numId === Number(currentUser?.id);
+                      const remoteUserMuted = isSelf ? isMuted : Boolean(remoteMuteStates[numId]);
+
+                      return (
+                        <div key={uId} className="flex items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-amber-500/20">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base animate-bounce">✋</span>
+                            <div>
+                              <p className="text-xs font-bold text-white">
+                                {hand.userName} {isSelf ? `(${isBn ? 'আপনি' : 'You'})` : ''}
+                              </p>
+                              <p className="text-[9px] text-amber-300/80">
+                                {isBn ? 'কথা বলার অপেক্ষমান' : 'Waiting to speak'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            {isMeHost && !isSelf && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    handleToggleParticipantMic(numId, hand.userName, remoteUserMuted);
+                                    handleLowerHand(numId, hand.userName);
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold transition cursor-pointer"
+                                  title={isBn ? 'মাইক অন করুন ও কথা বলতে দিন' : 'Unmute & allow to speak'}
+                                >
+                                  <FiMic size={11} />
+                                  <span>{isBn ? 'কথা বলতে দিন' : 'Allow Speak'}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleLowerHand(numId, hand.userName)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition cursor-pointer"
+                                  title={isBn ? 'হাত নামান' : 'Lower hand'}
+                                >
+                                  <span>{isBn ? 'হাত নামান' : 'Lower Hand'}</span>
+                                </button>
+                              </>
+                            )}
+                            {isSelf && (
+                              <button
+                                onClick={toggleRaiseHand}
+                                className="px-2 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition cursor-pointer"
+                              >
+                                {isBn ? 'হাত নামান' : 'Lower Hand'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Local User Row */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800">
                 <div className="flex items-center gap-3">
@@ -1656,6 +1881,11 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                           ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
                         </span>
                       ) : null}
+                      {isHandRaised && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold border border-amber-500/40 flex items-center gap-0.5 animate-pulse">
+                          <span>✋</span>
+                        </span>
+                      )}
                     </p>
                     <p className="text-[10px] text-slate-400">{currentUser?.roles?.[0] || 'Member'}</p>
                   </div>
@@ -1705,6 +1935,12 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                               ⭐ {isBn ? 'কো-হোস্ট' : 'Co-Host'}
                             </span>
                           ) : null}
+                          {Boolean(raisedHands[remote.userId]) && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold border border-amber-500/40 flex items-center gap-0.5 animate-pulse">
+                              <span>✋</span>
+                              <span>{isBn ? 'হাত তোলা' : 'Hand Up'}</span>
+                            </span>
+                          )}
                         </p>
                         <p className="text-[10px] text-slate-400">{remote.role || 'Member'}</p>
                       </div>
@@ -1810,7 +2046,8 @@ function RemoteVideoTile({
   remotePeerId, stream, userId, userName, role, avatar,
   compact = false, tier = 'member', isMuted = false,
   canControlAudio = false, onToggleMic,
-  canPromote = false, onToggleCoHost, isBn = false
+  canPromote = false, onToggleCoHost, isBn = false,
+  isHandRaised = false
 }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -1839,6 +2076,16 @@ function RemoteVideoTile({
       isHost ? 'border-amber-400/60 ring-1 ring-amber-400/20' : isCoHost ? 'border-amber-500/40' : 'border-slate-800'
     } ${compact ? 'rounded-xl' : ''}`}>
       
+      {/* ✋ Remote User Raised Hand Badge */}
+      {isHandRaised && (
+        <div className={`absolute top-3 z-30 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/25 backdrop-blur-md border border-amber-500/60 text-amber-300 text-[11px] font-bold animate-bounce shadow-xl ${
+          canPromote && tier !== 'host' ? 'right-28' : 'right-3'
+        }`}>
+          <span className="text-sm">✋</span>
+          <span>{isBn ? 'হাত তুলেছে' : 'Hand Up'}</span>
+        </div>
+      )}
+
       <video
         ref={videoRef}
         autoPlay
