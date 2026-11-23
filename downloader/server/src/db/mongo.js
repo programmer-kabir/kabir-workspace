@@ -24,11 +24,12 @@ export function sanitizeMongoUri(rawUri) {
  */
 export function getMongoConfig(overrideUri = null, overrideOptions = {}) {
   const uri = overrideUri || process.env.MONGODB_URI || null;
-  const dbName = process.env.MONGODB_DB_NAME || 'streamvault';
+  const dbName = overrideOptions.dbName || process.env.MONGODB_DB_NAME || 'streamvault';
   const maxPoolSize = parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10', 10);
   const minPoolSize = parseInt(process.env.MONGODB_MIN_POOL_SIZE || '2', 10);
-  const connectTimeoutMS = parseInt(process.env.MONGODB_CONNECT_TIMEOUT_MS || '5000', 10);
-  const serverSelectionTimeoutMS = parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || '5000', 10);
+  const connectTimeoutMS = parseInt(process.env.MONGODB_CONNECT_TIMEOUT_MS || '30000', 10);
+  const serverSelectionTimeoutMS = parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || '30000', 10);
+  const socketTimeoutMS = parseInt(process.env.MONGODB_SOCKET_TIMEOUT_MS || '45000', 10);
 
   return {
     uri,
@@ -38,6 +39,7 @@ export function getMongoConfig(overrideUri = null, overrideOptions = {}) {
       minPoolSize,
       connectTimeoutMS,
       serverSelectionTimeoutMS,
+      socketTimeoutMS,
       retryWrites: true,
       w: 'majority',
       appName: 'StreamVault',
@@ -119,6 +121,25 @@ export async function disconnectMongo() {
  */
 export function getMongoDb() {
   return db;
+}
+
+/**
+ * Set active MongoDB Db instance (useful for test isolation)
+ */
+export function setMongoDb(customDb, customClient = null) {
+  db = customDb;
+  if (customClient) {
+    client = customClient;
+  } else if (customDb && customDb.client) {
+    client = customDb.client;
+  }
+}
+
+/**
+ * Set active MongoClient instance (useful for test isolation)
+ */
+export function setMongoClient(customClient) {
+  client = customClient;
 }
 
 /**

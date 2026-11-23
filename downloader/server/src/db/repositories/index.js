@@ -99,3 +99,16 @@ export {
   getSystemRepository,
   getWebhookRepository
 };
+
+// Direct engine implementations
+export { sqliteUserRepository, mongoUserRepository } from './userRepository.js';
+export { sqliteSessionRepository, mongoSessionRepository } from './sessionRepository.js';
+export { sqliteQueueRepository, mongoQueueRepository } from './queueRepository.js';
+export { sqliteHistoryRepository, mongoHistoryRepository } from './historyRepository.js';
+export { sqliteFavoriteRepository, mongoFavoriteRepository } from './favoriteRepository.js';
+export { sqliteNotificationRepository, mongoNotificationRepository } from './notificationRepository.js';
+export { sqliteApiKeyRepository, mongoApiKeyRepository } from './apiKeyRepository.js';
+export { sqliteSubscriptionRepository, mongoSubscriptionRepository } from './subscriptionRepository.js';
+export { sqliteSystemRepository, mongoSystemRepository } from './systemRepository.js';
+export { sqliteWebhookRepository, mongoWebhookRepository } from './webhookRepository.js';
+

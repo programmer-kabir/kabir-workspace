@@ -7,22 +7,26 @@ import { getDbEngine, SUPPORTED_ENGINES } from './index.js';
 // SQLite Implementation
 export const sqliteHistoryRepository = {
   async create(entry) {
-    const now = entry.created_at || new Date().toISOString();
+    const now = (entry.created_at || entry.createdAt) || new Date().toISOString();
+    const userId = entry.user_id || entry.userId || null;
+    const jobId = entry.job_id || entry.jobId || null;
+    const formatId = entry.format_id || entry.formatId || null;
+    const fileSize = entry.file_size || entry.fileSize || null;
     const res = db.prepare(`
       INSERT INTO download_history (
         user_id, job_id, url, platform, title, thumbnail, format_id, type, resolution, file_size, duration, status, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      entry.user_id || null,
-      entry.job_id || null,
+      userId,
+      jobId,
       entry.url,
       entry.platform || 'generic',
       entry.title || 'Untitled Download',
       entry.thumbnail || null,
-      entry.format_id || null,
+      formatId,
       entry.type || 'video',
       entry.resolution || null,
-      entry.file_size || null,
+      fileSize,
       entry.duration || null,
       entry.status || 'completed',
       now
@@ -152,20 +156,24 @@ export const mongoHistoryRepository = {
   },
 
   async create(entry) {
-    const now = entry.created_at ? new Date(entry.created_at) : new Date();
+    const now = (entry.created_at || entry.createdAt) ? new Date(entry.created_at || entry.createdAt) : new Date();
+    const userId = entry.user_id || entry.userId;
+    const jobId = entry.job_id || entry.jobId;
+    const formatId = entry.format_id || entry.formatId;
+    const fileSize = entry.file_size || entry.fileSize;
     const doc = {
       _id: new ObjectId(),
       sqlite_id: entry.sqlite_id || null,
-      user_id: entry.user_id ? String(entry.user_id) : null,
-      job_id: entry.job_id ? String(entry.job_id) : null,
+      user_id: userId ? String(userId) : null,
+      job_id: jobId ? String(jobId) : null,
       url: String(entry.url),
       platform: String(entry.platform || 'generic'),
       title: String(entry.title || 'Untitled Download'),
       thumbnail: entry.thumbnail || null,
-      format_id: entry.format_id || null,
+      format_id: formatId || null,
       type: entry.type || 'video',
       resolution: entry.resolution || null,
-      file_size: entry.file_size || null,
+      file_size: fileSize || null,
       duration: entry.duration || null,
       status: entry.status || 'completed',
       created_at: now

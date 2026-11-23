@@ -32,6 +32,11 @@ export const sqliteFavoriteRepository = {
     return db.prepare('SELECT * FROM favorites WHERE user_id = ? AND url = ?').get(userId, url) || null;
   },
 
+  async exists(userId, url) {
+    const row = db.prepare('SELECT 1 FROM favorites WHERE user_id = ? AND url = ?').get(userId, url);
+    return !!row;
+  },
+
   async deleteById(id, userId) {
     const res = db.prepare('DELETE FROM favorites WHERE id = ? AND user_id = ?').run(id, userId);
     return res.changes > 0;
@@ -154,12 +159,21 @@ export const mongoFavoriteRepository = {
     return { ...doc, id: doc._id, collection: doc.collection_name };
   },
 
+  async exists(userId, url) {
+    const count = await this._getColl().countDocuments({ user_id: String(userId), url: String(url) });
+    return count > 0;
+  },
+
   async deleteById(id, userId) {
     const query = { user_id: String(userId) };
-    if (typeof id === 'string' && id.length === 24) {
-      query._id = new ObjectId(id);
+    if (id instanceof ObjectId) {
+      query._id = id;
+    } else if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
+      query.$or = [{ _id: new ObjectId(id) }, { _id: String(id) }];
     } else {
-      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) }];
+      const num = parseInt(id, 10);
+      query.$or = [{ _id: String(id) }];
+      if (!isNaN(num)) query.$or.push({ sqlite_id: num });
     }
     const res = await this._getColl().deleteOne(query);
     return res.deletedCount > 0;

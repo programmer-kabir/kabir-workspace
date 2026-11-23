@@ -134,11 +134,11 @@ export const SCHEMA_DEFINITIONS = {
           attempts: { bsonType: ['int', 'long'] },
           max_attempts: { bsonType: ['int', 'long'] },
           error_message: { bsonType: ['string', 'null'] },
-          file_size: { bsonType: ['string', 'null'] },
+          file_size: { bsonType: ['string', 'int', 'long', 'double', 'null'] },
           direct_url: { bsonType: ['string', 'null'] },
           created_at: { bsonType: 'date' },
-          started_at: { bsonType: ['date', 'null'] },
-          completed_at: { bsonType: ['date', 'null'] },
+          started_at: { bsonType: ['date', 'string', 'null'] },
+          completed_at: { bsonType: ['date', 'string', 'null'] },
           updated_at: { bsonType: 'date' }
         }
       }
@@ -162,8 +162,8 @@ export const SCHEMA_DEFINITIONS = {
           format_id: { bsonType: ['string', 'null'] },
           type: { enum: ['video', 'audio'] },
           resolution: { bsonType: ['string', 'null'] },
-          file_size: { bsonType: ['string', 'null'] },
-          duration: { bsonType: ['string', 'null'] },
+          file_size: { bsonType: ['string', 'int', 'long', 'double', 'null'] },
+          duration: { bsonType: ['string', 'int', 'long', 'double', 'null'] },
           status: { bsonType: 'string' },
           created_at: { bsonType: 'date' }
         }

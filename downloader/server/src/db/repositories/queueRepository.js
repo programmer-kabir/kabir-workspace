@@ -105,7 +105,8 @@ export const sqliteQueueRepository = {
       queuedJobs: queued,
       processingJobs: processing,
       failedJobs: failed,
-      completedJobs: completed
+      completedJobs: completed,
+      totalJobs: queued + processing + failed + completed
     };
   },
 
@@ -272,13 +273,22 @@ export const mongoQueueRepository = {
   },
 
   async create(job) {
-    const now = job.created_at ? new Date(job.created_at) : new Date();
+    const now = (job.created_at || job.createdAt) ? new Date(job.created_at || job.createdAt) : new Date();
+    const userId = job.user_id || job.userId;
+    const formatId = job.format_id || job.formatId;
+    const maxAttempts = job.max_attempts || job.maxAttempts || 3;
+    const errorMessage = job.error_message || job.errorMessage || null;
+    const fileSize = job.file_size || job.fileSize || null;
+    const directUrl = job.direct_url || job.directUrl || null;
+    const startedAt = job.started_at || job.startedAt;
+    const completedAt = job.completed_at || job.completedAt;
+
     const doc = {
       _id: String(job.id),
-      user_id: job.user_id ? String(job.user_id) : null,
+      user_id: userId ? String(userId) : null,
       url: String(job.url),
       platform: String(job.platform || 'generic'),
-      format_id: job.format_id || null,
+      format_id: formatId || null,
       type: job.type || 'video',
       quality: job.quality || null,
       title: job.title || null,
@@ -288,13 +298,13 @@ export const mongoQueueRepository = {
       progress: job.progress || 0,
       priority: job.priority || 1,
       attempts: job.attempts || 0,
-      max_attempts: job.max_attempts || 3,
-      error_message: job.error_message || null,
-      file_size: job.file_size || null,
-      direct_url: job.direct_url || null,
+      max_attempts: maxAttempts,
+      error_message: errorMessage,
+      file_size: fileSize,
+      direct_url: directUrl,
       created_at: now,
-      started_at: job.started_at ? new Date(job.started_at) : null,
-      completed_at: job.completed_at ? new Date(job.completed_at) : null,
+      started_at: startedAt ? new Date(startedAt) : null,
+      completed_at: completedAt ? new Date(completedAt) : null,
       updated_at: now
     };
     await this._getColl().insertOne(doc);
@@ -375,7 +385,8 @@ export const mongoQueueRepository = {
       queuedJobs: queued,
       processingJobs: processing,
       failedJobs: failed,
-      completedJobs: completed
+      completedJobs: completed,
+      totalJobs: queued + processing + failed + completed
     };
   },
 
@@ -457,6 +468,15 @@ export const mongoQueueRepository = {
   async updateJob(id, fields) {
     const now = new Date();
     const $set = { ...fields, updated_at: now };
+    if ($set.completed_at) {
+      $set.completed_at = $set.completed_at instanceof Date ? $set.completed_at : new Date($set.completed_at);
+    }
+    if ($set.started_at) {
+      $set.started_at = $set.started_at instanceof Date ? $set.started_at : new Date($set.started_at);
+    }
+    if ($set.created_at) {
+      $set.created_at = $set.created_at instanceof Date ? $set.created_at : new Date($set.created_at);
+    }
     await this._getColl().updateOne({ _id: String(id) }, { $set });
     return this.findById(id);
   },

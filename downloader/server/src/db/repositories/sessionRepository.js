@@ -17,17 +17,22 @@ export const sqliteSessionRepository = {
 
   async create(session) {
     const now = session.created_at || new Date().toISOString();
+    const userId = session.user_id || session.userId;
+    const tokenHash = session.token_hash || session.tokenHash;
+    const ipAddress = session.ip_address || session.ipAddress || null;
+    const userAgent = session.user_agent || session.userAgent || null;
+    const expiresAt = session.expires_at || session.expiresAt;
     db.prepare(`
       INSERT INTO sessions (
         id, user_id, token_hash, ip_address, user_agent, expires_at, created_at, last_active_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       session.id,
-      session.user_id,
-      session.token_hash,
-      session.ip_address || null,
-      session.user_agent || null,
-      session.expires_at,
+      userId,
+      tokenHash,
+      ipAddress,
+      userAgent,
+      expiresAt,
       now,
       now
     );
@@ -112,14 +117,19 @@ export const mongoSessionRepository = {
   },
 
   async create(session) {
-    const now = session.created_at ? new Date(session.created_at) : new Date();
-    const expiresAt = session.expires_at ? new Date(session.expires_at) : new Date(Date.now() + 7 * 86400 * 1000);
+    const now = (session.created_at || session.createdAt) ? new Date(session.created_at || session.createdAt) : new Date();
+    const rawExp = session.expires_at || session.expiresAt;
+    const expiresAt = rawExp ? new Date(rawExp) : new Date(Date.now() + 7 * 86400 * 1000);
+    const userId = session.user_id || session.userId;
+    const tokenHash = session.token_hash || session.tokenHash;
+    const ipAddress = session.ip_address || session.ipAddress || null;
+    const userAgent = session.user_agent || session.userAgent || null;
     const doc = {
       _id: String(session.id),
-      user_id: String(session.user_id),
-      token_hash: String(session.token_hash),
-      ip_address: session.ip_address || null,
-      user_agent: session.user_agent || null,
+      user_id: String(userId),
+      token_hash: String(tokenHash),
+      ip_address: ipAddress,
+      user_agent: userAgent,
       expires_at: expiresAt,
       created_at: now,
       last_active_at: now

@@ -109,7 +109,7 @@ export const mongoNotificationRepository = {
       created_at: now
     };
     await this._getColl().insertOne(doc);
-    return { ...doc, id: doc._id };
+    return { ...doc, id: doc._id.toString() };
   },
 
   async findByUserId(userId, limit = 50) {
@@ -117,20 +117,29 @@ export const mongoNotificationRepository = {
       .sort({ created_at: -1 })
       .limit(limit)
       .toArray();
-    return docs.map(d => ({ ...d, id: d._id, is_read: d.is_read ? 1 : 0 }));
+    return docs.map(d => ({ ...d, id: d._id.toString(), is_read: d.is_read ? 1 : 0 }));
   },
 
   async countUnread(userId) {
     return this._getColl().countDocuments({ user_id: String(userId), is_read: false });
   },
 
-  async markRead(id, userId) {
+  _buildIdQuery(id, userId) {
     const query = { user_id: String(userId) };
-    if (typeof id === 'string' && id.length === 24) {
-      query._id = new ObjectId(id);
+    if (id instanceof ObjectId) {
+      query._id = id;
+    } else if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
+      query.$or = [{ _id: new ObjectId(id) }, { _id: String(id) }];
     } else {
-      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) }];
+      const num = parseInt(id, 10);
+      query.$or = [{ _id: String(id) }];
+      if (!isNaN(num)) query.$or.push({ sqlite_id: num });
     }
+    return query;
+  },
+
+  async markRead(id, userId) {
+    const query = this._buildIdQuery(id, userId);
     const res = await this._getColl().updateOne(query, { $set: { is_read: true } });
     return res.modifiedCount > 0;
   },
@@ -144,12 +153,7 @@ export const mongoNotificationRepository = {
   },
 
   async deleteById(id, userId) {
-    const query = { user_id: String(userId) };
-    if (typeof id === 'string' && id.length === 24) {
-      query._id = new ObjectId(id);
-    } else {
-      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) }];
-    }
+    const query = this._buildIdQuery(id, userId);
     const res = await this._getColl().deleteOne(query);
     return res.deletedCount > 0;
   },

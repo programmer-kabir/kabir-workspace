@@ -1,5 +1,5 @@
 import db from '../index.js';
-import { getMongoDb } from '../mongo.js';
+import { getMongoDb, getMongoClient } from '../mongo.js';
 import { ObjectId } from 'mongodb';
 import { COLLECTIONS } from '../mongoSchemas.js';
 import { getDbEngine, SUPPORTED_ENGINES } from './index.js';
@@ -690,7 +690,7 @@ export const mongoSubscriptionRepository = {
     const mdb = getMongoDb();
     if (!mdb) throw new Error('MongoDB instance not connected.');
 
-    const client = mdb.client;
+    const client = getMongoClient() || mdb.client;
     const session = client ? client.startSession() : null;
 
     const performApproval = async (sess) => {
