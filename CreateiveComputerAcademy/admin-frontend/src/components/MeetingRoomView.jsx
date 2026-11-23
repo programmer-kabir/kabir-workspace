@@ -72,6 +72,7 @@ function createFallbackStream() {
 
 export default function MeetingRoomView({ roomId, meetingTitle, creatorId, currentUser, onLeave }) {
   const localVideoRef = useRef(null);
+  const localFilmstripVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const peerInstanceRef = useRef(null);
   const activeCallsRef = useRef({}); // peerId -> call object
@@ -120,6 +121,31 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   const [floatingReactions, setFloatingReactions] = useState([]); // [{ id, emoji, senderName, leftPercent, duration }]
   const [tileReactions, setTileReactions] = useState({}); // userId -> { emoji, expiresAt }
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+
+  // 🌟 Spotlight & Pin Speaker State
+  const [spotlightUser, setSpotlightUser] = useState(null); // { peerId, userId, userName, spotlightedBy }
+  const [pinnedUser, setPinnedUser] = useState(null); // { peerId, userId, userName }
+
+  // Fanfare / chord chime when host spotlights a speaker
+  const playSpotlightChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+      osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch (e) {}
+  }, []);
 
   // Subtle tactile pop sound when a reaction is triggered
   const playReactionSound = useCallback(() => {
@@ -420,8 +446,23 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
       }
     } else if (data.type === 'floating_reaction' && data.payload?.emoji) {
       triggerFloatingReaction(data.payload);
+    } else if (data.type === 'spotlight_toggle' && data.payload) {
+      const { targetPeerId, targetUserId, targetName, isSpotlighted, spotlightedBy } = data.payload;
+      if (isSpotlighted) {
+        setSpotlightUser({
+          peerId: targetPeerId,
+          userId: targetUserId,
+          userName: targetName,
+          spotlightedBy
+        });
+        playSpotlightChime();
+        toast.info(`🌟 Host (${spotlightedBy}) spotlighted ${targetName} for everyone.`);
+      } else {
+        setSpotlightUser(null);
+        toast.info(`🌟 Spotlight removed.`);
+      }
     }
-  }, [currentUser?.id, currentUser?.name, isMeHost, playHandRaiseChime, triggerFloatingReaction, handleIncomingMessage, handlePinUpdate]);
+  }, [currentUser?.id, currentUser?.name, isMeHost, playHandRaiseChime, playSpotlightChime, triggerFloatingReaction, handleIncomingMessage, handlePinUpdate]);
 
   // Fetch initial chat messages, hosts & lock state, poll periodically
   useEffect(() => {
@@ -924,6 +965,85 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     return () => window.removeEventListener('click', handleClickOutside);
   }, [reactionPickerOpen]);
 
+  // 📌 Local Pin Toggle
+  const handleTogglePin = (peerId, userId, userName) => {
+    if (pinnedUser && (pinnedUser.peerId === peerId || (userId && Number(pinnedUser.userId) === Number(userId)))) {
+      setPinnedUser(null);
+      toast.info('📌 Unpinned.');
+    } else {
+      setPinnedUser({ peerId, userId, userName });
+      toast.success(`📌 Pinned ${userName} for you.`);
+    }
+  };
+
+  // 🌟 Host Spotlight Toggle (Broadcasts to everyone)
+  const handleToggleSpotlight = (peerId, userId, userName) => {
+    if (!isMeHost) return;
+    const isCurrentlySpotlighted = spotlightUser && (spotlightUser.peerId === peerId || (userId && Number(spotlightUser.userId) === Number(userId)));
+    const nextSpotlight = !isCurrentlySpotlighted;
+
+    const payload = {
+      targetPeerId: peerId,
+      targetUserId: userId,
+      targetName: userName,
+      isSpotlighted: nextSpotlight,
+      spotlightedBy: currentUser?.name || 'Host'
+    };
+
+    if (nextSpotlight) {
+      setSpotlightUser({
+        peerId,
+        userId,
+        userName,
+        spotlightedBy: currentUser?.name || 'Host'
+      });
+      playSpotlightChime();
+      toast.success(`🌟 Spotlighted ${userName} for everyone!`);
+    } else {
+      setSpotlightUser(null);
+      toast.info('🌟 Spotlight removed.');
+    }
+
+    // Broadcast over DataChannel to all participants
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'spotlight_toggle',
+            payload
+          });
+        }
+      } catch (e) {}
+    });
+  };
+
+  // Focus resolution for Stage vs Filmstrip
+  const effectiveFocusUser = pinnedUser || spotlightUser;
+  const isFocusSpotlight = Boolean(spotlightUser && (!pinnedUser || (pinnedUser.peerId === spotlightUser.peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(spotlightUser.userId)))));
+  const isFocusLocal = Boolean(effectiveFocusUser && (
+    effectiveFocusUser.peerId === 'local' ||
+    (effectiveFocusUser.userId && Number(effectiveFocusUser.userId) === Number(currentUser?.id))
+  ));
+
+  // Auto-clear pinned/spotlight user if they leave the room
+  useEffect(() => {
+    if (pinnedUser && pinnedUser.peerId !== 'local' && Number(pinnedUser.userId) !== Number(currentUser?.id)) {
+      const exists = remotePeerList.some(([pId, r]) => pId === pinnedUser.peerId || (r.userId && Number(r.userId) === Number(pinnedUser.userId)));
+      if (!exists) setPinnedUser(null);
+    }
+    if (spotlightUser && spotlightUser.peerId !== 'local' && Number(spotlightUser.userId) !== Number(currentUser?.id)) {
+      const exists = remotePeerList.some(([pId, r]) => pId === spotlightUser.peerId || (r.userId && Number(r.userId) === Number(spotlightUser.userId)));
+      if (!exists) setSpotlightUser(null);
+    }
+  }, [remotePeerList, pinnedUser, spotlightUser, currentUser?.id]);
+
+  // Keep local stream connected to mini filmstrip video when mounted
+  useEffect(() => {
+    if (localFilmstripVideoRef.current && localStreamRef.current) {
+      localFilmstripVideoRef.current.srcObject = localStreamRef.current;
+    }
+  });
+
   // Host Action: Legacy single mute fallback
   const handleMuteParticipant = (targetUserId, targetName) => {
     handleToggleParticipantMic(targetUserId, targetName, false);
@@ -1371,6 +1491,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     {remotePeerList.map(([peerId, remote]) => {
                       const remoteTier = getUserHostTier(remote.userId, remote.role);
                       const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
+                      const isTilePinned = Boolean(pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId))));
+                      const isTileSpotlighted = Boolean(spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId))));
+
                       return (
                         <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
                           <RemoteVideoTile
@@ -1389,12 +1512,223 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                             canPromote={isMeHost}
                             onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
                             compact
+                            isPinned={isTilePinned}
+                            onTogglePin={() => handleTogglePin(peerId, remote.userId, remote.userName)}
+                            isSpotlighted={isTileSpotlighted}
+                            onToggleSpotlight={() => handleToggleSpotlight(peerId, remote.userId, remote.userName)}
+                            canSpotlight={isMeHost}
                           />
                         </div>
                       );
                     })}
                   </div>
                 )}
+              </div>
+            ) : effectiveFocusUser ? (
+              /* 🌟 HERO STAGE + FILMSTRIP (When a User is Pinned or Spotlighted) */
+              <div className="w-full h-full flex flex-col md:flex-row gap-3">
+                
+                {/* Main Hero Stage */}
+                <div className="flex-1 h-full rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border border-amber-500/40 shadow-2xl relative flex items-center justify-center">
+                  
+                  {/* Top Banner: Pin or Spotlight Indicator */}
+                  <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border text-xs font-bold shadow-lg ${
+                      isFocusSpotlight
+                        ? 'bg-amber-500/25 border-amber-500/50 text-amber-300 ring-1 ring-amber-500/30'
+                        : 'bg-indigo-500/25 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
+                    }`}>
+                      <span>{isFocusSpotlight ? '🌟' : '📌'}</span>
+                      <span>
+                        {isFocusSpotlight
+                          ? `Spotlight: ${effectiveFocusUser.userName}`
+                          : `Pinned for You: ${effectiveFocusUser.userName}`}
+                      </span>
+                    </div>
+
+                    {/* Quick Close / Unpin Button */}
+                    {pinnedUser ? (
+                      <button
+                        onClick={() => setPinnedUser(null)}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1"
+                        title="Unpin speaker"
+                      >
+                        <span>✕</span>
+                        <span>Unpin</span>
+                      </button>
+                    ) : isMeHost ? (
+                      <button
+                        onClick={() => handleToggleSpotlight(spotlightUser.peerId, spotlightUser.userId, spotlightUser.userName)}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-amber-300 hover:text-white transition cursor-pointer flex items-center gap-1"
+                        title="Remove spotlight"
+                      >
+                        <span>✕</span>
+                        <span>Remove</span>
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Hero Video Content */}
+                  {isFocusLocal ? (
+                    /* Large Local Video Tile */
+                    <div className="w-full h-full relative flex items-center justify-center">
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
+                      />
+                      {isVideoOff && (
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          {currentUser?.profile_picture ? (
+                            <img
+                              src={getAvatarUrl(currentUser.profile_picture)}
+                              alt={currentUser.name}
+                              className="w-24 h-24 rounded-full object-cover shadow-lg border-2 border-rose-500/40 ring-4 ring-rose-500/20"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center text-3xl font-black shadow-lg shadow-rose-600/30 ring-4 ring-rose-500/20">
+                              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                          )}
+                          <p className="text-base font-bold text-white">{currentUser?.name || 'You'}</p>
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
+                        <span>{currentUser?.name || 'You'} (You)</span>
+                        {isMuted ? <FiMicOff className="text-rose-500" size={13} /> : <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Large Remote Video Tile */
+                    (() => {
+                      const focusedRemoteEntry = remotePeerList.find(([pId, r]) => pId === effectiveFocusUser.peerId || (r.userId && Number(r.userId) === Number(effectiveFocusUser.userId)));
+                      if (!focusedRemoteEntry) return null;
+                      const [focusedPeerId, focusedRemote] = focusedRemoteEntry;
+                      const focusedTier = getUserHostTier(focusedRemote.userId, focusedRemote.role);
+                      const isFocusedMuted = Boolean(remoteMuteStates[focusedRemote.userId]);
+
+                      return (
+                        <div className="w-full h-full relative">
+                          <RemoteVideoTile
+                            remotePeerId={focusedPeerId}
+                            stream={focusedRemote.stream}
+                            userId={focusedRemote.userId}
+                            userName={focusedRemote.userName}
+                            role={focusedRemote.role}
+                            avatar={focusedRemote.avatar}
+                            tier={focusedTier}
+                            isMuted={isFocusedMuted}
+                            isHandRaised={Boolean(raisedHands[focusedRemote.userId])}
+                            recentReaction={tileReactions[focusedRemote.userId]?.emoji}
+                            canControlAudio={isMeHost}
+                            onToggleMic={() => handleToggleParticipantMic(focusedRemote.userId, focusedRemote.userName, isFocusedMuted)}
+                            canPromote={isMeHost}
+                            onToggleCoHost={() => handleToggleCoHost(focusedRemote.userId, focusedRemote.userName, focusedTier === 'co_host')}
+                            isPinned={Boolean(pinnedUser && (pinnedUser.peerId === focusedPeerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(focusedRemote.userId))))}
+                            onTogglePin={() => handleTogglePin(focusedPeerId, focusedRemote.userId, focusedRemote.userName)}
+                            isSpotlighted={Boolean(spotlightUser && (spotlightUser.peerId === focusedPeerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(focusedRemote.userId))))}
+                            onToggleSpotlight={() => handleToggleSpotlight(focusedPeerId, focusedRemote.userId, focusedRemote.userName)}
+                            canSpotlight={isMeHost}
+                          />
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+
+                {/* Filmstrip of Remaining Participants */}
+                <div className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0 pr-1">
+                  
+                  {/* If focus is NOT local user, show mini local user card in filmstrip */}
+                  {!isFocusLocal && (
+                    <div className="w-48 md:w-full h-32 shrink-0 relative rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-center group">
+                      <video
+                        ref={localFilmstripVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
+                      />
+                      {isVideoOff && (
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          {currentUser?.profile_picture ? (
+                            <img
+                              src={getAvatarUrl(currentUser.profile_picture)}
+                              alt={currentUser.name}
+                              className="w-10 h-10 rounded-full object-cover border border-slate-700"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-xs font-black text-white">
+                              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                          )}
+                          <p className="text-[10px] font-bold text-slate-300">{currentUser?.name || 'You'}</p>
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 text-white text-[10px] font-bold z-10">
+                        <span>{currentUser?.name || 'You'} (You)</span>
+                        {isMuted ? <FiMicOff className="text-rose-500" size={10} /> : <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 flex items-center gap-1 z-20">
+                        <button
+                          onClick={() => handleTogglePin('local', currentUser?.id, currentUser?.name || 'You')}
+                          className="p-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-xs text-white cursor-pointer"
+                          title="Pin yourself"
+                        >
+                          📌
+                        </button>
+                        {isMeHost && (
+                          <button
+                            onClick={() => handleToggleSpotlight('local', currentUser?.id, currentUser?.name || 'You')}
+                            className="p-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-xs text-amber-300 cursor-pointer"
+                            title="Spotlight yourself"
+                          >
+                            🌟
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mini Remote Participants (All except the focused one) */}
+                  {remotePeerList
+                    .filter(([pId, r]) => !(isFocusLocal ? false : (pId === effectiveFocusUser.peerId || (r.userId && Number(r.userId) === Number(effectiveFocusUser.userId)))))
+                    .map(([peerId, remote]) => {
+                      const remoteTier = getUserHostTier(remote.userId, remote.role);
+                      const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
+                      const isTilePinned = Boolean(pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId))));
+                      const isTileSpotlighted = Boolean(spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId))));
+
+                      return (
+                        <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
+                          <RemoteVideoTile
+                            remotePeerId={peerId}
+                            stream={remote.stream}
+                            userId={remote.userId}
+                            userName={remote.userName}
+                            role={remote.role}
+                            avatar={remote.avatar}
+                            tier={remoteTier}
+                            isMuted={isRemoteMuted}
+                            isHandRaised={Boolean(raisedHands[remote.userId])}
+                            recentReaction={tileReactions[remote.userId]?.emoji}
+                            canControlAudio={isMeHost}
+                            onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
+                            canPromote={isMeHost}
+                            onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
+                            compact
+                            isPinned={isTilePinned}
+                            onTogglePin={() => handleTogglePin(peerId, remote.userId, remote.userName)}
+                            isSpotlighted={isTileSpotlighted}
+                            onToggleSpotlight={() => handleToggleSpotlight(peerId, remote.userId, remote.userName)}
+                            canSpotlight={isMeHost}
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             ) : (
               /* Standard Gallery Grid (Zoom Style) */
@@ -1475,9 +1809,41 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     </div>
                   )}
 
+                  {/* Local User Quick Pin & Spotlight (Top-Right) */}
+                  <div className={`absolute top-4 right-4 z-20 flex items-center gap-1.5 transition-opacity ${
+                    (pinnedUser?.peerId === 'local' || spotlightUser?.peerId === 'local') ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}>
+                    <button
+                      onClick={() => handleTogglePin('local', currentUser?.id, currentUser?.name || 'You')}
+                      className={`px-2 py-1 rounded-xl backdrop-blur-md border text-xs font-bold transition cursor-pointer shadow-lg flex items-center gap-1 ${
+                        pinnedUser?.peerId === 'local'
+                          ? 'bg-indigo-600/40 border-indigo-400 text-indigo-200'
+                          : 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-slate-300'
+                      }`}
+                      title="Pin yourself"
+                    >
+                      <span>📌</span>
+                      <span className="text-[10px]">{pinnedUser?.peerId === 'local' ? 'Unpin' : 'Pin'}</span>
+                    </button>
+                    {isMeHost && (
+                      <button
+                        onClick={() => handleToggleSpotlight('local', currentUser?.id, currentUser?.name || 'You')}
+                        className={`px-2 py-1 rounded-xl backdrop-blur-md border text-xs font-bold transition cursor-pointer shadow-lg flex items-center gap-1 ${
+                          spotlightUser?.peerId === 'local'
+                            ? 'bg-amber-500/40 border-amber-400 text-amber-200 animate-pulse'
+                            : 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-amber-300'
+                        }`}
+                        title="Spotlight yourself"
+                      >
+                        <span>🌟</span>
+                        <span className="text-[10px]">{spotlightUser?.peerId === 'local' ? 'Remove' : 'Spotlight'}</span>
+                      </button>
+                    )}
+                  </div>
+
                   {/* Waiting hint if alone in room */}
                   {totalInRoom === 1 && (
-                    <div className="absolute top-4 right-4 bg-slate-950/85 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-lg">
+                    <div className="absolute top-4 left-4 bg-slate-950/85 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-lg">
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                       <span>Waiting for team members to join...</span>
                     </div>
@@ -1488,6 +1854,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                 {remotePeerList.map(([peerId, remote]) => {
                   const remoteTier = getUserHostTier(remote.userId, remote.role);
                   const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
+                  const isTilePinned = Boolean(pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId))));
+                  const isTileSpotlighted = Boolean(spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId))));
+
                   return (
                     <RemoteVideoTile
                       key={peerId}
@@ -1505,6 +1874,11 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                       canPromote={isMeHost}
                       onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
+                      isPinned={isTilePinned}
+                      onTogglePin={() => handleTogglePin(peerId, remote.userId, remote.userName)}
+                      isSpotlighted={isTileSpotlighted}
+                      onToggleSpotlight={() => handleToggleSpotlight(peerId, remote.userId, remote.userName)}
+                      canSpotlight={isMeHost}
                     />
                   );
                 })}
@@ -2039,7 +2413,31 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     <p className="text-[10px] text-slate-400">{currentUser?.roles?.[0] || 'Member'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleTogglePin('local', currentUser?.id, currentUser?.name || 'You')}
+                    className={`p-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      pinnedUser?.peerId === 'local'
+                        ? 'bg-indigo-500/25 text-indigo-300 border-indigo-500/50'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
+                    title={pinnedUser?.peerId === 'local' ? 'Unpin' : 'Pin yourself'}
+                  >
+                    📌
+                  </button>
+                  {isMeHost && (
+                    <button
+                      onClick={() => handleToggleSpotlight('local', currentUser?.id, currentUser?.name || 'You')}
+                      className={`p-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                        spotlightUser?.peerId === 'local'
+                          ? 'bg-amber-500/30 text-amber-200 border-amber-400 animate-pulse'
+                          : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                      }`}
+                      title={spotlightUser?.peerId === 'local' ? 'Remove spotlight' : 'Spotlight yourself'}
+                    >
+                      🌟
+                    </button>
+                  )}
                   {isMuted ? (
                     <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20 flex items-center gap-1">
                       <FiMicOff size={10} /> Muted
@@ -2096,6 +2494,42 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                     </div>
 
                     <div className="flex items-center gap-1.5">
+                      {/* Pin Speaker for yourself */}
+                      <button
+                        onClick={() => handleTogglePin(peerId, remote.userId, remote.userName)}
+                        className={`p-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                          pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId)))
+                            ? 'bg-indigo-500/25 text-indigo-300 border-indigo-500/50'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                        title={
+                          pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId)))
+                            ? 'Unpin user'
+                            : 'Pin user for you'
+                        }
+                      >
+                        📌
+                      </button>
+
+                      {/* Spotlight Speaker for Everyone (Host / Co-Host Only) */}
+                      {isMeHost && (
+                        <button
+                          onClick={() => handleToggleSpotlight(peerId, remote.userId, remote.userName)}
+                          className={`p-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                            spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId)))
+                              ? 'bg-amber-500/30 text-amber-200 border-amber-400 animate-pulse'
+                              : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                          }`}
+                          title={
+                            spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId)))
+                              ? 'Remove spotlight'
+                              : 'Spotlight for everyone'
+                          }
+                        >
+                          🌟
+                        </button>
+                      )}
+
                       {/* Host Mic Control for this user - 1-Click Bidirectional Mute ⇄ Unmute */}
                       {isMeHost && remote.userId && (
                         <button
@@ -2186,13 +2620,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   );
 }
 
-// 🌟 ZOOM-STYLE REMOTE VIDEO TILE (With Host Crown & Quick Co-Host Button)
+// 🌟 ZOOM-STYLE REMOTE VIDEO TILE (With Host Crown, Co-Host & Spotlight/Pin Controls)
 function RemoteVideoTile({
   remotePeerId, stream, userId, userName, role, avatar,
   compact = false, tier = 'member', isMuted = false,
   canControlAudio = false, onToggleMic,
   canPromote = false, onToggleCoHost,
-  isHandRaised = false, recentReaction = null
+  isHandRaised = false, recentReaction = null,
+  isPinned = false, onTogglePin,
+  isSpotlighted = false, onToggleSpotlight, canSpotlight = false
 }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -2333,17 +2769,52 @@ function RemoteVideoTile({
         )}
       </div>
 
-      {/* Quick Host Action on Hover (Top-Right) - Cannot demote primary creator */}
-      {canPromote && userId && !compact && tier !== 'host' && (
-        <button
-          onClick={onToggleCoHost}
-          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1 z-20"
-          title={isCoHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
-        >
-          <FiStar size={11} className={isCoHost ? 'fill-amber-400' : ''} />
-          <span>{isCoHost ? 'Demote' : 'Make Co-Host'}</span>
-        </button>
-      )}
+      {/* Quick Actions (Top-Right): Pin, Spotlight, Co-Host */}
+      <div className={`absolute top-3 right-3 z-20 flex items-center gap-1 transition-opacity ${
+        isPinned || isSpotlighted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`}>
+        {/* Pin Button */}
+        {onTogglePin && (
+          <button
+            onClick={onTogglePin}
+            className={`p-1.5 rounded-xl backdrop-blur-md border text-xs font-bold transition cursor-pointer shadow-lg ${
+              isPinned
+                ? 'bg-indigo-600/40 border-indigo-400 text-indigo-200 ring-1 ring-indigo-400/40'
+                : 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+            }`}
+            title={isPinned ? 'Unpin user' : 'Pin user'}
+          >
+            📌
+          </button>
+        )}
+
+        {/* Spotlight Button (Host / Co-Host Only) */}
+        {canSpotlight && onToggleSpotlight && (
+          <button
+            onClick={onToggleSpotlight}
+            className={`p-1.5 rounded-xl backdrop-blur-md border text-xs font-bold transition cursor-pointer shadow-lg ${
+              isSpotlighted
+                ? 'bg-amber-500/40 border-amber-400 text-amber-200 ring-1 ring-amber-400/40 animate-pulse'
+                : 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-amber-300 hover:text-white'
+            }`}
+            title={isSpotlighted ? 'Remove spotlight' : 'Spotlight user'}
+          >
+            🌟
+          </button>
+        )}
+
+        {/* Quick Host Action on Hover - Cannot demote primary creator */}
+        {canPromote && userId && !compact && tier !== 'host' && (
+          <button
+            onClick={onToggleCoHost}
+            className="px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] font-bold text-amber-300 hover:bg-slate-800 cursor-pointer shadow-lg flex items-center gap-1"
+            title={isCoHost ? 'Remove Co-Host status' : 'Promote to Co-Host'}
+          >
+            <FiStar size={11} className={isCoHost ? 'fill-amber-400' : ''} />
+            <span>{isCoHost ? 'Demote' : 'Co-Host'}</span>
+          </button>
+        )}
+      </div>
 
     </div>
   );
