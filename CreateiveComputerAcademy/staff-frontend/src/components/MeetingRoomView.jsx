@@ -22,6 +22,18 @@ const getAvatarUrl = (pic) => {
   return `${base}${cleanPath}`;
 };
 
+// 🌟 Available Live Floating Reactions
+const AVAILABLE_REACTIONS = [
+  { emoji: '❤️', labelBn: 'ভালোবাসা', labelEn: 'Heart' },
+  { emoji: '👍', labelBn: 'থাম্বস আপ', labelEn: 'Thumbs Up' },
+  { emoji: '👏', labelBn: 'হাততালি', labelEn: 'Clap' },
+  { emoji: '🎉', labelBn: 'উদযাপন', labelEn: 'Celebrate' },
+  { emoji: '😂', labelBn: 'হাসি', labelEn: 'Laugh' },
+  { emoji: '🔥', labelBn: 'অসাধারণ / আগুন', labelEn: 'Fire' },
+  { emoji: '😮', labelBn: 'বিস্ময়', labelEn: 'Wow' },
+  { emoji: '💯', labelBn: '১০০%', labelEn: '100' },
+];
+
 // Fallback silent & blank MediaStream for environments without camera/mic hardware
 function createFallbackStream() {
   const canvas = document.createElement('canvas');
@@ -107,6 +119,60 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   // ✋ Raise Hand State
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [raisedHands, setRaisedHands] = useState({}); // userId -> { userName, raisedAt }
+
+  // 😊 Live Floating Reactions State
+  const [floatingReactions, setFloatingReactions] = useState([]); // [{ id, emoji, senderName, leftPercent, duration }]
+  const [tileReactions, setTileReactions] = useState({}); // userId -> { emoji, expiresAt }
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+
+  // Subtle tactile pop sound when a reaction is triggered
+  const playReactionSound = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (e) {}
+  }, []);
+
+  // Trigger floating reaction animation & tile badge
+  const triggerFloatingReaction = useCallback((reactionData) => {
+    const reactionId = reactionData.id || `${Date.now()}-${Math.random()}`;
+    const reactionObj = {
+      ...reactionData,
+      id: reactionId,
+      leftPercent: reactionData.leftPercent ?? (15 + Math.random() * 70),
+      duration: reactionData.duration ?? 3200
+    };
+
+    setFloatingReactions(prev => [...prev.slice(-15), reactionObj]);
+
+    if (reactionData.senderId) {
+      setTileReactions(prev => ({
+        ...prev,
+        [Number(reactionData.senderId)]: {
+          emoji: reactionData.emoji,
+          expiresAt: Date.now() + 3500
+        }
+      }));
+    }
+
+    playReactionSound();
+
+    setTimeout(() => {
+      setFloatingReactions(prev => prev.filter(r => r.id !== reactionId));
+    }, reactionObj.duration + 200);
+  }, [playReactionSound]);
 
   // Pleasant audio chime when a participant raises their hand (Host notification)
   const playHandRaiseChime = useCallback(() => {
@@ -378,8 +444,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           ? `✋ ${userName || 'মেম্বার'} কথা বলার জন্য হাত তুলেছেন!` 
           : `✋ ${userName || 'Participant'} raised hand to speak!`);
       }
+    } else if (data.type === 'floating_reaction' && data.payload?.emoji) {
+      triggerFloatingReaction(data.payload);
     }
-  }, [currentUser?.id, currentUser?.name, isBn, isMeHost, playHandRaiseChime, handleIncomingMessage, handlePinUpdate]);
+  }, [currentUser?.id, currentUser?.name, isBn, isMeHost, playHandRaiseChime, triggerFloatingReaction, handleIncomingMessage, handlePinUpdate]);
 
   // Fetch initial chat messages, hosts & lock state, poll periodically
   useEffect(() => {
@@ -842,6 +910,43 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     toast.info(isBn ? `✋ ${targetName}-এর হাত নামিয়ে দেওয়া হয়েছে।` : `✋ Lowered ${targetName}'s hand.`);
   };
 
+  // 🌟 Participant Action: Send floating reaction
+  const sendFloatingReaction = (emoji) => {
+    const reactionPayload = {
+      id: `${Date.now()}-${Math.random()}`,
+      emoji,
+      senderId: currentUser?.id,
+      senderName: currentUser?.name || (isBn ? 'আপনি' : 'You'),
+      leftPercent: 20 + Math.random() * 60,
+      duration: 3200
+    };
+
+    triggerFloatingReaction(reactionPayload);
+
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({
+            type: 'floating_reaction',
+            payload: reactionPayload
+          });
+        }
+      } catch (e) {}
+    });
+  };
+
+  // Close reaction picker on outside click
+  useEffect(() => {
+    if (!reactionPickerOpen) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.reaction-picker-container')) {
+        setReactionPickerOpen(false);
+      }
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [reactionPickerOpen]);
+
   // Host Action: Legacy single mute fallback
   const handleMuteParticipant = (targetUserId, targetName) => {
     handleToggleParticipantMic(targetUserId, targetName, false);
@@ -1230,6 +1335,51 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           {/* 🌟 ZOOM-STYLE GALLERY GRID (When NOT sharing screen, or when presenting) */}
           <div className="relative flex-1 w-full h-[calc(100%-70px)] overflow-hidden flex items-center justify-center">
             
+            {/* 🌟 KEYFRAME STYLES FOR FLOATING REACTIONS */}
+            <style>{`
+              @keyframes floatUpDrift {
+                0% {
+                  opacity: 0;
+                  transform: translateY(20px) scale(0.6) rotate(0deg);
+                }
+                12% {
+                  opacity: 1;
+                  transform: translateY(-40px) scale(1.15) rotate(-6deg);
+                }
+                28% {
+                  transform: translateY(-110px) scale(1) rotate(6deg);
+                }
+                60% {
+                  transform: translateY(-240px) scale(0.95) rotate(-4deg);
+                  opacity: 0.95;
+                }
+                100% {
+                  transform: translateY(-420px) scale(0.8) rotate(8deg);
+                  opacity: 0;
+                }
+              }
+            `}</style>
+
+            {/* 🌟 LIVE FLOATING REACTIONS OVERLAY */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-40">
+              {floatingReactions.map((reaction) => (
+                <div
+                  key={reaction.id}
+                  style={{
+                    left: `${reaction.leftPercent}%`,
+                    bottom: '16px',
+                    animation: `floatUpDrift ${reaction.duration || 3200}ms cubic-bezier(0.22, 1, 0.36, 1) forwards`
+                  }}
+                  className="absolute pointer-events-none flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-2xl select-none"
+                >
+                  <span className="text-2xl drop-shadow-md">{reaction.emoji}</span>
+                  <span className="text-[11px] font-bold text-white max-w-[110px] truncate drop-shadow">
+                    {reaction.senderName}
+                  </span>
+                </div>
+              ))}
+            </div>
+            
             {/* If Local User is Screen Sharing: Big Stage + Mini Filmstrip */}
             {isScreenSharing ? (
               <div className="w-full h-full flex flex-col md:flex-row gap-3">
@@ -1266,6 +1416,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                             tier={remoteTier}
                             isMuted={isRemoteMuted}
                             isHandRaised={Boolean(raisedHands[remote.userId])}
+                            recentReaction={tileReactions[remote.userId]?.emoji}
                             canControlAudio={isMeHost}
                             onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                             canPromote={isMeHost}
@@ -1336,6 +1487,11 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       {currentUser?.name || (isBn ? 'আপনি' : 'You')}{' '}
                       ({myHostTier === 'host' ? (isBn ? 'হোস্ট' : 'Host') : myHostTier === 'co_host' ? (isBn ? 'কো-হোস্ট' : 'Co-Host') : (isBn ? 'আপনি' : 'You')})
                     </span>
+                    {tileReactions[currentUser?.id] && (
+                      <span className="text-sm animate-bounce select-none" title={isBn ? 'আপনার রিঅ্যাকশন' : 'Your Reaction'}>
+                        {tileReactions[currentUser?.id].emoji}
+                      </span>
+                    )}
                     {myHostTier === 'host' ? (
                       <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
                         👑 {isBn ? 'হোস্ট' : 'Host'}
@@ -1381,6 +1537,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                       tier={remoteTier}
                       isMuted={isRemoteMuted}
                       isHandRaised={Boolean(raisedHands[remote.userId])}
+                      recentReaction={tileReactions[remote.userId]?.emoji}
                       canControlAudio={isMeHost}
                       onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
                       canPromote={isMeHost}
@@ -1483,6 +1640,42 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                   {isHandRaised ? (isBn ? 'হাত নামান' : 'Hand Up') : (isBn ? 'হাত তুলুন' : 'Raise Hand')}
                 </span>
               </button>
+
+              {/* 😊 Live Floating Reactions Button & Tray */}
+              <div className="relative reaction-picker-container">
+                {/* Emoji Reaction Tray Popup */}
+                {reactionPickerOpen && (
+                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-2 bg-slate-900/95 backdrop-blur-2xl border border-slate-700/80 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-150">
+                    {AVAILABLE_REACTIONS.map(({ emoji, labelBn, labelEn }) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          sendFloatingReaction(emoji);
+                        }}
+                        className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-xl md:text-2xl hover:scale-130 active:scale-90 hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+                        title={isBn ? labelBn : labelEn}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setReactionPickerOpen(prev => !prev)}
+                  className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                    reactionPickerOpen
+                      ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40 shadow-lg'
+                      : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                  }`}
+                  title={isBn ? 'ইমোজি রিঅ্যাকশন পাঠান' : 'Send Floating Reaction'}
+                >
+                  <span className="text-lg leading-none select-none">😊</span>
+                  <span className="text-[10px] font-bold">
+                    {isBn ? 'রিঅ্যাকশন' : 'React'}
+                  </span>
+                </button>
+              </div>
 
               <div className="h-7 w-px bg-slate-800 mx-1" />
 
@@ -2047,7 +2240,7 @@ function RemoteVideoTile({
   compact = false, tier = 'member', isMuted = false,
   canControlAudio = false, onToggleMic,
   canPromote = false, onToggleCoHost, isBn = false,
-  isHandRaised = false
+  isHandRaised = false, recentReaction = null
 }) {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -2143,6 +2336,11 @@ function RemoteVideoTile({
       {/* Zoom-Style Remote User Pill */}
       <div className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-[11px] font-bold z-10">
         <span>{userName}</span>
+        {recentReaction && (
+          <span className="text-sm animate-bounce select-none" title="Reaction">
+            {recentReaction}
+          </span>
+        )}
         {isHost ? (
           <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
             👑 {isBn ? 'হোস্ট' : 'Host'}
