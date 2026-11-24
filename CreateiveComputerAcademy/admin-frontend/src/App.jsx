@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
 import Login from './pages/Login';
@@ -54,10 +55,11 @@ const Placeholder = ({ title }) => (
 function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" richColors />
-      <LuxuryToastContainer />
-      <Router>
-        <Routes>
+      <LanguageProvider>
+        <Toaster position="top-right" richColors />
+        <LuxuryToastContainer />
+        <Router>
+          <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
 
@@ -292,6 +294,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
+      </LanguageProvider>
     </AuthProvider>
   );
 }
