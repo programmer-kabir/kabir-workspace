@@ -67,6 +67,15 @@ const getChatAttachmentUrl = (url) => {
   return `${base}${cleanPath}`;
 };
 
+// ⬇️ Helper to construct direct-download endpoint URL (Forces direct download)
+const getChatFileDownloadUrl = (url, originalName) => {
+  if (!url) return '';
+  const base = API_BASE.endsWith('/') ? API_BASE : `${API_BASE}/`;
+  const cleanFile = url.split('/').pop() || url;
+  const encodedName = encodeURIComponent(originalName || cleanFile);
+  return `${base}api/meetings/download_chat_file.php?file=${encodeURIComponent(cleanFile)}&name=${encodedName}`;
+};
+
 // Fallback silent & blank MediaStream for environments without camera/mic hardware
 function createFallbackStream() {
   const canvas = document.createElement('canvas');
@@ -1508,6 +1517,41 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     }, 2000);
   };
 
+  // ⬇️ Direct File Downloader (Bypasses browser PDF viewer tabs)
+  const handleDirectFileDownload = async (fileUrl, fileName, e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const safeName = fileName || 'download';
+    const downloadApiUrl = getChatFileDownloadUrl(fileUrl, safeName);
+
+    const toastId = toast.loading(`Downloading "${safeName}"...`);
+    try {
+      // 1. Fetch blob with CORS support for instantaneous direct save without tab change
+      const response = await fetch(downloadApiUrl);
+      if (!response.ok) throw new Error('Download request failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const tempLink = document.createElement('a');
+      tempLink.href = blobUrl;
+      tempLink.setAttribute('download', safeName);
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+      toast.dismiss(toastId);
+      toast.success('Download complete!');
+    } catch (err) {
+      // 2. Direct browser trigger fallback (Hits Content-Disposition: attachment header)
+      toast.dismiss(toastId);
+      const tempLink = document.createElement('a');
+      tempLink.href = downloadApiUrl;
+      tempLink.setAttribute('download', safeName);
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+    }
+  };
+
   // Toggle Chat Lock (Host only)
   const handleToggleChatLock = async () => {
     if (!isMeHost) {
@@ -2706,26 +2750,28 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                                 <span className="text-slate-400 text-[9px]">
                                   {formatChatFileSize(msg.attachment_size)}
                                 </span>
-                                <a
-                                  href={getChatAttachmentUrl(msg.attachment_url)}
-                                  download={msg.attachment_name || 'download'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDirectFileDownload(msg.attachment_url, msg.attachment_name || 'image.png', e)}
                                   className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-white transition cursor-pointer"
                                   title="Download image"
                                 >
                                   <FiDownload size={11} />
-                                </a>
+                                </button>
                               </div>
                             </div>
                           </div>
                         ) : msg.message_type === 'file' ? (
-                          <div className={`p-3 rounded-2xl border shadow-md flex items-center gap-3 w-64 max-w-full ${
-                            isMe
-                              ? 'bg-gradient-to-r from-rose-950/30 to-red-950/30 border-rose-600/50 rounded-tr-none'
-                              : 'bg-slate-800 border-slate-700 rounded-tl-none'
-                          }`}>
-                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                          <div 
+                            onClick={(e) => handleDirectFileDownload(msg.attachment_url, msg.attachment_name || msg.message, e)}
+                            className={`p-3 rounded-2xl border shadow-md flex items-center gap-3 w-64 max-w-full cursor-pointer hover:brightness-110 active:scale-[0.98] transition group/filecard ${
+                              isMe
+                                ? 'bg-gradient-to-r from-rose-950/30 to-red-950/30 border-rose-600/50 rounded-tr-none'
+                                : 'bg-slate-800 border-slate-700 rounded-tl-none'
+                            }`}
+                            title="Click to download directly"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 group-hover/filecard:scale-105 transition">
                               <FiFileText size={20} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -2736,16 +2782,14 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                                 {formatChatFileSize(msg.attachment_size) || 'Attachment'}
                               </p>
                             </div>
-                            <a
-                              href={getChatAttachmentUrl(msg.attachment_url)}
-                              download={msg.attachment_name || 'download'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition shrink-0 shadow cursor-pointer"
-                              title="Download file"
+                            <button
+                              type="button"
+                              onClick={(e) => handleDirectFileDownload(msg.attachment_url, msg.attachment_name || msg.message, e)}
+                              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition shrink-0 shadow cursor-pointer group-hover/filecard:scale-105"
+                              title="Direct Download"
                             >
                               <FiDownload size={13} />
-                            </a>
+                            </button>
                           </div>
                         ) : (
                           <div
@@ -3265,14 +3309,25 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           onClick={() => setPreviewImageModal(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setPreviewImageModal(null)}
-              className="absolute -top-11 right-0 p-2 rounded-full bg-slate-800/80 hover:bg-rose-600 text-white transition cursor-pointer shadow-lg"
-              title="Close image"
-            >
-              <FiX size={18} />
-            </button>
+            <div className="absolute -top-11 right-0 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => handleDirectFileDownload(previewImageModal, 'shared_image.png', e)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 hover:bg-rose-600 text-white text-xs font-bold transition cursor-pointer shadow-lg"
+                title="Download image"
+              >
+                <FiDownload size={13} />
+                <span>Download</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewImageModal(null)}
+                className="p-2 rounded-full bg-slate-800/80 hover:bg-rose-600 text-white transition cursor-pointer shadow-lg"
+                title="Close image"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
             <img
               src={previewImageModal}
               alt="Enlarged preview"
