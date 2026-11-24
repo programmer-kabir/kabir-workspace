@@ -41,6 +41,27 @@ class GoogleDriveClient {
             }
         }
 
+        // Self-Healing DB fallback: Read fresh active credentials from system_storage_settings
+        try {
+            require_once __DIR__ . '/database.php';
+            $db = (new Database())->getConnection();
+            if ($db) {
+                $stmt = $db->query("SELECT setting_key, setting_value FROM system_storage_settings WHERE setting_key IN ('gdrive_refresh_token', 'gdrive_client_id', 'gdrive_client_secret')");
+                if ($stmt) {
+                    $dbSettings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                    if (!empty($dbSettings['gdrive_refresh_token'])) {
+                        $this->credentials = [
+                            'client_id'     => $dbSettings['gdrive_client_id'] ?? ($this->credentials['client_id'] ?? ''),
+                            'client_secret' => $dbSettings['gdrive_client_secret'] ?? ($this->credentials['client_secret'] ?? ''),
+                            'refresh_token' => $dbSettings['gdrive_refresh_token'],
+                            'type'          => 'authorized_user',
+                            'user_email'    => 'creativecomputeracademybd@gmail.com'
+                        ];
+                    }
+                }
+            }
+        } catch (Throwable $e) {}
+
         // Fallback: Read directly from server/.env if credentials file is missing or incomplete
         if (empty($this->credentials['client_id']) && function_exists('env')) {
             $clientId = env('GOOGLE_DRIVE_CLIENT_ID');

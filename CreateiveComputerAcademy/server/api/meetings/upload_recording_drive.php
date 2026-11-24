@@ -76,26 +76,18 @@ try {
     if ($gdrive->isConfigured()) {
         $driveMime = ($fileExt === 'mp4') ? 'video/mp4' : 'video/webm';
 
-        // 1. Locate or create CCA_Vault parent folder (Target: 18HFbN429toI-WJ1NUMTXcK3bVY69Kcno)
+        // 1. Target verified folder ID: Meeting_Recordings inside CCA_Vault
         $vaultParentId = '18HFbN429toI-WJ1NUMTXcK3bVY69Kcno';
-        try {
-            $foundVaultId = $gdrive->findOrCreateFolder('CCA_Vault');
-            if ($foundVaultId) {
-                $vaultParentId = $foundVaultId;
-            }
-        } catch (Throwable $vErr) {
-            error_log("CCA_Vault search notice: " . $vErr->getMessage());
-        }
+        $meetingFolderId = '1ylVVos5JaUoi4PBnewR2Danbd3AR5P4D';
 
-        // 2. Locate or create "Meeting_Recordings" folder INSIDE CCA_Vault
-        $meetingFolderId = $vaultParentId;
+        // Fallback search if needed
         try {
-            $foundMeetingFolder = $gdrive->findOrCreateFolder('Meeting_Recordings', $vaultParentId);
-            if ($foundMeetingFolder) {
-                $meetingFolderId = $foundMeetingFolder;
+            if (empty($meetingFolderId)) {
+                $meetingFolderId = $gdrive->findOrCreateFolder('Meeting_Recordings', $vaultParentId);
             }
         } catch (Throwable $fErr) {
             error_log("Meeting folder findOrCreate warning: " . $fErr->getMessage());
+            $meetingFolderId = $vaultParentId;
         }
 
         $driveRes = $gdrive->uploadFile($localFilePath, $savedFileName, $driveMime, $meetingFolderId);
