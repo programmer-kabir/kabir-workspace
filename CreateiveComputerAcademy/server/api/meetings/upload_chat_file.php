@@ -63,8 +63,19 @@ $targetPath = $uploadDir . $uniqueName;
 
 if (move_uploaded_file($fileTmpPath, $targetPath)) {
     $relativeUrl = 'uploads/meeting_files/' . $uniqueName;
+    $fileInfo = [
+        "url"             => $relativeUrl,
+        "file_url"        => $relativeUrl,
+        "filename"        => $originalName,
+        "original_name"   => $originalName,
+        "file_size"       => $fileSize,
+        "size"            => $fileSize,
+        "file_ext"        => $fileExt,
+        "is_image"        => $isImage
+    ];
     echo json_encode([
         "status"          => "success",
+        "file"            => $fileInfo,
         "file_url"        => $relativeUrl,
         "filename"        => $originalName,
         "file_size"       => $fileSize,

@@ -1449,20 +1449,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (uploadRes.data?.status === 'success' && uploadRes.data.file) {
-        const fileData = uploadRes.data.file;
-        const msgType = fileData.is_image ? 'image' : 'file';
+      if (uploadRes.data?.status === 'success') {
+        const fileData = uploadRes.data.file || uploadRes.data;
+        const isImage = Boolean(fileData.is_image);
+        const msgType = isImage ? 'image' : 'file';
+        const fileUrl = fileData.url || fileData.file_url || '';
+        const fileName = fileData.original_name || fileData.filename || file.name || 'attachment';
+        const fileSize = fileData.size || fileData.file_size || file.size || 0;
 
         const payload = {
           room_id: roomId,
           user_id: currentUser.id,
           user_name: currentUser.name || 'Admin Host',
           user_role: isMeHost ? 'Host' : (currentUser.roles?.[0] || 'Member'),
-          message: fileData.original_name,
+          message: fileName,
           message_type: msgType,
-          attachment_url: fileData.url,
-          attachment_name: fileData.original_name,
-          attachment_size: fileData.size
+          attachment_url: fileUrl,
+          attachment_name: fileName,
+          attachment_size: fileSize
         };
 
         const res = await axios.post(`${API_BASE}api/meetings/send_message.php`, payload);
