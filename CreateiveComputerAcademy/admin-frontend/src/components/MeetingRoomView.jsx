@@ -1017,6 +1017,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     });
   };
 
+  const remotePeerList = Object.entries(remotePeers);
+  const totalInRoom = 1 + remotePeerList.length;
+
   // Focus resolution for Stage vs Filmstrip
   const effectiveFocusUser = pinnedUser || spotlightUser;
   const isFocusSpotlight = Boolean(spotlightUser && (!pinnedUser || (pinnedUser.peerId === spotlightUser.peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(spotlightUser.userId)))));
@@ -1292,8 +1295,6 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const remotePeerList = Object.entries(remotePeers);
-  const totalInRoom = 1 + remotePeerList.length;
   const pinnedMessages = chatMessages.filter(m => Number(m.is_pinned) === 1);
 
   return (
