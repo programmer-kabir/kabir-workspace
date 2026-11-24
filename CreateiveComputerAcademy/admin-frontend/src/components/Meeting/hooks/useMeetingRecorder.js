@@ -187,11 +187,17 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
       return;
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const safeRoomId = roomId ? roomId.replace(/[^a-zA-Z0-9]/g, '_') : 'meeting';
+    const d = new Date();
+    const dateStr = d.getFullYear().toString() +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0') + '_' +
+      String(d.getHours()).padStart(2, '0') +
+      String(d.getMinutes()).padStart(2, '0') +
+      String(d.getSeconds()).padStart(2, '0');
+    const safeRoomId = roomId ? roomId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'meeting';
     const isMp4 = mimeTypeRef.current.includes('mp4');
     const ext = isMp4 ? 'mp4' : 'webm';
-    const defaultName = `CCA_Meeting_${safeRoomId}_${timestamp}.${ext}`;
+    const defaultName = `CCA_Meeting_${safeRoomId}_${dateStr}.${ext}`;
     const filename = customName || defaultName;
 
     const url = recordedBlobUrl || URL.createObjectURL(recordedBlob);
@@ -220,8 +226,15 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
       const formData = new FormData();
       const isMp4 = mimeTypeRef.current.includes('mp4');
       const ext = isMp4 ? 'mp4' : 'webm';
-      const cleanRoomId = roomId ? roomId.replace(/[^a-zA-Z0-9]/g, '_') : 'meeting';
-      const filename = `CCA_Meeting_${cleanRoomId}_${Date.now()}.${ext}`;
+      const cleanRoomId = roomId ? roomId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'meeting';
+      const d = new Date();
+      const dateStr = d.getFullYear().toString() +
+        String(d.getMonth() + 1).padStart(2, '0') +
+        String(d.getDate()).padStart(2, '0') + '_' +
+        String(d.getHours()).padStart(2, '0') +
+        String(d.getMinutes()).padStart(2, '0') +
+        String(d.getSeconds()).padStart(2, '0');
+      const filename = `CCA_Meeting_${cleanRoomId}_${dateStr}.${ext}`;
 
       formData.append('file', recordedBlob, filename);
       formData.append('room_id', roomId);

@@ -51,10 +51,10 @@ if (!is_dir($recordingsDir)) {
     @mkdir($recordingsDir, 0755, true);
 }
 
-// Generate unique safe filename
+// Generate unique safe filename: CCA_Meeting_<roomId>_<dateStr>.<ext>
 $cleanRoomId = preg_replace('/[^a-zA-Z0-9_-]/', '_', $roomId);
 $dateStr = date('Ymd_His');
-$savedFileName = "rec_{$cleanRoomId}_{$dateStr}.{$fileExt}";
+$savedFileName = "CCA_Meeting_{$cleanRoomId}_{$dateStr}.{$fileExt}";
 $localFilePath = $recordingsDir . DIRECTORY_SEPARATOR . $savedFileName;
 
 // Move uploaded file to local recording vault
@@ -74,23 +74,36 @@ $driveMessage = null;
 try {
     $gdrive = new GoogleDriveClient();
     if ($gdrive->isConfigured()) {
-        $driveTargetName = "CCA_Meeting_{$cleanRoomId}_{$dateStr}.{$fileExt}";
         $driveMime = ($fileExt === 'mp4') ? 'video/mp4' : 'video/webm';
 
-        // Automatically organize inside "CCA Meeting Recordings" folder
-        $folderId = null;
+        // 1. Locate or create CCA_Vault parent folder (Target: 18HFbN429toI-Wj1NUMTXcK3bVY69Kcno)
+        $vaultParentId = '18HFbN429toI-Wj1NUMTXcK3bVY69Kcno';
         try {
-            $folderId = $gdrive->findOrCreateFolder('CCA Meeting Recordings');
+            $foundVaultId = $gdrive->findOrCreateFolder('CCA_Vault');
+            if ($foundVaultId) {
+                $vaultParentId = $foundVaultId;
+            }
+        } catch (Throwable $vErr) {
+            error_log("CCA_Vault search notice: " . $vErr->getMessage());
+        }
+
+        // 2. Locate or create "Meeting_Recordings" folder INSIDE CCA_Vault
+        $meetingFolderId = $vaultParentId;
+        try {
+            $foundMeetingFolder = $gdrive->findOrCreateFolder('Meeting_Recordings', $vaultParentId);
+            if ($foundMeetingFolder) {
+                $meetingFolderId = $foundMeetingFolder;
+            }
         } catch (Throwable $fErr) {
             error_log("Meeting folder findOrCreate warning: " . $fErr->getMessage());
         }
 
-        $driveRes = $gdrive->uploadFile($localFilePath, $driveTargetName, $driveMime, $folderId);
+        $driveRes = $gdrive->uploadFile($localFilePath, $savedFileName, $driveMime, $meetingFolderId);
         if (!empty($driveRes['view_url'])) {
             $finalViewUrl = $driveRes['view_url'];
             $driveFileId = $driveRes['file_id'] ?? null;
             $storageType = 'google_drive';
-            $driveMessage = "Saved directly to CCA Google Drive Cloud Vault!";
+            $driveMessage = "Saved inside CCA_Vault > Meeting_Recordings on Google Drive!";
         }
     } else {
         $driveMessage = "Saved locally. Google Drive credentials not yet configured on server.";
