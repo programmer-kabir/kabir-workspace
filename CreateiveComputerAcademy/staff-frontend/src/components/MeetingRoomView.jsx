@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fi';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
+import InteractiveWhiteboard from './InteractiveWhiteboard';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -129,6 +130,22 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   // 🌟 Spotlight & Pin Speaker State
   const [spotlightUser, setSpotlightUser] = useState(null); // { peerId, userId, userName, spotlightedBy }
   const [pinnedUser, setPinnedUser] = useState(null); // { peerId, userId, userName }
+
+  // 🎨 Interactive Whiteboard State
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [whiteboardSharedBy, setWhiteboardSharedBy] = useState(null); // { userId, userName, peerId }
+  const [whiteboardAllowOthers, setWhiteboardAllowOthers] = useState(false);
+  const [whiteboardHistory, setWhiteboardHistory] = useState([]);
+  const whiteboardHistoryRef = useRef([]);
+  const whiteboardStateRef = useRef({ isOpen: false, sharedBy: null, allowOthers: false });
+
+  useEffect(() => {
+    whiteboardStateRef.current = {
+      isOpen: isWhiteboardOpen,
+      sharedBy: whiteboardSharedBy,
+      allowOthers: whiteboardAllowOthers
+    };
+  }, [isWhiteboardOpen, whiteboardSharedBy, whiteboardAllowOthers]);
 
   // Fanfare / chord chime when host spotlights a speaker
   const playSpotlightChime = useCallback(() => {
@@ -491,6 +508,50 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
           ? `🌟 স্পটলাইট সরানো হয়েছে।` 
           : `🌟 Spotlight removed.`);
       }
+    } else if (data.type === 'wb_toggle' && data.payload) {
+      const { isOpen, sharedBy, allowOthers } = data.payload;
+      setIsWhiteboardOpen(Boolean(isOpen));
+      setWhiteboardSharedBy(isOpen ? sharedBy : null);
+      if (typeof allowOthers === 'boolean') setWhiteboardAllowOthers(allowOthers);
+      if (!isOpen) {
+        setWhiteboardHistory([]);
+        whiteboardHistoryRef.current = [];
+      }
+      if (isOpen) {
+        toast.info(isBn 
+          ? `🎨 ${sharedBy?.userName || 'উপস্থাপক'} লাইভ হোয়াইটবোর্ড চালু করেছেন।` 
+          : `🎨 ${sharedBy?.userName || 'Presenter'} opened Live Whiteboard.`);
+      } else {
+        toast.info(isBn ? '🎨 হোয়াইটবোর্ড বন্ধ করা হয়েছে।' : '🎨 Whiteboard closed.');
+      }
+    } else if (data.type === 'wb_permission' && typeof data.payload?.allowOthers === 'boolean') {
+      setWhiteboardAllowOthers(data.payload.allowOthers);
+      toast.info(data.payload.allowOthers
+        ? (isBn ? '🔓 হোস্ট সবার জন্য হোয়াইটবোর্ডে ড্রয়িং উন্মুক্ত করেছেন!' : '🔓 Host allowed everyone to draw!')
+        : (isBn ? '🔒 হোস্ট হোয়াইটবোর্ড শুধুমাত্র উপস্থাপক মোডে রেখেছেন।' : '🔒 Host set whiteboard to presenter-only mode.'));
+    } else if (data.type === 'wb_draw' && data.payload) {
+      setWhiteboardHistory(prev => {
+        const next = [...prev, data.payload];
+        whiteboardHistoryRef.current = next;
+        return next;
+      });
+    } else if (data.type === 'wb_undo') {
+      setWhiteboardHistory(prev => {
+        const next = prev.slice(0, -1);
+        whiteboardHistoryRef.current = next;
+        return next;
+      });
+    } else if (data.type === 'wb_clear') {
+      setWhiteboardHistory([]);
+      whiteboardHistoryRef.current = [];
+    } else if (data.type === 'wb_sync' && data.payload) {
+      setIsWhiteboardOpen(Boolean(data.payload.isOpen));
+      setWhiteboardSharedBy(data.payload.sharedBy || null);
+      if (typeof data.payload.allowOthers === 'boolean') setWhiteboardAllowOthers(data.payload.allowOthers);
+      if (Array.isArray(data.payload.history)) {
+        setWhiteboardHistory(data.payload.history);
+        whiteboardHistoryRef.current = data.payload.history;
+      }
     }
   }, [currentUser?.id, currentUser?.name, isBn, isMeHost, playHandRaiseChime, playSpotlightChime, triggerFloatingReaction, handleIncomingMessage, handlePinUpdate]);
 
@@ -628,9 +689,28 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         });
 
         // Setup data channel listener for live in-meeting chat, pins, lock & host updates
-        peer.on('connection', (conn) => {
+        const setupPeerConnection = (conn) => {
           activeConnsRef.current[conn.peer] = conn;
           conn.on('data', handleIncomingData);
+          conn.on('open', () => {
+            if (whiteboardStateRef.current.isOpen) {
+              try {
+                conn.send({
+                  type: 'wb_sync',
+                  payload: {
+                    isOpen: true,
+                    sharedBy: whiteboardStateRef.current.sharedBy,
+                    allowOthers: whiteboardStateRef.current.allowOthers,
+                    history: whiteboardHistoryRef.current
+                  }
+                });
+              } catch (e) {}
+            }
+          });
+        };
+
+        peer.on('connection', (conn) => {
+          setupPeerConnection(conn);
         });
 
         peer.on('open', async (id) => {
@@ -647,8 +727,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
             if (p.peer_id && p.peer_id !== id && !activeCallsRef.current[p.peer_id]) {
               try {
                 const conn = peer.connect(p.peer_id);
-                activeConnsRef.current[p.peer_id] = conn;
-                conn.on('data', handleIncomingData);
+                setupPeerConnection(conn);
               } catch (e) {}
 
               const call = peer.call(p.peer_id, stream, {
@@ -713,8 +792,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
             if (p.peer_id && p.peer_id !== peer.id && !activeCallsRef.current[p.peer_id]) {
               try {
                 const conn = peer.connect(p.peer_id);
-                activeConnsRef.current[p.peer_id] = conn;
-                conn.on('data', handleIncomingData);
+                setupPeerConnection(conn);
               } catch (e) {}
 
               const call = peer.call(p.peer_id, localStreamRef.current, {
@@ -1042,6 +1120,106 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
         }
       } catch (e) {}
     });
+  };
+
+  // 🎨 Interactive Whiteboard Handlers
+  const handleToggleWhiteboard = () => {
+    if (!isMeHost) {
+      toast.error(isBn ? 'শুধুমাত্র হোস্ট ও কো-হোস্ট হোয়াইটবোর্ড নিয়ন্ত্রণ করতে পারবেন।' : 'Only hosts and co-hosts can manage the whiteboard.');
+      return;
+    }
+    const nextOpen = !isWhiteboardOpen;
+    const sharedByInfo = nextOpen ? {
+      userId: currentUser?.id,
+      userName: currentUser?.name || 'Host',
+      peerId: myPeerId || 'host'
+    } : null;
+
+    setIsWhiteboardOpen(nextOpen);
+    setWhiteboardSharedBy(sharedByInfo);
+    if (!nextOpen) {
+      setWhiteboardHistory([]);
+      whiteboardHistoryRef.current = [];
+    }
+
+    const payload = {
+      isOpen: nextOpen,
+      sharedBy: sharedByInfo,
+      allowOthers: whiteboardAllowOthers
+    };
+
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({ type: 'wb_toggle', payload });
+        }
+      } catch (e) {}
+    });
+
+    if (nextOpen) {
+      toast.success(isBn ? '🎨 লাইভ হোয়াইটবোর্ড চালু হয়েছে!' : '🎨 Live Whiteboard opened!');
+    } else {
+      toast.info(isBn ? '🎨 হোয়াইটবোর্ড বন্ধ করা হয়েছে।' : '🎨 Whiteboard closed.');
+    }
+  };
+
+  const handleWhiteboardAction = (action) => {
+    setWhiteboardHistory(prev => {
+      const next = [...prev, action];
+      whiteboardHistoryRef.current = next;
+      return next;
+    });
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({ type: 'wb_draw', payload: action });
+        }
+      } catch (e) {}
+    });
+  };
+
+  const handleWhiteboardUndo = () => {
+    setWhiteboardHistory(prev => {
+      const next = prev.slice(0, -1);
+      whiteboardHistoryRef.current = next;
+      return next;
+    });
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({ type: 'wb_undo' });
+        }
+      } catch (e) {}
+    });
+  };
+
+  const handleWhiteboardClear = () => {
+    setWhiteboardHistory([]);
+    whiteboardHistoryRef.current = [];
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({ type: 'wb_clear' });
+        }
+      } catch (e) {}
+    });
+    toast.info(isBn ? '🎨 হোয়াইটবোর্ড পরিষ্কার করা হয়েছে।' : '🎨 Whiteboard cleared.');
+  };
+
+  const handleToggleWhiteboardAllowOthers = () => {
+    if (!isMeHost) return;
+    const nextVal = !whiteboardAllowOthers;
+    setWhiteboardAllowOthers(nextVal);
+    Object.values(activeConnsRef.current).forEach(conn => {
+      try {
+        if (conn.open) {
+          conn.send({ type: 'wb_permission', payload: { allowOthers: nextVal } });
+        }
+      } catch (e) {}
+    });
+    toast.success(nextVal
+      ? (isBn ? '🔓 শিক্ষার্থীদের ড্রয়িং করার অনুমতি দেওয়া হয়েছে।' : '🔓 Participants can now draw.')
+      : (isBn ? '🔒 হোয়াইটবোর্ড শুধুমাত্র উপস্থাপক মোডে লক করা হয়েছে।' : '🔒 Presenter-only mode locked.'));
   };
 
   const remotePeerList = Object.entries(remotePeers);
@@ -1563,6 +1741,87 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                   </div>
                 )}
               </div>
+            ) : isWhiteboardOpen ? (
+              /* 🎨 INTERACTIVE WHITEBOARD HERO STAGE + FILMSTRIP */
+              <div className="w-full h-full flex flex-col md:flex-row gap-3">
+                <div className="flex-1 h-full min-h-[420px] rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative">
+                  <InteractiveWhiteboard
+                    isHost={isMeHost}
+                    canDraw={isMeHost || whiteboardAllowOthers}
+                    sharedBy={whiteboardSharedBy}
+                    allowOthers={whiteboardAllowOthers}
+                    onToggleAllowOthers={handleToggleWhiteboardAllowOthers}
+                    onClose={() => {
+                      if (isMeHost) handleToggleWhiteboard();
+                      else setIsWhiteboardOpen(false);
+                    }}
+                    history={whiteboardHistory}
+                    onBroadcastAction={handleWhiteboardAction}
+                    onBroadcastUndo={handleWhiteboardUndo}
+                    onBroadcastClear={handleWhiteboardClear}
+                    isBn={isBn}
+                    currentUser={currentUser}
+                  />
+                </div>
+
+                {/* Participant Filmstrip alongside Whiteboard */}
+                <div className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0">
+                  {/* Mini local user card */}
+                  <div className="w-48 md:w-full h-32 shrink-0 rounded-2xl overflow-hidden bg-slate-900 border border-purple-500/30 relative flex items-center justify-center shadow-lg">
+                    <video
+                      ref={localFilmstripVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
+                    />
+                    {isVideoOff && (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center font-bold text-sm shadow">
+                        {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/80 backdrop-blur-md text-[10px] font-bold text-white flex items-center gap-1">
+                      <span>{currentUser?.name || 'You'} ({isBn ? 'আপনি' : 'You'})</span>
+                    </div>
+                  </div>
+
+                  {/* Remote Peer Cards */}
+                  {remotePeerList.map(([peerId, remote]) => {
+                    const remoteTier = getUserHostTier(remote.userId, remote.role);
+                    const isRemoteMuted = Boolean(remoteMuteStates[remote.userId]);
+                    const isTilePinned = Boolean(pinnedUser && (pinnedUser.peerId === peerId || (pinnedUser.userId && Number(pinnedUser.userId) === Number(remote.userId))));
+                    const isTileSpotlighted = Boolean(spotlightUser && (spotlightUser.peerId === peerId || (spotlightUser.userId && Number(spotlightUser.userId) === Number(remote.userId))));
+
+                    return (
+                      <div key={peerId} className="w-48 md:w-full h-32 shrink-0">
+                        <RemoteVideoTile
+                          remotePeerId={peerId}
+                          stream={remote.stream}
+                          userId={remote.userId}
+                          userName={remote.userName}
+                          role={remote.role}
+                          avatar={remote.avatar}
+                          tier={remoteTier}
+                          isMuted={isRemoteMuted}
+                          isHandRaised={Boolean(raisedHands[remote.userId])}
+                          recentReaction={tileReactions[remote.userId]?.emoji}
+                          canControlAudio={isMeHost}
+                          onToggleMic={() => handleToggleParticipantMic(remote.userId, remote.userName, isRemoteMuted)}
+                          canPromote={isMeHost}
+                          onToggleCoHost={() => handleToggleCoHost(remote.userId, remote.userName, remoteTier === 'co_host')}
+                          compact
+                          isBn={isBn}
+                          isPinned={isTilePinned}
+                          onTogglePin={() => handleTogglePin(peerId, remote.userId, remote.userName)}
+                          isSpotlighted={isTileSpotlighted}
+                          onToggleSpotlight={() => handleToggleSpotlight(peerId, remote.userId, remote.userName)}
+                          canSpotlight={isMeHost}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             ) : effectiveFocusUser ? (
               /* 🌟 HERO STAGE + FILMSTRIP (When a User is Pinned or Spotlighted) */
               <div className="w-full h-full flex flex-col md:flex-row gap-3">
@@ -1977,6 +2236,24 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
               >
                 <FiTv size={18} className={isScreenSharing ? 'text-emerald-400' : 'text-emerald-500'} />
                 <span className="text-[10px] font-bold">{isScreenSharing ? (isBn ? 'শেয়ার বন্ধ' : 'Stop Share') : (isBn ? 'স্ক্রিন শেয়ার' : 'Share')}</span>
+              </button>
+
+              {/* 🎨 Live Whiteboard Button */}
+              <button
+                onClick={handleToggleWhiteboard}
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition cursor-pointer ${
+                  isWhiteboardOpen
+                    ? 'bg-purple-600/30 text-purple-300 ring-1 ring-purple-500/50 shadow-lg shadow-purple-500/20'
+                    : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={isWhiteboardOpen 
+                  ? (isBn ? 'হোয়াইটবোর্ড বন্ধ করুন' : 'Close Whiteboard') 
+                  : (isBn ? 'লাইভ হোয়াইটবোর্ড চালু করুন' : 'Open Live Whiteboard')}
+              >
+                <span className="text-lg leading-none select-none">🎨</span>
+                <span className="text-[10px] font-bold">
+                  {isWhiteboardOpen ? (isBn ? 'বোর্ড বন্ধ' : 'Close Board') : (isBn ? 'হোয়াইটবোর্ড' : 'Whiteboard')}
+                </span>
               </button>
 
               {/* In-Meeting Live Chat Button */}
