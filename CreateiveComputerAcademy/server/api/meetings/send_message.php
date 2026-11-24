@@ -14,11 +14,21 @@ $rawInput = file_get_contents("php://input");
 $data = json_decode($rawInput, true);
 if (!is_array($data)) $data = [];
 
-$roomId   = !empty($data['room_id']) ? trim($data['room_id']) : '';
-$userId   = !empty($data['user_id']) ? (int)$data['user_id'] : 0;
-$userName = !empty($data['user_name']) ? trim($data['user_name']) : 'Participant';
-$userRole = !empty($data['user_role']) ? trim($data['user_role']) : 'Member';
-$message  = !empty($data['message']) ? trim($data['message']) : '';
+$roomId         = !empty($data['room_id']) ? trim($data['room_id']) : '';
+$userId         = !empty($data['user_id']) ? (int)$data['user_id'] : 0;
+$userName       = !empty($data['user_name']) ? trim($data['user_name']) : 'Participant';
+$userRole       = !empty($data['user_role']) ? trim($data['user_role']) : 'Member';
+$message        = !empty($data['message']) ? trim($data['message']) : '';
+$messageType    = !empty($data['message_type']) ? trim($data['message_type']) : 'text'; // 'text', 'code', 'file', 'image'
+$attachmentUrl  = !empty($data['attachment_url']) ? trim($data['attachment_url']) : null;
+$attachmentName = !empty($data['attachment_name']) ? trim($data['attachment_name']) : null;
+$attachmentSize = !empty($data['attachment_size']) ? (int)$data['attachment_size'] : null;
+$codeLanguage   = !empty($data['code_language']) ? trim($data['code_language']) : null;
+
+// If message is empty for file or image, fallback to filename
+if (empty($message) && in_array($messageType, ['file', 'image']) && !empty($attachmentName)) {
+    $message = $attachmentName;
+}
 
 if (empty($roomId) || !$userId || empty($message)) {
     http_response_code(400);
@@ -51,15 +61,28 @@ try {
     }
 
     $insStmt = $db->prepare("
-        INSERT INTO meeting_messages (meeting_id, user_id, user_name, user_role, message, created_at)
-        VALUES (:mid, :uid, :uname, :urole, :msg, NOW())
+        INSERT INTO meeting_messages (
+            meeting_id, user_id, user_name, user_role, message,
+            message_type, attachment_url, attachment_name, attachment_size, code_language,
+            created_at
+        )
+        VALUES (
+            :mid, :uid, :uname, :urole, :msg,
+            :mtype, :aurl, :aname, :asize, :clang,
+            NOW()
+        )
     ");
     $insStmt->execute([
         ':mid'   => $meetingId,
         ':uid'   => $userId,
         ':uname' => $userName,
         ':urole' => $userRole,
-        ':msg'   => $message
+        ':msg'   => $message,
+        ':mtype' => $messageType,
+        ':aurl'  => $attachmentUrl,
+        ':aname' => $attachmentName,
+        ':asize' => $attachmentSize,
+        ':clang' => $codeLanguage
     ]);
 
     $newId = (int)$db->lastInsertId();
@@ -80,6 +103,11 @@ try {
             "user_role"       => $userRole,
             "profile_picture" => $profilePic,
             "message"         => $message,
+            "message_type"    => $messageType,
+            "attachment_url"  => $attachmentUrl,
+            "attachment_name" => $attachmentName,
+            "attachment_size" => $attachmentSize,
+            "code_language"   => $codeLanguage,
             "is_pinned"       => 0,
             "pinned_by"       => null,
             "pinned_at"       => null,

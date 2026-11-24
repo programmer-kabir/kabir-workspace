@@ -43,6 +43,7 @@ try {
     if ($afterId > 0) {
         $stmt = $db->prepare("
             SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message,
+                   mm.message_type, mm.attachment_url, mm.attachment_name, mm.attachment_size, mm.code_language,
                    mm.is_pinned, mm.pinned_by, mm.pinned_at, mm.created_at,
                    u.profile_picture
             FROM meeting_messages mm
@@ -54,6 +55,7 @@ try {
     } else {
         $stmt = $db->prepare("
             SELECT mm.id, mm.meeting_id, mm.user_id, mm.user_name, mm.user_role, mm.message,
+                   mm.message_type, mm.attachment_url, mm.attachment_name, mm.attachment_size, mm.code_language,
                    mm.is_pinned, mm.pinned_by, mm.pinned_at, mm.created_at,
                    u.profile_picture
             FROM meeting_messages mm

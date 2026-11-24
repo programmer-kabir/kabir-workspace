@@ -72,6 +72,11 @@ class MeetingDbHelper {
                 `user_name` VARCHAR(150) NOT NULL,
                 `user_role` VARCHAR(50) NULL DEFAULT 'Member',
                 `message` TEXT NOT NULL,
+                `message_type` VARCHAR(32) NOT NULL DEFAULT 'text',
+                `attachment_url` TEXT NULL,
+                `attachment_name` VARCHAR(255) NULL,
+                `attachment_size` INT NULL,
+                `code_language` VARCHAR(50) NULL,
                 `is_pinned` TINYINT(1) NOT NULL DEFAULT 0,
                 `pinned_by` INT NULL,
                 `pinned_at` DATETIME NULL,
@@ -83,7 +88,22 @@ class MeetingDbHelper {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
             try {
-                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `is_pinned` TINYINT(1) NOT NULL DEFAULT 0 AFTER `message`");
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `message_type` VARCHAR(32) NOT NULL DEFAULT 'text' AFTER `message`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `attachment_url` TEXT NULL AFTER `message_type`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `attachment_name` VARCHAR(255) NULL AFTER `attachment_url`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `attachment_size` INT NULL AFTER `attachment_name`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `code_language` VARCHAR(50) NULL AFTER `attachment_size`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `is_pinned` TINYINT(1) NOT NULL DEFAULT 0 AFTER `code_language`");
             } catch (Throwable $e) {}
             try {
                 $db->exec("ALTER TABLE `meeting_messages` ADD COLUMN `pinned_by` INT NULL AFTER `is_pinned`");

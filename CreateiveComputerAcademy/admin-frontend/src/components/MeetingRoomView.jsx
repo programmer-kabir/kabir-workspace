@@ -6,7 +6,8 @@ import {
   FiUsers, FiUser, FiCopy, FiCheck, FiShield, FiRadio,
   FiAlertTriangle, FiLoader, FiMaximize, FiMinimize,
   FiMessageSquare, FiSend, FiX, FiCheckCircle, FiLock,
-  FiUnlock, FiStar, FiUserCheck, FiUserPlus, FiUserX
+  FiUnlock, FiStar, FiUserCheck, FiUserPlus, FiUserX,
+  FiCode, FiPaperclip, FiDownload, FiFileText, FiImage, FiFile
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import InteractiveWhiteboard from './InteractiveWhiteboard';
@@ -33,6 +34,38 @@ const AVAILABLE_REACTIONS = [
   { emoji: '😮', labelBn: 'বিস্ময়', labelEn: 'Wow' },
   { emoji: '💯', labelBn: '১০০%', labelEn: '100' },
 ];
+
+// 💻 Supported Code Snippet Languages
+const CODE_LANGUAGES = [
+  { id: 'javascript', label: 'JavaScript' },
+  { id: 'python', label: 'Python' },
+  { id: 'php', label: 'PHP' },
+  { id: 'html', label: 'HTML / CSS' },
+  { id: 'sql', label: 'SQL' },
+  { id: 'java', label: 'Java' },
+  { id: 'cpp', label: 'C / C++' },
+  { id: 'typescript', label: 'TypeScript' },
+  { id: 'bash', label: 'Bash / Shell' },
+  { id: 'json', label: 'JSON' },
+  { id: 'other', label: 'Plain Code' },
+];
+
+// 📎 Helper to format file size in B, KB, MB
+const formatChatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes)) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+// 📎 Helper to get chat attachment full URL
+const getChatAttachmentUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = API_BASE.endsWith('/') ? API_BASE : `${API_BASE}/`;
+  const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+  return `${base}${cleanPath}`;
+};
 
 // Fallback silent & blank MediaStream for environments without camera/mic hardware
 function createFallbackStream() {
@@ -109,6 +142,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
   const [highlightedMsgId, setHighlightedMsgId] = useState(null);
+
+  // 💻 Code Snippet & Attachment state
+  const [codeModalOpen, setCodeModalOpen] = useState(false);
+  const [codeSnippet, setCodeSnippet] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('javascript');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [copiedSnippetId, setCopiedSnippetId] = useState(null);
+  const [previewImageModal, setPreviewImageModal] = useState(null);
+  const chatFileInputRef = useRef(null);
 
   // Remote Audio & Mic Management State
   const [remoteMuteStates, setRemoteMuteStates] = useState({}); // userId -> boolean (true if muted)
@@ -1332,6 +1374,136 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
     }
   };
 
+  // 💻 Send a programming code snippet
+  const handleSendCodeSnippet = async (e) => {
+    e?.preventDefault();
+    const code = codeSnippet.trim();
+    if (!code || !currentUser?.id || isSending) return;
+
+    if (isChatLocked && !isMeHost) {
+      toast.error('Chat is currently locked by the host.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const payload = {
+        room_id: roomId,
+        user_id: currentUser.id,
+        user_name: currentUser.name || 'Admin Host',
+        user_role: isMeHost ? 'Host' : (currentUser.roles?.[0] || 'Member'),
+        message: code,
+        message_type: 'code',
+        code_language: codeLanguage
+      };
+
+      const res = await axios.post(`${API_BASE}api/meetings/send_message.php`, payload);
+      if (res.data?.status === 'success' && res.data.message) {
+        const newMsg = res.data.message;
+        setChatMessages(prev => [...prev, newMsg]);
+        setCodeSnippet('');
+        setCodeModalOpen(false);
+
+        // Broadcast to all connected peers via DataChannel
+        Object.values(activeConnsRef.current).forEach(conn => {
+          try {
+            if (conn.open) {
+              conn.send({ type: 'chat_message', payload: newMsg });
+            }
+          } catch (e) {}
+        });
+        toast.success('Code snippet shared successfully!');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send code snippet.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // 📎 Upload and share a file / image in chat
+  const handleChatFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.id || isUploadingFile) return;
+
+    if (isChatLocked && !isMeHost) {
+      toast.error('Chat is currently locked by the host.');
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('File size cannot exceed 25MB.');
+      return;
+    }
+
+    setIsUploadingFile(true);
+    const toastId = toast.loading(`Uploading "${file.name}"...`);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('room_id', roomId);
+      formData.append('user_id', currentUser.id);
+
+      const uploadRes = await axios.post(`${API_BASE}api/meetings/upload_chat_file.php`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (uploadRes.data?.status === 'success' && uploadRes.data.file) {
+        const fileData = uploadRes.data.file;
+        const msgType = fileData.is_image ? 'image' : 'file';
+
+        const payload = {
+          room_id: roomId,
+          user_id: currentUser.id,
+          user_name: currentUser.name || 'Admin Host',
+          user_role: isMeHost ? 'Host' : (currentUser.roles?.[0] || 'Member'),
+          message: fileData.original_name,
+          message_type: msgType,
+          attachment_url: fileData.url,
+          attachment_name: fileData.original_name,
+          attachment_size: fileData.size
+        };
+
+        const res = await axios.post(`${API_BASE}api/meetings/send_message.php`, payload);
+        if (res.data?.status === 'success' && res.data.message) {
+          const newMsg = res.data.message;
+          setChatMessages(prev => [...prev, newMsg]);
+
+          // Broadcast to peers
+          Object.values(activeConnsRef.current).forEach(conn => {
+            try {
+              if (conn.open) {
+                conn.send({ type: 'chat_message', payload: newMsg });
+              }
+            } catch (e) {}
+          });
+
+          toast.dismiss(toastId);
+          toast.success('File shared successfully!');
+        }
+      } else {
+        throw new Error(uploadRes.data?.message || 'Upload failed');
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.message || err.message || 'File upload failed.');
+    } finally {
+      setIsUploadingFile(false);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+    }
+  };
+
+  // 📋 Copy code snippet to clipboard
+  const handleCopyCodeSnippet = (msgId, codeText) => {
+    navigator.clipboard.writeText(codeText);
+    setCopiedSnippetId(msgId);
+    toast.success('Code copied to clipboard!');
+    setTimeout(() => {
+      setCopiedSnippetId(null);
+    }, 2000);
+  };
+
   // Toggle Chat Lock (Host only)
   const handleToggleChatLock = async () => {
     if (!isMeHost) {
@@ -2472,16 +2644,116 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                           )}
                         </div>
 
-                        {/* Message Text Bubble */}
-                        <div
-                          className={`relative px-3.5 py-2.5 rounded-2xl text-xs break-words leading-relaxed shadow-md ${
+                        {/* Message Text Bubble or Code / Attachment Card */}
+                        {msg.message_type === 'code' ? (
+                          <div className={`w-full min-w-[200px] max-w-full rounded-2xl overflow-hidden border shadow-xl ${
+                            isMe ? 'border-rose-500/40 bg-slate-950 text-white rounded-tr-none' : 'border-slate-700/80 bg-slate-950 text-slate-100 rounded-tl-none'
+                          }`}>
+                            {/* Code Header Bar */}
+                            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 text-[11px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
+                                <span className="font-mono font-bold text-slate-300 ml-1 uppercase text-[10px] tracking-wide">
+                                  {msg.code_language || 'code'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCodeSnippet(msg.id, msg.message)}
+                                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer text-[10px] font-medium"
+                                title="Copy code"
+                              >
+                                {copiedSnippetId === msg.id ? (
+                                  <>
+                                    <FiCheck size={11} className="text-emerald-400" />
+                                    <span className="text-emerald-400">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FiCopy size={11} />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            {/* Code Snippet Content */}
+                            <pre className="p-3 text-[11px] font-mono text-emerald-300 leading-relaxed overflow-x-auto max-h-64 selection:bg-rose-500 selection:text-white whitespace-pre-wrap break-all">
+                              <code>{msg.message}</code>
+                            </pre>
+                          </div>
+                        ) : msg.message_type === 'image' ? (
+                          <div className={`p-1.5 rounded-2xl border shadow-md flex flex-col gap-1.5 max-w-full ${
+                            isMe ? 'bg-rose-950/20 border-rose-600/40 rounded-tr-none' : 'bg-slate-800/90 border-slate-700 rounded-tl-none'
+                          }`}>
+                            <div className="relative group cursor-zoom-in overflow-hidden rounded-xl bg-slate-950 flex items-center justify-center">
+                              <img
+                                src={getChatAttachmentUrl(msg.attachment_url)}
+                                alt={msg.attachment_name || 'Attached image'}
+                                className="max-h-56 w-auto max-w-full rounded-xl object-contain hover:scale-105 transition duration-200"
+                                onClick={() => setPreviewImageModal(getChatAttachmentUrl(msg.attachment_url))}
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between px-2 py-0.5 text-[10px] text-slate-300">
+                              <span className="truncate max-w-[140px] font-medium">{msg.attachment_name}</span>
+                              <div className="flex items-center gap-1 shrink-0 ml-1">
+                                <span className="text-slate-400 text-[9px]">
+                                  {formatChatFileSize(msg.attachment_size)}
+                                </span>
+                                <a
+                                  href={getChatAttachmentUrl(msg.attachment_url)}
+                                  download={msg.attachment_name || 'download'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-white transition cursor-pointer"
+                                  title="Download image"
+                                >
+                                  <FiDownload size={11} />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ) : msg.message_type === 'file' ? (
+                          <div className={`p-3 rounded-2xl border shadow-md flex items-center gap-3 w-64 max-w-full ${
                             isMe
-                              ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-tr-none'
-                              : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/80'
-                          }`}
-                        >
-                          {msg.message}
-                        </div>
+                              ? 'bg-gradient-to-r from-rose-950/30 to-red-950/30 border-rose-600/50 rounded-tr-none'
+                              : 'bg-slate-800 border-slate-700 rounded-tl-none'
+                          }`}>
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                              <FiFileText size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-white truncate" title={msg.attachment_name}>
+                                {msg.attachment_name || msg.message}
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                {formatChatFileSize(msg.attachment_size) || 'Attachment'}
+                              </p>
+                            </div>
+                            <a
+                              href={getChatAttachmentUrl(msg.attachment_url)}
+                              download={msg.attachment_name || 'download'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition shrink-0 shadow cursor-pointer"
+                              title="Download file"
+                            >
+                              <FiDownload size={13} />
+                            </a>
+                          </div>
+                        ) : (
+                          <div
+                            className={`relative px-3.5 py-2.5 rounded-2xl text-xs break-words leading-relaxed shadow-md ${
+                              isMe
+                                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-tr-none'
+                                : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/80'
+                            }`}
+                          >
+                            {msg.message}
+                          </div>
+                        )}
                       </div>
 
                       {/* 🌟 Hover Pin/Unpin Action Button (ONLY FOR HOSTS) */}
@@ -2502,37 +2774,131 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
               )}
             </div>
 
-            {/* Chat Message Input Footer (With Lock Awareness) */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center gap-2 shrink-0">
-              {isChatLocked && !isMeHost ? (
-                <div className="flex-1 py-2 px-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2 text-amber-300 text-xs">
-                  <FiLock size={14} className="shrink-0" />
-                  <span className="truncate">Chat is locked by host. Only hosts can post.</span>
-                </div>
-              ) : (
-                <>
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={
-                      isChatLocked 
-                        ? '[Host Broadcast] Type a message...' 
-                        : 'Type a message to everyone...'
-                    }
-                    className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
+            {/* Chat Message Input Footer (With Lock Awareness, Code Snippets & File Attachments) */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/80 flex flex-col gap-2 shrink-0">
+              {/* 💻 Code Snippet Composer Tray (if open) */}
+              {codeModalOpen && (
+                <div className="p-3 bg-slate-900 border border-slate-700/80 rounded-2xl flex flex-col gap-2 shadow-2xl animate-in slide-in-from-bottom duration-150">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                      <FiCode size={14} className="text-rose-400" />
+                      <span>Share Code Snippet</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={codeLanguage}
+                        onChange={(e) => setCodeLanguage(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-rose-500 font-mono"
+                      >
+                        {CODE_LANGUAGES.map(lang => (
+                          <option key={lang.id} value={lang.id}>{lang.label}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setCodeModalOpen(false)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                      >
+                        <FiX size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={codeSnippet}
+                    onChange={(e) => setCodeSnippet(e.target.value)}
+                    placeholder="Paste or write your programming code here..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-[11px] text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-rose-500 leading-relaxed resize-none"
                   />
-                  <button
-                    type="submit"
-                    disabled={!chatInput.trim() || isSending}
-                    className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Send Message"
-                  >
-                    {isSending ? <FiLoader className="animate-spin" size={15} /> : <FiSend size={15} />}
-                  </button>
-                </>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCodeModalOpen(false)}
+                      className="px-3 py-1.5 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendCodeSnippet}
+                      disabled={!codeSnippet.trim() || isSending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold transition shadow cursor-pointer disabled:opacity-40"
+                    >
+                      {isSending ? <FiLoader className="animate-spin" size={13} /> : <FiSend size={13} />}
+                      <span>Send Code</span>
+                    </button>
+                  </div>
+                </div>
               )}
-            </form>
+
+              {/* Hidden file input for attachment upload */}
+              <input
+                type="file"
+                ref={chatFileInputRef}
+                onChange={handleChatFileUpload}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar,.tar,.gz,.xls,.xlsx,.ppt,.pptx"
+              />
+
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                {isChatLocked && !isMeHost ? (
+                  <div className="flex-1 py-2 px-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2 text-amber-300 text-xs">
+                    <FiLock size={14} className="shrink-0" />
+                    <span className="truncate">Chat is locked by host. Only hosts can post.</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Attach File Button */}
+                    <button
+                      type="button"
+                      onClick={() => chatFileInputRef.current?.click()}
+                      disabled={isUploadingFile}
+                      className="p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer shrink-0 disabled:opacity-40"
+                      title="Attach file or image (Max 25MB)"
+                    >
+                      {isUploadingFile ? <FiLoader className="animate-spin text-amber-400" size={15} /> : <FiPaperclip size={15} />}
+                    </button>
+
+                    {/* Code Snippet Button */}
+                    <button
+                      type="button"
+                      onClick={() => setCodeModalOpen(prev => !prev)}
+                      className={`p-2.5 rounded-xl border transition cursor-pointer shrink-0 ${
+                        codeModalOpen
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-sm'
+                          : 'bg-slate-900 border-slate-700/80 hover:bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                      title="Share programming code snippet"
+                    >
+                      <FiCode size={15} />
+                    </button>
+
+                    {/* Chat Text Input */}
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={
+                        isChatLocked 
+                          ? '[Host Broadcast] Type a message...' 
+                          : 'Type a message to everyone...'
+                      }
+                      className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
+                    />
+
+                    {/* Send Message Button */}
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim() || isSending}
+                      className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      title="Send Message"
+                    >
+                      {isSending ? <FiLoader className="animate-spin" size={15} /> : <FiSend size={15} />}
+                    </button>
+                  </>
+                )}
+              </form>
+            </div>
 
           </div>
         )}
@@ -2884,6 +3250,31 @@ export default function MeetingRoomView({ roomId, meetingTitle, creatorId, curre
                 <span>Unmute Mic</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 Chat Image Lightbox Modal */}
+      {previewImageModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setPreviewImageModal(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setPreviewImageModal(null)}
+              className="absolute -top-11 right-0 p-2 rounded-full bg-slate-800/80 hover:bg-rose-600 text-white transition cursor-pointer shadow-lg"
+              title="Close image"
+            >
+              <FiX size={18} />
+            </button>
+            <img
+              src={previewImageModal}
+              alt="Enlarged preview"
+              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-slate-700/80"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
