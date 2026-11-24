@@ -10,6 +10,7 @@ import { AVAILABLE_REACTIONS } from './meetingUtils';
  * - Mic / Camera toggles
  * - Screen sharing toggle
  * - Interactive Whiteboard launcher
+ * - 🔴 In-Browser Meeting Recorder (Host / Co-host)
  * - In-Meeting Chat launcher with unread badge & lock indicator
  * - Raise hand button
  * - Live reaction launcher
@@ -20,7 +21,9 @@ export default function MeetingControlsBar(props) {
   const media = props.media || props;
   const rtc = props.rtc || props;
   const chat = props.chat || props;
+  const recorder = props.recorder;
 
+  const isMeHost = rtc.isMeHost;
   const isMuted = media.isMuted;
   const isVideoOff = media.isVideoOff;
   const isScreenSharing = media.isScreenSharing;
@@ -102,7 +105,59 @@ export default function MeetingControlsBar(props) {
         <span className="text-[9px] font-bold mt-0.5">{isBn ? 'বোর্ড' : 'Board'}</span>
       </button>
 
-      {/* 5. In-Meeting Live Chat Button */}
+      {/* 5. 🔴 Host Meeting Recorder Toggle (Host / Co-Host Only) */}
+      {isMeHost && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              if (recorder?.isRecording) {
+                recorder.stopRecording();
+              } else {
+                recorder?.startRecording({
+                  localStream: media?.localStreamRef?.current,
+                  remotePeerList: rtc?.remotePeerList || []
+                });
+              }
+            }}
+            className={`flex flex-col items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-2xl transition cursor-pointer ${
+              recorder?.isRecording
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/50 ring-2 ring-rose-400 animate-pulse'
+                : 'bg-slate-800/90 text-slate-100 hover:bg-slate-700/90 hover:text-white'
+            }`}
+            title={
+              recorder?.isRecording
+                ? (isBn ? `রেকর্ডিং বন্ধ করুন (${recorder.formattedDuration})` : `Stop Recording (${recorder.formattedDuration})`)
+                : (isBn ? 'মিটিং রেকর্ড করুন' : 'Record Meeting')
+            }
+          >
+            {recorder?.isRecording ? (
+              <span className="w-3.5 h-3.5 bg-white rounded-xs shadow-xs" />
+            ) : (
+              <span className="w-3.5 h-3.5 bg-rose-500 rounded-full shadow-sm ring-2 ring-rose-500/30" />
+            )}
+            <span className="text-[9px] font-bold mt-0.5">
+              {recorder?.isRecording ? (isBn ? 'স্টপ' : 'Stop') : (isBn ? 'রেকর্ড' : 'Record')}
+            </span>
+          </button>
+
+          {/* Pause / Resume button while recording */}
+          {recorder?.isRecording && (
+            <button
+              onClick={() => {
+                if (recorder.isPaused) recorder.resumeRecording();
+                else recorder.pauseRecording();
+              }}
+              className="flex flex-col items-center justify-center w-8 h-11 md:w-9 md:h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition cursor-pointer"
+              title={recorder.isPaused ? (isBn ? 'রেকর্ডিং চালু করুন' : 'Resume Recording') : (isBn ? 'রেকর্ডিং থামান' : 'Pause Recording')}
+            >
+              <span className="text-xs">{recorder.isPaused ? '▶️' : '⏸️'}</span>
+              <span className="text-[8px] font-bold mt-0.5">{recorder.isPaused ? (isBn ? 'চালু' : 'Play') : (isBn ? 'পজ' : 'Pause')}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 6. In-Meeting Live Chat Button */}
       <button
         onClick={onToggleChat}
         className={`relative flex flex-col items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-2xl transition cursor-pointer ${
@@ -126,7 +181,7 @@ export default function MeetingControlsBar(props) {
         )}
       </button>
 
-      {/* 6. Raise Hand Button */}
+      {/* 7. Raise Hand Button */}
       <button
         onClick={onToggleRaiseHand}
         className={`flex flex-col items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-2xl transition cursor-pointer ${
@@ -140,7 +195,7 @@ export default function MeetingControlsBar(props) {
         <span className="text-[9px] font-bold mt-0.5">{isHandRaised ? (isBn ? 'তোলা' : 'Raised') : (isBn ? 'হাত' : 'Hand')}</span>
       </button>
 
-      {/* 7. Live Reaction Launcher with Picker Tray */}
+      {/* 8. Live Reaction Launcher with Picker Tray */}
       <div className="relative reaction-picker-container">
         <button
           onClick={onToggleReactionPicker}
@@ -176,7 +231,7 @@ export default function MeetingControlsBar(props) {
 
       <div className="w-px h-7 bg-slate-800 mx-1" />
 
-      {/* 8. Leave Meeting Button */}
+      {/* 9. Leave Meeting Button */}
       <button
         onClick={onLeave}
         className="flex items-center gap-1.5 px-3 md:px-4 h-11 md:h-12 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-rose-600/30"

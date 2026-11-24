@@ -15,13 +15,15 @@ import MeetingImagePreviewModal from './Meeting/MeetingImagePreviewModal';
 import { useMeetingMedia } from './Meeting/hooks/useMeetingMedia';
 import { useMeetingChat } from './Meeting/hooks/useMeetingChat';
 import { useMeetingWebRTC } from './Meeting/hooks/useMeetingWebRTC';
+import { useMeetingRecorder } from './Meeting/hooks/useMeetingRecorder';
 
 /**
  * MeetingRoomView (Modular Component-Based Architecture)
- * Reduced from 3,600 lines to ~220 lines via decoupled sub-components and hooks:
+ * Reduced from 3,600 lines to ~225 lines via decoupled sub-components and hooks:
  * - useMeetingMedia: Audio/video hardware acquisition, tracks, screen share & sound FX
  * - useMeetingChat: Real-time messaging, attachments, code snippets & direct downloads
  * - useMeetingWebRTC: Mesh signaling, host privileges, live whiteboard & hand raising
+ * - useMeetingRecorder: In-browser meeting recording, mixer, timer & local/cloud save
  */
 export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onLeave, creatorId }) {
   const { language } = useLanguage();
@@ -66,6 +68,9 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
     onIncomingMessage: chat.receiveIncomingMessage,
     onPinUpdate: chat.receivePinUpdate,
   });
+
+  // 4. In-Browser Meeting Recorder
+  const recorder = useMeetingRecorder({ isBn, roomId, currentUser });
 
   // Connect WebRTC connection pool to chat broadcaster
   useEffect(() => {
@@ -138,6 +143,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         isMeHost={rtc.isMeHost}
         totalInRoom={rtc.totalInRoom}
         copied={copied}
+        recorder={recorder}
         onCopyInvite={copyMeetingInvite}
         onOpenParticipants={() => setParticipantsModalOpen(true)}
         onMuteAll={rtc.handleMuteAll}
@@ -159,6 +165,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             media={media}
             rtc={rtc}
             chat={chat}
+            recorder={recorder}
             isChatLocked={isChatLocked}
             reactionPickerOpen={reactionPickerOpen}
             onToggleAudio={handleToggleAudio}
