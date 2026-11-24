@@ -77,7 +77,15 @@ try {
         $driveTargetName = "CCA_Meeting_{$cleanRoomId}_{$dateStr}.{$fileExt}";
         $driveMime = ($fileExt === 'mp4') ? 'video/mp4' : 'video/webm';
 
-        $driveRes = $gdrive->uploadFile($localFilePath, $driveTargetName, $driveMime);
+        // Automatically organize inside "CCA Meeting Recordings" folder
+        $folderId = null;
+        try {
+            $folderId = $gdrive->findOrCreateFolder('CCA Meeting Recordings');
+        } catch (Throwable $fErr) {
+            error_log("Meeting folder findOrCreate warning: " . $fErr->getMessage());
+        }
+
+        $driveRes = $gdrive->uploadFile($localFilePath, $driveTargetName, $driveMime, $folderId);
         if (!empty($driveRes['view_url'])) {
             $finalViewUrl = $driveRes['view_url'];
             $driveFileId = $driveRes['file_id'] ?? null;
