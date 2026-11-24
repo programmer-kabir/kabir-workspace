@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import axios from 'axios';
 import { toast } from 'sonner';
+import { API_BASE } from '../meetingUtils';
 import {
   createCompositeMeetingStream,
   getSupportedMimeType,
@@ -9,12 +11,12 @@ import {
 
 /**
  * useMeetingRecorder Hook
- * Step 2: Manages meeting recording lifecycle:
+ * Manages meeting recording lifecycle:
  * - Start / Pause / Resume / Stop recording
  * - Real-time duration timer and size calculation
  * - Audio-video stream cleanup
  * - Local offline download as .webm / .mp4
- * - Prepares recorded video Blob for Step 5 (Google Drive upload)
+ * - Automatic cloud upload to Google Drive Cloud Vault
  */
 export function useMeetingRecorder({ isBn, roomId, currentUser }) {
   const [recordingState, setRecordingState] = useState('idle'); // 'idle' | 'starting' | 'recording' | 'paused' | 'stopped'
@@ -24,9 +26,10 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
   const [recordedFileSize, setRecordedFileSize] = useState(0);
   const [recordingModalOpen, setRecordingModalOpen] = useState(false);
 
-  // Upload state for Step 5
+  // Upload state for Google Drive
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [cloudRecordingUrl, setCloudRecordingUrl] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -54,11 +57,10 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
       toast.info(isBn ? 'মিটিং ট্যাবটি সিলেক্ট করে "Share" চাপুন...' : 'Select the meeting tab and click "Share"...');
 
       // Step 1 Engine: Mix audio and capture viewport
-      const { compositeStream, cleanup, videoTrack } = await createCompositeMeetingStream({
+      const { compositeStream, cleanup } = await createCompositeMeetingStream({
         localStream,
         remotePeerList,
         onScreenEnded: () => {
-          // Trigger stop if user clicks browser's native "Stop sharing" bar
           stopRecording();
         }
       });
@@ -203,7 +205,62 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
     toast.success(isBn ? `💾 "${filename}" পিসিতে ডাউনলোড হচ্ছে...` : `💾 Downloading "${filename}" to PC...`);
   }, [recordedBlob, recordedBlobUrl, roomId, isBn]);
 
-  // 6. Discard Recording & Free Memory
+  // 6. Upload Recording to Google Drive / Cloud Vault (Step 5)
+  const uploadToDrive = useCallback(async () => {
+    if (!recordedBlob) {
+      toast.error(isBn ? 'কোনো রেকর্ডিং ফাইল পাওয়া যায়নি।' : 'No recording file found.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    const toastId = toast.loading(isBn ? 'Google Drive ক্লাউড ভল্টে সেভ হচ্ছে...' : 'Saving to Google Drive Cloud Vault...');
+
+    try {
+      const formData = new FormData();
+      const isMp4 = mimeTypeRef.current.includes('mp4');
+      const ext = isMp4 ? 'mp4' : 'webm';
+      const cleanRoomId = roomId ? roomId.replace(/[^a-zA-Z0-9]/g, '_') : 'meeting';
+      const filename = `CCA_Meeting_${cleanRoomId}_${Date.now()}.${ext}`;
+
+      formData.append('file', recordedBlob, filename);
+      formData.append('room_id', roomId);
+      formData.append('user_id', currentUser?.id || 0);
+      formData.append('duration', recordingDuration);
+
+      const res = await axios.post(`${API_BASE}api/meetings/upload_recording_drive.php`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
+      });
+
+      if (res.data?.status === 'success') {
+        toast.dismiss(toastId);
+        const driveUrl = res.data.recording_url;
+        setCloudRecordingUrl(driveUrl);
+        const isDrive = res.data.storage === 'google_drive';
+
+        toast.success(
+          isDrive
+            ? (isBn ? '☁️ সফলভাবে Google Drive ক্লাউড ভল্টে সংরক্ষিত হয়েছে!' : '☁️ Successfully saved to Google Drive Cloud Vault!')
+            : (isBn ? '💾 সফলভাবে CCA সার্ভার ভল্টে সংরক্ষিত হয়েছে!' : '💾 Successfully saved to CCA Server Vault!')
+        );
+      } else {
+        throw new Error(res.data?.message || 'Upload failed');
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.message || err.message || (isBn ? 'ক্লাউড আপলোড ব্যর্থ হয়েছে।' : 'Cloud upload failed.'));
+    } finally {
+      setIsUploading(false);
+    }
+  }, [recordedBlob, isBn, roomId, currentUser, recordingDuration]);
+
+  // 7. Discard Recording & Free Memory
   const discardRecording = useCallback(() => {
     if (recordedBlobUrl) {
       URL.revokeObjectURL(recordedBlobUrl);
@@ -216,6 +273,7 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
     setRecordingState('idle');
     setUploadProgress(0);
     setIsUploading(false);
+    setCloudRecordingUrl(null);
   }, [recordedBlobUrl]);
 
   // Cleanup on unmount
@@ -247,11 +305,13 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
     setIsUploading,
     uploadProgress,
     setUploadProgress,
+    cloudRecordingUrl,
     startRecording,
     pauseRecording,
     resumeRecording,
     stopRecording,
     downloadLocally,
+    uploadToDrive,
     discardRecording,
   };
 }

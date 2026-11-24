@@ -22,6 +22,7 @@ export default function MeetingTopBar({
   onCopyInvite,
 }) {
   const handleCopy = onCopyInvite || onCopyLink;
+
   return (
     <div className="h-12 px-5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 z-20 text-white">
       <div className="flex items-center gap-3">

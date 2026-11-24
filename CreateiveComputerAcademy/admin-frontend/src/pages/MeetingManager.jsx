@@ -558,6 +558,7 @@ export default function MeetingManager() {
                   <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Host</th>
                   <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Date & Time</th>
                   <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Status</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-center">Recording</th>
                   <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-center">Attendance Logs</th>
                 </tr>
               </thead>
@@ -595,6 +596,22 @@ export default function MeetingManager() {
                       }`}>
                         {m.status}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {m.recording_url ? (
+                        <a
+                          href={m.recording_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl font-bold text-[11px] border border-rose-200 dark:border-rose-500/30 transition cursor-pointer"
+                          title="Watch Recording"
+                        >
+                          <span>▶️</span>
+                          <span>Watch</span>
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium">—</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <button

@@ -224,8 +224,10 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         formattedFileSize={recorder.formattedFileSize}
         onDownload={() => recorder.downloadLocally()}
         onDiscard={recorder.discardRecording}
+        onUploadToDrive={recorder.uploadToDrive}
         isUploading={recorder.isUploading}
         uploadProgress={recorder.uploadProgress}
+        cloudRecordingUrl={recorder.cloudRecordingUrl}
       />
     </div>
   );

@@ -25,6 +25,7 @@ export default function MeetingRecordingModal({
   onUploadToDrive,
   isUploading = false,
   uploadProgress = 0,
+  cloudRecordingUrl = null,
 }) {
   if (!isOpen) return null;
 
@@ -156,21 +157,39 @@ export default function MeetingRecordingModal({
             </button>
           </div>
 
-          {/* Primary Action 2: Cloud Google Drive Save (Prepared for Step 5) */}
-          <button
-            type="button"
-            onClick={onUploadToDrive}
-            disabled={isUploading}
-            className={`w-full py-2.5 px-4 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              isUploading
-                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-300 hover:text-white shadow-md'
-            }`}
-            title={isBn ? 'সিসিএ ক্লাউড ড্রাইভে স্বয়ংক্রিয়ভাবে সেভ করুন' : 'Save to CCA Google Drive'}
-          >
-            <FiUploadCloud size={15} />
-            <span>{isBn ? 'Google Drive-এ ক্লাউড সেভ করুন (অটোমেটিক)' : 'Save to Google Drive (Cloud Vault)'}</span>
-          </button>
+          {/* Primary Action 2: Cloud Google Drive Save (Step 5) */}
+          {cloudRecordingUrl ? (
+            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+              <span className="flex items-center gap-1.5 font-bold text-emerald-300">
+                <FiCheckCircle size={15} className="text-emerald-400" />
+                <span>{isBn ? 'Google Drive ক্লাউডে সংরক্ষিত' : 'Saved to Google Drive Vault'}</span>
+              </span>
+              <a
+                href={cloudRecordingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition flex items-center gap-1"
+              >
+                <span>{isBn ? 'ড্রাইভে দেখুন' : 'View in Drive'}</span>
+                <span>↗</span>
+              </a>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onUploadToDrive}
+              disabled={isUploading}
+              className={`w-full py-2.5 px-4 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                isUploading
+                  ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-300 hover:text-white shadow-md'
+              }`}
+              title={isBn ? 'সিসিএ ক্লাউড ড্রাইভে স্বয়ংক্রিয়ভাবে সেভ করুন' : 'Save to CCA Google Drive'}
+            >
+              <FiUploadCloud size={15} />
+              <span>{isBn ? 'Google Drive-এ ক্লাউড সেভ করুন (অটোমেটিক)' : 'Save to Google Drive (Cloud Vault)'}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

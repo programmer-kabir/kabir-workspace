@@ -38,6 +38,21 @@ class MeetingDbHelper {
             try {
                 $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `hosts_json` TEXT NULL AFTER `is_chat_locked`");
             } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `recording_url` TEXT NULL AFTER `hosts_json`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `recording_drive_id` VARCHAR(255) NULL AFTER `recording_url`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `recording_duration` INT NULL DEFAULT 0 AFTER `recording_drive_id`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `recording_size` BIGINT NULL DEFAULT 0 AFTER `recording_duration`");
+            } catch (Throwable $e) {}
+            try {
+                $db->exec("ALTER TABLE `academy_meetings` ADD COLUMN `recorded_at` DATETIME NULL AFTER `recording_size`");
+            } catch (Throwable $e) {}
 
             // 2. Table: meeting_attendance_logs
             $db->exec("CREATE TABLE IF NOT EXISTS `meeting_attendance_logs` (

@@ -481,7 +481,19 @@ export default function LiveMeetings() {
                     {pm.actual_start?.slice(0, 10)} &bull; {pm.actual_start?.slice(11, 16)} – {pm.actual_end?.slice(11, 16) || (isBn ? 'সমাপ্ত' : 'Ended')}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center gap-2">
+                  {pm.recording_url && (
+                    <a
+                      href={pm.recording_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 transition shadow-sm cursor-pointer"
+                      title={isBn ? 'রেকর্ডিং ভিডিও দেখুন' : 'Watch Recording'}
+                    >
+                      <span>▶️</span>
+                      <span>{isBn ? 'রেকর্ডিং' : 'Recording'}</span>
+                    </a>
+                  )}
                   <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     {pm.total_attendees_count} {isBn ? 'জন উপস্থিত ছিল' : 'Attended'}
                   </span>
