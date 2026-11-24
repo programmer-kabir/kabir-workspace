@@ -10,6 +10,7 @@ import MeetingChatDrawer from './Meeting/MeetingChatDrawer';
 import ParticipantsModal from './Meeting/ParticipantsModal';
 import UnmutePromptModal from './Meeting/UnmutePromptModal';
 import MeetingImagePreviewModal from './Meeting/MeetingImagePreviewModal';
+import MeetingRecordingModal from './Meeting/MeetingRecordingModal';
 
 // Specialized Custom Hooks
 import { useMeetingMedia } from './Meeting/hooks/useMeetingMedia';
@@ -19,7 +20,7 @@ import { useMeetingRecorder } from './Meeting/hooks/useMeetingRecorder';
 
 /**
  * MeetingRoomView (Modular Component-Based Architecture)
- * Reduced from 3,600 lines to ~225 lines via decoupled sub-components and hooks:
+ * Reduced from 3,600 lines to ~230 lines via decoupled sub-components and hooks:
  * - useMeetingMedia: Audio/video hardware acquisition, tracks, screen share & sound FX
  * - useMeetingChat: Real-time messaging, attachments, code snippets & direct downloads
  * - useMeetingWebRTC: Mesh signaling, host privileges, live whiteboard & hand raising
@@ -210,6 +211,21 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         onClose={() => chat.setPreviewImageModal(null)}
         onDownload={chat.handleDirectFileDownload}
         isBn={isBn}
+      />
+
+      {/* 🌟 7. Meeting Recording Preview & Download Modal */}
+      <MeetingRecordingModal
+        isOpen={recorder.recordingModalOpen}
+        onClose={() => recorder.setRecordingModalOpen(false)}
+        isBn={isBn}
+        meetingTitle={meetingTitle}
+        recordedBlobUrl={recorder.recordedBlobUrl}
+        formattedDuration={recorder.formattedDuration}
+        formattedFileSize={recorder.formattedFileSize}
+        onDownload={() => recorder.downloadLocally()}
+        onDiscard={recorder.discardRecording}
+        isUploading={recorder.isUploading}
+        uploadProgress={recorder.uploadProgress}
       />
     </div>
   );
