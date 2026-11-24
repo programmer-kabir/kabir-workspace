@@ -26,6 +26,7 @@ export default function MeetingRecordingModal({
   isUploading = false,
   uploadProgress = 0,
   cloudRecordingUrl = null,
+  cloudStorageType = null,
 }) {
   if (!isOpen) return null;
 
@@ -159,18 +160,43 @@ export default function MeetingRecordingModal({
 
           {/* Primary Action 2: Cloud Google Drive Save (Step 5) */}
           {cloudRecordingUrl ? (
-            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-emerald-300">
-                <FiCheckCircle size={15} className="text-emerald-400" />
-                <span>{isBn ? 'Google Drive ক্লাউডে সংরক্ষিত' : 'Saved to Google Drive Vault'}</span>
+            <div className={`p-3 rounded-2xl border flex items-center justify-between gap-2 text-xs ${
+              cloudStorageType === 'google_drive'
+                ? 'bg-emerald-950/40 border-emerald-500/30'
+                : 'bg-amber-950/40 border-amber-500/30'
+            }`}>
+              <span className="flex items-center gap-1.5 font-bold">
+                {cloudStorageType === 'google_drive' ? (
+                  <>
+                    <FiCheckCircle size={15} className="text-emerald-400" />
+                    <span className="text-emerald-300">
+                      {isBn ? 'Google Drive ক্লাউডে সংরক্ষিত' : 'Saved to Google Drive Vault'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <FiCheckCircle size={15} className="text-amber-400" />
+                    <span className="text-amber-300">
+                      {isBn ? 'CCA সার্ভার ভল্টে সংরক্ষিত' : 'Saved to CCA Server Vault'}
+                    </span>
+                  </>
+                )}
               </span>
               <a
                 href={cloudRecordingUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition flex items-center gap-1"
+                className={`px-3 py-1 rounded-xl border text-[11px] font-bold transition flex items-center gap-1 ${
+                  cloudStorageType === 'google_drive'
+                    ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                    : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                }`}
               >
-                <span>{isBn ? 'ড্রাইভে দেখুন' : 'View in Drive'}</span>
+                <span>
+                  {cloudStorageType === 'google_drive'
+                    ? (isBn ? 'ড্রাইভে দেখুন' : 'View in Drive')
+                    : (isBn ? 'সার্ভারে দেখুন' : 'View on Server')}
+                </span>
                 <span>↗</span>
               </a>
             </div>

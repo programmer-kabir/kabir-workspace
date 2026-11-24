@@ -30,6 +30,7 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [cloudRecordingUrl, setCloudRecordingUrl] = useState(null);
+  const [cloudStorageType, setCloudStorageType] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -54,6 +55,11 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
 
     try {
       setRecordingState('starting');
+      setRecordedBlob(null);
+      setRecordedBlobUrl(null);
+      setRecordedFileSize(0);
+      setCloudRecordingUrl(null);
+      setCloudStorageType(null);
       toast.info(isBn ? 'মিটিং ট্যাবটি সিলেক্ট করে "Share" চাপুন...' : 'Select the meeting tab and click "Share"...');
 
       // Step 1 Engine: Mix audio and capture viewport
@@ -254,8 +260,10 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
       if (res.data?.status === 'success') {
         toast.dismiss(toastId);
         const driveUrl = res.data.recording_url;
+        const storage = res.data.storage;
         setCloudRecordingUrl(driveUrl);
-        const isDrive = res.data.storage === 'google_drive';
+        setCloudStorageType(storage);
+        const isDrive = storage === 'google_drive';
 
         toast.success(
           isDrive
@@ -287,6 +295,7 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
     setUploadProgress(0);
     setIsUploading(false);
     setCloudRecordingUrl(null);
+    setCloudStorageType(null);
   }, [recordedBlobUrl]);
 
   // Cleanup on unmount
@@ -319,6 +328,7 @@ export function useMeetingRecorder({ isBn, roomId, currentUser }) {
     uploadProgress,
     setUploadProgress,
     cloudRecordingUrl,
+    cloudStorageType,
     startRecording,
     pauseRecording,
     resumeRecording,

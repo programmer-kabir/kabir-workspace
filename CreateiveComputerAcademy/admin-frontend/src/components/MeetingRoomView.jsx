@@ -228,6 +228,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         isUploading={recorder.isUploading}
         uploadProgress={recorder.uploadProgress}
         cloudRecordingUrl={recorder.cloudRecordingUrl}
+        cloudStorageType={recorder.cloudStorageType}
       />
     </div>
   );
