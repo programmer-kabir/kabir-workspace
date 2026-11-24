@@ -76,8 +76,8 @@ try {
     if ($gdrive->isConfigured()) {
         $driveMime = ($fileExt === 'mp4') ? 'video/mp4' : 'video/webm';
 
-        // 1. Locate or create CCA_Vault parent folder (Target: 18HFbN429toI-Wj1NUMTXcK3bVY69Kcno)
-        $vaultParentId = '18HFbN429toI-Wj1NUMTXcK3bVY69Kcno';
+        // 1. Locate or create CCA_Vault parent folder (Target: 18HFbN429toI-WJ1NUMTXcK3bVY69Kcno)
+        $vaultParentId = '18HFbN429toI-WJ1NUMTXcK3bVY69Kcno';
         try {
             $foundVaultId = $gdrive->findOrCreateFolder('CCA_Vault');
             if ($foundVaultId) {
