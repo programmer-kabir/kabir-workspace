@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   FiFilm, FiCalendar, FiUser, FiClock, FiHardDrive, 
-  FiRefreshCw, FiPlay, FiExternalLink, FiX, FiCheckCircle,
-  FiSearch, FiFastForward, FiSliders, FiShield, FiFolder
+  FiRefreshCw, FiPlay, FiCheckCircle,
+  FiSearch, FiShield
 } from 'react-icons/fi';
 import { toast } from 'sonner';
+import WorkstationVideoPlayerModal from '../components/WorkstationVideoPlayerModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.creativecomputeracademy.com/';
 
@@ -235,28 +236,14 @@ export default function WorkstationVideoLogs() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-800/60">
+                    <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800/60">
                       <button
-                        onClick={() => {
-                          setActiveClipModal(clip);
-                          setPlaybackSpeed(1);
-                        }}
-                        className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        onClick={() => setActiveClipModal(clip)}
+                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95"
                       >
-                        <FiPlay size={12} /> Play
+                        <FiPlay size={13} />
+                        <span>Play Video</span>
                       </button>
-
-                      {clip.drive_view_link && (
-                        <a
-                          href={clip.drive_view_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Open in Google Drive"
-                          className="p-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg transition border border-slate-200 dark:border-slate-700"
-                        >
-                          <FiExternalLink size={14} />
-                        </a>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -266,74 +253,17 @@ export default function WorkstationVideoLogs() {
         </div>
       )}
 
-      {/* ── Interactive Video Player Modal with 1x, 2x, 4x, 8x Speed ─────── */}
-      {activeClipModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950">
-              <div className="flex items-center gap-2.5">
-                <FiFilm className="text-indigo-500 dark:text-indigo-400" size={18} />
-                <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                  {activeClipModal.staff_name} &bull; Clip #{activeClipModal.chunk_index} ({activeClipModal.start_time_formatted || activeClipModal.start_time} - {activeClipModal.end_time_formatted || activeClipModal.end_time})
-                </h3>
-              </div>
-              <button
-                onClick={() => setActiveClipModal(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
-              >
-                <FiX size={18} />
-              </button>
-            </div>
-
-            {/* Video Player Frame */}
-            <div className="relative bg-black aspect-video w-full flex items-center justify-center">
-              {activeClipModal.embed_url ? (
-                <iframe
-                  src={activeClipModal.embed_url}
-                  className="w-full h-full border-0"
-                  allow="autoplay"
-                  title="Workstation Recording"
-                />
-              ) : (
-                <p className="text-xs text-slate-400">Video preview not available</p>
-              )}
-            </div>
-
-            {/* Playback Controls & Speed Switcher */}
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1">
-                  <FiFastForward /> Speed:
-                </span>
-                {[1, 1.5, 2, 4, 8].map(spd => (
-                  <button
-                    key={spd}
-                    onClick={() => setPlaybackSpeed(spd)}
-                    className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${playbackSpeed === spd
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {spd}x
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <a
-                  href={activeClipModal.drive_view_link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold"
-                >
-                  <FiFolder size={12} /> View in Google Drive Vault
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Branded & Secure In-App Video Player Modal ────────────────────── */}
+      <WorkstationVideoPlayerModal
+        isOpen={Boolean(activeClipModal)}
+        clip={activeClipModal}
+        allClips={
+          (activeClipModal && videoData.find(s => s.clips.some(c => c.id === activeClipModal.id))?.clips) || []
+        }
+        onClose={() => setActiveClipModal(null)}
+        onSelectClip={(newClip) => setActiveClipModal(newClip)}
+        isBn={false}
+      />
     </div>
   );
 }

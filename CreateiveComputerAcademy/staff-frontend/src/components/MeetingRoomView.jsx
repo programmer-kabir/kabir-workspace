@@ -11,12 +11,14 @@ import ParticipantsModal from './Meeting/ParticipantsModal';
 import UnmutePromptModal from './Meeting/UnmutePromptModal';
 import MeetingImagePreviewModal from './Meeting/MeetingImagePreviewModal';
 import MeetingRecordingModal from './Meeting/MeetingRecordingModal';
+import MeetingVirtualBackgroundModal from './Meeting/MeetingVirtualBackgroundModal';
 
 // Specialized Custom Hooks
 import { useMeetingMedia } from './Meeting/hooks/useMeetingMedia';
 import { useMeetingChat } from './Meeting/hooks/useMeetingChat';
 import { useMeetingWebRTC } from './Meeting/hooks/useMeetingWebRTC';
 import { useMeetingRecorder } from './Meeting/hooks/useMeetingRecorder';
+import { useVirtualBackground } from './Meeting/hooks/useVirtualBackground';
 
 /**
  * MeetingRoomView (Modular Component-Based Architecture)
@@ -72,6 +74,17 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
 
   // 4. In-Browser Meeting Recorder
   const recorder = useMeetingRecorder({ isBn, roomId, currentUser });
+
+  // 5. Virtual Background & Blur Processor
+  const virtualBg = useVirtualBackground({
+    isBn,
+    localStreamRef: media.localStreamRef,
+    localVideoRef: media.localVideoRef,
+    localFilmstripVideoRef: media.localFilmstripVideoRef,
+    activeCallsRef: rtc.activeCallsRef,
+    isVideoOff: media.isVideoOff,
+    setIsVideoOff: media.setIsVideoOff,
+  });
 
   // Connect WebRTC connection pool to chat broadcaster
   useEffect(() => {
@@ -159,6 +172,7 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             currentUser={currentUser}
             media={media}
             rtc={rtc}
+            activeBgUrl={virtualBg.activeBgUrl}
           />
 
           <MeetingControlsBar
@@ -171,6 +185,8 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
             reactionPickerOpen={reactionPickerOpen}
             onToggleAudio={handleToggleAudio}
             onToggleReactionPicker={() => setReactionPickerOpen(prev => !prev)}
+            onToggleVirtualBg={() => virtualBg.setIsModalOpen(true)}
+            hasActiveBg={virtualBg.selectedBgId !== 'none'}
             onLeave={onLeave}
           />
         </div>
@@ -229,6 +245,15 @@ export default function MeetingRoomView({ roomId, meetingTitle, currentUser, onL
         uploadProgress={recorder.uploadProgress}
         cloudRecordingUrl={recorder.cloudRecordingUrl}
         cloudStorageType={recorder.cloudStorageType}
+      />
+
+      {/* 🌟 8. Virtual Background & Blur Modal */}
+      <MeetingVirtualBackgroundModal
+        isOpen={virtualBg.isModalOpen}
+        onClose={() => virtualBg.setIsModalOpen(false)}
+        isBn={isBn}
+        virtualBg={virtualBg}
+        isVideoOff={media.isVideoOff}
       />
     </div>
   );

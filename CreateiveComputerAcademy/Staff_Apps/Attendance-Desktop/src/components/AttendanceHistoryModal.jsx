@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiX, FiCalendar, FiClock, FiCheckCircle } from 'react-icons/fi';
 import { getAttendanceApi } from '../utils/api';
 
@@ -34,9 +35,11 @@ const AttendanceHistoryModal = ({ userId, isOpen, onClose }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
-      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex flex-col justify-end" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -94,6 +97,10 @@ const AttendanceHistoryModal = ({ userId, isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default AttendanceHistoryModal;

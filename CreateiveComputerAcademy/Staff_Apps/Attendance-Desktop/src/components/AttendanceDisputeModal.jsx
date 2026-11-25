@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { FiX, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
@@ -48,9 +49,11 @@ const AttendanceDisputeModal = ({ isOpen, onClose, selectedDate, onSuccess }) =>
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-up">
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-up" onClick={(e) => e.stopPropagation()}>
         
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
           <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
@@ -143,6 +146,10 @@ const AttendanceDisputeModal = ({ isOpen, onClose, selectedDate, onSuccess }) =>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default AttendanceDisputeModal;

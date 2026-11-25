@@ -73,12 +73,55 @@ $driveMessage = null;
 // Try uploading to Google Drive
 try {
     $gdrive = new GoogleDriveClient();
+
+    // Check if client supplied fresh Drive credentials or folder IDs
+    $incomingRefreshToken = isset($_POST['gdrive_refresh_token']) ? trim($_POST['gdrive_refresh_token']) : null;
+    $incomingClientId = isset($_POST['gdrive_client_id']) ? trim($_POST['gdrive_client_id']) : null;
+    $incomingClientSecret = isset($_POST['gdrive_client_secret']) ? trim($_POST['gdrive_client_secret']) : null;
+    $incomingFolderId = isset($_POST['gdrive_meeting_folder_id']) ? trim($_POST['gdrive_meeting_folder_id']) : null;
+
+    if (!empty($incomingRefreshToken)) {
+        $defaultCreds = GoogleDriveClient::getDefaultCredentials();
+        $gdrive->setCredentials([
+            'client_id'     => $incomingClientId ?: ($defaultCreds['client_id'] ?? ''),
+            'client_secret' => $incomingClientSecret ?: ($defaultCreds['client_secret'] ?? ''),
+            'refresh_token' => $incomingRefreshToken,
+            'type'          => 'authorized_user',
+            'user_email'    => 'creativecomputeracademybd@gmail.com'
+        ]);
+
+        // Self-heal system_storage_settings in Hostinger database
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS `system_storage_settings` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `setting_key` VARCHAR(64) NOT NULL UNIQUE,
+                `setting_value` TEXT NULL,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+            $upsert = $db->prepare("INSERT INTO `system_storage_settings` (`setting_key`, `setting_value`) VALUES
+                ('gdrive_refresh_token', :rt),
+                ('gdrive_client_id', :cid),
+                ('gdrive_client_secret', :cs),
+                ('gdrive_meeting_folder_id', :mid)
+            ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`)");
+            $upsert->execute([
+                ':rt'  => $incomingRefreshToken,
+                ':cid' => $incomingClientId ?: ($defaultCreds['client_id'] ?? ''),
+                ':cs'  => $incomingClientSecret ?: ($defaultCreds['client_secret'] ?? ''),
+                ':mid' => $incomingFolderId ?: '1ylVVos5JaUoi4PBnewR2Danbd3AR5P4D'
+            ]);
+        } catch (Throwable $dbErr) {
+            error_log("Failed to persist storage settings: " . $dbErr->getMessage());
+        }
+    }
+
     if ($gdrive->isConfigured()) {
         $driveMime = ($fileExt === 'mp4') ? 'video/mp4' : 'video/webm';
 
         // 1. Target verified folder ID: Meeting_Recordings inside CCA_Vault
         $vaultParentId = '18HFbN429toI-WJ1NUMTXcK3bVY69Kcno';
-        $meetingFolderId = '1ylVVos5JaUoi4PBnewR2Danbd3AR5P4D';
+        $meetingFolderId = $incomingFolderId ?: '1ylVVos5JaUoi4PBnewR2Danbd3AR5P4D';
 
         // Fallback search if needed
         try {

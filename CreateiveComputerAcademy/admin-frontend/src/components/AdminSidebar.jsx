@@ -202,8 +202,8 @@ const AdminSidebar = ({ isOpen = true }) => {
                               {/* Hierarchy branch indicator line */}
                               <span
                                 className={`absolute -left-[16px] top-1/2 -translate-y-1/2 w-2.5 h-[2px] rounded-full transition-colors ${isSubActive
-                                    ? 'bg-blue-600 dark:bg-blue-500'
-                                    : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
+                                  ? 'bg-blue-600 dark:bg-blue-500'
+                                  : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
                                   }`}
                               />
                               <span className="truncate text-sm">{sub.name}</span>

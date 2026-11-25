@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="minBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19"/>
+      <stop offset="50%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#030712"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="subtleMesh" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Clean Corporate Wall -->
+  <rect width="1920" height="1080" fill="url(#minBg)"/>
+
+  <!-- Minimal Angled Geo Layer Left -->
+  <polygon points="0,0 750,0 450,1080 0,1080" fill="url(#subtleMesh)"/>
+  <line x1="750" y1="0" x2="450" y2="1080" stroke="#334155" stroke-width="2" opacity="0.4"/>
+
+  <!-- Center Floating Glass Identity Badge -->
+  <g transform="translate(960, 280)">
+    <circle cx="0" cy="0" r="80" fill="#1e293b" fill-opacity="0.6" stroke="url(#goldAccent)" stroke-width="3"/>
+    <circle cx="0" cy="0" r="66" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <!-- CCA Emblem -->
+    <path d="M 0 -45 A 45 45 0 1 0 38 18" fill="none" stroke="url(#goldAccent)" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="16" fill="url(#goldAccent)"/>
+    <text x="0" y="115" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#f8fafc" text-anchor="middle" letter-spacing="3">CREATIVE COMPUTER ACADEMY</text>
+    <text x="0" y="145" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#94a3b8" text-anchor="middle" letter-spacing="6">EXCELLENCE IN DIGITAL SKILLS</text>
+  </g>
+</svg>

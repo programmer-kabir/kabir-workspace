@@ -14,10 +14,43 @@ class GoogleDriveClient {
     private $credentials = null;
     private $tokenCachePath;
 
+    /**
+     * Active Google OAuth credentials fallback
+     */
+    public static function getDefaultCredentials() {
+        $jsonPath = __DIR__ . '/google_drive_credentials.json';
+        if (file_exists($jsonPath)) {
+            $raw = @file_get_contents($jsonPath);
+            if ($raw) {
+                $creds = @json_decode($raw, true);
+                if (is_array($creds) && !empty($creds['client_id'])) {
+                    return $creds;
+                }
+            }
+        }
+        return [
+            'client_id'     => getenv('GOOGLE_DRIVE_CLIENT_ID') ?: '',
+            'client_secret' => getenv('GOOGLE_DRIVE_CLIENT_SECRET') ?: '',
+            'refresh_token' => getenv('GOOGLE_DRIVE_REFRESH_TOKEN') ?: '',
+            'type'          => 'authorized_user',
+            'user_email'    => getenv('GOOGLE_DRIVE_USER_EMAIL') ?: 'creativecomputeracademybd@gmail.com'
+        ];
+    }
+
     public function __construct($credentialsPath = null) {
         $this->credentialsPath = $credentialsPath ?: (__DIR__ . '/google_drive_credentials.json');
         $this->tokenCachePath = __DIR__ . '/google_drive_token_cache.json';
         $this->loadCredentials();
+    }
+
+    /**
+     * Allows dynamically injecting or overriding active credentials
+     */
+    public function setCredentials($creds) {
+        if (!is_array($this->credentials)) {
+            $this->credentials = [];
+        }
+        $this->credentials = array_merge($this->credentials, $creds);
     }
 
     /**
@@ -34,14 +67,22 @@ class GoogleDriveClient {
      * Loads and parses the Service Account / OAuth JSON
      */
     private function loadCredentials() {
+        // 1. Start with verified active defaults
+        $this->credentials = self::getDefaultCredentials();
+
+        // 2. Check credentials file if exists
         if (file_exists($this->credentialsPath)) {
             $raw = @file_get_contents($this->credentialsPath);
             if ($raw) {
-                $this->credentials = @json_decode($raw, true);
+                $fileCreds = @json_decode($raw, true);
+                if (is_array($fileCreds) && !empty($fileCreds['refresh_token'])) {
+                    // Only override if it has valid credentials
+                    $this->credentials = array_merge($this->credentials, $fileCreds);
+                }
             }
         }
 
-        // Self-Healing DB fallback: Read fresh active credentials from system_storage_settings
+        // 3. Self-Healing DB fallback: Read fresh active credentials from system_storage_settings
         try {
             require_once __DIR__ . '/database.php';
             $db = (new Database())->getConnection();
@@ -50,19 +91,15 @@ class GoogleDriveClient {
                 if ($stmt) {
                     $dbSettings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
                     if (!empty($dbSettings['gdrive_refresh_token'])) {
-                        $this->credentials = [
-                            'client_id'     => $dbSettings['gdrive_client_id'] ?? ($this->credentials['client_id'] ?? ''),
-                            'client_secret' => $dbSettings['gdrive_client_secret'] ?? ($this->credentials['client_secret'] ?? ''),
-                            'refresh_token' => $dbSettings['gdrive_refresh_token'],
-                            'type'          => 'authorized_user',
-                            'user_email'    => 'creativecomputeracademybd@gmail.com'
-                        ];
+                        $this->credentials['refresh_token'] = $dbSettings['gdrive_refresh_token'];
+                        if (!empty($dbSettings['gdrive_client_id'])) $this->credentials['client_id'] = $dbSettings['gdrive_client_id'];
+                        if (!empty($dbSettings['gdrive_client_secret'])) $this->credentials['client_secret'] = $dbSettings['gdrive_client_secret'];
                     }
                 }
             }
         } catch (Throwable $e) {}
 
-        // Fallback: Read directly from server/.env if credentials file is missing or incomplete
+        // 4. Fallback: Read directly from server/.env if credentials file is missing or incomplete
         if (empty($this->credentials['client_id']) && function_exists('env')) {
             $clientId = env('GOOGLE_DRIVE_CLIENT_ID');
             $clientSecret = env('GOOGLE_DRIVE_CLIENT_SECRET');
@@ -97,12 +134,14 @@ class GoogleDriveClient {
         // 2A. If User OAuth2 (Refresh Token - Personal 5TB Drive)
         if (!empty($this->credentials['refresh_token'])) {
             // Check cached oauth token
+            $rtHash = md5($this->credentials['refresh_token'] ?? '');
             if (file_exists($this->tokenCachePath)) {
                 $cache = @json_decode(@file_get_contents($this->tokenCachePath), true);
                 if (!empty($cache['access_token']) && 
                     !empty($cache['expires_at']) && 
                     time() < ($cache['expires_at'] - 120) &&
-                    ($cache['auth_type'] ?? '') === 'oauth'
+                    ($cache['auth_type'] ?? '') === 'oauth' &&
+                    ($cache['rt_hash'] ?? '') === $rtHash
                 ) {
                     return $cache['access_token'];
                 }
@@ -113,7 +152,8 @@ class GoogleDriveClient {
             // If credentials file already has an active access token
             if (!empty($this->credentials['access_token']) && 
                 !empty($this->credentials['expires_at']) && 
-                time() < ($this->credentials['expires_at'] - 120)
+                time() < ($this->credentials['expires_at'] - 120) &&
+                (!isset($this->credentials['refresh_token']) || md5($this->credentials['refresh_token']) === $rtHash)
             ) {
                 return $this->credentials['access_token'];
             }
@@ -138,6 +178,7 @@ class GoogleDriveClient {
 
             $json = @json_decode($res, true);
             if ($httpCode !== 200 || empty($json['access_token'])) {
+                @unlink($this->tokenCachePath);
                 $err = $json['error_description'] ?? ($json['error'] ?? 'OAuth token refresh error');
                 throw new Exception("Google Drive OAuth Token Error ({$httpCode}): {$err}");
             }
@@ -148,7 +189,8 @@ class GoogleDriveClient {
             @file_put_contents($this->tokenCachePath, json_encode([
                 'access_token' => $accessToken,
                 'expires_at'   => time() + $expiresIn,
-                'auth_type'    => 'oauth'
+                'auth_type'    => 'oauth',
+                'rt_hash'      => $rtHash
             ]));
 
             return $accessToken;

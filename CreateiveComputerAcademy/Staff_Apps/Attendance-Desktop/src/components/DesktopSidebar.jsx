@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText,
+  FiHome, FiClock, FiList, FiCalendar, FiUser, FiLogOut, FiFileText, FiCheckCircle,
   FiMessageSquare, FiSettings, FiCoffee, FiBookOpen, FiVideo,
   FiDollarSign, FiUsers, FiTerminal, FiChevronDown, FiActivity, FiRadio, FiDatabase, FiCode, FiDownload, FiMonitor, FiAward, FiCheckSquare
 } from 'react-icons/fi';
@@ -10,12 +10,12 @@ import axios from 'axios';
 import { API_BASE } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 
-const DesktopSidebar = ({ 
+const DesktopSidebar = ({
   isOpen = true,
-  activeTab = '/', 
-  setActiveTab, 
-  currentUser, 
-  onLogout 
+  activeTab = '/',
+  setActiveTab,
+  currentUser,
+  onLogout
 }) => {
   const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -122,12 +122,11 @@ const DesktopSidebar = ({
   return (
     <aside
       style={{ willChange: 'transform, width, opacity' }}
-      className={`bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 h-full flex flex-col shadow-2xl lg:shadow-xl border-r border-slate-200 dark:border-slate-800 z-40 overflow-hidden shrink-0 select-none transition-all duration-300 ease-in-out ${
-        isOpen ? 'w-64 opacity-100' : 'w-0 opacity-0 pointer-events-none border-r-0'
-      }`}
+      className={`bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 h-full flex flex-col shadow-2xl lg:shadow-xl border-r border-slate-200 dark:border-slate-800 z-20 overflow-hidden shrink-0 select-none transition-all duration-300 ease-in-out ${isOpen ? 'w-64 opacity-100' : 'w-0 opacity-0 pointer-events-none border-r-0'
+        }`}
     >
       <div className="w-64 h-full flex flex-col shrink-0">
-        
+
         {/* Exact Logo / Brand Area matching staff-frontend */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -151,11 +150,10 @@ const DesktopSidebar = ({
                   key={item.name}
                   type="button"
                   onClick={() => setActiveTab(item.path)}
-                  className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${
-                    isActive
+                  className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${isActive
                       ? 'bg-primary-50/90 dark:bg-primary-500/15 text-primary-700 dark:text-primary-400 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] font-black'
                       : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1 font-bold text-slate-600 dark:text-slate-400'
-                  }`}
+                    }`}
                 >
                   {/* Subtle active state glow background */}
                   {isActive && (
@@ -164,16 +162,14 @@ const DesktopSidebar = ({
 
                   {/* Active indicator bar on the left */}
                   <div
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 rounded-r-full bg-primary-600 dark:bg-primary-400 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out ${
-                      isActive ? 'h-4/5 opacity-100' : 'h-0 opacity-0 group-hover:h-1/2 group-hover:opacity-40'
-                    }`}
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 rounded-r-full bg-primary-600 dark:bg-primary-400 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out ${isActive ? 'h-4/5 opacity-100' : 'h-0 opacity-0 group-hover:h-1/2 group-hover:opacity-40'
+                      }`}
                   ></div>
 
                   <div className="flex items-center gap-3 relative z-10 min-w-0">
                     <div
-                      className={`transition-all duration-300 transform group-hover:scale-110 shrink-0 ${
-                        isActive ? 'drop-shadow-md text-primary-600 dark:text-primary-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary-500 dark:group-hover:text-primary-400'
-                      }`}
+                      className={`transition-all duration-300 transform group-hover:scale-110 shrink-0 ${isActive ? 'drop-shadow-md text-primary-600 dark:text-primary-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary-500 dark:group-hover:text-primary-400'
+                        }`}
                     >
                       {item.icon}
                     </div>
@@ -195,27 +191,24 @@ const DesktopSidebar = ({
                 <button
                   type="button"
                   onClick={toggleDevMenu}
-                  className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${
-                    isDevRoute
+                  className={`w-full group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 ease-out overflow-hidden cursor-pointer ${isDevRoute
                       ? 'bg-primary-50/90 dark:bg-primary-500/15 text-primary-700 dark:text-primary-400 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] font-black'
                       : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1 font-bold text-slate-600 dark:text-slate-400'
-                  }`}
+                    }`}
                 >
                   {isDevRoute && (
                     <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-primary-500/5 to-transparent dark:from-primary-400/10 dark:via-primary-400/5 opacity-70 pointer-events-none"></div>
                   )}
 
                   <div
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 rounded-r-full bg-primary-600 dark:bg-primary-400 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out ${
-                      isDevRoute ? 'h-4/5 opacity-100' : 'h-0 opacity-0 group-hover:h-1/2 group-hover:opacity-40'
-                    }`}
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 rounded-r-full bg-primary-600 dark:bg-primary-400 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out ${isDevRoute ? 'h-4/5 opacity-100' : 'h-0 opacity-0 group-hover:h-1/2 group-hover:opacity-40'
+                      }`}
                   ></div>
 
                   <div className="flex items-center gap-3 relative z-10">
                     <div
-                      className={`transition-all duration-300 transform group-hover:scale-110 ${
-                        isDevRoute ? 'drop-shadow-md text-primary-600 dark:text-primary-400' : 'text-cyan-500 group-hover:text-cyan-400'
-                      }`}
+                      className={`transition-all duration-300 transform group-hover:scale-110 ${isDevRoute ? 'drop-shadow-md text-primary-600 dark:text-primary-400' : 'text-cyan-500 group-hover:text-cyan-400'
+                        }`}
                     >
                       <FiTerminal size={19} />
                     </div>
@@ -228,18 +221,16 @@ const DesktopSidebar = ({
                     </span>
                     <FiChevronDown
                       size={15}
-                      className={`text-slate-400 transition-transform duration-300 ease-out ${
-                        devMenuOpen ? 'rotate-180 text-primary-600 dark:text-primary-400' : ''
-                      }`}
+                      className={`text-slate-400 transition-transform duration-300 ease-out ${devMenuOpen ? 'rotate-180 text-primary-600 dark:text-primary-400' : ''
+                        }`}
                     />
                   </div>
                 </button>
 
                 {/* Collapsible Sub-items */}
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    devMenuOpen ? 'max-h-[500px] opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
-                  }`}
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${devMenuOpen ? 'max-h-[500px] opacity-100 mt-1.5' : 'max-h-0 opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4.5 my-1">
                     {devSubMenuItems.map((sub) => {
@@ -249,19 +240,17 @@ const DesktopSidebar = ({
                           key={sub.path}
                           type="button"
                           onClick={() => setActiveTab(sub.path)}
-                          className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 cursor-pointer ${
-                            isSubActive
+                          className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 cursor-pointer ${isSubActive
                               ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-black shadow-2xs'
                               : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-semibold'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2">
                             <div
-                              className={`transition-colors ${
-                                isSubActive
+                              className={`transition-colors ${isSubActive
                                   ? 'text-cyan-600 dark:text-cyan-400'
                                   : 'text-slate-400 dark:text-slate-500 group-hover:text-cyan-500'
-                              }`}
+                                }`}
                             >
                               {sub.icon}
                             </div>

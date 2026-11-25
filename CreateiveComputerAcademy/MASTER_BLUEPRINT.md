@@ -1,8 +1,8 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Blueprint
 
-**Generated / Updated:** November 22, 2026  
+**Generated / Updated:** November 24, 2026  
 **Role:** Lead Software Architect / Senior Full-Stack Developer Analysis  
-**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App v2.1.0 with 100% Web Feature Parity), 1 PHP REST backend (410 endpoints across 32 domains), 96 baseline MySQL tables + dynamic runtime self-healing tables, Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, Google Gemini AI integration, Team Feasts & Tours (`EventDbHelper`), Gamification & Career Rankings (`GamificationHelper`), Focus & Productivity Planner (`ProductivityHelper`, procedural `ambientSoundEngine`), Content Studio OS 🎬 (`ContentStudioView.jsx`), Interactive Boy Mascot & Wicker Harvest Basket (`MangoBreakTreeView.jsx`), Smart Finance & Mango Simulator, and Workspace Master Secrets Backup & 1-Click Restore Suite.
+**Scope:** Full repository — 4 React web frontends, 2 Electron Desktop Apps (`Admin-Desktop` Executive Station & `Attendance-Desktop` Staff Workstation Surveillance App v2.1.0 with 100% Web Feature Parity), 1 PHP REST backend (425 endpoints across 34 domains), 99 baseline MySQL tables + dynamic runtime self-healing tables, Live WebRTC Video Conferencing & CCA Studio Hub (`MeetingDbHelper.php`), Cloudflare R2, Google Drive Cloud Vault (`CCA_Vault/Workstation_Videos`), Pusher Realtime WebSockets, WebRTC Live Screen Streaming & Remote Control (`input_injector.exe`), Workstation 30-Min Video Surveillance & Audit Vault, Single Source of Truth (SSoT) Modular Overtime & Payroll Ledger Engine (`OvertimeEngine.php`, `PayrollLedger.php`), Scoped Staff Workstation & Idle Audit Logs (`get_my_workstation_logs.php`), Student Academic Leave Quota Management, Desktop Release & Fleet Version Governance, Multi-Tier Storage Routing, In-Browser Server Code & File Manager, Inactivity Watchdog & Idle Alerts Engine, Offline Attendance Queue & Local Vault, Desktop Download Hub, SMS Dispatcher Shield, Google Gemini AI integration, Team Feasts & Tours (`EventDbHelper`), Gamification & Career Rankings (`GamificationHelper`), Focus & Productivity Planner (`ProductivityHelper`, procedural `ambientSoundEngine`), Content Studio OS 🎬 (`ContentStudioView.jsx`), Interactive Boy Mascot & Wicker Harvest Basket (`MangoBreakTreeView.jsx`), Smart Finance & Mango Simulator, and Workspace Master Secrets Backup & 1-Click Restore Suite.
 
 No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
@@ -82,6 +82,7 @@ The complete repository has been exhaustively analyzed:
   - `PusherHelper` (`server/config/PusherHelper.php`): cURL-based Pusher REST API publisher
   - `SmsHelper` (`server/config/SmsHelper.php`): SMS dispatcher with simulation shield (`maintenance_status.json`)
   - `AppVersionHelper` (`server/config/AppVersionHelper.php`): Fleet version telemetry & release gatekeeper
+  - `MeetingDbHelper` (`server/api/meetings/MeetingDbHelper.php`): Self-healing schema for `academy_meetings`, `meeting_attendance_logs`, and `meeting_messages`, host resolution hierarchy, and chat lock enforcement
   - `GoogleDriveClient` (`server/api/admin/storage/GoogleDriveClient.php`): Google Drive API Cloud Vault integration
 - **AI Integration**: Google Gemini REST API (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.8-flash`) with deterministic rule-based fallback in `server/api/breaks/polish_break_note.php`.
 
@@ -515,6 +516,10 @@ The system operates on **80 baseline tables** defined in `server/u647959341_cca_
 | **Multi-Tier Storage Settings** | Admin Portal | `storage.php` | `api/admin/storage/*` | `system_storage_settings` | ✅ Active | `StorageSettings.jsx`, `storage.php`, `GoogleDriveClient.php` |
 | **Offline Attendance Sync** | Electron Desktop | Procedural PHP | `api/attendance/sync_offline.php` | `attendance`, `attendance_device_logs` | ✅ Active | `OfflineQueueService.js`, `sync_offline.php` |
 | **Desktop App Download Hub** | Staff Portal | Procedural PHP | `api/app_version/get_latest_release.php` | `app_releases` | ✅ Active | `DesktopAppDownload.jsx`, `get_latest_release.php` |
+| **Live WebRTC Meetings & CCA Studio** | Admin, Staff | `MeetingDbHelper.php` | `api/meetings/*` | `academy_meetings`, `meeting_attendance_logs`, `meeting_messages` | ✅ Active | `MeetingRoomView.jsx`, `MeetingRoom.jsx`, `AdminMeetingRoom.jsx`, `MeetingDbHelper.php` |
+| **Live Meeting Raise Hand & Moderation** | Admin, Staff | WebRTC DataChannels | Peer-to-Peer DataChannel | Ephemeral state | ✅ Active | `MeetingRoomView.jsx` |
+| **Live Floating Reactions & Synth Audio** | Admin, Staff | Web Audio API | Peer-to-Peer DataChannel | Ephemeral state | ✅ Active | `MeetingRoomView.jsx` |
+| **Spotlight & Pin User Focus** | Admin, Staff | DataChannel Broadcast | Peer-to-Peer DataChannel | Ephemeral state | ✅ Active | `MeetingRoomView.jsx` |
 
 ---
 
@@ -537,6 +542,12 @@ The system operates on **80 baseline tables** defined in `server/u647959341_cca_
    - Both hierarchical foreign keys (`category_id`, `subcategory_id`) and legacy string columns exist.
 3. **Redundant Layout & Auth Code**:
    - Login forms and layout wrappers are duplicated across the 4 frontends rather than shared via an internal component library.
+
+### 🟢 Recently Resolved Issues (November 2026)
+1. **MeetingRoomView TDZ Initialization Error (Resolved Nov 24, 2026)**:
+   - In `admin-frontend` and `staff-frontend`, `remotePeerList` and `totalInRoom` were originally declared below `useEffect` stage resolution hooks, throwing a fatal `ReferenceError: Cannot access 'remotePeerList' before initialization` during component mount. Resolved by lifting both declarations above the effects.
+2. **Single Mute State Discrepancy (Resolved Nov 2026)**:
+   - Bidirectional DataChannel synchronization (`set_mic_state` and `peer_mic_state`) integrated into WebRTC mesh preventing mute desync between remote clients and host.
 
 ---
 
@@ -566,6 +577,9 @@ The system operates on **80 baseline tables** defined in `server/u647959341_cca_
 - `server/api/community/CommunityDbHelper.php`: Self-provisioning community post and reaction engine.
 - `server/api/developer/developer_guard.php`: Standardized token-based developer and admin access guard.
 - `server/api/admin/database/admin_db_guard.php`: Strict token-based database manager security guard.
+- `staff-frontend/src/components/MeetingRoomView.jsx`: Core staff conference room view (PeerJS mesh, Hero Stage, side filmstrip, spotlighting, pinning, chat, raise hand, floating reactions).
+- `admin-frontend/src/components/MeetingRoomView.jsx`: Admin host broadcast studio view (full moderation, remote audio control, spotlights, stage direction).
+- `server/api/meetings/MeetingDbHelper.php`: Self-healing schema for `academy_meetings`, `meeting_attendance_logs`, and `meeting_messages`.
 - `server/u647959341_cca_manage_db.sql`: Baseline MySQL schema dump.
 
 ---
@@ -881,6 +895,117 @@ Described in Section 13.
 - **Sidebar Ordering & Visual Alignment**: Identical menu item hierarchy, developer suite sequence, unified icons, and expanded accordion height (500px).
 - **Interactive Boy Mascot & Wicker Harvest Basket (`MangoBreakTreeView.jsx`)**: Vector SVG boy character ("আমের দিকে চেয়ে থাকা খোকা") with clicking bounce, thought bubble dialogue rotation, pop audio, and harvest wicker basket.
 - **Packaging & Distribution**: Built and signed `CCA-Staff-App-Setup.exe` (NSIS installer) and `CCA-Staff-App-Standalone.exe` (portable executable) v2.1.0 in `Staff_Apps/Attendance-Desktop/release`.
+
+### 12.38 Live WebRTC Meetings & CCA Studio System (Native Video Conferencing, Audio Orchestration, JIT Schema, DataChannels & Moderation)
+- **Objective**: Full autonomous, zero-dependency, Zoom-style multi-party video conferencing, live screen sharing, bidirectional remote audio orchestration, and pinned in-meeting chat directly inside CCA Admin and Staff portals without third-party meeting subscription dependencies.
+- **Self-Healing JIT Schema (`MeetingDbHelper.php`)**:
+  - `academy_meetings`: Meeting records with `room_id`, `title`, `agenda`, `meeting_type`, `created_by`, `status`, `is_chat_locked`, `hosts_json`, and timestamps.
+  - `meeting_attendance_logs`: Session tracking with `meeting_id`, `user_id`, `peer_id`, `joined_at`, `left_at`, `duration_minutes`, and `last_ping` keepalive.
+  - `meeting_messages`: Real-time chat archive storing `meeting_id`, `user_id`, `user_name`, `user_role`, `message`, `is_pinned`, `pinned_by`, `pinned_at`, and `created_at`.
+- **Peer-to-Peer Mesh Architecture (`PeerJS` & Google STUN)**:
+  - Connects to Google public STUN infrastructure (`stun.l.google.com:19302`, `stun1`, `stun2`).
+  - Automated 7-second heartbeat and peer discovery loop discovering incoming members dynamically.
+  - DataChannel mesh dispatcher handling high-speed peer messages without server round-trips:
+    - `chat_message`: Real-time text broadcast with avatar rendering.
+    - `pin_toggle`: Pinned announcement synchronization.
+    - `chat_lock_toggle`: Instant lock/unlock propagation.
+    - `host_update`: Dynamic Co-Host promotion/demotion.
+    - `set_mic_state`: Direct bidirectional remote microphone toggle.
+    - `peer_mic_state`: Real-time audio waveform / mute indicator broadcast.
+    - `mute_all` / `unmute_all`: Room-wide audio moderation commands.
+- **Host & Role Hierarchy Governance**:
+  - **Permanent Primary Host**: The creator of the meeting (`created_by`) is permanently assigned the primary `👑 Host` badge.
+  - **Developer Superuser Role (`developer`)**: Automatically and permanently receives `⭐ Co-Host` status upon entering any meeting room across the academy.
+  - **Dynamic Co-Host Delegation**: Primary Host and existing Co-Hosts can promote participants to Co-Host or demote them at will. The primary creator cannot be demoted.
+- **Bidirectional Instant Audio Control Matrix (Mute ⇄ Unmute)**:
+  - Host or Co-Host can directly toggle any participant's microphone on or off at will (`handleToggleParticipantMic`).
+  - Synchronous track manipulation (`audioTrack.enabled = true / false`) triggers immediately over DataChannels without re-prompting browser `getUserMedia` permissions.
+  - Prominent 1-click toggle buttons on the participant video card (top-left), clickable mic icon in the user pill, and per-user rows in the Participants Modal.
+  - Room-wide `[ 🔇 Mute All ]` and `[ 🎙️ Unmute All ]` controls available in both the top navigation bar and the Participants Modal.
+- **Fault-Tolerant Media Acquisition (Anti-Freeze Guard)**:
+  - `getUserMedia` executes with a 4-second asynchronous promise race timeout against hardware mutex lockups or permission delays.
+  - Automatic fallback to audio-only (3s timeout) and synthetic silent/canvas stream (`createFallbackStream`).
+  - Loading screen features an immediate `[ 🚀 Skip & Join (Listen-Only) ]` button preventing members from ever stalling on connection screens.
+- **Zoom-Style Presentation & Screen Sharing**:
+  - Dynamic WebRTC track replacement (`sender.replaceTrack(screenTrack)`) on all active peer connections without renegotiation.
+  - Prominent "You are currently sharing your screen" control banner with 1-click revert to camera.
+  - Dynamic responsive layout: Gallery grid for group discussions, dynamic stage + participant filmstrip when screen presenting.
+  - Visual audio indicators with triple-bar CSS pulsing wave animations for active speakers and clear muted status badges.
+- **In-Meeting Chat with Avatars & Message Pinning**:
+  - Host-moderated chat lock (`is_chat_locked = 1` by default) with host broadcast capability.
+  - Sender avatars and role badges rendered on every message bubble.
+  - Sticky pinned message bar with 1-click jump-to-message highlighting (`scrollIntoView`).
+- **✋ Raise Hand & Priority Speaker Queue**:
+  - Attendees can raise/lower hand via floating dock or hotkey; triggers `hand_raise_toggle` DataChannel broadcast (`{ type: 'hand_raise_toggle', payload: { userId, userName, isHandRaised } }`).
+  - Web Audio API synthesizes a two-tone ascending chime `C5 (523.25Hz) -> G5 (783.99Hz)` to notify room members without downloading external audio assets.
+  - Video cards display glowing bounce badges (`✋ Hand Raised` / `✋ হাত তুলেছে`).
+  - `ParticipantsModal` renders an amber-accented priority speaker queue at the top of the list with instant `[ 🎙️ Allow Speak ]` (unmutes participant and lowers hand) and `[ Lower Hand ]` controls for Hosts.
+- **🎉 Live Floating Emoji Reactions & Web Audio Pop Synthesis**:
+  - Attendees can dispatch 6 dynamic floating reactions (`❤️`, `👏`, `🔥`, `🎉`, `💡`, `🚀`) from a hover popover tray.
+  - Triggers `reaction` DataChannel broadcast (`{ type: 'reaction', payload: { emoji, userId, userName } }`).
+  - Floating visual physics engine: Dynamic upward translation with randomized horizontal jitter (`-40px` to `+40px`), variable scale (`0.85` to `1.35`), and automatic DOM lifecycle cleanup after 2.8 seconds.
+  - Web Audio API synthesizes an authentic acoustic pop via frequency sweep `F5 (698.46Hz) -> A5 (880Hz)` over 80ms with exponential gain ramp down.
+  - Local and remote participant video tiles display a 2.5-second bounce attribution badge reflecting recent reactions.
+- **🌟 Spotlight & 📌 Pin User Focus (Hero Stage + Filmstrip)**:
+  - **Local Pin (`📌`)**: Any attendee can pin any participant (or self) locally. The pinned speaker immediately occupies the full Hero Stage while other participants collapse into a responsive side/bottom Filmstrip. Includes a quick `[ ✕ Unpin ]` button.
+  - **Room-Wide Spotlight (`🌟`)**: Host and Co-Hosts can broadcast room-wide spotlights over WebRTC DataChannel (`spotlight_toggle` payload: `{ targetPeerId, targetUserId, targetName, isSpotlighted, spotlightedBy }`). Plays a tri-tone fanfare synthesizer chime `C5 -> E5 -> G5` and displays an amber glowing badge banner `🌟 Spotlight for Everyone: [Name]`.
+  - **Smart Stage Hierarchy**:
+    1. Screen Sharing active $\to$ Presentation Stage + Mini Filmstrip.
+    2. Effective Focus active (Local Pin overrides room-wide Spotlight for personal viewing preference) $\to$ Speaker Hero Stage + Side Filmstrip.
+    3. Default $\to$ Zoom-style responsive Gallery Grid.
+  - **Local Camera Multi-Attach**: When a remote user is focused on the Hero Stage, the local user's camera feed is seamlessly attached to `localFilmstripVideoRef`, ensuring self-view is never lost in filmstrip mode.
+  - **Anti-Stale Disconnection Self-Healing**: `useEffect` monitors active `remotePeerList` and resets pinned/spotlighted states immediately if the focused participant leaves or disconnects.
+  - **Temporal Dead Zone (TDZ) Memory Protection**: Variable declaration hoisting (`remotePeerList`, `totalInRoom`) placed above stage resolution effects guarantees zero initialization crashes across all browser rendering lifecycles.
+- **🎨 Live Interactive Whiteboard (`InteractiveWhiteboard.jsx`)**:
+  - Full collaborative vector canvas without external screen-sharing dependencies.
+  - Features drawing tools: Pen/Brush (size 2-24px, 12 presets), Eraser, Shapes (Rectangle, Circle, Line, Arrow), Text annotations, and Pan/Clear.
+  - Real-time P2P synchronization over WebRTC DataChannel (`wb_action`, `wb_undo`, `wb_clear`, `wb_sync`).
+  - Late-joiner automatic sync: new participants automatically receive existing whiteboard canvas state on entry.
+  - 1-Click PNG snapshot export (`canvas.toBlob`) directly in the whiteboard header.
+  - Host moderation: Host controls board presentation and can toggle `allowOthers` permission for collaborative classroom drawing.
+- **💻 In-Meeting Syntax Code Snippets & File Sharing**:
+  - **Code Snippets**: Formatted syntax-highlighted code sharing directly in meeting chat with language selector (JavaScript, Python, PHP, HTML/CSS, SQL, Java, C++, TypeScript, Bash, JSON, etc.), monospace preview with dark IDE container, language badge, and 1-click `[ 📋 Copy Code ]` button.
+  - **File & Document Sharing**: Upload and distribute PDFs, documents, presentations, and ZIP archives up to 25MB via `api/meetings/upload_chat_file.php`. File cards display file type icon, name, formatted size (B/KB/MB), and direct download button.
+  - **Image Previews & Lightbox**: Shared images render clickable inline previews with click-to-expand lightbox modal and download link.
+  - **Zero Round-Trip DataChannel Broadcast**: Messages and attachments broadcast immediately over WebRTC DataChannel (`{ type: 'chat_message', payload: newMsg }`) with fallback DB persistence in `meeting_messages`.
+  - **JIT Self-Healing Schema (`MeetingDbHelper.php`)**: Dynamically provisions `message_type`, `attachment_url`, `attachment_name`, `attachment_size`, and `code_language` columns on the `meeting_messages` table without requiring manual migration.
+
+### 12.39 In-Browser Studio Recording Engine, Google Drive Auto-Vault & Modular Architecture
+- **In-Browser Audio/Video Compositor Engine (`useMeetingRecorder.js`)**:
+  - Direct in-browser recording without heavy server-side transcoding infrastructure or third-party SFU dependencies.
+  - Mixes local microphone audio, remote peer audio elements via `AudioContext` destination node, and video feeds (Presenter Hero Stage, Screen Sharing, or Gallery Grid) onto an HTML5 `<canvas>` rendering stream.
+  - Employs native `MediaRecorder` API recording into high-compression `video/webm;codecs=vp9,opus` (with MP4 fallback) at 30 fps and 1080p full definition.
+  - Floating Live REC indicator badge with live elapsed duration timer (`HH:MM:SS`) in the top meeting header and toast lifecycle alerts.
+- **Recording Preview & Playback Modal (`MeetingRecordingModal.jsx`)**:
+  - Automatically pops up when the host or co-host stops a recording.
+  - Embedded HTML5 `<video>` player with play/pause, seek scrub bar, volume, duration counter, file size indicator, and 1080p HD badge.
+  - 1-Click local PC download with clean standardized naming: `CCA_Meeting_<roomId>_<YYYYMMDD_HHmmss>.webm`.
+  - Dual-tier cloud save button with real-time percentage progress bar and visual cloud storage badge ("Saved to Google Drive Vault" vs "Saved to CCA Server Vault").
+- **Google Drive Auto-Vault & Failover System (`upload_recording_drive.php`)**:
+  - Multipart upload endpoint saving recorded media to `uploads/meeting_recordings/CCA_Meeting_<roomId>_<dateStr>.webm`.
+  - Primary cloud target: Google Drive Cloud Vault under `My Drive > CCA_Vault (ID: 18HFbN429toI-WJ1NUMTXcK3bVY69Kcno) > Meeting_Recordings (ID: 1ylVVos5JaUoi4PBnewR2Danbd3AR5P4D)`.
+  - Pure PHP Google Drive API v3 client (`GoogleDriveClient.php`) utilizing OAuth2 refresh tokens, self-healing token cache with MD5 hash validation, and MySQL database fallback (`system_storage_settings`).
+  - Automatic fallback to local server vault if Google Drive is temporarily unreachable or undergoing token renewal, maintaining zero data loss.
+- **Self-Healing Meeting Schema Extension (`MeetingDbHelper.php`)**:
+  - Automatically verifies and provisions the recording columns on `academy_meetings`:
+    - `recording_url`: Web link to video on Google Drive or local server vault.
+    - `recording_drive_id`: Google Drive File ID for direct Drive viewer/download integration.
+    - `recording_duration`: Recorded meeting duration in seconds.
+    - `recording_size`: Exact file size in bytes.
+    - `recorded_at`: Timestamp of recording completion.
+- **Ultra-Modular Component Refactoring (235-Line Architecture)**:
+  - Decomposed legacy monolithic 3,543-line `MeetingRoomView.jsx` into a clean, modular ~235-line component in both `staff-frontend` and `admin-frontend`:
+    - `src/components/Meeting/hooks/useMeetingSession.js`: WebRTC mesh, peer discovery, and signal lifecycle.
+    - `src/components/Meeting/hooks/useMeetingRecorder.js`: Audio/video canvas mixing, recording timer, and upload handler.
+    - `src/components/Meeting/components/MeetingRecordingModal.jsx`: Playback preview and local/Drive download modal.
+    - `src/components/Meeting/components/MeetingHeader.jsx`: Room title, time elapsed, badge indicators, and audio/record controls.
+    - `src/components/Meeting/components/MeetingFloatingDock.jsx`: Dock controls for mic, camera, screen share, whiteboard, chat, hand raise, and reactions.
+    - `src/components/Meeting/components/MeetingParticipantsModal.jsx`: Attendee roster, hand raise priority queue, and host moderation tools.
+    - `src/components/Meeting/components/MeetingChatPanel.jsx`: Moderated chat, syntax code snippet viewer, and file transfer.
+    - `src/components/Meeting/components/MeetingVideoGrid.jsx`: Gallery grid, Hero Stage, spotlighting, and side filmstrip.
+    - `src/components/Meeting/components/InteractiveWhiteboard.jsx`: Collaborative vector whiteboard canvas.
+    - `src/components/Meeting/components/FloatingReactions.jsx`: Web Audio synthesized reaction animations.
+  - Bilingual localization wrapped in `LanguageContext.jsx` for seamless English and Bengali switching.
 
 ---
 

@@ -71,18 +71,34 @@ export function createFallbackStream() {
   canvas.width = 640;
   canvas.height = 360;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0b0f19';
-  ctx.fillRect(0, 0, 640, 360);
-  ctx.fillStyle = '#e11d48';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('CCA Live Studio', 320, 180);
+
+  // Clean dark gradient without hardcoded mirrored text
+  const drawFrame = () => {
+    if (!ctx) return;
+    const grad = ctx.createLinearGradient(0, 0, 0, 360);
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(1, '#020617');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 640, 360);
+  };
+  drawFrame();
+
+  // Continuous tick so Chromium WebRTC & video elements keep receiving frames
+  const timer = setInterval(drawFrame, 500);
 
   let videoTrack = null;
   if (canvas.captureStream) {
     const stream = canvas.captureStream(5);
     videoTrack = stream.getVideoTracks()[0];
-    if (videoTrack) videoTrack.enabled = false;
+    if (videoTrack) {
+      videoTrack.enabled = false;
+      videoTrack._isFallback = true;
+      const originalStop = videoTrack.stop.bind(videoTrack);
+      videoTrack.stop = () => {
+        clearInterval(timer);
+        originalStop();
+      };
+    }
   }
 
   let audioTrack = null;
@@ -92,12 +108,17 @@ export function createFallbackStream() {
       const audioCtx = new AudioContextClass();
       const dst = audioCtx.createMediaStreamDestination();
       audioTrack = dst.stream.getAudioTracks()[0];
-      if (audioTrack) audioTrack.enabled = false;
+      if (audioTrack) {
+        audioTrack.enabled = false;
+        audioTrack._isFallback = true;
+      }
     }
   } catch (e) {}
 
   const tracks = [];
   if (videoTrack) tracks.push(videoTrack);
   if (audioTrack) tracks.push(audioTrack);
-  return new MediaStream(tracks);
+  const mediaStream = new MediaStream(tracks);
+  mediaStream._isFallback = true;
+  return mediaStream;
 }

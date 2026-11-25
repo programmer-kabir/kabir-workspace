@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { FiX, FiClock, FiAlertCircle, FiCheck, FiRefreshCw, FiInfo, FiRotateCcw } from 'react-icons/fi';
@@ -305,9 +306,9 @@ Rules:
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="px-6 py-5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0">
@@ -604,6 +605,10 @@ Rules:
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default BreakRequestModal;

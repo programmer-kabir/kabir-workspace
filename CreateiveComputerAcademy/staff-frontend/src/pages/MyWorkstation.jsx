@@ -3,13 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   FiFilm, FiCalendar, FiClock, FiHardDrive,
-  FiRefreshCw, FiPlay, FiExternalLink, FiX, FiCheckCircle,
+  FiRefreshCw, FiPlay, FiCheckCircle,
   FiSearch, FiSliders, FiShield, FiAlertTriangle, FiAlertOctagon,
   FiMonitor, FiActivity, FiCpu, FiInfo
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import WorkstationVideoPlayerModal from '../components/WorkstationVideoPlayerModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/';
 
@@ -307,28 +308,14 @@ export default function MyWorkstation() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <button
-                      onClick={() => {
-                        setActiveClipModal(clip);
-                        setPlaybackSpeed(1);
-                      }}
-                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                      onClick={() => setActiveClipModal(clip)}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95"
                     >
-                      <FiPlay size={12} /> প্লে করুন
+                      <FiPlay size={13} />
+                      <span>ভিডিও দেখুন</span>
                     </button>
-
-                    {clip.drive_view_link && (
-                      <a
-                        href={clip.drive_view_link}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Google Drive-এ সরাসরি দেখুন"
-                        className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition border border-slate-200 dark:border-slate-700"
-                      >
-                        <FiExternalLink size={14} />
-                      </a>
-                    )}
                   </div>
                 </div>
               ))}
@@ -442,83 +429,15 @@ export default function MyWorkstation() {
         </div>
       )}
 
-      {/* ── Interactive Video Player Modal ────────────────────────────── */}
-      {activeClipModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-3 md:p-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950">
-              <div className="flex items-center gap-2.5">
-                <FiFilm className="text-blue-500 dark:text-blue-400" size={18} />
-                <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white">
-                  ক্লিপ #{activeClipModal.chunk_index} ({activeClipModal.start_time_formatted} - {activeClipModal.end_time_formatted})
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Speed Controls */}
-                <div className="hidden sm:flex items-center gap-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
-                  {[1, 1.25, 1.5, 2, 4].map((spd) => (
-                    <button
-                      key={spd}
-                      onClick={() => setPlaybackSpeed(spd)}
-                      className={`px-2 py-0.5 rounded-lg text-[11px] font-black transition cursor-pointer ${playbackSpeed === spd
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                    >
-                      {spd}x
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setActiveClipModal(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center transition cursor-pointer"
-                >
-                  <FiX size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Video Player Container */}
-            <div className="relative bg-black flex-1 flex items-center justify-center aspect-video w-full overflow-hidden">
-              {activeClipModal.embed_url ? (
-                <iframe
-                  src={activeClipModal.embed_url}
-                  className="w-full h-full border-0"
-                  allow="autoplay"
-                  title="Workstation Recording"
-                />
-              ) : (
-                <div className="text-center p-8 text-white space-y-2">
-                  <FiAlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
-                  <p className="text-sm font-bold">ভিডিও স্ট্রিমিং লিঙ্ক প্রস্তুত নয়</p>
-                  <p className="text-xs text-slate-400">Google Drive-এ সরাসরি ফাইলটি দেখুন।</p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">
-                ফাইল সাইজ: {activeClipModal.file_size_mb} MB &bull; সময়কাল: {activeClipModal.duration_minutes} মিনিট
-              </span>
-
-              {activeClipModal.drive_view_link && (
-                <a
-                  href={activeClipModal.drive_view_link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1"
-                >
-                  Google Drive-এ ওপেন করুন <FiExternalLink size={12} />
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Branded & Secure In-App Video Player Modal ────────────────── */}
+      <WorkstationVideoPlayerModal
+        isOpen={Boolean(activeClipModal)}
+        clip={activeClipModal}
+        allClips={videos}
+        onClose={() => setActiveClipModal(null)}
+        onSelectClip={(newClip) => setActiveClipModal(newClip)}
+        isBn={true}
+      />
     </div>
   );
 }

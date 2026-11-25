@@ -105,7 +105,7 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     { name: 'Community Wall', transKey: 'community_wall', path: '/community', icon: <FiUsers size={19} className="text-violet-500 group-hover:text-violet-400" /> },
     { name: 'Team Feasts & Tours', transKey: 'team_events', path: '/events', icon: <FiCalendar size={18} className="text-amber-500" /> },
     { name: 'Message', transKey: 'message', path: '/messages', icon: <FiMessageSquare size={19} /> },
-    { name: 'Live Meetings 🎙️', transKey: 'live_meetings', path: '/meetings', icon: <FiRadio size={19} className="text-rose-500 group-hover:text-rose-400" /> },
+    // { name: 'Live Meetings 🎙️', transKey: 'live_meetings', path: '/meetings', icon: <FiRadio size={19} className="text-rose-500 group-hover:text-rose-400" /> },
     { name: 'Attendance', transKey: 'attendance', path: '/attendance', icon: <FiClock size={19} /> },
     { name: 'Desktop App & Updates', transKey: 'desktop_app', path: '/desktop-app', icon: <FiDownload size={19} className="text-cyan-500 group-hover:text-cyan-400" /> },
     { name: 'My Workstation', transKey: 'my_workstation', path: '/workstation', icon: <FiMonitor size={19} className="text-blue-500 group-hover:text-blue-400" /> },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FiVideo, FiHardDrive, FiUploadCloud, FiFolder, FiPlay, 
   FiTrash2, FiRefreshCw, FiCheckCircle, FiAlertTriangle, FiX, 
@@ -90,10 +91,13 @@ const VideoSpoolModal = ({ isOpen, onClose }) => {
   // Chunk duration progress (0 - 30 min = 1800s)
   const chunkPercent = Math.min(100, Math.round((elapsedCurrentChunkSec / 1800) * 100));
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
+        className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -502,6 +506,10 @@ const VideoSpoolModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default VideoSpoolModal;

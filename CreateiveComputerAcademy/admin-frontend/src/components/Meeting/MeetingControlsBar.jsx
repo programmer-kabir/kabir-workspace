@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  FiMic, FiMicOff, FiVideo, FiVideoOff, FiTv, FiMessageSquare, FiLogOut
+  FiMic, FiMicOff, FiVideo, FiVideoOff, FiTv, FiMessageSquare, FiLogOut, FiImage
 } from 'react-icons/fi';
 import { AVAILABLE_REACTIONS } from './meetingUtils';
 
@@ -75,6 +75,20 @@ export default function MeetingControlsBar(props) {
       >
         {isVideoOff ? <FiVideoOff size={18} /> : <FiVideo size={18} />}
         <span className="text-[9px] font-bold mt-0.5">{isVideoOff ? (isBn ? 'স্টার্ট' : 'Start') : (isBn ? 'স্টপ' : 'Stop')}</span>
+      </button>
+
+      {/* 2B. Virtual Background & Blur Toggle */}
+      <button
+        onClick={props.onToggleVirtualBg}
+        className={`flex flex-col items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-2xl transition cursor-pointer ${
+          props.hasActiveBg
+            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/20'
+            : 'bg-slate-800/90 text-slate-100 hover:bg-slate-700/90 hover:text-white'
+        }`}
+        title={isBn ? 'ভার্চুয়াল ব্যাকগ্রাউন্ড ও ব্লার' : 'Virtual Background & Blur'}
+      >
+        <FiImage size={18} />
+        <span className="text-[9px] font-bold mt-0.5">{isBn ? 'ব্যাকগ্রাউন্ড' : 'BG Blur'}</span>
       </button>
 
       {/* 3. Screen Share Toggle */}

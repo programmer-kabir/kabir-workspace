@@ -95,14 +95,53 @@ export function useMeetingMedia({ isBn }) {
   }, []);
 
   // 5. Toggle Camera
-  const toggleVideo = useCallback(() => {
+  const toggleVideo = useCallback(async (activeCallsRef) => {
     if (!localStreamRef.current) return;
-    const videoTrack = localStreamRef.current.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      setIsVideoOff(!videoTrack.enabled);
+    let videoTrack = localStreamRef.current.getVideoTracks()[0];
+    if (videoTrack && !videoTrack._isFallback) {
+      const nextState = !videoTrack.enabled;
+      videoTrack.enabled = nextState;
+      setIsVideoOff(!nextState);
+    } else {
+      // Need real camera acquisition
+      try {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+        const newTrack = camStream.getVideoTracks()[0];
+        if (newTrack && localStreamRef.current) {
+          if (videoTrack) {
+            localStreamRef.current.removeTrack(videoTrack);
+          }
+          localStreamRef.current.addTrack(newTrack);
+
+          if (activeCallsRef?.current) {
+            Object.values(activeCallsRef.current).forEach(call => {
+              const sender = call.peerConnection?.getSenders()?.find(s => s.track && s.track.kind === 'video');
+              if (sender) sender.replaceTrack(newTrack);
+            });
+          }
+
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = null;
+            localVideoRef.current.srcObject = localStreamRef.current;
+            localVideoRef.current.play().catch(() => {});
+          }
+          setIsVideoOff(false);
+          toast.success(isBn ? 'ক্যামেরা চালু হয়েছে।' : 'Camera started.');
+        }
+      } catch (err) {
+        console.warn('Camera acquisition failed:', err);
+        if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          toast.error(isBn 
+            ? '⚠️ ক্যামেরা অন্য ট্যাবে (যেমন Staff Portal) চালু আছে। অন্য ট্যাবের ক্যামেরা বন্ধ করুন।' 
+            : '⚠️ Camera is busy in another tab. Please stop camera in that tab.');
+        } else {
+          toast.error(isBn ? 'ক্যামেরা পারমিশন পাওয়া যায়নি।' : 'Camera permission denied or unavailable.');
+        }
+      }
     }
-  }, []);
+  }, [isBn]);
 
   // 6. Screen Share (Zoom Style)
   const toggleScreenShare = useCallback(async (activeCallsRef) => {

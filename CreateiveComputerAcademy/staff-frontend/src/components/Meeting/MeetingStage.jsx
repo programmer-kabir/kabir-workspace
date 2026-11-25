@@ -31,6 +31,7 @@ export default function MeetingStage(props) {
   const setIsMuted = media.setIsMuted;
   const isScreenSharing = media.isScreenSharing;
   const revertToCamera = props.revertToCamera || (() => media.revertToCamera(rtc.activeCallsRef));
+  const activeBgUrl = props.activeBgUrl || null;
 
   const isMeHost = rtc.isMeHost;
   const myHostTier = rtc.myHostTier;
@@ -301,7 +302,17 @@ export default function MeetingStage(props) {
 
               {/* Hero Video Content */}
               {isFocusLocal ? (
-                <div className="w-full h-full relative flex items-center justify-center">
+                <div
+                  style={activeBgUrl && isVideoOff ? {
+                    backgroundImage: `url(${activeBgUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  } : undefined}
+                  className="w-full h-full relative flex items-center justify-center overflow-hidden"
+                >
+                  {activeBgUrl && isVideoOff && (
+                    <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] z-10" />
+                  )}
                   <video
                     ref={localVideoRef}
                     autoPlay
@@ -310,7 +321,7 @@ export default function MeetingStage(props) {
                     className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
                   />
                   {isVideoOff && (
-                    <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="relative z-20 flex flex-col items-center justify-center gap-3">
                       {currentUser?.profile_picture ? (
                         <img
                           src={getAvatarUrl(currentUser.profile_picture)}
@@ -322,7 +333,7 @@ export default function MeetingStage(props) {
                           {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                         </div>
                       )}
-                      <p className="text-base font-bold text-white">{currentUser?.name || (isBn ? 'আপনি' : 'You')}</p>
+                      <p className="text-base font-bold text-white drop-shadow-md">{currentUser?.name || (isBn ? 'আপনি' : 'You')}</p>
                     </div>
                   )}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-white text-xs font-bold">
@@ -466,9 +477,18 @@ export default function MeetingStage(props) {
             totalInRoom <= 4 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
           }`}>
             {/* Local User Card */}
-            <div className={`relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl flex items-center justify-center group ${
+            <div
+              style={activeBgUrl && isVideoOff ? {
+                backgroundImage: `url(${activeBgUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              } : undefined}
+              className={`relative rounded-2xl md:rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl flex items-center justify-center group ${
               !isMuted ? 'border-rose-500/40 ring-1 ring-rose-500/20' : 'border-slate-800'
             }`}>
+              {activeBgUrl && isVideoOff && (
+                <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] z-10" />
+              )}
               <video
                 ref={localVideoRef}
                 autoPlay
@@ -478,7 +498,7 @@ export default function MeetingStage(props) {
               />
 
               {isVideoOff && (
-                <div className="flex flex-col items-center justify-center gap-3">
+                <div className="relative z-20 flex flex-col items-center justify-center gap-3">
                   {currentUser?.profile_picture ? (
                     <img
                       src={getAvatarUrl(currentUser.profile_picture)}
@@ -491,8 +511,8 @@ export default function MeetingStage(props) {
                     </div>
                   )}
                   <div className="text-center">
-                    <p className="text-sm font-bold text-white">{currentUser?.name || (isBn ? 'আপনি' : 'You')}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">
+                    <p className="text-sm font-bold text-white drop-shadow-md">{currentUser?.name || (isBn ? 'আপনি' : 'You')}</p>
+                    <p className="text-[11px] text-slate-300 font-medium drop-shadow-sm">
                       {isBn ? 'ক্যামেরা বন্ধ রয়েছে' : 'Camera Off'}
                     </p>
                   </div>

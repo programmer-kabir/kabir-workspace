@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="cyberBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="50%" stop-color="#0c1222"/>
+      <stop offset="100%" stop-color="#05070d"/>
+    </linearGradient>
+    <linearGradient id="cyanNeon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="purpleNeon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="15" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark Cyber Stage Background -->
+  <rect width="1920" height="1080" fill="url(#cyberBg)"/>
+
+  <!-- Geometric Studio Hex Pattern Left -->
+  <g opacity="0.15" stroke="#06b6d4" stroke-width="2" fill="none">
+    <polygon points="120,200 160,130 240,130 280,200 240,270 160,270"/>
+    <polygon points="280,200 320,130 400,130 440,200 400,270 320,270"/>
+    <polygon points="200,340 240,270 320,270 360,340 320,410 240,410"/>
+    <polygon points="360,340 400,270 480,270 520,340 480,410 400,410"/>
+    <polygon points="120,480 160,410 240,410 280,480 240,550 160,550"/>
+    <polygon points="280,480 320,410 400,410 440,480 400,550 320,550"/>
+  </g>
+
+  <!-- Ambient Neon Light Bars Across Ceiling & Walls -->
+  <path d="M 0 100 L 700 100 L 900 240" fill="none" stroke="url(#cyanNeon)" stroke-width="5" opacity="0.8" filter="url(#neonGlow)"/>
+  <path d="M 1200 240 L 1400 100 L 1920 100" fill="none" stroke="url(#purpleNeon)" stroke-width="5" opacity="0.8" filter="url(#neonGlow)"/>
+
+  <!-- Studio Acoustic Diamond Panels Right -->
+  <g opacity="0.18" fill="#1e293b" stroke="#334155" stroke-width="2">
+    <polygon points="1500,300 1600,200 1700,300 1600,400"/>
+    <polygon points="1650,450 1750,350 1850,450 1750,550"/>
+    <polygon points="1450,550 1550,450 1650,550 1550,650"/>
+  </g>
+
+  <!-- CCA Center Cyber Studio Hologram Emblem -->
+  <g transform="translate(960, 260)" filter="url(#neonGlow)">
+    <circle cx="0" cy="0" r="75" fill="#0f172a" stroke="#06b6d4" stroke-width="4" opacity="0.9"/>
+    <circle cx="0" cy="0" r="62" fill="none" stroke="#a855f7" stroke-width="2" stroke-dasharray="10 6"/>
+    <!-- CCA Stylized Crest -->
+    <path d="M 0 -42 A 42 42 0 1 0 35 18" fill="none" stroke="#06b6d4" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="16" fill="#a855f7"/>
+  </g>
+
+  <!-- Studio Typography -->
+  <text x="960" y="385" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="26" fill="#f8fafc" text-anchor="middle" letter-spacing="4">CCA LIVE STUDIO</text>
+  <text x="960" y="415" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#38bdf8" text-anchor="middle" letter-spacing="6">CREATIVE COMPUTER ACADEMY</text>
+
+  <!-- Dark Studio Ground Plane -->
+  <rect x="0" y="900" width="1920" height="180" fill="#060910"/>
+  <line x1="0" y1="900" x2="1920" y2="900" stroke="#06b6d4" stroke-width="3" opacity="0.5" filter="url(#neonGlow)"/>
+</svg>
