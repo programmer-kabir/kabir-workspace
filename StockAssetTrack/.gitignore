@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production build outputs
+dist/
+build/
+*/dist/
+
+# Environment & Credential files
+.env
+*/.env
+.env.local
+.env.*.local
+!.env.example
+!.env.production.example
+creditenal.json
+*credentials*.json
+
+# Keep empty schema DDL tracked while ignoring dumps
+!server/database/schema.sql
+
+# PHP / Local Storage / Logs
+server/storage/logs/
+server/storage/cache/
+*.log
+npm-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
