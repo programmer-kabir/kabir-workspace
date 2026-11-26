@@ -16,7 +16,7 @@ import {
   Zap,
   Lock,
 } from 'lucide-react';
-import { IconItem, StrokeLinecap, StrokeLinejoin, QuotaStatus, IconCustomization } from '@/types/icon';
+import { IconItem, IconStyle, StrokeLinecap, StrokeLinejoin, QuotaStatus, IconCustomization } from '@/types/icon';
 import { useIconCustomization } from '@/context/IconCustomizationContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -74,8 +74,8 @@ export default function IconDetailDrawer({
     (currentIcon as any)?.tier === 'pro'
   );
   const isIconLocked = Boolean(isPremiumIcon && !isProUser);
-  const [localStyle, setLocalStyle] = useState<'outlined' | 'filled'>(globalStyle);
-  const [variantsMap, setVariantsMap] = useState<{ outlined?: string; filled?: string }>({});
+  const [localStyle, setLocalStyle] = useState<IconStyle>(globalStyle);
+  const [variantsMap, setVariantsMap] = useState<Record<string, string>>({});
   const [relatedVariants, setRelatedVariants] = useState<IconItem[]>([]);
 
   // Local customization state for the modal only (defaults to 330px size, 5px stroke width, black color)
@@ -107,7 +107,7 @@ export default function IconDetailDrawer({
     if (icon) {
       setCurrentIcon(icon);
       // Immediately seed variantsMap with the newly clicked icon's own SVG so there is 0 delay
-      const initialVariants: { outlined?: string; filled?: string } = (icon as any).variants
+      const initialVariants: Record<string, string> = (icon as any).variants
         ? { ...(icon as any).variants }
         : icon.svg
           ? { [globalStyle]: icon.svg, outlined: icon.svg }
@@ -448,7 +448,21 @@ export default function IconDetailDrawer({
                   </span>
                 )}
               </div>
-              <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold">{currentIcon.category}</span>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <span className="text-purple-600 dark:text-purple-400 font-semibold">{currentIcon.category}</span>
+                {currentIcon.pack_slug && (
+                  <>
+                    <span>•</span>
+                    <Link
+                      to={`/pack/${currentIcon.pack_slug}`}
+                      onClick={onClose}
+                      className="text-purple-500 hover:text-purple-400 hover:underline font-medium"
+                    >
+                      {currentIcon.pack_name || 'View Pack'}
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-1">

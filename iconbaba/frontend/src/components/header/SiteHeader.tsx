@@ -1,9 +1,10 @@
 // frontend/src/components/header/SiteHeader.tsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, Heart, Folder, History, LogOut, Sparkles, Shield, ExternalLink, CreditCard } from 'lucide-react';
+import { Menu, X, Heart, Folder, History, LogOut, Sparkles, Shield, ExternalLink, CreditCard, Layers } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import NotificationDropdown from '@/components/header/NotificationDropdown';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 interface SiteHeaderProps {
   onToggleSidebar?: () => void;
@@ -48,12 +49,44 @@ export default function SiteHeader({ onToggleSidebar, sidebarOpen = false }: Sit
           </Link>
         </div>
 
+        {/* Middle: Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-1.5">
+          <Link
+            to="/packs"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5"
+          >
+            <Layers className="size-3.5 text-purple-500" />
+            <span>Icon Packs</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 uppercase">
+              Packs
+            </span>
+          </Link>
+          <Link
+            to="/categories"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Categories
+          </Link>
+          <Link
+            to="/icons"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Single Icons
+          </Link>
+          <Link
+            to="/pricing"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Pricing
+          </Link>
+        </nav>
+
         {/* Right: Actions, Utilities Capsule, Auth & Menu */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Admin panel direct quick-switcher for admins */}
           {isAdmin && (
             <a
-              href={`http://localhost:3003${currentToken ? `?token=${currentToken}` : ''}`}
+              href={`http://localhost:3001${currentToken ? `?token=${currentToken}` : ''}`}
               target="_blank"
               rel="noreferrer"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100/80 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200 border border-purple-200 dark:border-purple-500/30 text-xs font-semibold transition-all shadow-sm"
@@ -67,6 +100,9 @@ export default function SiteHeader({ onToggleSidebar, sidebarOpen = false }: Sit
 
           {/* Role-Aware & Personal Notifications */}
           <NotificationDropdown />
+
+          {/* 1-Click Light & Dark Theme Toggle */}
+          <ThemeToggle />
 
           {user ? (
             <div className="relative">
@@ -251,6 +287,26 @@ export default function SiteHeader({ onToggleSidebar, sidebarOpen = false }: Sit
                 <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white dark:bg-[#141522] border border-slate-200 dark:border-white/10 shadow-2xl p-2 z-50 text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-150">
                   {/* Main Pages */}
                   <div className="py-1">
+                    <Link
+                      to="/"
+                      onClick={() => setNavMenuOpen(false)}
+                      className="flex items-center px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                    >
+                      Browse Icons
+                    </Link>
+                    <Link
+                      to="/packs"
+                      onClick={() => setNavMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors font-semibold"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Layers className="size-3.5" />
+                        <span>Icon Packs</span>
+                      </span>
+                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-600 dark:text-purple-300 font-bold">
+                        Sets
+                      </span>
+                    </Link>
                     <Link
                       to="/pricing"
                       onClick={() => setNavMenuOpen(false)}

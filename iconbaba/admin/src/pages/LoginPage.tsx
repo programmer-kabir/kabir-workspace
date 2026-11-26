@@ -1,7 +1,12 @@
 // admin/src/pages/LoginPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ShieldCheck } from 'lucide-react';
 import { loginUser, setToken } from '@/lib/api';
+
+const DEV_ADMIN_CREDENTIALS = import.meta.env.DEV
+  ? { login: 'admin@iconbaba.com', password: 'Admin@1234' }
+  : null;
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -10,13 +15,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function performLogin(loginValue: string, passwordValue: string) {
     setError(null);
     setLoading(true);
 
     try {
-      const res = await loginUser(login, password);
+      const res = await loginUser(loginValue, passwordValue);
       if (res.success && res.data?.token) {
         const hasAdmin = res.data.user.roles?.includes('admin') || res.data.user.role === 'admin';
         if (!hasAdmin) {
@@ -33,6 +37,18 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await performLogin(login, password);
+  }
+
+  async function handleDemoAdminLogin() {
+    if (!DEV_ADMIN_CREDENTIALS) return;
+    setLogin(DEV_ADMIN_CREDENTIALS.login);
+    setPassword(DEV_ADMIN_CREDENTIALS.password);
+    await performLogin(DEV_ADMIN_CREDENTIALS.login, DEV_ADMIN_CREDENTIALS.password);
   }
 
   return (
@@ -96,6 +112,23 @@ export default function LoginPage() {
             {loading ? 'Authenticating...' : 'Sign In to Admin Panel'}
           </button>
         </form>
+
+        {DEV_ADMIN_CREDENTIALS && (
+          <div className="pt-2 border-t border-slate-800/80 space-y-2">
+            <div className="text-[11px] font-medium text-slate-400 text-center">
+              Quick Demo Login (Local Dev)
+            </div>
+            <button
+              type="button"
+              onClick={handleDemoAdminLogin}
+              disabled={loading}
+              className="w-full py-2.5 px-3 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 disabled:opacity-50 text-purple-200 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4 text-purple-300" />
+              <span>1-Click Demo Admin ({DEV_ADMIN_CREDENTIALS.login})</span>
+            </button>
+          </div>
+        )}
 
         <div className="text-center text-[11px] text-slate-500 pt-2 border-t border-slate-800">
           IconBaba Management Platform &middot; All actions audited

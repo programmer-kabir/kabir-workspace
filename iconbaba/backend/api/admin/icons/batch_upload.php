@@ -1,6 +1,6 @@
 <?php
 // backend/api/admin/icons/batch_upload.php
-// Production-grade Bulk / Batch Icon Upload API for IconBaba
+// Production-grade Bulk / Batch Icon Upload API with Pack & Multi-variant Support
 
 require_once __DIR__ . '/../../../config/cors.php';
 require_once __DIR__ . '/../../../config/database.php';
@@ -24,18 +24,20 @@ if (!is_array($iconsList) || empty($iconsList)) {
     jsonResponse(false, null, 'No icons provided. Expected a non-empty array of icons.', 400);
 }
 
-// Max 100 icons per single HTTP batch request for stability
+// Max 100 icons per single batch request
 if (count($iconsList) > 100) {
     jsonResponse(false, null, 'Maximum 100 icons allowed per batch request. Please chunk your uploads.', 400);
 }
 
 // Fallback Global Settings
 $globalCategoryId = isset($data['category_id']) ? (int)$data['category_id'] : 0;
+$globalPackId = !empty($data['pack_id']) ? (int)$data['pack_id'] : null;
 $globalStatus = isset($data['status']) && in_array($data['status'], ['published', 'draft', 'archived']) 
     ? $data['status'] 
     : 'published';
 $globalIsPremium = isset($data['is_premium']) ? ((int)(bool)$data['is_premium']) : 0;
 $globalTags = isset($data['tags']) ? trim($data['tags']) : '';
+$globalDefaultStyle = trim($data['default_style'] ?? 'outlined');
 
 // 3. Cache valid categories
 $validCategories = $pdo->query("SELECT id, name FROM categories")->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -47,6 +49,8 @@ $defaultCategoryId = $globalCategoryId > 0 && isset($validCategories[$globalCate
     ? $globalCategoryId 
     : (int)array_key_first($validCategories);
 
+// Cache valid packs
+$validPacks = $pdo->query("SELECT id, name FROM packs")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Helper: In-batch Collision-Safe Slug Generator
 function generateBatchSafeSlug($pdo, $name, &$usedSlugs) {
@@ -77,18 +81,19 @@ $usedSlugs = [];
 $uploadedItems = [];
 $failedItems = [];
 $affectedCategoryIds = [];
+$affectedPackIds = [];
 
 try {
     $pdo->beginTransaction();
 
     $insertIconStmt = $pdo->prepare("
-        INSERT INTO icons (name, slug, category_id, tags, status, is_premium, downloads_count, favorites_count, created_by, created_at, updated_at)
-        VALUES (:name, :slug, :category_id, :tags, :status, :is_premium, 0, 0, :created_by, NOW(), NOW())
+        INSERT INTO icons (name, slug, category_id, pack_id, default_style, tags, status, is_premium, downloads_count, favorites_count, created_by, created_at, updated_at)
+        VALUES (:name, :slug, :category_id, :pack_id, :default_style, :tags, :status, :is_premium, 0, 0, :created_by, NOW(), NOW())
     ");
 
     $insertVarStmt = $pdo->prepare("
-        INSERT INTO icon_variants (icon_id, style, svg_content)
-        VALUES (:icon_id, :style, :svg_content)
+        INSERT INTO icon_variants (icon_id, style, is_multicolor, palette_json, svg_content)
+        VALUES (:icon_id, :style, :is_multicolor, :palette_json, :svg_content)
     ");
 
     foreach ($iconsList as $idx => $item) {
@@ -106,6 +111,12 @@ try {
         $catId = isset($item['category_id']) ? (int)$item['category_id'] : 0;
         if ($catId <= 0 || !isset($validCategories[$catId])) {
             $catId = $defaultCategoryId;
+        }
+
+        // Determine Pack
+        $packId = !empty($item['pack_id']) ? (int)$item['pack_id'] : $globalPackId;
+        if ($packId && !isset($validPacks[$packId])) {
+            $packId = null;
         }
 
         $itemStatus = isset($item['status']) && in_array($item['status'], ['published', 'draft', 'archived'])
@@ -127,54 +138,73 @@ try {
             $tags = implode(', ', array_unique($nameTokens));
         }
 
-        // Extract SVGs
-        $rawOutlined = isset($item['svg_outlined']) ? trim((string)$item['svg_outlined']) : '';
-        $rawFilled = isset($item['svg_filled']) ? trim((string)$item['svg_filled']) : '';
+        $defaultStyle = trim($item['default_style'] ?? $globalDefaultStyle);
 
-        if (empty($rawOutlined) && empty($rawFilled)) {
+        // Normalize Variants
+        $rawVariants = [];
+        if (!empty($item['variants']) && is_array($item['variants'])) {
+            foreach ($item['variants'] as $v) {
+                if (!empty($v['style']) && !empty($v['svg'])) {
+                    $rawVariants[trim($v['style'])] = $v['svg'];
+                }
+            }
+        }
+        if (!empty($item['svg_outlined'])) $rawVariants['outlined'] = $item['svg_outlined'];
+        if (!empty($item['svg_filled'])) $rawVariants['filled'] = $item['svg_filled'];
+        if (!empty($item['svg_lineal_color'])) $rawVariants['lineal-color'] = $item['svg_lineal_color'];
+        if (!empty($item['svg_flat'])) $rawVariants['flat'] = $item['svg_flat'];
+        if (!empty($item['svg']) && empty($rawVariants)) $rawVariants['outlined'] = $item['svg'];
+
+        if (empty($rawVariants)) {
             $failedItems[] = [
                 'index' => $idx,
                 'name' => $rawName,
-                'error' => 'At least one SVG variant (outlined or filled) must be provided.'
+                'error' => 'No SVG content provided.'
             ];
             continue;
         }
 
-        // Sanitize SVGs
-        $cleanOutlined = null;
-        $cleanFilled = null;
-
-        if (!empty($rawOutlined)) {
+        // Sanitize Variants
+        $cleanedVariants = [];
+        $hasError = false;
+        foreach ($rawVariants as $st => $rawSvg) {
+            $isMulti = isMultiColorStyle($st);
             $errMsg = '';
-            $cleanOutlined = validateAndSanitizeSvg($rawOutlined, $errMsg);
-            if ($cleanOutlined === false) {
+            $cleanSvg = validateAndSanitizeSvg($rawSvg, $errMsg, $isMulti);
+            if ($cleanSvg === false) {
                 $failedItems[] = [
                     'index' => $idx,
                     'name' => $rawName,
-                    'error' => 'Invalid outlined SVG: ' . $errMsg
+                    'error' => "Invalid SVG for style [{$st}]: {$errMsg}"
                 ];
-                continue;
+                $hasError = true;
+                break;
             }
+            $palette = $isMulti ? extractSvgColors($cleanSvg) : [];
+            $cleanedVariants[$st] = [
+                'svg' => $cleanSvg,
+                'is_multicolor' => $isMulti ? 1 : 0,
+                'palette' => $palette
+            ];
         }
 
-        if (!empty($rawFilled)) {
-            $errMsg = '';
-            $cleanFilled = validateAndSanitizeSvg($rawFilled, $errMsg);
-            if ($cleanFilled === false) {
-                $failedItems[] = [
-                    'index' => $idx,
-                    'name' => $rawName,
-                    'error' => 'Invalid filled SVG: ' . $errMsg
-                ];
-                continue;
-            }
+        if ($hasError) {
+            continue;
         }
 
-        // Bidirectional Fallback to ensure both variants always exist
-        if ($cleanOutlined && !$cleanFilled) {
-            $cleanFilled = $cleanOutlined;
-        } elseif ($cleanFilled && !$cleanOutlined) {
-            $cleanOutlined = $cleanFilled;
+        // Fallback for outlined & filled if only one is provided
+        if (isset($cleanedVariants['outlined']) && !isset($cleanedVariants['filled'])) {
+            $cleanedVariants['filled'] = [
+                'svg' => $cleanedVariants['outlined']['svg'],
+                'is_multicolor' => 0,
+                'palette' => []
+            ];
+        } elseif (isset($cleanedVariants['filled']) && !isset($cleanedVariants['outlined'])) {
+            $cleanedVariants['outlined'] = [
+                'svg' => $cleanedVariants['filled']['svg'],
+                'is_multicolor' => 0,
+                'palette' => []
+            ];
         }
 
         // Generate Slug
@@ -185,6 +215,8 @@ try {
             ':name' => $rawName,
             ':slug' => $slug,
             ':category_id' => $catId,
+            ':pack_id' => $packId,
+            ':default_style' => $defaultStyle,
             ':tags' => $tags,
             ':status' => $itemStatus,
             ':is_premium' => $itemIsPremium,
@@ -192,71 +224,82 @@ try {
         ]);
         $iconId = (int)$pdo->lastInsertId();
 
-        // Insert Outlined Variant
-        $insertVarStmt->execute([
-            ':icon_id' => $iconId,
-            ':style' => 'outlined',
-            ':svg_content' => $cleanOutlined
-        ]);
+        // Insert Variants
+        foreach ($cleanedVariants as $st => $vData) {
+            $insertVarStmt->execute([
+                ':icon_id' => $iconId,
+                ':style' => $st,
+                ':is_multicolor' => $vData['is_multicolor'],
+                ':palette_json' => !empty($vData['palette']) ? json_encode($vData['palette']) : null,
+                ':svg_content' => $vData['svg']
+            ]);
+        }
 
-        // Insert Filled Variant
-        $insertVarStmt->execute([
-            ':icon_id' => $iconId,
-            ':style' => 'filled',
-            ':svg_content' => $cleanFilled
-        ]);
-
-
-        $affectedCategoryIds[] = $catId;
+        $affectedCategoryIds[$catId] = true;
+        if ($packId) {
+            $affectedPackIds[$packId] = true;
+        }
 
         $uploadedItems[] = [
             'id' => $iconId,
             'name' => $rawName,
             'slug' => $slug,
             'category_id' => $catId,
-            'category_name' => $validCategories[$catId] ?? 'General',
+            'pack_id' => $packId,
             'status' => $itemStatus,
-            'is_premium' => (bool)$itemIsPremium,
-            'tags' => $tags
+            'styles' => array_keys($cleanedVariants)
         ];
     }
 
-    // 6. Recalculate icon_count for all affected categories
-    $affectedCategoryIds = array_values(array_unique($affectedCategoryIds));
+    // 6. Recalculate icon_count on affected categories
     if (!empty($affectedCategoryIds)) {
         $updateCatStmt = $pdo->prepare("
             UPDATE categories 
             SET icon_count = (SELECT COUNT(*) FROM icons WHERE category_id = ? AND status = 'published')
             WHERE id = ?
         ");
-        foreach ($affectedCategoryIds as $affectedId) {
-            $updateCatStmt->execute([(int)$affectedId, (int)$affectedId]);
+        foreach (array_keys($affectedCategoryIds) as $cId) {
+            $updateCatStmt->execute([$cId, $cId]);
         }
     }
 
-    // 7. Record Admin Audit Action
+    // Recalculate icon_count on affected packs
+    if (!empty($affectedPackIds)) {
+        $updatePackStmt = $pdo->prepare("
+            UPDATE packs 
+            SET icon_count = (SELECT COUNT(*) FROM icons WHERE pack_id = ? AND status = 'published')
+            WHERE id = ?
+        ");
+        foreach (array_keys($affectedPackIds) as $pId) {
+            $updatePackStmt->execute([$pId, $pId]);
+        }
+    }
+
+    // 7. Audit Logging
     if (!empty($uploadedItems)) {
-        logAdminAction($pdo, $admin['id'], 'bulk_upload_icons', 'icons', null, [
-            'total_received' => count($iconsList),
-            'uploaded_count' => count($uploadedItems),
-            'failed_count' => count($failedItems),
-            'affected_categories' => $affectedCategoryIds
+        logAdminAction($pdo, $admin['id'], 'batch_upload_icons', 'icon', null, [
+            'total_attempted' => count($iconsList),
+            'total_success' => count($uploadedItems),
+            'total_failed' => count($failedItems),
+            'first_few_ids' => array_slice(array_column($uploadedItems, 'id'), 0, 5)
         ]);
     }
 
     $pdo->commit();
 
     jsonResponse(true, [
-        'total_received' => count($iconsList),
-        'uploaded_count' => count($uploadedItems),
-        'failed_count' => count($failedItems),
-        'items' => $uploadedItems,
-        'errors' => $failedItems
-    ], count($uploadedItems) . ' icons uploaded successfully.', 201);
+        'uploaded' => $uploadedItems,
+        'failed' => $failedItems,
+        'summary' => [
+            'total' => count($iconsList),
+            'success_count' => count($uploadedItems),
+            'failed_count' => count($failedItems)
+        ]
+    ], count($uploadedItems) . ' icons processed successfully.', 200);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    jsonResponse(false, null, 'Bulk upload failed: ' . $e->getMessage(), 500);
+    jsonResponse(false, null, 'Batch upload failed: ' . $e->getMessage(), 500);
 }

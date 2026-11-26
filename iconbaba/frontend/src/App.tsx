@@ -1,6 +1,10 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
+import PacksPage from './pages/PacksPage';
+import PackDetailPage from './pages/PackDetailPage';
+import CategoryPage from './pages/CategoryPage';
+import IconsPage from './pages/IconsPage';
 import PricingPage from './pages/PricingPage';
 import FaqPage from './pages/FaqPage';
 import ContactPage from './pages/ContactPage';
@@ -38,6 +42,13 @@ export default function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/packs" element={<PacksPage />} />
+        <Route path="/pack/:slug" element={<PackDetailPage />} />
+        <Route path="/packs/:slug" element={<PackDetailPage />} />
+        <Route path="/categories" element={<CategoryPage />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/categories/:slug" element={<CategoryPage />} />
+        <Route path="/icons" element={<IconsPage />} />
         <Route path="/icon/:slug" element={<IconPage />} />
         <Route path="/icons/:slug" element={<IconPage />} />
         <Route path="/pricing" element={<PricingPage />} />

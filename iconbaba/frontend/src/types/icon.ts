@@ -1,6 +1,14 @@
 // frontend/types/icon.ts
 
-export type IconStyle = 'outlined' | 'filled';
+export type IconStyle = 'outlined' | 'filled' | 'lineal-color' | 'flat' | 'gradient';
+
+export interface IconStyleMeta {
+  slug: IconStyle | string;
+  name: string;
+  is_multicolor: boolean;
+  supports_stroke_edit: boolean;
+  display_order?: number;
+}
 
 export type StrokeLinecap = 'round' | 'butt' | 'square';
 export type StrokeLinejoin = 'round' | 'bevel' | 'miter';
@@ -13,11 +21,15 @@ export interface IconItem {
   slug: string;
   category: string;
   category_slug: string;
+  pack_id?: number | null;
+  pack_name?: string | null;
+  pack_slug?: string | null;
   tags: string[];
   downloads_count: number;
   favorites_count: number;
-  style: IconStyle;
+  style: IconStyle | string;
   is_premium?: boolean;
+  is_multicolor?: boolean;
   svg: string;
   v_data?: string;
 }
@@ -27,6 +39,54 @@ export interface CategoryItem {
   name: string;
   slug: string;
   icon_count: number;
+  pack_count?: number;
+}
+
+export interface PackPreviewIcon {
+  id: number;
+  name: string;
+  slug: string;
+  style: string;
+  v_data?: string;
+  svg?: string;
+}
+
+export interface PackItem {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  tags: string[];
+  category_id: number;
+  category_name: string;
+  category_slug: string;
+  family_slug?: string | null;
+  primary_style: string;
+  author_name: string;
+  is_premium: boolean;
+  is_featured: boolean;
+  icon_count: number;
+  downloads_count: number;
+  favorites_count: number;
+  available_styles: string[];
+  preview_icons: PackPreviewIcon[];
+  created_at?: string;
+}
+
+export interface PackDetail extends Omit<PackItem, 'available_styles'> {
+  available_styles: IconStyleMeta[];
+  icons: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    tags: string[];
+    is_premium: boolean;
+    default_style: string;
+    downloads_count: number;
+    favorites_count: number;
+    v_variants: Record<string, string>;
+    variants?: Record<string, string>;
+  }>;
 }
 
 export interface IconCustomization {

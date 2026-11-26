@@ -11,6 +11,7 @@ $totalIcons = (int)$pdo->query("SELECT COUNT(*) FROM icons")->fetchColumn();
 $publishedIcons = (int)$pdo->query("SELECT COUNT(*) FROM icons WHERE status = 'published'")->fetchColumn();
 $draftIcons = (int)$pdo->query("SELECT COUNT(*) FROM icons WHERE status = 'draft'")->fetchColumn();
 $totalCategories = (int)$pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
+$totalPacks = (int)$pdo->query("SELECT COUNT(*) FROM packs")->fetchColumn();
 $totalUsers = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $totalDownloads = (int)$pdo->query("SELECT COUNT(*) FROM downloads")->fetchColumn();
 $totalFavorites = (int)$pdo->query("SELECT COUNT(*) FROM favorites")->fetchColumn();
@@ -81,6 +82,7 @@ jsonResponse(true, [
         'published_icons' => $publishedIcons,
         'draft_icons' => $draftIcons,
         'total_categories' => $totalCategories,
+        'total_packs' => $totalPacks,
         'total_users' => $totalUsers,
         'total_downloads' => $totalDownloads,
         'total_favorites' => $totalFavorites,

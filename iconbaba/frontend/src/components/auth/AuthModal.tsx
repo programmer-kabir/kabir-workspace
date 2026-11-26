@@ -110,6 +110,13 @@ type Step =
   | 'forgot_otp'      // Step B: verify OTP
   | 'forgot_newpass'; // Step C: set new password
 
+const DEV_DEMO_ACCOUNTS = import.meta.env.DEV
+  ? [
+      { key: 'user', label: 'Demo User', email: 'user@iconbaba.com', password: 'User@1234' },
+      { key: 'admin', label: 'Demo Admin', email: 'admin@iconbaba.com', password: 'Admin@1234' },
+    ] as const
+  : [];
+
 export default function AuthModal() {
   const { showAuthModal, setShowAuthModal, authMode, setAuthMode, login, refreshUser, triggerWelcome } = useAuth();
 
@@ -168,18 +175,28 @@ export default function AuthModal() {
   // ── HANDLERS ───────────────────────────────────────────────────────────────
 
   // Login
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performLogin = async (loginValue: string, passwordValue: string) => {
     setError('');
     setLoading(true);
     try {
-      const res = await login(loginId, loginPass);
+      const res = await login(loginValue, passwordValue);
       if (!res.success) setError(res.message || 'Invalid credentials');
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performLogin(loginId, loginPass);
+  };
+
+  const handleDemoLogin = async (account: (typeof DEV_DEMO_ACCOUNTS)[number]) => {
+    setLoginId(account.email);
+    setLoginPass(account.password);
+    await performLogin(account.email, account.password);
   };
 
   // Register Step 1 → send OTP
@@ -639,12 +656,34 @@ export default function AuthModal() {
           </form>
         )}
 
-        {/* Admin hint */}
-        {(step === 'login' || step === 'register_info') && (
-          <div className="mt-5 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-slate-400 text-center">
-            <span className="font-semibold text-purple-300">Admin Account:</span>{' '}
-            <span className="font-mono text-slate-300">admin@iconbaba.com</span> /{' '}
-            <span className="font-mono text-slate-300">admin123</span>
+        {/* 1-click demo login buttons (local dev only) */}
+        {step === 'login' && DEV_DEMO_ACCOUNTS.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-white/10 space-y-2.5">
+            <p className="text-[11px] font-medium text-slate-400 text-center">
+              Quick Demo Login (Local Dev)
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {DEV_DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.key}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleDemoLogin(account)}
+                  className={`h-10 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                    account.key === 'admin'
+                      ? 'bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/30 text-purple-200'
+                      : 'bg-white/5 hover:bg-white/10 border-white/15 text-slate-200'
+                  }`}
+                >
+                  {account.key === 'admin' ? (
+                    <ShieldCheck className="size-3.5 text-purple-300 shrink-0" />
+                  ) : (
+                    <UserIcon className="size-3.5 text-slate-300 shrink-0" />
+                  )}
+                  <span>{account.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

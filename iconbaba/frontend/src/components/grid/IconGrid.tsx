@@ -16,8 +16,8 @@ interface IconGridProps {
   loading: boolean;
   onSelectIcon: (icon: IconItem) => void;
   hasMore: boolean;
-  onLoadMore: () => void;
-  loadingMore: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
 export default function IconGrid({
@@ -25,8 +25,8 @@ export default function IconGrid({
   loading,
   onSelectIcon,
   hasMore,
-  onLoadMore,
-  loadingMore,
+  onLoadMore = () => {},
+  loadingMore = false,
 }: IconGridProps) {
   const { customization, style, quickCopyMode } = useIconCustomization();
   const { user, setShowAuthModal, setAuthMode } = useAuth();

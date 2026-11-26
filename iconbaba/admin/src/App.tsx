@@ -7,6 +7,8 @@ import IconsPage from './pages/IconsPage';
 import IconUploadPage from './pages/IconUploadPage';
 import IconEditPage from './pages/IconEditPage';
 import CategoriesPage from './pages/CategoriesPage';
+import PacksPage from './pages/PacksPage';
+import PackEditPage from './pages/PackEditPage';
 import UsersPage from './pages/UsersPage';
 import FavoritesPage from './pages/FavoritesPage';
 import CollectionsPage from './pages/CollectionsPage';
@@ -29,6 +31,8 @@ export default function App() {
           <Route path="icons" element={<IconsPage />} />
           <Route path="icons/upload" element={<IconUploadPage />} />
           <Route path="icons/edit/:id" element={<IconEditPage />} />
+          <Route path="packs" element={<PacksPage />} />
+          <Route path="packs/edit/:id" element={<PackEditPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="billing" element={<BillingPage />} />

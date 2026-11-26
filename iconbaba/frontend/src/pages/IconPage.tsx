@@ -267,17 +267,29 @@ export default function IconPage() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb Navigation (Crucial for Google SEO Hierarchy) */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-slate-400 mb-6">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-slate-400 mb-6 flex-wrap">
           <Link to="/" className="hover:text-white transition-colors">
             Home
           </Link>
           <ChevronRight className="size-3 text-slate-600" />
           <Link
-            to={`/?category=${encodeURIComponent(icon.category)}`}
+            to={`/?category=${encodeURIComponent(icon.category_slug || icon.category)}`}
             className="hover:text-white transition-colors"
           >
             {icon.category}
           </Link>
+          {icon.pack_slug && (
+            <>
+              <ChevronRight className="size-3 text-slate-600" />
+              <Link
+                to={`/pack/${icon.pack_slug}`}
+                className="hover:text-purple-400 text-purple-300 font-semibold transition-colors flex items-center gap-1"
+              >
+                <Layers className="size-3 text-purple-400" />
+                <span>{icon.pack_name || 'Pack'}</span>
+              </Link>
+            </>
+          )}
           <ChevronRight className="size-3 text-slate-600" />
           <span className="text-slate-200 font-medium truncate">{displayName}</span>
         </nav>

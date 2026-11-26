@@ -6,6 +6,7 @@ export interface DashboardStats {
     published_icons: number;
     draft_icons: number;
     total_categories: number;
+    total_packs?: number;
     total_users: number;
     total_downloads: number;
     total_favorites: number;
@@ -58,6 +59,8 @@ export interface AdminIconItem {
   name: string;
   slug: string;
   category_id: number;
+  pack_id?: number | null;
+  pack_name?: string | null;
   tags: string;
   tags_array?: string[];
   status: 'draft' | 'published' | 'archived';
@@ -89,6 +92,42 @@ export interface AdminCategoryItem {
   published_icons: number;
   draft_icons: number;
   icon_count: number;
+  pack_count?: number;
+}
+
+export interface AdminPackItem {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  tags?: string;
+  category_id: number;
+  category_name?: string;
+  family_slug?: string;
+  primary_style: string;
+  author_name: string;
+  is_premium: boolean;
+  is_featured: boolean;
+  status: 'published' | 'draft' | 'archived';
+  icon_count: number;
+  downloads_count: number;
+  favorites_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminPackDetail {
+  pack: AdminPackItem;
+  icons: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    status: string;
+    is_premium: boolean;
+    sort_order: number;
+    default_style: string;
+    svg: string;
+  }>;
 }
 
 export interface AdminUserItem {

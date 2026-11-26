@@ -1,8 +1,17 @@
 <?php
 // backend/helpers/svg.php
-// SVG Validation, Sanitization, and Normalization Helper
+// SVG Validation, Sanitization, Normalization & Palette Helper
 
-function validateAndSanitizeSvg($rawSvg, &$errorMessage = '') {
+/**
+ * Validates and sanitizes raw SVG markup.
+ * 
+ * @param string $rawSvg
+ * @param string &$errorMessage
+ * @param bool $preserveColors If true, preserves hex/rgb fills, strokes, defs, gradients (for multi-color styles like flat, lineal-color, gradient).
+ *                             If false, normalizes monochrome SVGs to currentColor (for outlined, filled).
+ * @return string|false Sanitized SVG string or false on failure
+ */
+function validateAndSanitizeSvg($rawSvg, &$errorMessage = '', $preserveColors = false) {
     if (empty($rawSvg) || !is_string($rawSvg)) {
         $errorMessage = 'SVG content is empty or invalid.';
         return false;
@@ -43,8 +52,7 @@ function validateAndSanitizeSvg($rawSvg, &$errorMessage = '') {
 
     foreach ($dangerousPatterns as $pattern) {
         if (preg_match($pattern, $svgContent)) {
-            // Remove the dangerous content rather than failing if it's just script/event,
-            // but if it's ENTITY/DOCTYPE, fail immediately for security
+            // Disallow DOCTYPE / ENTITY completely for XXE prevention
             if (stripos($pattern, 'ENTITY') !== false || stripos($pattern, 'DOCTYPE') !== false) {
                 $errorMessage = 'SVG contains disallowed DOCTYPE or ENTITY definitions.';
                 return false;
@@ -92,7 +100,19 @@ function validateAndSanitizeSvg($rawSvg, &$errorMessage = '') {
 
     $cleanSvg = $dom->saveXML($root);
 
-    // Normalize colors and convert all hardcoded styles to currentColor
+    // Remove XML comments & Illustrator/Inkscape metadata attributes
+    $cleanSvg = preg_replace('/<!--(.*?)-->/s', '', $cleanSvg);
+    $cleanSvg = preg_replace('/\s+id="Layer_[^"]*"/i', '', $cleanSvg);
+    $cleanSvg = preg_replace('/\s+xml:space="preserve"/i', '', $cleanSvg);
+    $cleanSvg = preg_replace('/\s+enable-background="[^"]*"/i', '', $cleanSvg);
+
+    // If preserveColors is requested (for multi-color styles: lineal-color, flat, gradient),
+    // we keep hex/rgb colors, defs, gradients, and classes intact.
+    if ($preserveColors) {
+        return trim($cleanSvg);
+    }
+
+    // Otherwise, normalize monochrome colors to currentColor:
     // 1. Process and remove <style> tags (e.g. Illustrator .st0 { fill: #...; })
     if (preg_match_all('/<style\b[^>]*>(.*?)<\/style>/is', $cleanSvg, $styleMatches)) {
         foreach ($styleMatches[1] as $css) {
@@ -116,23 +136,17 @@ function validateAndSanitizeSvg($rawSvg, &$errorMessage = '') {
         $cleanSvg = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $cleanSvg);
     }
 
-    // 2. Remove XML comments & Illustrator/Inkscape metadata attributes
-    $cleanSvg = preg_replace('/<!--(.*?)-->/s', '', $cleanSvg);
-    $cleanSvg = preg_replace('/\s+id="Layer_[^"]*"/i', '', $cleanSvg);
-    $cleanSvg = preg_replace('/\s+xml:space="preserve"/i', '', $cleanSvg);
-    $cleanSvg = preg_replace('/\s+enable-background="[^"]*"/i', '', $cleanSvg);
-
-    // 3. Normalize hardcoded fill colors (except 'none' and 'transparent') to 'currentColor'
+    // 2. Normalize hardcoded fill colors (except 'none' and 'transparent') to 'currentColor'
     $cleanSvg = preg_replace('/(?<![a-zA-Z-])fill=(["\'])(?!none\b|transparent\b|currentColor\b)[^"\']*\1/i', 'fill="currentColor"', $cleanSvg);
 
-    // 4. Normalize hardcoded stroke colors (except 'none' and 'transparent') to 'currentColor'
+    // 3. Normalize hardcoded stroke colors (except 'none' and 'transparent') to 'currentColor'
     $cleanSvg = preg_replace('/(?<![a-zA-Z-])stroke=(["\'])(?!none\b|transparent\b|currentColor\b)[^"\']*\1/i', 'stroke="currentColor"', $cleanSvg);
 
-    // 5. Normalize inline styles: style="fill: #...; stroke: #..."
+    // 4. Normalize inline styles: style="fill: #...; stroke: #..."
     $cleanSvg = preg_replace('/fill\s*:\s*(?!none\b|transparent\b|currentColor\b)[^;}"\']+/i', 'fill: currentColor', $cleanSvg);
     $cleanSvg = preg_replace('/stroke\s*:\s*(?!none\b|transparent\b|currentColor\b)[^;}"\']+/i', 'stroke: currentColor', $cleanSvg);
 
-    // 6. Ensure filled icons without explicit fill get fill="currentColor" on <svg>
+    // 5. Ensure filled icons without explicit fill get fill="currentColor" on <svg>
     $isOutline = preg_match('/(?<![a-zA-Z-])fill=["\']none["\']/i', $cleanSvg) &&
                  (preg_match('/(?<![a-zA-Z-])stroke=/i', $cleanSvg) || preg_match('/stroke-width/i', $cleanSvg));
     if (!$isOutline && !preg_match('/(?<![a-zA-Z-])fill=/i', $cleanSvg)) {
@@ -142,8 +156,37 @@ function validateAndSanitizeSvg($rawSvg, &$errorMessage = '') {
     return trim($cleanSvg);
 }
 
+/**
+ * Checks if a style slug is a multi-color style.
+ */
+function isMultiColorStyle($style) {
+    return in_array($style, ['lineal-color', 'flat', 'gradient', 'color', 'multicolor']);
+}
+
+/**
+ * Extracts unique hex colors from SVG markup.
+ */
+function extractSvgColors($svgContent) {
+    if (empty($svgContent)) {
+        return [];
+    }
+    $colors = [];
+    if (preg_match_all('/#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b/', $svgContent, $matches)) {
+        foreach ($matches[0] as $hex) {
+            $hex = strtolower($hex);
+            if (strlen($hex) === 4) {
+                $hex = '#' . $hex[1] . $hex[1] . $hex[2] . $hex[2] . $hex[3] . $hex[3];
+            }
+            $colors[] = $hex;
+        }
+    }
+    return array_values(array_unique($colors));
+}
+
+/**
+ * Generates a unique slug for icons.
+ */
 function generateSafeSlug($pdo, $name, $excludeId = null) {
-    // Basic slugify
     $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
     if (empty($slug)) {
         $slug = 'icon-' . time();
@@ -154,6 +197,35 @@ function generateSafeSlug($pdo, $name, $excludeId = null) {
 
     while (true) {
         $sql = "SELECT id FROM icons WHERE slug = :slug";
+        $params = [':slug' => $candidate];
+        if ($excludeId) {
+            $sql .= " AND id != :exclude_id";
+            $params[':exclude_id'] = $excludeId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) {
+            return $candidate;
+        }
+        $candidate = "{$slug}-{$counter}";
+        $counter++;
+    }
+}
+
+/**
+ * Generates a unique slug for packs.
+ */
+function generatePackSafeSlug($pdo, $name, $excludeId = null) {
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+    if (empty($slug)) {
+        $slug = 'pack-' . time();
+    }
+
+    $candidate = $slug;
+    $counter = 1;
+
+    while (true) {
+        $sql = "SELECT id FROM packs WHERE slug = :slug";
         $params = [':slug' => $candidate];
         if ($excludeId) {
             $sql .= " AND id != :exclude_id";

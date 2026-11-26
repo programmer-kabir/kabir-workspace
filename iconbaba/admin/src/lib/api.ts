@@ -117,8 +117,11 @@ export async function getAdminIcon(idOrSlug: number | string) {
 export async function uploadAdminIcon(data: {
   name: string;
   category_id: number;
+  pack_id?: number | null;
+  default_style?: string;
   tags?: string;
   status?: 'draft' | 'published' | 'archived';
+  is_premium?: boolean | number;
   svg_outlined?: string;
   svg_filled?: string;
 }) {
@@ -131,6 +134,8 @@ export async function uploadAdminIcon(data: {
 export interface BatchIconUploadItem {
   name: string;
   category_id?: number;
+  pack_id?: number | null;
+  default_style?: string;
   tags?: string;
   status?: 'draft' | 'published' | 'archived';
   is_premium?: boolean | number;
@@ -161,6 +166,7 @@ export interface BatchUploadResponse {
 
 export async function batchUploadAdminIcons(data: {
   category_id?: number;
+  pack_id?: number | null;
   status?: 'draft' | 'published' | 'archived';
   is_premium?: number | boolean;
   icons: BatchIconUploadItem[];
@@ -290,6 +296,84 @@ export async function deleteAdminCategory(id: number, reassignTo?: number) {
   return request<{ id: number }>('/admin/categories/delete.php', {
     method: 'POST',
     body: JSON.stringify({ id, reassign_to: reassignTo }),
+  });
+}
+
+// ==========================================
+// Pack Management
+// ==========================================
+
+export async function getAdminPacks(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category_id?: number;
+  status?: string;
+} = {}) {
+  const qp = new URLSearchParams();
+  if (params.page) qp.set('page', params.page.toString());
+  if (params.limit) qp.set('limit', params.limit.toString());
+  if (params.search) qp.set('search', params.search);
+  if (params.category_id) qp.set('category_id', params.category_id.toString());
+  if (params.status && params.status !== 'all') qp.set('status', params.status);
+
+  return request<{
+    packs: import('@/types/admin').AdminPackItem[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      total_pages: number;
+    };
+  }>(`/admin/packs/list.php?${qp.toString()}`);
+}
+
+export async function getAdminPack(id: number) {
+  return request<import('@/types/admin').AdminPackDetail>(`/admin/packs/single.php?id=${id}`);
+}
+
+export async function createAdminPack(data: {
+  name: string;
+  category_id: number;
+  description?: string;
+  tags?: string;
+  primary_style?: string;
+  author_name?: string;
+  is_premium?: boolean;
+  is_featured?: boolean;
+  status?: 'published' | 'draft' | 'archived';
+  family_slug?: string;
+}) {
+  return request<{ id: number; name: string; slug: string }>('/admin/packs/create.php', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateAdminPack(data: {
+  id: number;
+  name?: string;
+  slug?: string;
+  category_id?: number;
+  description?: string;
+  tags?: string;
+  primary_style?: string;
+  author_name?: string;
+  is_premium?: boolean;
+  is_featured?: boolean;
+  status?: 'published' | 'draft' | 'archived';
+  family_slug?: string;
+}) {
+  return request<{ id: number; name: string; slug: string }>('/admin/packs/update.php', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteAdminPack(id: number) {
+  return request<null>('/admin/packs/delete.php', {
+    method: 'POST',
+    body: JSON.stringify({ id }),
   });
 }
 

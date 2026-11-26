@@ -51,15 +51,93 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 // Categories
-export async function getCategories(style?: 'outlined' | 'filled') {
+export async function getCategories(style?: string) {
   const query = style ? `?style=${style}` : '';
-  return request<{ total_icons: number; categories: import('@/types/icon').CategoryItem[] }>(`/categories/list.php${query}`);
+  return request<{ total_icons: number; total_packs?: number; categories: import('@/types/icon').CategoryItem[] }>(`/categories/list.php${query}`);
+}
+
+// Styles
+export async function getStyles() {
+  return request<import('@/types/icon').IconStyleMeta[]>('/packs/styles.php');
+}
+
+// Packs
+export async function getPacks(params: {
+  category?: string;
+  search?: string;
+  tier?: 'all' | 'free' | 'pro';
+  style?: string;
+  featured?: boolean;
+  sort?: 'popular' | 'recent' | 'name' | 'icons';
+  page?: number;
+  limit?: number;
+} = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.category) searchParams.set('category', params.category);
+  if (params.search) searchParams.set('search', params.search);
+  if (params.tier && params.tier !== 'all') searchParams.set('tier', params.tier);
+  if (params.style && params.style !== 'all') searchParams.set('style', params.style);
+  if (params.featured) searchParams.set('featured', '1');
+  if (params.sort) searchParams.set('sort', params.sort);
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+
+  const res = await request<{
+    packs: import('@/types/icon').PackItem[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      total_pages: number;
+    };
+  }>(`/packs/list.php?${searchParams.toString()}`);
+
+  if (res.success && res.data?.packs) {
+    res.data.packs = res.data.packs.map((p) => ({
+      ...p,
+      preview_icons: (p.preview_icons || []).map((pi) => ({
+        ...pi,
+        svg: deobfuscateVector(pi.v_data || pi.svg),
+      })),
+    }));
+  }
+
+  return res;
+}
+
+export async function getPack(slugOrId: string | number) {
+  const param = typeof slugOrId === 'number' ? `id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
+  const res = await request<import('@/types/icon').PackDetail>(`/packs/single.php?${param}`);
+
+  if (res.success && res.data) {
+    if (res.data.icons && Array.isArray(res.data.icons)) {
+      res.data.icons = res.data.icons.map((ico) => {
+        const decoded: Record<string, string> = {};
+        const raw = ico.v_variants || ico.variants || {};
+        for (const [st, val] of Object.entries(raw)) {
+          decoded[st] = deobfuscateVector(val as string);
+        }
+        return {
+          ...ico,
+          variants: decoded,
+        };
+      });
+    }
+  }
+
+  return res;
+}
+
+export function getPackZipDownloadUrl(slugOrId: string | number, style: string = 'all'): string {
+  const param = typeof slugOrId === 'number' ? `pack_id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
+  return `${API_BASE}/packs/download_zip.php?${param}&style=${encodeURIComponent(style)}`;
 }
 
 // Icons
 export async function getIcons(params: {
   category?: string;
-  style?: 'outlined' | 'filled';
+  pack?: string;
+  style?: string;
   tier?: 'all' | 'free' | 'pro';
   search?: string;
   page?: number;
@@ -67,6 +145,7 @@ export async function getIcons(params: {
 }) {
   const searchParams = new URLSearchParams();
   if (params.category) searchParams.set('category', params.category);
+  if (params.pack) searchParams.set('pack', params.pack);
   if (params.style) searchParams.set('style', params.style);
   if (params.tier && params.tier !== 'all') searchParams.set('tier', params.tier);
   if (params.search) searchParams.set('search', params.search);
@@ -209,7 +288,7 @@ export async function resetPassword(resetToken: string, password: string) {
 
 
 // Favorites
-export async function getFavorites(style: 'outlined' | 'filled' = 'outlined') {
+export async function getFavorites(style: import('@/types/icon').IconStyle | string = 'outlined') {
   return request<{ favorites: import('@/types/icon').IconItem[] }>(`/favorites/list.php?style=${style}`);
 }
 
@@ -243,7 +322,7 @@ export async function createCollection(name: string, description?: string, isPub
   });
 }
 
-export async function getCollection(id: number, style: 'outlined' | 'filled' = 'outlined') {
+export async function getCollection(id: number, style: import('@/types/icon').IconStyle | string = 'outlined') {
   return request<{ collection: import('@/types/icon').Collection }>(`/collections/single.php?id=${id}&style=${style}`);
 }
 
@@ -299,7 +378,7 @@ export async function logDownload(iconId: number, format: 'svg' | 'png', size: n
   return trackExport({ iconId, action: 'download', format, size });
 }
 
-export async function getDownloadHistory(style: 'outlined' | 'filled' = 'outlined') {
+export async function getDownloadHistory(style: import('@/types/icon').IconStyle | string = 'outlined') {
   return request<{ downloads: import('@/types/icon').DownloadHistoryItem[] }>(`/downloads/history.php?style=${style}`);
 }
 

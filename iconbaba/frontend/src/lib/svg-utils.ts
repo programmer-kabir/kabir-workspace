@@ -31,7 +31,7 @@ export function deobfuscateVector(encoded?: string): string {
 export function applyCustomizationToSvg(
   svgStr: string,
   custom: IconCustomization,
-  style: 'outlined' | 'filled' = 'outlined'
+  style: string = 'outlined'
 ): string {
   if (!svgStr) return '';
 
@@ -48,6 +48,14 @@ export function applyCustomizationToSvg(
     customized = customized.replace(/(?<![a-zA-Z-])height="[^"]*"/g, `height="${custom.size}"`);
   } else {
     customized = customized.replace('<svg', `<svg height="${custom.size}"`);
+  }
+
+  // Multi-color styles (lineal-color, flat, gradient): preserve their unique palettes
+  if (['lineal-color', 'flat', 'gradient', 'multicolor'].includes(style)) {
+    if (style === 'lineal-color' && customized.includes('stroke-width=')) {
+      customized = customized.replace(/stroke-width="[^"]*"/g, `stroke-width="${custom.strokeWidth}"`);
+    }
+    return customized;
   }
 
   // 2. Inject CSS style="color: ${custom.color};" on root <svg>
