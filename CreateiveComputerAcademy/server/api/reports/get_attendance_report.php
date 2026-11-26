@@ -227,10 +227,10 @@ while ($current_date_ts <= $end_date_ts) {
                 $ot_hours = floor($ot_seconds / 3600);
                 $ot_minutes = floor(($ot_seconds % 3600) / 60);
                 $row['overtime'] = '+' . $ot_hours . 'h ' . $ot_minutes . 'm';
-                if($is_weekend || $is_special_day) {
+                if($is_weekend || $is_special_day || $is_student_leave) {
                     $row['overtime'] .= ' (OT)';
                 }
-            } else if ($diff_seconds < $expected_seconds) {
+            } else if ($diff_seconds < $expected_seconds && !$is_student_leave) {
                 $short_seconds = $expected_seconds - $diff_seconds;
                 if ($short_seconds > 900) { // more than 15 mins
                     $row['is_short'] = true;

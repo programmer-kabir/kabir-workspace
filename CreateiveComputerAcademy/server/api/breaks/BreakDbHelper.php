@@ -190,19 +190,42 @@ class BreakDbHelper {
                 $dailyExcessBreak[$d] = max($dailyExcessBreak[$d], $excessBreakSec);
             }
 
+            // Approved Student Leaves for getAvailableMangoMinutes
+            $studentLeaveDates = [];
+            try {
+                $slStmt = $db->prepare("SELECT start_date, end_date FROM leave_requests WHERE user_id = :uid AND status = 'Approved' AND type = 'Student Academic Leave'");
+                $slStmt->execute([':uid' => $user_id]);
+                while ($sl = $slStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cTs = strtotime($sl['start_date']);
+                    $eTs = strtotime($sl['end_date']);
+                    while ($cTs <= $eTs) {
+                        $studentLeaveDates[date('Y-m-d', $cTs)] = true;
+                        $cTs = strtotime('+1 day', $cTs);
+                    }
+                }
+            } catch (Throwable $e) {}
+            try {
+                $attSlStmt = $db->prepare("SELECT date FROM attendance WHERE user_id = :uid AND status = 'Student Leave'");
+                $attSlStmt->execute([':uid' => $user_id]);
+                while ($asl = $attSlStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $studentLeaveDates[$asl['date']] = true;
+                }
+            } catch (Throwable $e) {}
+
             $totalOvertimeSeconds = 0;
             $totalShortSeconds = 0;
             $totalExcessBreakSeconds = 0;
             foreach ($dailyPresence as $d => $pSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
-                $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
+                $isStudentLeave = isset($studentLeaveDates[$d]);
+                $expectedSec = ($isFriday || $isStudentLeave) ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
                 $diffSec = $pSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
-                } elseif ($diffSec < -900 && !$isFriday) {
+                } elseif ($diffSec < -900 && !$isFriday && !$isStudentLeave) {
                     $totalShortSeconds += abs($diffSec);
                 }
                 $exB = $dailyExcessBreak[$d] ?? 0;
@@ -347,19 +370,42 @@ class BreakDbHelper {
                 $dailyExcessBreak[$d] = max($dailyExcessBreak[$d], $excessBreakSec);
             }
 
+            // Approved Student Leaves for getAvailableMangoMinutes
+            $studentLeaveDates = [];
+            try {
+                $slStmt = $db->prepare("SELECT start_date, end_date FROM leave_requests WHERE user_id = :uid AND status = 'Approved' AND type = 'Student Academic Leave'");
+                $slStmt->execute([':uid' => $user_id]);
+                while ($sl = $slStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cTs = strtotime($sl['start_date']);
+                    $eTs = strtotime($sl['end_date']);
+                    while ($cTs <= $eTs) {
+                        $studentLeaveDates[date('Y-m-d', $cTs)] = true;
+                        $cTs = strtotime('+1 day', $cTs);
+                    }
+                }
+            } catch (Throwable $e) {}
+            try {
+                $attSlStmt = $db->prepare("SELECT date FROM attendance WHERE user_id = :uid AND status = 'Student Leave'");
+                $attSlStmt->execute([':uid' => $user_id]);
+                while ($asl = $attSlStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $studentLeaveDates[$asl['date']] = true;
+                }
+            } catch (Throwable $e) {}
+
             $totalOvertimeSeconds = 0;
             $totalShortSeconds = 0;
             $totalExcessBreakSeconds = 0;
             foreach ($dailyPresence as $d => $pSec) {
                 $isFriday = (date('N', strtotime($d)) == 5);
-                $expectedSec = $isFriday ? 0 : ($shiftMins * 60);
+                $isStudentLeave = isset($studentLeaveDates[$d]);
+                $expectedSec = ($isFriday || $isStudentLeave) ? 0 : ($shiftMins * 60);
                 if (isset($holidays[$d])) {
                     $expectedSec = $holidays[$d] * 3600;
                 }
                 $diffSec = $pSec - $expectedSec;
                 if ($diffSec > 0) {
                     $totalOvertimeSeconds += $diffSec;
-                } elseif ($diffSec < -900 && !$isFriday) {
+                } elseif ($diffSec < -900 && !$isFriday && !$isStudentLeave) {
                     $totalShortSeconds += abs($diffSec);
                 }
                 $exB = $dailyExcessBreak[$d] ?? 0;

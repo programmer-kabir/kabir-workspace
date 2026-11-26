@@ -1,7 +1,7 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
-require_once 'BreakDbHelper.php';
+require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/BreakDbHelper.php';
 
 date_default_timezone_set('Asia/Dhaka');
 
@@ -226,11 +226,34 @@ try {
     // Standard daily expected shift: derived from user's employee profile (e.g. 6.0h for Jahidul & Kalam, 8.0h for others)
     $standardDailyMins = intval(round($shift_hours * 60));
 
+    // 6.1. Approved Student Academic Leaves (Expected hours = 0, presence = pure OT)
+    $studentLeaveDates = [];
+    try {
+        $slStmt = $db->prepare("SELECT start_date, end_date FROM leave_requests WHERE user_id = :uid AND status = 'Approved' AND type = 'Student Academic Leave'");
+        $slStmt->execute([':uid' => $user_id]);
+        while ($sl = $slStmt->fetch(PDO::FETCH_ASSOC)) {
+            $cTs = strtotime($sl['start_date']);
+            $eTs = strtotime($sl['end_date']);
+            while ($cTs <= $eTs) {
+                $studentLeaveDates[date('Y-m-d', $cTs)] = true;
+                $cTs = strtotime('+1 day', $cTs);
+            }
+        }
+    } catch (Throwable $e) {}
+    try {
+        $attSlStmt = $db->prepare("SELECT date FROM attendance WHERE user_id = :uid AND status = 'Student Leave'");
+        $attSlStmt->execute([':uid' => $user_id]);
+        while ($asl = $attSlStmt->fetch(PDO::FETCH_ASSOC)) {
+            $studentLeaveDates[$asl['date']] = true;
+        }
+    } catch (Throwable $e) {}
+
     foreach ($daily_presence as $date_str => $presence_sec) {
         $total_worked_seconds += $presence_sec;
 
         $is_friday = (date('N', strtotime($date_str)) == 5);
-        $expected_sec = $is_friday ? 0 : ($standardDailyMins * 60);
+        $is_student_leave = isset($studentLeaveDates[$date_str]);
+        $expected_sec = ($is_friday || $is_student_leave) ? 0 : ($standardDailyMins * 60);
 
         if (isset($holidays[$date_str])) {
             $expected_sec = $holidays[$date_str] * 3600;
@@ -247,9 +270,10 @@ try {
                 'expected_hours' => round($expected_sec / 3600, 2),
                 'overtime_hours' => round($diff_sec / 3600, 2),
                 'overtime_seconds' => $diff_sec,
-                'type' => 'overtime'
+                'type' => $is_student_leave ? 'student_leave_ot' : 'overtime',
+                'note' => $is_student_leave ? 'Student Academic Leave (Pure OT)' : null
             ];
-        } else if ($diff_sec < -900 && !$is_friday) {
+        } else if ($diff_sec < -900 && !$is_friday && !$is_student_leave) {
             // Gap / Short shift more than 15 minutes
             $short_sec = abs($diff_sec);
             $total_short_seconds += $short_sec;

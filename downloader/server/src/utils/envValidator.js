@@ -44,16 +44,24 @@ export function validateEnvironment() {
     warnings.push('CLIENT_ORIGIN is not defined in production environment. Fallbacks will be applied.');
   }
 
-  // 5. Database Engine Validation
+  // 5. Database Engine Validation (MongoDB-Only)
   if (process.env.DB_ENGINE !== undefined) {
     const raw = String(process.env.DB_ENGINE).trim();
     if (raw === '') {
-      throw new Error('Invalid DB_ENGINE: DB_ENGINE is explicitly defined but empty. Must be "sqlite" or "mongodb".');
+      throw new Error('Invalid DB_ENGINE: DB_ENGINE is explicitly defined but empty. Must be "mongodb".');
     }
     const normalized = raw.toLowerCase();
-    if (normalized !== 'sqlite' && normalized !== 'mongodb') {
-      throw new Error(`Invalid DB_ENGINE: "${process.env.DB_ENGINE}". Supported values are "sqlite" or "mongodb".`);
+    if (normalized === 'sqlite') {
+      throw new Error('Invalid DB_ENGINE: SQLite has been decommissioned. StreamVault runs exclusively on MongoDB Atlas. Set DB_ENGINE=mongodb.');
     }
+    if (normalized !== 'mongodb') {
+      throw new Error(`Invalid DB_ENGINE: "${process.env.DB_ENGINE}". Supported database engine is "mongodb".`);
+    }
+  }
+
+  // 6. MongoDB URI Validation
+  if (!process.env.MONGODB_URI && nodeEnv !== 'test') {
+    warnings.push('MONGODB_URI is not defined. Ensure MongoDB Atlas connection URI is configured.');
   }
 
   return {

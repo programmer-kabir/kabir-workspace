@@ -1,0 +1,19 @@
+# robots.txt for IconBaba
+User-agent: *
+Allow: /
+Allow: /icon/
+Allow: /category/
+Allow: /pricing
+Allow: /faq
+Allow: /licenses
+
+# Disallow private/authenticated sections
+Disallow: /admin/
+Disallow: /billing
+Disallow: /favorites
+Disallow: /history
+Disallow: /collections
+Disallow: /api/admin/
+
+# Sitemap Location
+Sitemap: https://iconbaba.com/api/seo/sitemap.php

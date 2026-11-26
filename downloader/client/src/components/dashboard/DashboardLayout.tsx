@@ -295,7 +295,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         )}
 
         {/* Main View Container */}
-        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
+        <main className="p-4 sm:p-6 lg:p-8 w-full mx-auto flex-1">
           {renderActiveView()}
         </main>
 

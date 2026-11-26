@@ -1,11 +1,4 @@
 <?php
-/**
- * GoogleDriveClient - High-Speed Pure PHP Google Drive v3 API Client
- * Creative Computer Academy
- *
- * Uses native PHP OpenSSL and cURL (Zero Composer dependencies).
- * Authenticates via Google Service Account JWT (RS256).
- */
 
 require_once __DIR__ . '/env.php';
 
@@ -14,9 +7,6 @@ class GoogleDriveClient {
     private $credentials = null;
     private $tokenCachePath;
 
-    /**
-     * Active Google OAuth credentials fallback
-     */
     public static function getDefaultCredentials() {
         $jsonPath = __DIR__ . '/google_drive_credentials.json';
         if (file_exists($jsonPath)) {

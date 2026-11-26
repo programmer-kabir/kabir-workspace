@@ -1,151 +1,6 @@
-import db from '../index.js';
 import { getMongoDb } from '../mongo.js';
 import { ObjectId } from 'mongodb';
 import { COLLECTIONS } from '../mongoSchemas.js';
-import { getDbEngine, SUPPORTED_ENGINES } from './index.js';
-
-// SQLite Implementation
-export const sqliteHistoryRepository = {
-  async create(entry) {
-    const now = (entry.created_at || entry.createdAt) || new Date().toISOString();
-    const userId = entry.user_id || entry.userId || null;
-    const jobId = entry.job_id || entry.jobId || null;
-    const formatId = entry.format_id || entry.formatId || null;
-    const fileSize = entry.file_size || entry.fileSize || null;
-    const res = db.prepare(`
-      INSERT INTO download_history (
-        user_id, job_id, url, platform, title, thumbnail, format_id, type, resolution, file_size, duration, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      userId,
-      jobId,
-      entry.url,
-      entry.platform || 'generic',
-      entry.title || 'Untitled Download',
-      entry.thumbnail || null,
-      formatId,
-      entry.type || 'video',
-      entry.resolution || null,
-      fileSize,
-      entry.duration || null,
-      entry.status || 'completed',
-      now
-    );
-    return db.prepare('SELECT * FROM download_history WHERE id = ?').get(res.lastInsertRowid);
-  },
-
-  async findByUserId(userId, { limit = 50, offset = 0, platform = null, search = '' } = {}) {
-    let query = 'SELECT * FROM download_history WHERE user_id = ?';
-    const params = [userId];
-
-    if (platform) {
-      query += ' AND platform = ?';
-      params.push(platform);
-    }
-    if (search) {
-      query += ' AND (title LIKE ? OR url LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
-
-    return db.prepare(query).all(...params);
-  },
-
-  async countSince(userId, sinceDate) {
-    if (!userId) return 0;
-    const isoString = sinceDate instanceof Date ? sinceDate.toISOString() : sinceDate;
-    return db.prepare('SELECT COUNT(*) as count FROM download_history WHERE user_id = ? AND created_at >= ?')
-      .get(userId, isoString).count;
-  },
-
-  async deleteById(id, userId) {
-    const res = db.prepare('DELETE FROM download_history WHERE id = ? AND user_id = ?').run(id, userId);
-    return res.changes > 0;
-  },
-
-  async findByIdAndUserId(id, userId) {
-    return db.prepare('SELECT * FROM download_history WHERE id = ? AND user_id = ?').get(id, userId) || null;
-  },
-
-  async deleteBulk(ids, userId) {
-    if (!Array.isArray(ids) || ids.length === 0) return 0;
-    const placeholders = ids.map(() => '?').join(',');
-    const statement = db.prepare(`DELETE FROM download_history WHERE id IN (${placeholders}) AND user_id = ?`);
-    const res = statement.run(...ids, userId);
-    return res.changes;
-  },
-
-  async findHistory({ userId, search = '', platform = '', type = '', dateFrom = '', dateTo = '', sort = 'DESC', page = 1, limit = 10 }) {
-    const cleanSearch = (search || '').trim().toLowerCase();
-    const cleanPlatform = (platform || '').trim();
-    const cleanType = (type || '').trim().toLowerCase();
-    const sortDir = sort === 'oldest' || sort === 'ASC' ? 'ASC' : 'DESC';
-    const offset = (page - 1) * limit;
-
-    let query = 'SELECT * FROM download_history WHERE user_id = ?';
-    let countQuery = 'SELECT COUNT(*) as total FROM download_history WHERE user_id = ?';
-    const params = [userId];
-    const countParams = [userId];
-
-    if (cleanSearch) {
-      query += ' AND (LOWER(title) LIKE ? OR LOWER(url) LIKE ?)';
-      countQuery += ' AND (LOWER(title) LIKE ? OR LOWER(url) LIKE ?)';
-      params.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
-      countParams.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
-    }
-
-    if (cleanPlatform && cleanPlatform !== 'all') {
-      query += ' AND LOWER(platform) = LOWER(?)';
-      countQuery += ' AND LOWER(platform) = LOWER(?)';
-      params.push(cleanPlatform);
-      countParams.push(cleanPlatform);
-    }
-
-    if (cleanType && cleanType !== 'all') {
-      query += ' AND type = ?';
-      countQuery += ' AND type = ?';
-      params.push(cleanType);
-      countParams.push(cleanType);
-    }
-
-    if (dateFrom) {
-      query += ' AND created_at >= ?';
-      countQuery += ' AND created_at >= ?';
-      params.push(`${dateFrom}T00:00:00.000Z`);
-      countParams.push(`${dateFrom}T00:00:00.000Z`);
-    }
-
-    if (dateTo) {
-      query += ' AND created_at <= ?';
-      countQuery += ' AND created_at <= ?';
-      params.push(`${dateTo}T23:59:59.999Z`);
-      countParams.push(`${dateTo}T23:59:59.999Z`);
-    }
-
-    query += ` ORDER BY created_at ${sortDir} LIMIT ? OFFSET ?`;
-    params.push(limit, offset);
-
-    const history = db.prepare(query).all(...params);
-    const countRow = db.prepare(countQuery).get(...countParams);
-    const total = countRow ? countRow.total : 0;
-
-    const platformRows = db.prepare(`
-      SELECT DISTINCT platform FROM download_history WHERE user_id = ? ORDER BY platform ASC
-    `).all(userId);
-    const platforms = platformRows.map(p => p.platform);
-
-    return {
-      history,
-      platforms,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1
-    };
-  }
-};
 
 // MongoDB Implementation
 export const mongoHistoryRepository = {
@@ -210,10 +65,12 @@ export const mongoHistoryRepository = {
 
   async deleteById(id, userId) {
     const query = { user_id: String(userId) };
-    if (typeof id === 'string' && id.length === 24) {
+    if (id instanceof ObjectId) {
+      query._id = id;
+    } else if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
       query._id = new ObjectId(id);
     } else {
-      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) }];
+      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) || 0 }];
     }
     const res = await this._getColl().deleteOne(query);
     return res.deletedCount > 0;
@@ -221,10 +78,12 @@ export const mongoHistoryRepository = {
 
   async findByIdAndUserId(id, userId) {
     const query = { user_id: String(userId) };
-    if (typeof id === 'string' && id.length === 24) {
+    if (id instanceof ObjectId) {
+      query._id = id;
+    } else if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
       query._id = new ObjectId(id);
     } else {
-      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) }];
+      query.$or = [{ _id: String(id) }, { sqlite_id: parseInt(id, 10) || 0 }];
     }
     const doc = await this._getColl().findOne(query);
     return doc ? { ...doc, id: doc._id } : null;
@@ -306,7 +165,8 @@ export const mongoHistoryRepository = {
   }
 };
 
-export function getHistoryRepository(engine = null) {
-  const active = engine || getDbEngine();
-  return active === SUPPORTED_ENGINES.MONGODB ? mongoHistoryRepository : sqliteHistoryRepository;
+export function getHistoryRepository() {
+  return mongoHistoryRepository;
 }
+
+export default mongoHistoryRepository;

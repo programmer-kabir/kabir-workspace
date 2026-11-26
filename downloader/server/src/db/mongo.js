@@ -40,6 +40,8 @@ export function getMongoConfig(overrideUri = null, overrideOptions = {}) {
       connectTimeoutMS,
       serverSelectionTimeoutMS,
       socketTimeoutMS,
+      maxIdleTimeMS: 30000,
+      retryReads: true,
       retryWrites: true,
       w: 'majority',
       appName: 'StreamVault',
@@ -65,7 +67,7 @@ export async function connectMongo(customUri = null, customOptions = {}) {
   const config = getMongoConfig(customUri, customOptions);
 
   if (!config.uri) {
-    logger.info('MongoDB URI is not configured (MONGODB_URI is unset). SQLite continues as primary database.');
+    logger.warn('MongoDB URI is not configured (MONGODB_URI is unset). Please configure MONGODB_URI in environment.');
     return null;
   }
 

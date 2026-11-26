@@ -137,7 +137,10 @@ const Attendance = () => {
     }
   };
 
-  const workTimeData = todayStatus && !todayStatus.check_out ? calculateWorkTime(todayStatus.check_in, time, shiftHours) : null;
+  const isSpecialOtDay = Boolean(todayHoliday) || (todayStatus?.status === 'Student Leave') || (new Date().getDay() === 5);
+  const workTimeData = todayStatus && todayStatus.check_in && !todayStatus.check_out 
+    ? calculateWorkTime(todayStatus.check_in, time, shiftHours, isSpecialOtDay) 
+    : null;
   const processedHistory = processAttendanceHistory(history, shiftHours);
 
   const displayHistory = processedHistory.filter((record) => {
@@ -153,8 +156,8 @@ const Attendance = () => {
   });
 
   const totalDays = history.length;
-  const presentDays = history.filter((r) => r.status === 'Present' || r.status === 'Late').length;
-  const leaveDays = history.filter((r) => r.status === 'Leave').length;
+  const presentDays = history.filter((r) => r.status === 'Present' || r.status === 'Late' || (r.check_in && r.check_out)).length;
+  const leaveDays = history.filter((r) => r.status === 'Leave' || r.status === 'Student Leave').length;
   const absentDays = history.filter((r) => r.status === 'Absent').length;
   const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
 

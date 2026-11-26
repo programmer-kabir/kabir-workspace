@@ -109,16 +109,7 @@ export async function loginUser({ email, password, ipAddress, userAgent }) {
     throw new Error('Invalid email or password.');
   }
 
-  // Record successful login
-  await systemRepo.recordLogin({
-    userId: user.id,
-    email: cleanEmail,
-    ipAddress: ipAddress || null,
-    userAgent: userAgent || null,
-    status: 'success'
-  });
-
-  // Generate Session Token
+  // Parallelize session creation, audit logging, and login history recording
   const rawToken = generateToken(32);
   const tokenHash = sha256(rawToken);
   const sessionId = generateId('sess');
@@ -128,18 +119,26 @@ export async function loginUser({ email, password, ipAddress, userAgent }) {
   const expiresAt = expiresDate.toISOString();
   const now = new Date().toISOString();
 
-  await sessionRepo.create({
-    id: sessionId,
-    user_id: user.id,
-    token_hash: tokenHash,
-    ip_address: ipAddress || null,
-    user_agent: userAgent || null,
-    expires_at: expiresAt,
-    created_at: now,
-    last_active_at: now
-  });
-
-  await systemRepo.logActivity(user.id, 'login', 'User signed in', ipAddress, userAgent);
+  await Promise.all([
+    systemRepo.recordLogin({
+      userId: user.id,
+      email: cleanEmail,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      status: 'success'
+    }),
+    sessionRepo.create({
+      id: sessionId,
+      user_id: user.id,
+      token_hash: tokenHash,
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+      expires_at: expiresAt,
+      created_at: now,
+      last_active_at: now
+    }),
+    systemRepo.logActivity(user.id, 'login', 'User signed in', ipAddress, userAgent)
+  ]);
 
   return {
     token: rawToken,
@@ -177,8 +176,11 @@ export async function validateSession(rawToken) {
     return null;
   }
 
-  // Update last active timestamp
-  await sessionRepo.touch(session.id || session._id);
+  // Update last active timestamp with 5-minute throttling to eliminate redundant write IOPS
+  const lastActiveTime = session.last_active_at ? new Date(session.last_active_at).getTime() : 0;
+  if (Date.now() - lastActiveTime > 5 * 60 * 1000) {
+    await sessionRepo.touch(session.id || session._id);
+  }
 
   // Dynamic subscription expiration verification (real-time enforcement)
   let activePlan = session.plan;

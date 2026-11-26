@@ -29,6 +29,39 @@ class OvertimeEngine {
                 }
             } catch (Throwable $e) {}
 
+            // ── 1b. Approved Student Leaves (Expected hours = 0, presence = pure OT) ──
+            $studentLeaveDates = [];
+            try {
+                $slStmt = $pdo->prepare("
+                    SELECT start_date, end_date
+                    FROM leave_requests
+                    WHERE user_id = :uid 
+                      AND status = 'Approved'
+                      AND type = 'Student Academic Leave'
+                ");
+                $slStmt->execute([':uid' => $userId]);
+                while ($sl = $slStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cTs = strtotime($sl['start_date']);
+                    $eTs = strtotime($sl['end_date']);
+                    while ($cTs <= $eTs) {
+                        $studentLeaveDates[date('Y-m-d', $cTs)] = true;
+                        $cTs = strtotime('+1 day', $cTs);
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            // Also check attendance records explicitly tagged with 'Student Leave'
+            try {
+                $attSlStmt = $pdo->prepare("
+                    SELECT date FROM attendance 
+                    WHERE user_id = :uid AND status = 'Student Leave' AND date <= :upto
+                ");
+                $attSlStmt->execute([':uid' => $userId, ':upto' => $upToDate]);
+                while ($asl = $attSlStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $studentLeaveDates[$asl['date']] = true;
+                }
+            } catch (Throwable $e) {}
+
             // ── 2. Attendance presence per date ───────────────────────────────────
             $attStmt = $pdo->prepare("
                 SELECT date, check_in, check_out
@@ -85,15 +118,16 @@ class OvertimeEngine {
             $monthlyExcessBreakSec = [];
 
             foreach ($dailyPresence as $d => $pSec) {
-                $isFri  = (date('N', strtotime($d)) == 5);
-                $expSec = $isFri ? 0 : $shiftSecs;
+                $isFri          = (date('N', strtotime($d)) == 5);
+                $isStudentLeave = isset($studentLeaveDates[$d]);
+                $expSec         = ($isFri || $isStudentLeave) ? 0 : $shiftSecs;
                 if (isset($holidays[$d])) $expSec = (int)round($holidays[$d] * 3600);
                 $diff  = $pSec - $expSec;
                 $mKey  = substr($d, 0, 7);
                 if ($diff > 0) {
                     $grossOtSec += $diff;
                     $monthlyOtSec[$mKey] = ($monthlyOtSec[$mKey] ?? 0) + $diff;
-                } elseif ($diff < -900 && !$isFri) {
+                } elseif ($diff < -900 && !$isFri && !$isStudentLeave) {
                     $abs = abs($diff);
                     $shortSec += $abs;
                     $monthlyShortSec[$mKey] = ($monthlyShortSec[$mKey] ?? 0) + $abs;

@@ -7,20 +7,22 @@ dist/
 build/
 */dist/
 
+# Test artifacts
+test-results/
+playwright-report/
+*/test-results/
+*/playwright-report/
+
 # Environment files
 .env
 .env.local
 .env.*.local
 
-# Databases & Backups
+# Databases & Runtime Data
 *.db
 *.db-wal
 *.db-shm
 *.sqlite
-server/data/*
-!server/data/.gitkeep
-server/backups/*
-!server/backups/.gitkeep
 
 # Logs
 *.log

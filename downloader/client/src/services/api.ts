@@ -20,7 +20,14 @@ import {
   AdminPaymentStats
 } from '../types';
 
-const API_BASE = '/api';
+export function resolveApiBase(): string {
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (!envUrl || typeof envUrl !== 'string') return '/api';
+  const clean = envUrl.trim().replace(/\/+$/, '');
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+}
+
+export const API_BASE = resolveApiBase();
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('sv_token');

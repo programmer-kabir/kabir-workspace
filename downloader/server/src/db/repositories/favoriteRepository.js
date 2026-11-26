@@ -1,126 +1,6 @@
-import db from '../index.js';
 import { getMongoDb } from '../mongo.js';
 import { ObjectId } from 'mongodb';
 import { COLLECTIONS } from '../mongoSchemas.js';
-import { getDbEngine, SUPPORTED_ENGINES } from './index.js';
-
-// SQLite Implementation
-export const sqliteFavoriteRepository = {
-  async create(fav) {
-    const now = fav.created_at || new Date().toISOString();
-    const res = db.prepare(`
-      INSERT INTO favorites (user_id, url, platform, title, thumbnail, duration, collection, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      fav.user_id,
-      fav.url,
-      fav.platform || 'generic',
-      fav.title || 'Saved Video',
-      fav.thumbnail || null,
-      fav.duration || null,
-      fav.collection_name || fav.collection || 'General',
-      now
-    );
-    return db.prepare('SELECT * FROM favorites WHERE id = ?').get(res.lastInsertRowid);
-  },
-
-  async findByUserId(userId) {
-    return db.prepare('SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC').all(userId);
-  },
-
-  async findByUserAndUrl(userId, url) {
-    return db.prepare('SELECT * FROM favorites WHERE user_id = ? AND url = ?').get(userId, url) || null;
-  },
-
-  async exists(userId, url) {
-    const row = db.prepare('SELECT 1 FROM favorites WHERE user_id = ? AND url = ?').get(userId, url);
-    return !!row;
-  },
-
-  async deleteById(id, userId) {
-    const res = db.prepare('DELETE FROM favorites WHERE id = ? AND user_id = ?').run(id, userId);
-    return res.changes > 0;
-  },
-
-  async findFavorites({ userId, search = '', platform = '', collection = '', page = 1, limit = 12 }) {
-    const cleanSearch = (search || '').trim().toLowerCase();
-    const cleanPlatform = (platform || '').trim();
-    const cleanCollection = (collection || '').trim();
-    const offset = (page - 1) * limit;
-
-    let query = 'SELECT * FROM favorites WHERE user_id = ?';
-    let countQuery = 'SELECT COUNT(*) as total FROM favorites WHERE user_id = ?';
-    const params = [userId];
-    const countParams = [userId];
-
-    if (cleanSearch) {
-      query += ' AND (LOWER(title) LIKE ? OR LOWER(url) LIKE ?)';
-      countQuery += ' AND (LOWER(title) LIKE ? OR LOWER(url) LIKE ?)';
-      params.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
-      countParams.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
-    }
-
-    if (cleanPlatform && cleanPlatform !== 'all') {
-      query += ' AND LOWER(platform) = LOWER(?)';
-      countQuery += ' AND LOWER(platform) = LOWER(?)';
-      params.push(cleanPlatform);
-      countParams.push(cleanPlatform);
-    }
-
-    if (cleanCollection && cleanCollection !== 'all') {
-      query += ' AND collection = ?';
-      countQuery += ' AND collection = ?';
-      params.push(cleanCollection);
-      countParams.push(cleanCollection);
-    }
-
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
-
-    const favorites = db.prepare(query).all(...params);
-    const countRow = db.prepare(countQuery).get(...countParams);
-    const total = countRow ? countRow.total : 0;
-
-    const collectionRows = db.prepare(`
-      SELECT DISTINCT collection FROM favorites WHERE user_id = ? AND collection IS NOT NULL ORDER BY collection ASC
-    `).all(userId);
-    const collections = collectionRows.map(c => c.collection);
-
-    const platformRows = db.prepare(`
-      SELECT DISTINCT platform FROM favorites WHERE user_id = ? ORDER BY platform ASC
-    `).all(userId);
-    const platforms = platformRows.map(p => p.platform);
-
-    return {
-      favorites,
-      collections: collections.length ? collections : ['General'],
-      platforms,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1
-    };
-  },
-
-  async upsert({ userId, url, platform, title, thumbnail = null, duration = null, collection = 'General' }) {
-    const now = new Date().toISOString();
-    const cleanUrl = url.trim();
-    const resolvedTitle = (title || 'Saved Video').trim();
-    const cleanCollection = (collection || 'General').trim();
-
-    db.prepare(`
-      INSERT INTO favorites (user_id, url, platform, title, thumbnail, duration, collection, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(user_id, url) DO UPDATE SET
-        title = excluded.title,
-        thumbnail = excluded.thumbnail,
-        duration = excluded.duration,
-        collection = excluded.collection
-    `).run(userId, cleanUrl, platform, resolvedTitle, thumbnail, duration, cleanCollection, now);
-
-    return db.prepare('SELECT * FROM favorites WHERE user_id = ? AND url = ?').get(userId, cleanUrl);
-  }
-};
 
 // MongoDB Implementation
 export const mongoFavoriteRepository = {
@@ -260,7 +140,8 @@ export const mongoFavoriteRepository = {
   }
 };
 
-export function getFavoriteRepository(engine = null) {
-  const active = engine || getDbEngine();
-  return active === SUPPORTED_ENGINES.MONGODB ? mongoFavoriteRepository : sqliteFavoriteRepository;
+export function getFavoriteRepository() {
+  return mongoFavoriteRepository;
 }
+
+export default mongoFavoriteRepository;

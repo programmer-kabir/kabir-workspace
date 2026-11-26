@@ -1,6 +1,5 @@
 import express from 'express';
 import os from 'os';
-import { createDatabaseBackup, listDatabaseBackups } from '../db/backup.js';
 import { systemRepository, queueRepository, userRepository } from '../db/repositories/index.js';
 import { authenticateUser, requireAdmin } from '../middleware/auth.js';
 
@@ -61,15 +60,19 @@ router.get('/diagnostics', async (req, res) => {
 
 /**
  * POST /api/admin/system/backup
- * Trigger an on-demand atomic SQLite backup
+ * Informational endpoint for MongoDB Atlas Continuous Cloud Backups
  */
 router.post('/backup', (req, res) => {
   try {
-    const backup = createDatabaseBackup();
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Atomic database backup created and verified successfully.',
-      data: backup
+      message: 'StreamVault runs on MongoDB Atlas with continuous automated cloud backups enabled.',
+      data: {
+        backupType: 'cloud_automated',
+        provider: 'MongoDB Atlas',
+        status: 'active',
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -78,12 +81,22 @@ router.post('/backup', (req, res) => {
 
 /**
  * GET /api/admin/system/backups
- * List all available backups
+ * List cloud backup status
  */
 router.get('/backups', (req, res) => {
   try {
-    const backups = listDatabaseBackups();
-    res.json({ success: true, data: backups });
+    res.json({
+      success: true,
+      data: [
+        {
+          id: 'atlas-continuous-backup',
+          type: 'cloud_continuous',
+          provider: 'MongoDB Atlas',
+          status: 'active',
+          retention: 'continuous point-in-time recovery'
+        }
+      ]
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

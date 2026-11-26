@@ -144,11 +144,14 @@ try {
         $is_weekend = (date('N', $current_date_ts) == 5); // Friday
         $is_holiday = isset($holidays[$current_date_str]) && $holidays[$current_date_str]['expected_hours'] == 0;
         
-        $expected_seconds = $is_weekend ? 0 : ($shift_hours * 3600);
+        $is_student_leave = (isset($db_records[$current_date_str]) && $db_records[$current_date_str]['status'] === 'Student Leave');
+        $expected_seconds = ($is_weekend || $is_student_leave) ? 0 : ($shift_hours * 3600);
         if (isset($holidays[$current_date_str])) {
             $expected_seconds = $holidays[$current_date_str]['expected_hours'] * 3600;
         }
-        $att_stats['total_expected_seconds'] += $expected_seconds;
+        if (!$is_student_leave) {
+            $att_stats['total_expected_seconds'] += $expected_seconds;
+        }
 
         if (isset($db_records[$current_date_str])) {
             $db_row = $db_records[$current_date_str];
@@ -171,7 +174,7 @@ try {
                     
                     if ($diff_seconds > $expected_seconds) {
                         $att_stats['total_overtime_seconds'] += ($diff_seconds - $expected_seconds);
-                    } else if ($diff_seconds < $expected_seconds) {
+                    } else if ($diff_seconds < $expected_seconds && !$is_student_leave) {
                         $short = $expected_seconds - $diff_seconds;
                         if ($short > 900) { // more than 15 mins
                             $att_stats['total_short_seconds'] += $short;

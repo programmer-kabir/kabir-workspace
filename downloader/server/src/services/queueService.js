@@ -14,6 +14,37 @@ queueEvents.setMaxListeners(100);
 
 let activeJobsCount = 0;
 const MAX_CONCURRENT_JOBS = 3;
+let queueInterval = null;
+let isShuttingDown = false;
+
+/**
+ * Returns whether queue engine is shutting down
+ */
+export function isQueueShuttingDown() {
+  return isShuttingDown;
+}
+
+/**
+ * Pauses the queue engine and stops polling/claiming jobs for graceful shutdown
+ */
+export function pauseQueueEngine() {
+  isShuttingDown = true;
+  if (queueInterval) {
+    clearInterval(queueInterval);
+    queueInterval = null;
+  }
+}
+
+/**
+ * Awaits completion of in-flight jobs up to a given timeout (ms)
+ */
+export async function waitForActiveJobs(timeoutMs = 10000) {
+  const start = Date.now();
+  while (activeJobsCount > 0 && Date.now() - start < timeoutMs) {
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { drained: activeJobsCount === 0, remainingJobs: activeJobsCount };
+}
 
 /**
  * Reset stale processing jobs from previous server run
@@ -226,7 +257,7 @@ export async function retryJob(jobId, userId = null) {
  * Background Queue Worker Loop
  */
 export async function triggerWorker() {
-  if (activeJobsCount >= MAX_CONCURRENT_JOBS) return;
+  if (isShuttingDown || activeJobsCount >= MAX_CONCURRENT_JOBS) return;
 
   const queueRepo = getQueueRepository();
   const nextJob = await queueRepo.claimNextJob();
@@ -524,10 +555,12 @@ export async function bulkRetryJobs(jobIds, userId = null) {
  * Initialize Queue Engine
  */
 export async function initQueueEngine() {
+  isShuttingDown = false;
   await recoverStaleJobs();
 
   // Run periodic worker trigger every 5 seconds to catch any newly queued jobs
-  setInterval(() => {
+  if (queueInterval) clearInterval(queueInterval);
+  queueInterval = setInterval(() => {
     triggerWorker();
   }, 5000);
 

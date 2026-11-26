@@ -1,4 +1,4 @@
-export const calculateWorkTime = (checkInTimeStr, time, shiftHours = 8) => {
+export const calculateWorkTime = (checkInTimeStr, time, shiftHours = 8, isSpecialOtDay = false) => {
   if (!checkInTimeStr || !time) return null;
 
   const parts = checkInTimeStr.split(':').map(Number);
@@ -11,7 +11,7 @@ export const calculateWorkTime = (checkInTimeStr, time, shiftHours = 8) => {
   let elapsedSeconds = Math.floor((now - checkInDate) / 1000);
   if (elapsedSeconds < 0) elapsedSeconds = 0;
 
-  const TARGET_HOURS = shiftHours || 8;
+  const TARGET_HOURS = isSpecialOtDay ? 0 : (shiftHours || 8);
   const TARGET_SECONDS = TARGET_HOURS * 3600;
 
   const formatTime = (totalSec) => {
@@ -23,11 +23,11 @@ export const calculateWorkTime = (checkInTimeStr, time, shiftHours = 8) => {
 
   const formatElapsed = formatTime(elapsedSeconds);
 
-  if (elapsedSeconds >= TARGET_SECONDS) {
+  if (isSpecialOtDay || elapsedSeconds >= TARGET_SECONDS) {
     const overtimeSec = elapsedSeconds - TARGET_SECONDS;
     return {
       type: 'overtime',
-      label: 'Overtime (+)',
+      label: isSpecialOtDay ? 'Pure Overtime (+)' : 'Overtime (+)',
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-50 dark:bg-emerald-500/10',
       borderColor: 'border-emerald-200 dark:border-emerald-800/50',
@@ -70,8 +70,8 @@ export const processAttendanceHistory = (history = [], shiftHours = 8) => {
     if (!record.check_in || !record.check_out || record.check_out === '-') return record;
 
     let total_hours = record.total_hours;
-    let overtime = null;
-    let is_short = false;
+    let overtime = record.overtime || null;
+    let is_short = record.is_short ?? false;
     let rawOverSec = 0;
     let rawShortSec = 0;
 
@@ -88,7 +88,10 @@ export const processAttendanceHistory = (history = [], shiftHours = 8) => {
       let elapsedSeconds = Math.floor((outDate - inDate) / 1000);
       if (elapsedSeconds < 0) elapsedSeconds += 24 * 3600;
 
-      const TARGET_SECONDS = (shiftHours || 8) * 3600;
+      const isStudentLeave = record.status === 'Student Leave';
+      const isFriday = record.date ? (new Date(record.date).getDay() === 5) : false;
+      const isSpecialOtDay = isStudentLeave || isFriday || record.status === 'Holiday';
+      const TARGET_SECONDS = isSpecialOtDay ? 0 : ((shiftHours || 8) * 3600);
 
       if (!total_hours) {
         const h = Math.floor(elapsedSeconds / 3600);
@@ -96,32 +99,32 @@ export const processAttendanceHistory = (history = [], shiftHours = 8) => {
         total_hours = `${h}h ${m}m`;
       }
 
-      if (!overtime) {
-        if (elapsedSeconds > TARGET_SECONDS) {
-          const overSec = elapsedSeconds - TARGET_SECONDS;
-          rawOverSec = overSec;
-          const oh = Math.floor(overSec / 3600);
-          const om = Math.floor((overSec % 3600) / 60);
-          if (overSec >= 60) {
-            overtime = `+${oh}h ${om}m`;
-            is_short = false;
-          } else {
-            overtime = `PERFECT`;
-            is_short = null;
-          }
-        } else if (elapsedSeconds < TARGET_SECONDS) {
-          const shortSec = TARGET_SECONDS - elapsedSeconds;
-          rawShortSec = shortSec;
-          const sh = Math.floor(shortSec / 3600);
-          const sm = Math.floor((shortSec % 3600) / 60);
-          if (shortSec >= 60) {
-            overtime = `-${sh}h ${sm}m GAP`;
-            is_short = true;
-          } else {
-            overtime = `PERFECT`;
-            is_short = null;
-          }
+      if (elapsedSeconds > TARGET_SECONDS) {
+        const overSec = elapsedSeconds - TARGET_SECONDS;
+        rawOverSec = overSec;
+        const oh = Math.floor(overSec / 3600);
+        const om = Math.floor((overSec % 3600) / 60);
+        if (overSec >= 60) {
+          overtime = isSpecialOtDay ? `+${oh}h ${om}m (OT)` : `+${oh}h ${om}m`;
+          is_short = false;
         } else {
+          overtime = `PERFECT`;
+          is_short = null;
+        }
+      } else if (elapsedSeconds < TARGET_SECONDS && !isSpecialOtDay) {
+        const shortSec = TARGET_SECONDS - elapsedSeconds;
+        rawShortSec = shortSec;
+        const sh = Math.floor(shortSec / 3600);
+        const sm = Math.floor((shortSec % 3600) / 60);
+        if (shortSec >= 60) {
+          overtime = `-${sh}h ${sm}m GAP`;
+          is_short = true;
+        } else {
+          overtime = `PERFECT`;
+          is_short = null;
+        }
+      } else {
+        if (!overtime) {
           overtime = `PERFECT`;
           is_short = null;
         }

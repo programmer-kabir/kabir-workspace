@@ -1,89 +1,5 @@
-import db from '../index.js';
 import { getMongoDb } from '../mongo.js';
 import { COLLECTIONS } from '../mongoSchemas.js';
-import { getDbEngine, SUPPORTED_ENGINES } from './index.js';
-
-// SQLite Implementation
-export const sqliteSessionRepository = {
-  async findByTokenHash(tokenHash) {
-    const session = db.prepare(`
-      SELECT s.*, u.id as user_id, u.email, u.name, u.role, u.plan, u.is_banned, u.two_factor_enabled, u.referral_code
-      FROM sessions s
-      JOIN users u ON s.user_id = u.id
-      WHERE s.token_hash = ?
-    `).get(tokenHash);
-    return session || null;
-  },
-
-  async create(session) {
-    const now = session.created_at || new Date().toISOString();
-    const userId = session.user_id || session.userId;
-    const tokenHash = session.token_hash || session.tokenHash;
-    const ipAddress = session.ip_address || session.ipAddress || null;
-    const userAgent = session.user_agent || session.userAgent || null;
-    const expiresAt = session.expires_at || session.expiresAt;
-    db.prepare(`
-      INSERT INTO sessions (
-        id, user_id, token_hash, ip_address, user_agent, expires_at, created_at, last_active_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      session.id,
-      userId,
-      tokenHash,
-      ipAddress,
-      userAgent,
-      expiresAt,
-      now,
-      now
-    );
-    return db.prepare('SELECT * FROM sessions WHERE id = ?').get(session.id);
-  },
-
-  async findByUserId(userId) {
-    return db.prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY last_active_at DESC').all(userId);
-  },
-
-  async deleteById(id) {
-    const res = db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
-    return res.changes > 0;
-  },
-
-  async deleteByUserIdExcept(userId, excludeSessionId) {
-    const res = db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(userId, excludeSessionId);
-    return res.changes;
-  },
-
-  async deleteExpired() {
-    const now = new Date().toISOString();
-    const res = db.prepare('DELETE FROM sessions WHERE datetime(expires_at) < datetime(?)').run(now);
-    return res.changes;
-  },
-
-  async count() {
-    return db.prepare('SELECT COUNT(*) as count FROM sessions').get().count;
-  },
-
-  async touch(id) {
-    const now = new Date().toISOString();
-    const res = db.prepare('UPDATE sessions SET last_active_at = ? WHERE id = ?').run(now, id);
-    return res.changes > 0;
-  },
-
-  async deleteByTokenHash(tokenHash) {
-    const res = db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash);
-    return res.changes > 0;
-  },
-
-  async deleteByIdAndUserId(id, userId) {
-    const res = db.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').run(id, userId);
-    return res.changes > 0;
-  },
-
-  async deleteByUserId(userId) {
-    const res = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
-    return res.changes;
-  }
-};
 
 // MongoDB Implementation
 export const mongoSessionRepository = {
@@ -187,7 +103,8 @@ export const mongoSessionRepository = {
   }
 };
 
-export function getSessionRepository(engine = null) {
-  const active = engine || getDbEngine();
-  return active === SUPPORTED_ENGINES.MONGODB ? mongoSessionRepository : sqliteSessionRepository;
+export function getSessionRepository() {
+  return mongoSessionRepository;
 }
+
+export default mongoSessionRepository;

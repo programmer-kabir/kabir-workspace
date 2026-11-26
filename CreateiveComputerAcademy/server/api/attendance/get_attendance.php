@@ -73,6 +73,22 @@ while($h = $hol_stmt->fetch(PDO::FETCH_ASSOC)) {
     $holidays[$h['date']] = $h;
 }
 
+// Get approved student leaves for this user (Expected hours = 0, presence = pure OT)
+$approved_student_leaves = [];
+try {
+    $asl_query = "SELECT start_date, end_date FROM leave_requests WHERE user_id = :uid AND status = 'Approved' AND type = 'Student Academic Leave'";
+    $asl_stmt = $db->prepare($asl_query);
+    $asl_stmt->execute([':uid' => $user_id]);
+    while($asl = $asl_stmt->fetch(PDO::FETCH_ASSOC)) {
+        $c = strtotime($asl['start_date']);
+        $e = strtotime($asl['end_date']);
+        while($c <= $e) {
+            $approved_student_leaves[date('Y-m-d', $c)] = true;
+            $c = strtotime('+1 day', $c);
+        }
+    }
+} catch (Throwable $e) {}
+
 // Get Monthly Breaks (Excluding Mango Breaks which are earned leaves)
 $monthly_breaks = [];
 $mb_query = "SELECT date, SUM(duration_minutes) as total_mins FROM user_breaks WHERE user_id = :user_id AND MONTH(date) = :month AND YEAR(date) = :year AND status = 'Completed' AND break_type NOT IN ('Mango Full Day', 'Mango Break', 'Mango Overtime') GROUP BY date";
@@ -102,7 +118,8 @@ while ($row = $history_stmt->fetch(PDO::FETCH_ASSOC)) {
         $row['total_hours'] = $hours . 'h ' . $minutes . 'm';
         
         $is_weekend = (date('N', strtotime($row['date'])) == 5); // 5 is Friday
-        $expected_seconds = $is_weekend ? 0 : ($shift_hours * 3600);
+        $is_student_leave = (!empty($row['status']) && $row['status'] === 'Student Leave') || isset($approved_student_leaves[$row['date']]);
+        $expected_seconds = ($is_weekend || $is_student_leave) ? 0 : ($shift_hours * 3600);
         
         $date_key = $row['date'];
         $is_special_day = false;
@@ -116,10 +133,10 @@ while ($row = $history_stmt->fetch(PDO::FETCH_ASSOC)) {
             $ot_hours = floor($ot_seconds / 3600);
             $ot_minutes = floor(($ot_seconds % 3600) / 60);
             $row['overtime'] = '+' . $ot_hours . 'h ' . $ot_minutes . 'm';
-            if($is_weekend || $is_special_day) {
+            if($is_weekend || $is_special_day || $is_student_leave) {
                 $row['overtime'] .= ' (OT)';
             }
-        } else if ($diff_seconds < $expected_seconds) {
+        } else if ($diff_seconds < $expected_seconds && !$is_student_leave) {
             $short_seconds = $expected_seconds - $diff_seconds;
             // Only count as short if it's significant (e.g. more than 15 mins early)
             if ($short_seconds > 900) {

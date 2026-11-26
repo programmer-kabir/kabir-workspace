@@ -87,32 +87,47 @@ if($emp_stmt->rowCount() > 0) {
 }
 
 // Check if already checked in today
-$check_query = "SELECT id, check_in, check_out FROM attendance WHERE user_id = :user_id AND date = :today LIMIT 1";
+$check_query = "SELECT id, check_in, check_out, status FROM attendance WHERE user_id = :user_id AND date = :today LIMIT 1";
 $check_stmt = $db->prepare($check_query);
 $check_stmt->bindParam(':user_id', $user_id);
 $check_stmt->bindParam(':today', $today);
 $check_stmt->execute();
 
+$attendance_id = null;
+$status = 'Present';
+$exec_ok = false;
+
 if($check_stmt->rowCount() > 0) {
-    echo json_encode(["status" => "error", "message" => "You have already checked in today."]);
-    exit;
+    $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
+    if(!empty($existing['check_in'])) {
+        echo json_encode(["status" => "error", "message" => "You have already checked in today."]);
+        exit;
+    }
+    // Existing row with empty check_in (e.g. pre-created Student Leave approval row)
+    $attendance_id = $existing['id'];
+    $status = (!empty($existing['status']) && $existing['status'] !== 'Absent') ? $existing['status'] : 'Present';
+
+    $update_query = "UPDATE attendance SET check_in = :check_in, status = :status WHERE id = :id";
+    $u_stmt = $db->prepare($update_query);
+    $u_stmt->bindParam(':check_in', $current_time);
+    $u_stmt->bindParam(':status', $status);
+    $u_stmt->bindParam(':id', $attendance_id);
+    $exec_ok = $u_stmt->execute();
+} else {
+    // Insert new Check-in
+    $query = "INSERT INTO attendance (user_id, date, check_in, status) VALUES (:user_id, :date, :check_in, :status)";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':user_id', $user_id);
+    $stmt->bindParam(':date', $today);
+    $stmt->bindParam(':check_in', $current_time);
+    $stmt->bindParam(':status', $status);
+    $exec_ok = $stmt->execute();
+    if($exec_ok) {
+        $attendance_id = $db->lastInsertId();
+    }
 }
 
-// Determine Status
-$status = 'Present';
-
-// Insert Check-in
-$query = "INSERT INTO attendance (user_id, date, check_in, status) VALUES (:user_id, :date, :check_in, :status)";
-$stmt = $db->prepare($query);
-
-$stmt->bindParam(':user_id', $user_id);
-$stmt->bindParam(':date', $today);
-$stmt->bindParam(':check_in', $current_time);
-$stmt->bindParam(':status', $status);
-
-if($stmt->execute()) {
-    $attendance_id = $db->lastInsertId();
-
+if($exec_ok && $attendance_id) {
     // Log complete device & security metadata to attendance_device_logs
     AttendanceSecurityHelper::logDevicePunch($db, $attendance_id, $user_id, 'check_in', $eval);
 

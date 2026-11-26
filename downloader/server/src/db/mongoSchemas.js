@@ -303,7 +303,7 @@ export const SCHEMA_DEFINITIONS = {
         bsonType: 'object',
         required: ['_id', 'webhook_id', 'user_id', 'event', 'payload', 'attempt', 'max_attempts', 'status', 'created_at'],
         properties: {
-          _id: { bsonType: 'string', description: 'Delivery ID (whd_...)' },
+          _id: { bsonType: ['string', 'objectId'], description: 'Delivery ID (whd_...)' },
           webhook_id: { bsonType: 'string' },
           user_id: { bsonType: 'string' },
           event: { bsonType: 'string' },

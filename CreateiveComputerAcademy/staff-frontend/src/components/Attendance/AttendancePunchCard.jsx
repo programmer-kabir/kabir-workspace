@@ -101,7 +101,19 @@ export default function AttendancePunchCard({
           </div>
         )}
 
-        {!todayStatus ? (
+        {!todayHoliday && todayStatus?.status === 'Student Leave' && (
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500/10 via-indigo-400/10 to-purple-500/10 border border-purple-300 dark:border-purple-700/50 text-left text-xs text-purple-900 dark:text-purple-300 flex items-start gap-2 shadow-sm">
+            <span className="text-base leading-none">🎓</span>
+            <div>
+              <span className="font-bold">Student Academic Leave (Pure OT Mode):</span>
+              <p className="text-[11px] opacity-90 mt-0.5">
+                আজ আপনার স্টুডেন্ট একাডেমিক ছুটি। আপনি সেন্টারে উপস্থিত হয়ে কাজ করলে সম্পূর্ণ সময়টাই ১০০% ওভারটাইম হিসেবে জমা হবে (কোনো শর্টফল বা অ্যাবসেন্ট নেই)।
+              </p>
+            </div>
+          </div>
+        )}
+
+        {(!todayStatus || !todayStatus.check_in) ? (
           <button
             onClick={handleCheckIn}
             disabled={isPunching || !isAuthorizedToPunch}

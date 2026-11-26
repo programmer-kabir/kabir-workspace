@@ -36,8 +36,8 @@ if ($user_check->rowCount() === 0) {
 $today = date('Y-m-d');
 $current_time = date('H:i:s');
 
-// Find active attendance record for today
-$find_query = "SELECT id FROM attendance WHERE user_id = :user_id AND date = :date AND check_out IS NULL LIMIT 1";
+// Find active attendance record for today (must have checked in and not yet checked out)
+$find_query = "SELECT id FROM attendance WHERE user_id = :user_id AND date = :date AND check_in IS NOT NULL AND check_out IS NULL LIMIT 1";
 $find_stmt = $db->prepare($find_query);
 $find_stmt->execute([':user_id' => $user_id, ':date' => $today]);
 $att_record = $find_stmt->fetch(PDO::FETCH_ASSOC);

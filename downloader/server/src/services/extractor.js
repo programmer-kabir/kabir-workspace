@@ -1,6 +1,7 @@
-import { spawn } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import ffmpegPath from 'ffmpeg-static';
 import { detectPlatform } from '../utils/platformDetector.js';
@@ -8,15 +9,75 @@ import { detectPlatform } from '../utils/platformDetector.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Locate yt-dlp binary
-function getYtDlpPath() {
+// Locate and validate yt-dlp binary across operating systems and architectures
+export function getYtDlpPath() {
+  if (process.env.YT_DLP_PATH && fs.existsSync(process.env.YT_DLP_PATH)) {
+    return process.env.YT_DLP_PATH;
+  }
+
   const localBinWindows = path.resolve(__dirname, '../../bin/yt-dlp.exe');
   const localBinLinux = path.resolve(__dirname, '../../bin/yt-dlp');
 
-  if (fs.existsSync(localBinWindows)) return localBinWindows;
-  if (fs.existsSync(localBinLinux)) return localBinLinux;
+  if (process.platform === 'win32') {
+    if (fs.existsSync(localBinWindows)) return localBinWindows;
+  } else {
+    if (fs.existsSync(localBinLinux)) {
+      try {
+        fs.accessSync(localBinLinux, fs.constants.X_OK);
+        return localBinLinux;
+      } catch {
+        // Fall back to PATH if local file exists but is not executable
+      }
+    }
+  }
 
-  return 'yt-dlp'; // fallback to PATH
+  return 'yt-dlp'; // fallback to system PATH
+}
+
+/**
+ * Validates media extraction binaries (yt-dlp & FFmpeg) on server startup
+ */
+export function validateMediaBinaries() {
+  const platform = os.platform();
+  const arch = os.arch();
+  const ytDlp = getYtDlpPath();
+
+  const report = {
+    platform,
+    arch,
+    ytDlpPath: ytDlp,
+    ytDlpVersion: null,
+    ffmpegPath: ffmpegPath || null,
+    ffmpegAvailable: false,
+    healthy: true,
+    warnings: [],
+    errors: []
+  };
+
+  // Test yt-dlp binary execution (10s timeout to allow PyInstaller bootstrap on Windows)
+  try {
+    const ver = execFileSync(ytDlp, ['--version'], { timeout: 10000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }).trim();
+    report.ytDlpVersion = ver;
+  } catch (err) {
+    report.healthy = false;
+    const isArm = arch === 'arm64' || arch === 'aarch64';
+    const installCmd = platform === 'win32'
+      ? 'Ensure yt-dlp.exe is placed in server/bin/ or installed in PATH.'
+      : isArm
+        ? 'curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64 -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp'
+        : 'curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp';
+
+    report.errors.push(`yt-dlp binary unavailable or not executable at '${ytDlp}': ${err.message}. To install for ${platform}/${arch}, run: ${installCmd}`);
+  }
+
+  // Test ffmpeg binary availability
+  if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+    report.ffmpegAvailable = true;
+  } else {
+    report.warnings.push(`FFmpeg not found via ffmpeg-static at '${ffmpegPath}'. Audio conversion or stream merging may be limited.`);
+  }
+
+  return report;
 }
 
 function formatBytes(bytes, decimals = 1) {

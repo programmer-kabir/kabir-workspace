@@ -3,10 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import os from 'os';
-import { extractMediaInfo, streamMedia } from './services/extractor.js';
+import { extractMediaInfo, streamMedia, validateMediaBinaries } from './services/extractor.js';
 import { isValidHttpUrl, detectPlatform } from './utils/platformDetector.js';
 import { initDatabase } from './db/index.js';
-import { initQueueEngine } from './services/queueService.js';
+import { initQueueEngine, pauseQueueEngine, waitForActiveJobs } from './services/queueService.js';
 import authRoutes from './routes/authRoutes.js';
 import queueRoutes from './routes/queueRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -19,7 +19,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import adminPaymentRoutes from './routes/adminPaymentRoutes.js';
 import adminSystemRoutes from './routes/adminSystemRoutes.js';
 import { checkAndExpireSubscriptions } from './db/index.js';
-import { connectMongo, isMongoConnected } from './db/mongo.js';
+import { connectMongo, isMongoConnected, disconnectMongo } from './db/mongo.js';
 import { getDbEngine } from './db/repositories/index.js';
 import { securityHeadersMiddleware, getCorsOptions } from './middleware/securityHeaders.js';
 import { validateEnvironment } from './utils/envValidator.js';
@@ -38,14 +38,19 @@ try {
   process.exit(1);
 }
 
-// Initialize persistent SQLite Database & Queue Engine
-initDatabase();
-initQueueEngine();
+// 0.1 Validate media extraction binaries (yt-dlp & FFmpeg)
+const mediaBinStatus = validateMediaBinaries();
+if (mediaBinStatus.healthy) {
+  logger.info(`✅ Media engine ready [${mediaBinStatus.platform}/${mediaBinStatus.arch}] — yt-dlp ${mediaBinStatus.ytDlpVersion || 'detected'}, FFmpeg: ${mediaBinStatus.ffmpegAvailable ? 'available' : 'external'}`);
+} else {
+  mediaBinStatus.errors.forEach(err => logger.error(`Media Engine Warning: ${err}`));
+}
 
-// Initialize MongoDB Atlas connection if configured (non-blocking)
-connectMongo().catch(err => {
-  logger.warn(`Non-blocking MongoDB initialization note: ${err.message}`);
+// Initialize MongoDB Atlas Database & Queue Engine
+await initDatabase().catch(err => {
+  logger.error('Failed to initialize MongoDB database:', err);
 });
+initQueueEngine();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -110,12 +115,13 @@ app.get('/health', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   const engine = getDbEngine();
+  const mongoConnected = isMongoConnected();
   res.json({
     status: 'healthy',
     service: 'All-in-One Video Downloader Engine & Queue Service',
     databaseEngine: engine,
-    database: engine === 'mongodb' ? 'connected (MongoDB Atlas)' : 'connected (node:sqlite WAL)',
-    mongodb: isMongoConnected() ? 'connected' : 'unconfigured / disconnected',
+    database: mongoConnected ? 'connected (MongoDB Atlas)' : 'disconnected (MongoDB Atlas)',
+    mongodb: mongoConnected ? 'connected' : 'disconnected',
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
@@ -255,6 +261,46 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Video Downloader API & Queue Server running on http://0.0.0.0:${PORT}`);
 });
+
+// Graceful Shutdown Management (SIGTERM / SIGINT)
+let isShuttingDown = false;
+export async function handleShutdown(signal = 'SIGTERM') {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`Received ${signal}. Initiating graceful shutdown sequence...`);
+
+  // 1. Pause queue worker from claiming new jobs
+  pauseQueueEngine();
+
+  // 2. Stop accepting incoming HTTP connections
+  if (server && server.close) {
+    server.close(() => {
+      logger.info('HTTP server closed to new connections.');
+    });
+  }
+
+  // 3. Allow in-flight jobs/streams to drain up to configured timeout
+  const timeoutMs = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '10000', 10);
+  const drainage = await waitForActiveJobs(timeoutMs);
+  if (drainage.drained) {
+    logger.info('All in-flight queue jobs finished cleanly.');
+  } else {
+    logger.warn(`Shutdown timeout reached. ${drainage.remainingJobs} in-flight job(s) will be automatically recovered on next boot.`);
+  }
+
+  // 4. Disconnect cleanly from MongoDB
+  await disconnectMongo();
+
+  logger.info('Graceful shutdown completed successfully.');
+  if (process.env.NODE_ENV !== 'test') {
+    process.exit(0);
+  }
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
+export default app;
