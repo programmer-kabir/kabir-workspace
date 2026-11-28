@@ -1,0 +1,35 @@
+# Python / Virtual Environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build & Packaging
+build/
+dist/
+*.egg-info/
+*.tsbuildinfo
+
+# Local machine config
+renderpy.toml
+
+# Rendered Outputs
+*.mp4
+*.webm
+*.mov
+*_frames/
+*_preview_*.png
+previews/
+renders/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
