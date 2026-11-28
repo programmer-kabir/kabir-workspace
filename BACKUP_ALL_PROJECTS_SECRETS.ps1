@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # KABIR WORKSPACE — ALL PROJECTS SECRETS AUTO-BACKUP
 # Automatically discovers and packages all .env and secret
 # configs across all projects in kabir-workspace.
@@ -19,9 +19,10 @@ function Find-SecretFiles($dir) {
         $files = [System.IO.Directory]::GetFiles($dir)
         foreach ($f in $files) {
             $name = [System.IO.Path]::GetFileName($f)
-            # Match .env, .env.production, google_drive_credentials.json, token caches
+            # Match .env, .env.production, google_drive_credentials.json, token caches, live_credentials.txt
             if (($name -like '.env*' -and $name -notlike '*.example') -or
                 $name -like '*credentials*.json' -or
+                $name -like '*credentials*.txt' -or
                 $name -like '*token_cache*.json') {
                 $results += $f
             }
