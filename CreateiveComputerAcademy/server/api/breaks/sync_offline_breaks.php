@@ -77,7 +77,7 @@ try {
                 $startTs = strtotime($startTime);
                 $endTs   = strtotime($endTime);
                 $durMins = max(1, round(abs($endTs - $startTs) / 60));
-                $tiffinDelta = ($breakType === 'Tiffin') ? BreakDbHelper::calculateTiffinDelta($durMins) : 0;
+                $tiffinDelta = ($breakType === 'Tiffin' || $breakType === 'Namaz') ? BreakDbHelper::calculateBreakDelta($breakType, $durMins) : 0;
 
                 $upd = $db->prepare("UPDATE user_breaks 
                     SET end_time = :etime, duration_minutes = :dur, tiffin_delta_minutes = :delta, status = 'Completed', updated_at = NOW() 
@@ -110,8 +110,8 @@ try {
             $startTs = strtotime($startTime);
             $endTs   = strtotime($endTime);
             $durationMinutes = max(1, round(abs($endTs - $startTs) / 60));
-            if ($breakType === 'Tiffin') {
-                $tiffinDelta = BreakDbHelper::calculateTiffinDelta($durationMinutes);
+            if ($breakType === 'Tiffin' || $breakType === 'Namaz') {
+                $tiffinDelta = BreakDbHelper::calculateBreakDelta($breakType, $durationMinutes);
             }
         }
 

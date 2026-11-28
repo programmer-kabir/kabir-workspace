@@ -712,7 +712,7 @@ final class DemoAdobeClient implements AdobeClientInterface
             ],
             [
                 'id' => $vectorId,
-                'title' => "{$clean} Scalable Flat Vector Set (Null Date Guard)",
+                'title' => "{$clean} Scalable Flat Vector Concept Pack",
                 'thumbnailUrl' => $this->demoPreviewUrl($vectorId, "{$clean} Vector Pack", 'Vector', false),
                 'preview1000Url' => $this->demoPreviewUrl($vectorId, "{$clean} Vector Pack", 'Vector', false),
                 'videoPreviewUrl' => null,
@@ -831,7 +831,13 @@ final class DemoAdobeClient implements AdobeClientInterface
             'ai' => $isAi ? '1' : '0',
         ]);
 
-        return "{$this->appUrl}/api/demo-media/{$id}?{$query}";
+        $baseUrl = $this->appUrl;
+        if (!empty($_SERVER['HTTP_HOST']) && (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1') || empty($baseUrl))) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $baseUrl = "{$scheme}://{$_SERVER['HTTP_HOST']}";
+        }
+
+        return "{$baseUrl}/api/demo-media/{$id}?{$query}";
     }
 
     /**

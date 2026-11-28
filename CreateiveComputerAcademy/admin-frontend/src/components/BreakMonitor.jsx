@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import Pusher from 'pusher-js';
+import PrayerScheduleControl from './PrayerScheduleControl';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -274,7 +275,10 @@ const BreakMonitor = () => {
            ══════════════════════════════════════════ */}
         {activeTab === 'breaks' && (
           <>
-            {/* ── 0. Pending Overtime Trades Alert Banner (Click to switch tab) ── */}
+            {/* ── 0. Center Prayer Schedule & Master Control ── */}
+            <PrayerScheduleControl />
+
+            {/* ── 0b. Pending Overtime Trades Alert Banner (Click to switch tab) ── */}
             {pendingTrades.length > 0 && (
               <div
                 onClick={() => setActiveTab('trades')}

@@ -163,12 +163,12 @@ final class ProxyController
   </g>
   <circle cx="560" cy="240" r="120" fill="#ffffff" fill-opacity="0.09"/>
   <circle cx="220" cy="360" r="150" fill="{$palette[2]}" fill-opacity="0.16"/>
-  <rect x="28" y="28" width="132" height="32" rx="16" fill="#0f172a" fill-opacity="0.65"/>
-  <text x="94" y="49" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0">{$safeType}</text>
+  <rect x="70" y="28" width="132" height="32" rx="16" fill="#0f172a" fill-opacity="0.65"/>
+  <text x="136" y="49" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0">{$safeType}</text>
   {$aiBadge}
   <rect x="28" y="422" width="744" height="90" rx="14" fill="#020617" fill-opacity="0.6"/>
   <text x="48" y="458" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#ffffff">{$safeTitle}</text>
-  <text x="48" y="488" font-family="monospace" font-size="14" fill="#94a3b8">Asset ID #{$safeId} · StockAssetTrack Demo Preview</text>
+  <text x="48" y="488" font-family="monospace" font-size="14" fill="#94a3b8">Asset ID #{$safeId} · StockAssetTrack Intelligence Preview</text>
 </svg>
 SVG;
 

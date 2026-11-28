@@ -110,7 +110,7 @@ export function LightboxModal({ assets, currentIndex, onClose, onNavigate }: Lig
             />
           ) : (
             <img
-              src={asset.preview1000Url}
+              src={asset.preview1000Url?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || asset.preview1000Url}
               alt={asset.title}
               className="max-h-[62vh] max-w-full rounded-xl object-contain"
             />

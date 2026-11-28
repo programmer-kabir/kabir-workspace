@@ -1,126 +1,10 @@
 <?php
-// BreakDbHelper.php - Schema auto-ensurance for Break & Approval System
+// BreakDbHelper.php - Break & Approval System Helper
+require_once __DIR__ . '/BreakSchema.php';
 
 class BreakDbHelper {
     public static function ensureSchema($db) {
-        if (!$db) return;
-        try {
-            // 1. Create table if not exists
-            $db->exec("CREATE TABLE IF NOT EXISTS user_breaks (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                date DATE NOT NULL,
-                break_type VARCHAR(50) NOT NULL,
-                start_time DATETIME NULL,
-                end_time DATETIME DEFAULT NULL,
-                duration_minutes INT DEFAULT 0,
-                status VARCHAR(30) NOT NULL DEFAULT 'Active',
-                reason VARCHAR(255) NULL,
-                estimated_minutes INT NULL,
-                approved_by INT NULL,
-                approved_at DATETIME NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX (user_id),
-                INDEX (date),
-                INDEX (status)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-
-            // 2. Add missing columns if existing table
-            $cols = $db->query("SHOW COLUMNS FROM user_breaks")->fetchAll(PDO::FETCH_COLUMN);
-
-            if (!in_array('purpose', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN purpose VARCHAR(50) NULL AFTER break_type");
-                $db->exec("UPDATE user_breaks SET purpose = 'Tiffin' WHERE break_type = 'Tiffin' AND (purpose IS NULL OR purpose = '')");
-            }
-            if (!in_array('reason', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN reason VARCHAR(255) NULL AFTER status");
-            }
-            if (!in_array('estimated_minutes', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN estimated_minutes INT NULL AFTER reason");
-            }
-            if (!in_array('approved_by', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN approved_by INT NULL AFTER estimated_minutes");
-            }
-            if (!in_array('approved_at', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN approved_at DATETIME NULL AFTER approved_by");
-            }
-            if (!in_array('tiffin_delta_minutes', $cols)) {
-                $db->exec("ALTER TABLE user_breaks ADD COLUMN tiffin_delta_minutes INT DEFAULT 0 AFTER duration_minutes");
-            }
-
-            // Backfill completed tiffins with exact delta (40 - duration_minutes)
-            try {
-                $db->exec("UPDATE user_breaks 
-                    SET tiffin_delta_minutes = (40 - duration_minutes) 
-                    WHERE break_type = 'Tiffin' 
-                      AND status = 'Completed' 
-                      AND duration_minutes > 0");
-            } catch (Throwable $bf) {}
-
-            // Ensure status is VARCHAR(30) so 'Pending', 'Active', 'Completed', 'Rejected' are supported
-            $db->exec("ALTER TABLE user_breaks MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'Active'");
-
-            // Allow start_time to be NULL for initial pending state
-            $db->exec("ALTER TABLE user_breaks MODIFY COLUMN start_time DATETIME NULL");
-
-            // 3. Ensure staff_withdrawals has overtime_hours_cashed column
-            try {
-                $swCols = $db->query("SHOW COLUMNS FROM staff_withdrawals")->fetchAll(PDO::FETCH_COLUMN);
-                if (!in_array('overtime_hours_cashed', $swCols)) {
-                    $db->exec("ALTER TABLE staff_withdrawals ADD COLUMN overtime_hours_cashed DECIMAL(6,2) NOT NULL DEFAULT 0.00 AFTER amount");
-                }
-            } catch (Throwable $t2) {}
-
-            // 4. Ensure staff_overtime_trades table exists
-            try {
-                $db->exec("CREATE TABLE IF NOT EXISTS staff_overtime_trades (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    trade_code VARCHAR(50) NOT NULL UNIQUE,
-                    seller_id INT NOT NULL,
-                    buyer_id INT NOT NULL,
-                    hours_traded DECIMAL(6,2) NOT NULL,
-                    minutes_traded INT NOT NULL,
-                    hourly_rate DECIMAL(10,2) NOT NULL,
-                    total_price DECIMAL(10,2) NOT NULL,
-                    status VARCHAR(30) NOT NULL DEFAULT 'pending_seller',
-                    seller_action_at DATETIME NULL,
-                    approved_by INT NULL,
-                    approved_at DATETIME NULL,
-                    rejection_reason VARCHAR(255) NULL,
-                    buyer_note VARCHAR(255) NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX (seller_id),
-                    INDEX (buyer_id),
-                    INDEX (status)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            } catch (Throwable $t3) {}
-
-            // 5. Ensure mango_vault_ledger table exists
-            try {
-                $db->exec("CREATE TABLE IF NOT EXISTS mango_vault_ledger (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    action_type VARCHAR(30) NOT NULL,
-                    mango_count INT NOT NULL DEFAULT 1,
-                    minutes_amount INT NOT NULL DEFAULT 0,
-                    source_user_id INT NULL,
-                    target_user_id INT NULL,
-                    from_source VARCHAR(20) DEFAULT 'vault',
-                    note VARCHAR(255) NULL,
-                    performed_by INT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX (user_id),
-                    INDEX (action_type),
-                    INDEX (performed_by),
-                    INDEX (created_at)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            } catch (Throwable $t4) {}
-
-        } catch (Throwable $t) {
-            error_log("BreakDbHelper error: " . $t->getMessage());
-        }
+        BreakSchema::ensure($db);
     }
 
     /**
@@ -169,8 +53,8 @@ class BreakDbHelper {
             $bStmt->execute([':user_id' => $user_id]);
             $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-            // Group presence and excess breaks (beyond 40m allocated paid break) per calendar date
-            $allocatedBreakSec = 40 * 60; // 40m allocated paid break
+            // Group presence and excess breaks (beyond 60m allocated free paid break: 40m noon + 20m afternoon) per calendar date
+            $allocatedBreakSec = 60 * 60; // 60m allocated paid break (40m tiffin + 20m namaz)
             $dailyPresence = [];
             $dailyExcessBreak = [];
             foreach ($attRows as $r) {
@@ -267,10 +151,10 @@ class BreakDbHelper {
                 $boughtMins = (int)($boughtRow['bought_mins'] ?? 0);
             } catch (Throwable $e2) {}
 
-            // 8. Tiffin efficiency savings bonus (when taking less than 40m allocated paid break)
+            // 8. Tiffin & Namaz efficiency savings bonus (when taking less than allocated paid break)
             $tiffinSavings = 0;
             try {
-                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_bonus FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
+                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_bonus FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Tiffin', 'Namaz') AND status = 'Completed'");
                 $tStmt->execute([':user_id' => $user_id]);
                 $tRow = $tStmt->fetch(PDO::FETCH_ASSOC);
                 $tiffinSavings = (int)($tRow['t_bonus'] ?? 0);
@@ -350,7 +234,7 @@ class BreakDbHelper {
             $bStmt->execute([':user_id' => $user_id]);
             $breaksByDate = $bStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-            $allocatedBreakSec = 40 * 60; // 40m allocated paid break
+            $allocatedBreakSec = 60 * 60; // 60m allocated paid break (40m tiffin + 20m namaz)
             $dailyPresence = [];
             $dailyExcessBreak = [];
             foreach ($attRows as $r) {
@@ -445,7 +329,7 @@ class BreakDbHelper {
 
             $tiffinSavings = 0;
             try {
-                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'");
+                $tStmt = $db->prepare("SELECT COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as t_savings FROM user_breaks WHERE user_id = :user_id AND break_type IN ('Tiffin', 'Namaz') AND status = 'Completed'");
                 $tStmt->execute([':user_id' => $user_id]);
                 $tRow = $tStmt->fetch(PDO::FETCH_ASSOC);
                 $tiffinSavings = (int)($tRow['t_savings'] ?? 0);
@@ -501,7 +385,7 @@ class BreakDbHelper {
                     ELSE 0 
                 END), 0) as net_held_mins,
                 COALESCE(SUM(CASE WHEN action_type = 'transfer_out' THEN minutes_amount ELSE 0 END), 0) as total_trans_out,
-                COALESCE(SUM(CASE WHEN action_type = 'transfer_in' THEN minutes_amount ELSE 0 END), 0) as total_trans_in
+                COALESCE(SUM(CASE WHEN action_type IN ('transfer_in', 'salah_reward', 'salah_full_day_bonus') THEN minutes_amount ELSE 0 END), 0) as total_trans_in
             FROM mango_vault_ledger 
             WHERE user_id = :user_id");
             $stmt->execute([':user_id' => $user_id]);
@@ -526,23 +410,72 @@ class BreakDbHelper {
     }
 
     /**
-     * Calculates the Tiffin Efficiency Delta (Full Real Time — No Capping)
-     * Standard: 40 minutes
-     * Formula: 40 - duration_minutes
-     * Early finish credits full saved minutes (e.g. 5m lunch => +35 mins)
-     * Excess break penalizes full overdue minutes (e.g. 85m lunch => -45 mins)
+     * Get active center prayer break schedule
+     * Stored in dedicated center_prayer_schedules table to keep employees table unbloated
      */
-    public static function calculateTiffinDelta($duration_minutes) {
-        $duration = max(1, (int)$duration_minutes);
+    public static function getActivePrayerSchedule($db) {
+        $default = [
+            'id' => 1,
+            'title' => 'আসরের নামাজ ও বিকাল বিরতি',
+            'start_time' => '16:15:00',
+            'end_time' => '16:35:00',
+            'allocated_minutes' => 20,
+            'is_active' => 1,
+            'salah_reward_mins' => 3,
+            'salah_full_day_bonus' => 5,
+            'is_reward_enabled' => 1
+        ];
+        if (!$db) return $default;
+        try {
+            $stmt = $db->query("SELECT id, title, start_time, end_time, allocated_minutes, is_active, salah_reward_mins, salah_full_day_bonus, is_reward_enabled FROM center_prayer_schedules WHERE is_active = 1 ORDER BY id DESC LIMIT 1");
+            $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+            if ($row) {
+                return [
+                    'id' => (int)$row['id'],
+                    'title' => $row['title'] ?: 'আসরের নামাজ ও বিকাল বিরতি',
+                    'start_time' => $row['start_time'] ?: '16:15:00',
+                    'end_time' => $row['end_time'] ?: '16:35:00',
+                    'allocated_minutes' => isset($row['allocated_minutes']) ? (int)$row['allocated_minutes'] : 20,
+                    'is_active' => (int)$row['is_active'],
+                    'salah_reward_mins' => isset($row['salah_reward_mins']) ? (int)$row['salah_reward_mins'] : 3,
+                    'salah_full_day_bonus' => isset($row['salah_full_day_bonus']) ? (int)$row['salah_full_day_bonus'] : 5,
+                    'is_reward_enabled' => isset($row['is_reward_enabled']) ? (int)$row['is_reward_enabled'] : 1
+                ];
+            }
+        } catch (Throwable $e) {}
+        return $default;
+    }
+
+    /**
+     * Calculates the Break Efficiency Delta for Scheduled Center Breaks
+     * Standard: 40 minutes for Tiffin, 20 minutes for Namaz
+     * Formula: allocated - duration_minutes
+     * Early finish credits full saved minutes into Mango Tree Overtime
+     * Excess break penalizes full overdue minutes
+     */
+    public static function calculateBreakDelta($breakType, $durationMinutes) {
+        $duration = max(1, (int)$durationMinutes);
+        if ($breakType === 'Namaz') {
+            return (20 - $duration);
+        }
         return (40 - $duration);
     }
 
     /**
-     * Get detailed Tiffin efficiency summary for user (optionally scoped to a date range)
+     * Backward compatible wrapper for Tiffin Efficiency Delta
+     */
+    public static function calculateTiffinDelta($duration_minutes, $breakType = 'Tiffin') {
+        return self::calculateBreakDelta($breakType, $duration_minutes);
+    }
+
+    /**
+     * Get detailed Tiffin & Namaz efficiency summary for user (optionally scoped to a date range)
      */
     public static function getTiffinSummary($db, $user_id, $startDate = null, $endDate = null) {
         $data = [
             'total_tiffin_count' => 0,
+            'total_namaz_count' => 0,
+            'total_break_count' => 0,
             'total_target_minutes' => 0,
             'total_target_hours' => 0,
             'total_taken_minutes' => 0,
@@ -555,13 +488,15 @@ class BreakDbHelper {
 
         try {
             $sql = "SELECT 
-                COUNT(*) as t_count,
+                SUM(CASE WHEN break_type = 'Tiffin' THEN 1 ELSE 0 END) as t_count,
+                SUM(CASE WHEN break_type = 'Namaz' THEN 1 ELSE 0 END) as n_count,
+                COUNT(*) as total_count,
                 COALESCE(SUM(duration_minutes), 0) as total_duration_taken,
                 COALESCE(SUM(CASE WHEN tiffin_delta_minutes > 0 THEN tiffin_delta_minutes ELSE 0 END), 0) as total_bonus,
                 COALESCE(SUM(CASE WHEN tiffin_delta_minutes < 0 THEN ABS(tiffin_delta_minutes) ELSE 0 END), 0) as total_penalty,
                 COALESCE(SUM(tiffin_delta_minutes), 0) as net_delta
             FROM user_breaks 
-            WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'";
+            WHERE user_id = :user_id AND break_type IN ('Tiffin', 'Namaz') AND status = 'Completed'";
             
             $params = [':user_id' => $user_id];
             if ($startDate && $endDate) {
@@ -574,18 +509,22 @@ class BreakDbHelper {
             $stmt->execute($params);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
-                $tCount = (int)$row['t_count'];
-                $takenMins = (int)$row['total_duration_taken'];
-                $targetMins = $tCount * 40;
+                $tCount = (int)($row['t_count'] ?? 0);
+                $nCount = (int)($row['n_count'] ?? 0);
+                $totalCount = (int)($row['total_count'] ?? 0);
+                $takenMins = (int)($row['total_duration_taken'] ?? 0);
+                $targetMins = ($tCount * 40) + ($nCount * 20);
 
                 $data['total_tiffin_count'] = $tCount;
+                $data['total_namaz_count'] = $nCount;
+                $data['total_break_count'] = $totalCount;
                 $data['total_target_minutes'] = $targetMins;
                 $data['total_target_hours'] = round($targetMins / 60, 2);
                 $data['total_taken_minutes'] = $takenMins;
                 $data['total_taken_hours'] = round($takenMins / 60, 2);
-                $data['bonus_minutes'] = (int)$row['total_bonus'];
-                $data['penalty_minutes'] = (int)$row['total_penalty'];
-                $data['net_tiffin_delta'] = (int)$row['net_delta'];
+                $data['bonus_minutes'] = (int)($row['total_bonus'] ?? 0);
+                $data['penalty_minutes'] = (int)($row['total_penalty'] ?? 0);
+                $data['net_tiffin_delta'] = (int)($row['net_delta'] ?? 0);
             }
         } catch (Throwable $t) {}
 

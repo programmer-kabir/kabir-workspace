@@ -11,7 +11,7 @@ return [
     'url' => rtrim(envValue('APP_URL', 'http://localhost:5001'), '/'),
     'corsOrigins' => array_values(array_filter(array_map(
         static fn(string $origin): string => trim($origin),
-        explode(',', envValue('CORS_ALLOWED_ORIGINS', 'http://localhost:5174'))
+        explode(',', envValue('CORS_ALLOWED_ORIGINS', 'http://localhost:3000'))
     ))),
     'adobe' => [
         'mode' => envValue('ADOBE_DATA_MODE', 'demo'),
@@ -37,6 +37,17 @@ return [
     'scoring' => [
         'competitionLowMax' => 10000,
         'competitionMediumMax' => 500000,
+    ],
+    'mail' => [
+        'fromAddress' => envValue('MAIL_FROM_ADDRESS', 'support@stockassettrack.com'),
+        'fromName' => envValue('MAIL_FROM_NAME', 'StockAssetTrack'),
+        'autoVerifySignup' => filter_var(envValue('AUTO_VERIFY_SIGNUP', 'false'), FILTER_VALIDATE_BOOLEAN),
+    ],
+    'smtp' => [
+        'host' => envValue('SMTP_HOST', ''),
+        'port' => (int) envValue('SMTP_PORT', '465'),
+        'user' => envValue('SMTP_USER', ''),
+        'pass' => envValue('SMTP_PASS', ''),
     ],
     'plans' => [
         'free' => ['dailySearches' => 2, 'maxDevices' => 1, 'priceMonthly' => 0],

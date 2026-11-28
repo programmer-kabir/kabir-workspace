@@ -51,12 +51,11 @@ try {
     $query = "SELECT eb.*, 
                      u.name as user_name, 
                      u.profile_picture as user_avatar,
-                     COALESCE(e.employee_code, st.student_code) as employee_code,
+                     COALESCE(e.employee_code, 'Staff') as employee_code,
                      u_adm.name as approved_by_name
               FROM user_breaks eb
               LEFT JOIN users u ON eb.user_id = u.id
               LEFT JOIN employees e ON u.id = e.user_id
-              LEFT JOIN students st ON u.id = st.user_id
               LEFT JOIN users u_adm ON eb.approved_by = u_adm.id
               WHERE {$whereSql}
               ORDER BY eb.date DESC, eb.id DESC";

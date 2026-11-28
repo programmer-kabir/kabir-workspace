@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import ActiveBreakWidget from '../components/ActiveBreakWidget';
 import BreakWidget from '../components/BreakWidget';
 import BreakRequestModal from '../components/BreakRequestModal';
+import DailySalahTracker from '../components/DailySalahTracker';
 import TiffinTimer from '../components/TiffinTimer';
 import BreakSummaryCards from '../components/Breaks/BreakSummaryCards';
 import BreakFilterBar from '../components/Breaks/BreakFilterBar';
@@ -132,6 +133,9 @@ const Breaks = () => {
 
       {/* ── Tiffin Timer ── */}
       <TiffinTimer />
+
+      {/* ── Daily 5 Waqt Salah Tracker ── */}
+      <DailySalahTracker />
 
       {/* ── Summary Cards ── */}
       <BreakSummaryCards summary={summary} />

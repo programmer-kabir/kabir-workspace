@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import TiffinTimer from '../components/TiffinTimer';
 import ActiveBreakWidget from '../components/ActiveBreakWidget';
+import DailySalahTracker from '../components/DailySalahTracker';
 
 import DashboardHeroBanner from '../components/Dashboard/DashboardHeroBanner';
 import DashboardMotivationTicker from '../components/Dashboard/DashboardMotivationTicker';
@@ -210,6 +211,9 @@ const Dashboard = () => {
 
       {/* Tiffin Quota Widget */}
       <TiffinTimer />
+
+      {/* Daily 5 Waqt Salah Tracker */}
+      <DailySalahTracker />
 
       {/* Top 5 Metric Cards Grid */}
       <DashboardMetricGrid

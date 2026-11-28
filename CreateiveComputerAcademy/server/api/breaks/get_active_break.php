@@ -57,10 +57,8 @@ try {
         $pending_request = $pendStmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    // 3. Get allocated_break_minutes & has_tiffin_break for this user (from employees or students)
-    $limit_query = "SELECT has_tiffin_break, allocated_break_minutes FROM employees WHERE user_id = :user_id 
-                    UNION 
-                    SELECT has_tiffin_break, allocated_break_minutes FROM students WHERE user_id = :user_id LIMIT 1";
+    // 3. Get allocated_break_minutes & has_tiffin_break for this user (from employees)
+    $limit_query = "SELECT has_tiffin_break, allocated_break_minutes FROM employees WHERE user_id = :user_id LIMIT 1";
     $limit_stmt = $db->prepare($limit_query);
     $limit_stmt->execute([':user_id' => $user_id]);
     $allocated_minutes = 40; // Default 40 mins
@@ -78,13 +76,23 @@ try {
 
     $is_manual_break = ($has_tiffin_break === 0 || ($allocated_minutes > 0 && $has_tiffin_break === 0));
 
-    // 4. Get total Tiffin break minutes today (counted against company quota)
+    // 4. Get total Tiffin & Namaz break minutes today (counted against company quota)
     $tiffin_stmt = $db->prepare("SELECT SUM(duration_minutes) as total_mins 
                                  FROM user_breaks 
                                  WHERE user_id = :user_id AND date = :today AND status = 'Completed' 
                                  AND break_type = 'Tiffin'");
     $tiffin_stmt->execute([':user_id' => $user_id, ':today' => $today]);
     $total_tiffin_minutes_today = (int)($tiffin_stmt->fetch(PDO::FETCH_ASSOC)['total_mins'] ?? 0);
+
+    $namaz_stmt = $db->prepare("SELECT SUM(duration_minutes) as total_mins 
+                                FROM user_breaks 
+                                WHERE user_id = :user_id AND date = :today AND status = 'Completed' 
+                                AND break_type = 'Namaz'");
+    $namaz_stmt->execute([':user_id' => $user_id, ':today' => $today]);
+    $total_namaz_minutes_today = (int)($namaz_stmt->fetch(PDO::FETCH_ASSOC)['total_mins'] ?? 0);
+
+    // Active center prayer break schedule
+    $prayer_schedule = BreakDbHelper::getActivePrayerSchedule($db);
 
     // 5. Get total Mango Overtime break minutes today (paid from overtime bank)
     $mango_stmt = $db->prepare("SELECT SUM(duration_minutes) as total_mins 
@@ -99,12 +107,14 @@ try {
         "data" => [
             "active_break" => $active_break,
             "pending_request" => $pending_request,
-            "allocated_break_minutes" => $allocated_minutes,
+            "allocated_break_minutes" => 60, // 40m tiffin + 20m namaz
             "has_tiffin_break" => (bool)$has_tiffin_break,
             "is_manual_break" => (bool)$is_manual_break,
-            "total_break_minutes_today" => $total_tiffin_minutes_today,
+            "total_break_minutes_today" => ($total_tiffin_minutes_today + $total_namaz_minutes_today),
             "total_tiffin_minutes_today" => $total_tiffin_minutes_today,
+            "total_namaz_minutes_today" => $total_namaz_minutes_today,
             "total_mango_minutes_today" => $total_mango_minutes_today,
+            "prayer_schedule" => $prayer_schedule,
             "server_time" => date('Y-m-d H:i:s')
         ]
     ]);

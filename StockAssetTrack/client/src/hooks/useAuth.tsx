@@ -17,7 +17,6 @@ interface AuthContextValue {
   user: AuthUser | null;
   usage: UsageSummary | null;
   loadingAuth: boolean;
-  pendingDevVerificationCode: string | null;
   deviceChallenge: DeviceLimitChallenge | null;
   refreshSession: () => Promise<void>;
   signIn: (email: string, password: string, deviceLabel?: string, turnstileToken?: string) => Promise<void>;
@@ -40,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [pendingDevVerificationCode, setPendingDevVerificationCode] = useState<string | null>(null);
   const [deviceChallenge, setDeviceChallenge] = useState<DeviceLimitChallenge | null>(null);
 
   const refreshSession = useCallback(async () => {
@@ -83,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStoredAuthToken(res.token);
       setStoredDeviceToken(res.deviceToken);
       if (res.csrToken) setStoredCsrToken(res.csrToken);
-      setPendingDevVerificationCode(res.verificationCode ?? null);
       setDeviceChallenge(null);
       setUser(res.user);
       await refreshSession();
@@ -106,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStoredAuthToken(res.token);
     setStoredDeviceToken(res.deviceToken);
     if (res.csrToken) setStoredCsrToken(res.csrToken);
-    setPendingDevVerificationCode(res.verificationCode ?? null);
     setDeviceChallenge(null);
     setUser(res.user);
     await refreshSession();
@@ -116,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyEmail = async (code: string) => {
     const res = await verifyAccountEmail(code);
     setUser(res.user);
-    setPendingDevVerificationCode(null);
   };
 
   const completeDeviceReplace = async (token: string, deviceToken: string) => {
@@ -128,7 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     setStoredAuthToken(null);
-    setPendingDevVerificationCode(null);
     setDeviceChallenge(null);
     setUser(null);
     setUsage(null);
@@ -140,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         usage,
         loadingAuth,
-        pendingDevVerificationCode,
         deviceChallenge,
         refreshSession,
         signIn,

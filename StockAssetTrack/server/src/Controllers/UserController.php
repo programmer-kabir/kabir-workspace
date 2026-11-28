@@ -63,6 +63,14 @@ final class UserController
         $token = $this->authService->issueAuthToken((int) $user['id']);
         $csr = $this->authService->issueCsrToken($deviceToken);
 
+        $autoVerify = (bool) ($this->config['mail']['autoVerifySignup'] ?? false);
+        if ($autoVerify) {
+            $this->authService->verifyEmailWithCode((int) $user['id'], (string) $result['verificationCode']);
+            $user = $this->authService->findUserById((int) $user['id']) ?? $user;
+        } else {
+            $this->dispatchVerificationEmail((string) $user['email'], (string) $user['displayName'], (string) $result['verificationCode']);
+        }
+
         $payload = [
             'success' => true,
             'token' => $token,
@@ -71,10 +79,6 @@ final class UserController
             'user' => $user,
             'devices' => $this->authService->listDevices((int) $user['id'], $deviceToken),
         ];
-
-        if (($this->config['env'] ?? 'production') === 'local') {
-            $payload['verificationCode'] = $result['verificationCode'];
-        }
 
         Response::json($payload, 201);
     }
@@ -117,6 +121,24 @@ final class UserController
 
         $csr = $this->authService->issueCsrToken($deviceToken);
 
+        if (empty($user['emailVerified'])) {
+            $code = $this->authService->expectedVerificationCode((int) $user['id'], (string) $user['email']);
+            $this->dispatchVerificationEmail((string) $user['email'], (string) $user['displayName'], $code);
+
+            Response::json([
+                'success' => false,
+                'error' => [
+                    'code' => 'EMAIL_NOT_VERIFIED',
+                    'message' => 'Please verify your email before signing in. We have sent a verification code to your email.',
+                    'details' => [
+                        'email' => $user['email'],
+                        'pendingToken' => $token,
+                        'deviceToken' => $deviceToken,
+                    ],
+                ],
+            ], 403);
+        }
+
         $payload = [
             'success' => true,
             'token' => $token,
@@ -125,10 +147,6 @@ final class UserController
             'user' => $user,
             'devices' => $slotCheck['devices'],
         ];
-
-        if (($this->config['env'] ?? 'production') === 'local' && empty($user['emailVerified'])) {
-            $payload['verificationCode'] = $this->authService->expectedVerificationCode((int) $user['id'], (string) $user['email']);
-        }
 
         Response::json($payload);
     }
@@ -156,13 +174,13 @@ final class UserController
         $user = $this->authMiddleware->resolveUser($request, required: true, enforceDeviceSlot: false);
         assert($user !== null);
 
+        $code = $this->authService->expectedVerificationCode((int) $user['id'], (string) $user['email']);
+        $this->dispatchVerificationEmail((string) $user['email'], (string) $user['displayName'], $code);
+
         $payload = [
             'success' => true,
             'message' => 'Verification instructions issued.',
         ];
-        if (($this->config['env'] ?? 'production') === 'local') {
-            $payload['verificationCode'] = $this->authService->expectedVerificationCode((int) $user['id'], (string) $user['email']);
-        }
 
         Response::json($payload);
     }
@@ -437,5 +455,41 @@ final class UserController
         ]);
 
         Response::json(['success' => true, 'removed' => $stmt->rowCount() > 0]);
+    }
+
+    private function dispatchVerificationEmail(string $toEmail, string $displayName, string $code): bool
+    {
+        $safeName = htmlspecialchars($displayName ?: 'Creator', ENT_QUOTES, 'UTF-8');
+        $subject = "Your StockAssetTrack Verification Code: {$code}";
+        $textBody = "Hello {$displayName},\n\nYour StockAssetTrack verification code is: {$code}\n\nEnter this 8-character code to verify your account.\n\nBest regards,\nThe StockAssetTrack Team\nhttps://stockassettrack.com\n";
+
+        $htmlBody = <<<HTML
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #0f172a; color: #f8fafc; border-radius: 16px; padding: 36px 32px; border: 1px solid #334155;">
+  <div style="margin-bottom: 24px;">
+    <span style="font-size: 20px; font-weight: 800; color: #818cf8; letter-spacing: -0.5px;">StockAssetTrack</span>
+    <span style="font-size: 11px; margin-left: 8px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Intelligence</span>
+  </div>
+  <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #ffffff;">Verify Your Creator Account</h2>
+  <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0 0 20px 0;">
+    Hello <strong>{$safeName}</strong>,<br>
+    Welcome to StockAssetTrack. Use the verification code below to activate your account and unlock niche research, competitor tracking, and AI prompt tools:
+  </p>
+  <div style="margin: 28px 0; text-align: center;">
+    <div style="display: inline-block; padding: 14px 28px; background: #1e1b4b; border: 1px solid #6366f1; border-radius: 12px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 26px; font-weight: 800; letter-spacing: 5px; color: #a5b4fc;">
+      {$code}
+    </div>
+  </div>
+  <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+    Enter this code on your StockAssetTrack verification screen. If you did not request this code, you can safely ignore this email.
+  </p>
+  <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; text-align: center;">
+    StockAssetTrack &copy; 2026 · Microstock Intelligence Platform<br>
+    <a href="https://stockassettrack.com" style="color: #6366f1; text-decoration: none;">stockassettrack.com</a>
+  </div>
+</div>
+HTML;
+
+        $mailer = new \App\Services\SmtpMailer($this->config);
+        return $mailer->send($toEmail, $displayName, $subject, $htmlBody, $textBody);
     }
 }

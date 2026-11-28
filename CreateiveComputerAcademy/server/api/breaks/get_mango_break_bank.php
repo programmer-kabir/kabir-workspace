@@ -193,8 +193,8 @@ try {
     $brkStmt->execute($brkParams);
     $breaksByDate = $brkStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // Aggregate attendance per calendar day (Gross Office Presence and Excess Breaks beyond 40m allocated paid break)
-    $allocatedBreakSec = 40 * 60; // 40 minutes allocated paid break
+    // Aggregate attendance per calendar day (Gross Office Presence and Excess Breaks beyond 60m allocated paid break: 40m noon + 20m afternoon)
+    $allocatedBreakSec = 60 * 60; // 60 minutes allocated paid break
     $daily_presence = [];
     $daily_excess_break = [];
     foreach ($attendance_rows as $row) {
@@ -397,6 +397,39 @@ try {
         }
     }
 
+    // 7.5. Emergency Shift Gap Breaks
+    try {
+        $emSql = "SELECT id, date, duration_minutes, reason, purpose, status, created_at 
+                  FROM user_breaks 
+                  WHERE user_id = :user_id AND break_type = 'Emergency Break' AND status = 'Completed'";
+        $emParams = [':user_id' => $user_id];
+        if (!$is_all_time) {
+            $emSql .= " AND date BETWEEN :m_start AND :m_end";
+            $emParams[':m_start'] = $month_start;
+            $emParams[':m_end'] = $month_end;
+        }
+        $emSql .= " ORDER BY date DESC, id DESC";
+        $emStmt = $db->prepare($emSql);
+        $emStmt->execute($emParams);
+        $emergencyBreaks = $emStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($emergencyBreaks as $eb) {
+            $eMins = (int)$eb['duration_minutes'];
+            $eHrs = round($eMins / 60, 2);
+            $unified_claims[] = [
+                'id' => 'emergency-gap-' . $eb['id'],
+                'claim_date' => $eb['date'],
+                'leave_date' => $eb['date'],
+                'hours_claimed' => $eHrs,
+                'duration_minutes' => $eMins,
+                'type' => 'Emergency Shift Gap 🚨',
+                'purpose' => 'Emergency Gap',
+                'reason' => $eb['reason'] ? "Approved Emergency Break: {$eb['reason']} (-{$eMins}m gap)" : "Approved Emergency Break (-{$eMins}m gap)",
+                'status' => 'Shift Gap'
+            ];
+        }
+    } catch (Throwable $eEm) {}
+
     // 8. Cashed Out Overtime from staff_withdrawals (Money vs Mango Choice)
     $total_cashed_out_overtime_hours = 0.0;
     try {
@@ -507,9 +540,9 @@ try {
     $total_tiffin_penalty_hours = round($tiffin_summary['penalty_minutes'] / 60, 2);
 
     try {
-        $tfSql = "SELECT id, date, duration_minutes, tiffin_delta_minutes, created_at 
+        $tfSql = "SELECT id, date, break_type, duration_minutes, tiffin_delta_minutes, created_at 
                   FROM user_breaks 
-                  WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed' AND tiffin_delta_minutes != 0";
+                  WHERE user_id = :user_id AND break_type IN ('Tiffin', 'Namaz') AND status = 'Completed' AND tiffin_delta_minutes != 0";
         $tfParams = [':user_id' => $user_id];
         if (!$is_all_time) {
             $tfSql .= " AND date BETWEEN :m_start AND :m_end";
@@ -523,25 +556,29 @@ try {
 
         foreach ($tiffinRows as $tf) {
             $tDelta = (int)$tf['tiffin_delta_minutes'];
-            // Tiffin savings are kept in tiffin_summary/tiffin_history, not mixed into the Overtime attendance table
+            // Tiffin and Namaz savings are kept in tiffin_summary/tiffin_history, not mixed into the Overtime attendance table
             if ($tDelta < 0) {
                 $absDelta = abs($tDelta);
+                $isNamaz = ($tf['break_type'] ?? '') === 'Namaz';
+                $targetLimit = $isNamaz ? 20 : 40;
+                $label = $isNamaz ? 'Namaz Over-Break ⚡' : 'Tiffin Over-Break ⚡';
+                $breakName = $isNamaz ? 'Namaz' : 'Tiffin';
                 $unified_claims[] = [
                     'id' => 'tiffin-pen-' . $tf['id'],
                     'claim_date' => $tf['date'],
                     'leave_date' => $tf['date'],
                     'hours_claimed' => round($absDelta / 60, 2),
-                    'type' => 'Tiffin Over-Break ⚡',
+                    'type' => $label,
                     'purpose' => 'Over-Break Penalty',
-                    'reason' => "Tiffin took {$tf['duration_minutes']}m (Exceeded 40m by {$absDelta}m)",
+                    'reason' => "{$breakName} took {$tf['duration_minutes']}m (Exceeded {$targetLimit}m by {$absDelta}m)",
                     'status' => 'Deducted'
                 ];
             }
         }
 
-        $allTfSql = "SELECT id, date, start_time, end_time, duration_minutes, COALESCE(tiffin_delta_minutes, 0) as tiffin_delta_minutes, status, created_at 
+        $allTfSql = "SELECT id, date, break_type, start_time, end_time, duration_minutes, COALESCE(tiffin_delta_minutes, 0) as tiffin_delta_minutes, status, created_at 
                      FROM user_breaks 
-                     WHERE user_id = :user_id AND break_type = 'Tiffin' AND status = 'Completed'";
+                     WHERE user_id = :user_id AND break_type IN ('Tiffin', 'Namaz') AND status = 'Completed'";
         $allTfParams = [':user_id' => $user_id];
         if (!$is_all_time) {
             $allTfSql .= " AND date BETWEEN :m_start AND :m_end";

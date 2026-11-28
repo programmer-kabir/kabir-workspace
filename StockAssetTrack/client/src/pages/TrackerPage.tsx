@@ -220,7 +220,7 @@ export function TrackerPage() {
           totalDownloads: stats?.totalDownloads ?? 0,
           notifyEnabled: true,
         });
-        toast.success(`Added ${activeCreator.name} to MySQL Watchlist`);
+        toast.success(`Added ${activeCreator.name} to Watchlist`);
       }
       await refreshWatchlist();
       window.dispatchEvent(new Event('sat:watchlist-changed'));
@@ -254,7 +254,7 @@ export function TrackerPage() {
           Contributor Portfolio Tracker
         </h1>
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-          Paste any Adobe Stock contributor URL or numeric ID to inspect portfolio velocity, AI share, country origin, and track competitors in MySQL.
+          Paste any Adobe Stock contributor URL or numeric ID to inspect portfolio velocity, AI share, country origin, and track competitor growth.
         </p>
       </div>
 
@@ -450,7 +450,7 @@ export function TrackerPage() {
                     <span className="font-mono text-xs text-slate-500">ID #{activeCreator.id}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    Stats source: {stats.cached ? 'MySQL 6h Cache' : stats.source} · Computed{' '}
+                    Stats source: {stats.cached ? 'Indexed Cache' : stats.source} · Computed{' '}
                     {new Date(stats.computedAt).toLocaleTimeString()}
                   </p>
                 </div>
@@ -467,7 +467,7 @@ export function TrackerPage() {
                     }`}
                 >
                   {isWatching ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
-                  <span>{isWatching ? 'Watching (MySQL)' : 'Watch Competitor'}</span>
+                  <span>{isWatching ? 'Watching' : 'Watch Competitor'}</span>
                 </button>
 
                 <button
@@ -637,7 +637,7 @@ export function TrackerPage() {
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-brand-cyan" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Competitor Watchlist (MySQL Persisted)
+              Competitor Watchlist
             </h3>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               {watchlist.length}
@@ -650,7 +650,7 @@ export function TrackerPage() {
 
         {watchlist.length === 0 ? (
           <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            No contributors on your MySQL watchlist yet. Click &ldquo;Watch Competitor&rdquo; above to track new uploads &amp; download growth.
+            No contributors on your watchlist yet. Click &ldquo;Watch Competitor&rdquo; above to track new uploads &amp; download growth.
           </p>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

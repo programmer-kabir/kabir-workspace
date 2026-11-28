@@ -1,11 +1,13 @@
 <?php
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
+require_once 'BreakDbHelper.php';
 
 date_default_timezone_set('Asia/Dhaka');
 
 $database = new Database();
 $db = $database->getConnection();
+BreakDbHelper::ensureSchema($db);
 
 $data = json_decode(file_get_contents("php://input"));
 
@@ -38,9 +40,16 @@ try {
             echo json_encode(["status" => "error", "message" => "You have already completed your daily scheduled Tiffin break for today. Any further breaks require earned Mango Overtime."]);
             exit;
         }
+    } else if ($break_type === 'Namaz') {
+        $nCheck = $db->prepare("SELECT id FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Namaz' AND status = 'Completed' LIMIT 1");
+        $nCheck->execute([':user_id' => $user_id, ':date' => $date]);
+        if ($nCheck->rowCount() > 0) {
+            echo json_encode(["status" => "error", "message" => "You have already completed your daily scheduled Namaz break for today. Any further breaks require earned Mango Overtime."]);
+            exit;
+        }
     }
 
-    $purpose = !empty($data->purpose) ? trim($data->purpose) : ($break_type === 'Tiffin' ? 'Tiffin' : 'Personal');
+    $purpose = !empty($data->purpose) ? trim($data->purpose) : ($break_type === 'Tiffin' ? 'Tiffin' : ($break_type === 'Namaz' ? 'Namaz' : 'Personal'));
     $reason = !empty($data->reason) ? trim($data->reason) : null;
 
     $query = "INSERT INTO user_breaks (user_id, date, break_type, purpose, reason, start_time, status) VALUES (:user_id, :date, :break_type, :purpose, :reason, :start_time, 'Active')";

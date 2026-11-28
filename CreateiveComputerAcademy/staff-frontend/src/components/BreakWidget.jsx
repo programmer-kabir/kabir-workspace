@@ -169,9 +169,12 @@ const BreakWidget = () => {
   const remainingSeconds = elapsedSeconds % 60;
   const timeString = `${String(elapsedMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
   
-  // Determine states based on limit
-  const isOvertime = elapsedMinutes >= allocatedMinutes;
-  const isWarning = elapsedMinutes >= allocatedMinutes - 10 && !isOvertime;
+  // Determine states based on limit (20m for Namaz, 40m for Tiffin, or allocatedMinutes)
+  const isNamaz = activeBreak?.break_type === 'Namaz';
+  const isTiffin = activeBreak?.break_type === 'Tiffin';
+  const targetLimitMinutes = isNamaz ? 20 : (isTiffin ? 40 : allocatedMinutes);
+  const isOvertime = elapsedMinutes >= targetLimitMinutes;
+  const isWarning = elapsedMinutes >= targetLimitMinutes - 5 && !isOvertime;
 
   return (
     <div className={`group bg-white dark:bg-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border ${isOvertime ? 'border-rose-500/50 dark:border-rose-500/50 shadow-rose-500/20' : isWarning ? 'border-amber-400/50 dark:border-amber-400/50' : 'border-slate-100 dark:border-slate-700'} p-8 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1`}>
@@ -185,7 +188,7 @@ const BreakWidget = () => {
         
         <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-1">Break Tracker</h3>
         <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs mb-6">
-          Limit: {allocatedMinutes}m &bull; Taken Today: {totalBreakMinutesToday}m
+          Daily Free Pool: {allocatedMinutes}m (40m Tiffin + 20m Namaz) &bull; Taken Today: {totalBreakMinutesToday}m
         </p>
 
         {activeBreak ? (
@@ -234,9 +237,9 @@ const BreakWidget = () => {
                 onChange={e => setBreakType(e.target.value)}
                 className="w-full appearance-none bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer shadow-sm"
               >
-                <option value="Tiffin">🥪 Tiffin Break (Standard Quota)</option>
-                <option value="Mango Break">🥭 Mango Break (Deducts from Overtime Bank)</option>
-                <option value="Prayer">🕌 Prayer Break</option>
+                <option value="Tiffin">🥪 দুপুরের টিফিন (৪০ মিনিট ফ্রি কোটা)</option>
+                <option value="Namaz">🕌 আসরের নামাজ ও বিকাল বিরতি (২০ মিনিট ফ্রি কোটা)</option>
+                <option value="Mango Break">🥭 Mango Break (আম ওভারটাইম ব্যাংক থেকে)</option>
                 <option value="Personal">☕ Personal Break</option>
                 <option value="Other">✨ Other</option>
               </select>

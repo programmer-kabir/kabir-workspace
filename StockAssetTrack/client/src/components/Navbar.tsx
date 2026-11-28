@@ -75,7 +75,7 @@ export function Navbar({ darkMode, onToggleTheme, onOpenSaved, health }: NavbarP
 
         <div className="flex items-center gap-2">
           <span
-            title={health ? `PHP ${health.phpVersion} | DB: ${health.database.status}` : 'Checking API'}
+            title={health ? 'Microstock Intelligence Engine Operational' : 'Checking API Status'}
             className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium sm:inline-flex ${
               health?.success
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
@@ -84,10 +84,10 @@ export function Navbar({ darkMode, onToggleTheme, onOpenSaved, health }: NavbarP
           >
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                health?.success ? 'bg-emerald-500' : 'bg-amber-500'
+                health?.success ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
               }`}
             />
-            {health?.success ? `API: ${health.adobeDataMode}` : 'API Offline'}
+            {health?.success ? 'Live Engine' : 'Connecting...'}
           </span>
 
           <button
@@ -99,12 +99,14 @@ export function Navbar({ darkMode, onToggleTheme, onOpenSaved, health }: NavbarP
             <span>Saved</span>
           </button>
 
+          {/* Adobe Review Submission: Temporarily hidden to present 100% free community tool
           <Link
             to="/pricing"
             className="hidden rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900 sm:inline-block"
           >
             Plans
           </Link>
+          */}
 
           {user ? (
             <Link

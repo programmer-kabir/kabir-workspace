@@ -76,6 +76,8 @@ const dictionary = {
     student_approved_notice: "Student status is approved. You can apply for up to 3 days of student academic leaves each month.",
     center_closed: "Center Closed / Holiday",
     paid_holiday: "Official Paid Holiday (100% Salary Protected)",
+    noon_tiffin_break: "Noon Tiffin Break (40 min)",
+    asr_prayer_break: "Asr Prayer & Evening Break (20 min)",
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -148,6 +150,8 @@ const dictionary = {
     student_approved_notice: "শিক্ষার্থী স্ট্যাটাস অনুমোদিত। আপনি প্রতি মাসে সর্বোচ্চ ৩ দিন পর্যন্ত স্টুডেন্ট অ্যাকাডেমিক ছুটি নিতে পারবেন।",
     center_closed: "ছুটি ও সেন্টার বন্ধ",
     paid_holiday: "বেতনভুক্ত সরকারি ছুটি (১০০% বেতন সুরক্ষিত)",
+    noon_tiffin_break: "দুপুরের টিফিন বিরতি (৪০ মিনিট)",
+    asr_prayer_break: "আসরের নামাজ ও বিকাল বিরতি (২০ মিনিট)",
   }
 };
 

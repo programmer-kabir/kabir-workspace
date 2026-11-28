@@ -34,15 +34,60 @@ if ($empCfg) {
 }
 
 $break_type = !empty($data->break_type) ? trim($data->break_type) : 'Mango Break';
-$purpose = !empty($data->purpose) ? trim($data->purpose) : ($break_type === 'Tiffin' ? 'Tiffin' : 'Personal');
+$purpose = !empty($data->purpose) ? trim($data->purpose) : ($break_type === 'Tiffin' ? 'Tiffin' : ($break_type === 'Namaz' ? 'Namaz' : 'Personal'));
 $reason = !empty($data->reason) ? trim($data->reason) : '';
 $estimated_minutes = isset($data->estimated_minutes) ? (int)$data->estimated_minutes : 15;
 $today = date('Y-m-d');
 
+$isEmergency = ($break_type === 'Emergency Break' || !empty($data->is_emergency) || !empty($data->is_emergency_gap));
+
 try {
-    // Rule: All custom breaks (other than Tiffin) MUST be funded by Mango Overtime Bank
-    if ($break_type !== 'Tiffin') {
-        $break_type = 'Mango Break'; // Standardize as Mango Break so it deducts from overtime bank
+    // Rule: Center paid breaks are Tiffin (40m) and Namaz (20m) — no overtime balance required
+    if ($isEmergency) {
+        $break_type = 'Emergency Break';
+        $purpose = 'Emergency Gap';
+
+        if (empty($reason)) {
+            echo json_encode(["status" => "error", "message" => "A specific reason is required for an Emergency Break request."]);
+            exit;
+        }
+
+        // Limit emergency break to max 60 minutes
+        if ($estimated_minutes > 60) {
+            $estimated_minutes = 60;
+        }
+
+        // Monthly emergency break quota: Maximum 3 approved/pending emergency breaks per calendar month
+        $curMonth = date('Y-m');
+        $mCountStmt = $db->prepare("SELECT COUNT(*) FROM user_breaks WHERE user_id = :uid AND break_type = 'Emergency Break' AND DATE_FORMAT(date, '%Y-%m') = :m AND status != 'Rejected'");
+        $mCountStmt->execute([':uid' => $user_id, ':m' => $curMonth]);
+        $monthlyCount = (int)$mCountStmt->fetchColumn();
+
+        if ($monthlyCount >= 3) {
+            echo json_encode([
+                "status" => "error", 
+                "message" => "Monthly emergency break limit reached (Maximum 3 emergency breaks allowed per month). Please consult Admin directly."
+            ]);
+            exit;
+        }
+
+    } else if ($break_type === 'Tiffin') {
+        $tCheck = $db->prepare("SELECT id FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Tiffin' AND status = 'Completed' LIMIT 1");
+        $tCheck->execute([':user_id' => $user_id, ':date' => $today]);
+        if ($tCheck->rowCount() > 0) {
+            echo json_encode(["status" => "error", "message" => "You have already completed your daily scheduled Tiffin break for today."]);
+            exit;
+        }
+    } else if ($break_type === 'Namaz') {
+        $nCheck = $db->prepare("SELECT id FROM user_breaks WHERE user_id = :user_id AND date = :date AND break_type = 'Namaz' AND status = 'Completed' LIMIT 1");
+        $nCheck->execute([':user_id' => $user_id, ':date' => $today]);
+        if ($nCheck->rowCount() > 0) {
+            echo json_encode(["status" => "error", "message" => "You have already completed your daily scheduled Namaz break for today."]);
+            exit;
+        }
+    } else {
+        // Rule: All regular custom breaks MUST be funded by Mango Overtime Bank
+        $break_type = 'Mango Break';
         $availableMinutes = BreakDbHelper::getAvailableMangoMinutes($db, $user_id);
 
         if ($availableMinutes < $estimated_minutes) {
@@ -51,7 +96,7 @@ try {
             $availStr = $h > 0 ? "{$h}h {$m}m" : "{$m} mins";
             echo json_encode([
                 "status" => "error",
-                "message" => "Insufficient Mango Overtime balance. You have {$availStr} ({$availableMinutes} mins) available, but requested {$estimated_minutes} mins. Tiffin break is provided daily on schedule, but custom breaks require earned overtime."
+                "message" => "Insufficient Mango Overtime balance. You have {$availStr} ({$availableMinutes} mins) available, but requested {$estimated_minutes} mins. For critical emergencies with zero mangoes, use the 'Emergency Break' request option."
             ]);
             exit;
         }
@@ -103,6 +148,7 @@ try {
         "date" => $today,
         "break_type" => $break_type,
         "purpose" => $purpose,
+        "is_emergency" => (bool)$isEmergency,
         "reason" => $reason,
         "estimated_minutes" => $estimated_minutes,
         "status" => "Pending",
@@ -113,6 +159,7 @@ try {
     try {
         $pusher = new PusherHelper();
         $pusher->trigger('staff-breaks', 'break-requested', $responsePayload);
+        $pusher->trigger('admin-breaks', 'break-requested', $responsePayload);
     } catch (Throwable $pe) {
         error_log("Pusher break-requested error: " . $pe->getMessage());
     }
@@ -124,18 +171,23 @@ try {
             // Get admin users
             $admStmt = $db->query("SELECT user_id FROM user_roles WHERE role = 'admin'");
             $adminIds = $admStmt->fetchAll(PDO::FETCH_COLUMN);
+            $notifTitle = $isEmergency ? "🚨 Emergency Break Request from {$userName}" : "☕ Break Request from {$userName}";
+            $notifBody = $isEmergency 
+                ? "{$userName} requested {$estimated_minutes}m Emergency Break (Zero Mangoes). Reason: '{$reason}'. If approved, counts as work gap."
+                : "{$userName} requested {$estimated_minutes} mins {$break_type} ({$purpose}). Reason: {$reason}";
+
             foreach ($adminIds as $adminId) {
                 NotificationHelper::sendToUser(
                     $db,
                     $adminId,
                     $user_id,
-                    "☕ Break Request from {$userName}",
-                    "{$userName} requested {$estimated_minutes} mins {$break_type} ({$purpose}). Reason: {$reason}",
-                    "break_request",
+                    $notifTitle,
+                    $notifBody,
+                    $isEmergency ? "emergency_break_request" : "break_request",
                     "admin",
                     "/roster",
-                    "normal",
-                    ["break_id" => $break_id, "user_id" => $user_id, "break_type" => $break_type, "purpose" => $purpose]
+                    $isEmergency ? "urgent" : "normal",
+                    ["break_id" => $break_id, "user_id" => $user_id, "break_type" => $break_type, "purpose" => $purpose, "is_emergency" => $isEmergency]
                 );
             }
         }

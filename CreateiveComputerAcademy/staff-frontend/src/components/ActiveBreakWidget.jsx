@@ -163,7 +163,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
         if (typeof delta === 'number' && delta > 0) {
           toast.success(`🎉 দারুণ! আপনি ${delta} মিনিট সাশ্রয় করেছেন। আম গাছে +${delta} মিনিট জমা হয়েছে 🥭`, { duration: 6000 });
         } else if (typeof delta === 'number' && delta < 0) {
-          toast.error(`⚠️ টিফিন লিমিট অতিক্রম! আম গাছ থেকে ${Math.abs(delta)} মিনিট কর্তন করা হয়েছে ⚡`, { duration: 6000 });
+          toast.error(`⚠️ বিরতির লিমিট অতিক্রম! আম গাছ থেকে ${Math.abs(delta)} মিনিট কর্তন করা হয়েছে ⚡`, { duration: 6000 });
         } else {
           toast.success(res.data.message || `✅ Break ended! Total time away: ${res.data.duration || 0} minutes.`);
         }
@@ -185,10 +185,14 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
   if (loading) return null;
   if (!activeBreak && !pendingRequest) return null; // Clean hidden state!
 
-  const isTiffin = activeBreak?.break_type === 'Tiffin' || activeBreak?.purpose === 'Tiffin';
-  const isOverTiffin = isTiffin && elapsedSeconds > 40 * 60;
-  const overSeconds = isOverTiffin ? elapsedSeconds - 40 * 60 : 0;
-  const remainingTiffinSec = isTiffin && !isOverTiffin ? Math.max(0, 40 * 60 - elapsedSeconds) : 0;
+  const isEmergency = activeBreak?.break_type === 'Emergency Break' || activeBreak?.purpose === 'Emergency Gap';
+  const isNamaz = !isEmergency && (activeBreak?.break_type === 'Namaz' || activeBreak?.purpose === 'Namaz');
+  const isTiffin = !isEmergency && !isNamaz && (activeBreak?.break_type === 'Tiffin' || activeBreak?.purpose === 'Tiffin');
+  const targetMinutes = isNamaz ? 20 : (isTiffin ? 40 : 0);
+  const isCenterPaidBreak = isTiffin || isNamaz;
+  const isOverBreak = isCenterPaidBreak && elapsedSeconds > targetMinutes * 60;
+  const overSeconds = isOverBreak ? elapsedSeconds - targetMinutes * 60 : 0;
+  const remainingBreakSec = isCenterPaidBreak && !isOverBreak ? Math.max(0, targetMinutes * 60 - elapsedSeconds) : 0;
 
   return (
     <div className="w-full animate-in fade-in slide-in-from-top-4 duration-300">
@@ -196,15 +200,19 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
       {/* ── CASE 1: ACTIVE BREAK RUNNING ── */}
       {activeBreak && (
         <div className={`relative overflow-hidden rounded-3xl p-5 md:p-6 text-white shadow-xl border transition-all duration-500 ${
-          isOverTiffin
+          isOverBreak
             ? 'bg-gradient-to-r from-red-700 via-rose-700 to-amber-800 border-red-300/40 ring-4 ring-rose-500/30 shadow-red-900/30'
+            : isEmergency
+            ? 'bg-gradient-to-r from-red-600 via-rose-600 to-amber-700 border-white/20 shadow-rose-600/20'
+            : isNamaz
+            ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 border-white/20 shadow-emerald-600/20'
             : isTiffin
             ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-emerald-700 border-white/20 shadow-orange-600/20'
             : 'bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 border-white/20 shadow-orange-600/20'
         }`}>
           
           {/* Animated pulsing background effect */}
-          <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full blur-2xl pointer-events-none ${isOverTiffin ? 'bg-red-400/20 animate-ping' : 'bg-white/10 animate-pulse'}`} />
+          <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full blur-2xl pointer-events-none ${isOverBreak || isEmergency ? 'bg-red-400/20 animate-ping' : 'bg-white/10 animate-pulse'}`} />
           <div className="absolute -bottom-12 left-1/3 w-40 h-40 bg-black/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5">
@@ -212,23 +220,35 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
             {/* Left info */}
             <div className="flex items-center gap-4 w-full md:w-auto">
               <div className={`w-14 h-14 rounded-2xl backdrop-blur-md border flex items-center justify-center text-white shrink-0 shadow-lg ${
-                isOverTiffin ? 'bg-red-500/30 border-red-300/40 animate-pulse text-3xl' : 'bg-white/20 border-white/30 text-2xl'
+                isOverBreak ? 'bg-red-500/30 border-red-300/40 animate-pulse text-3xl' : isEmergency ? 'bg-red-500/30 border-red-300/40 text-2xl' : 'bg-white/20 border-white/30 text-2xl'
               }`}>
-                {isTiffin ? (isOverTiffin ? '🚨' : '🥪') : <FiCoffee size={28} className="animate-bounce" />}
+                {isEmergency ? '🚨' : isNamaz ? (isOverBreak ? '🚨' : '🕌') : isTiffin ? (isOverBreak ? '🚨' : '🥪') : <FiCoffee size={28} className="animate-bounce" />}
               </div>
               <div>
                 <div className="flex items-center flex-wrap gap-2">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border backdrop-blur-sm ${
-                    isOverTiffin
+                    isOverBreak
                       ? 'bg-red-500/40 text-white border-red-300/50 animate-pulse'
+                      : isEmergency
+                      ? 'bg-red-500/40 text-white border-red-300/50'
                       : 'bg-white/20 text-white border-white/30'
                   }`}>
-                    <span className={`w-2 h-2 rounded-full ${isOverTiffin ? 'bg-red-300 animate-ping' : 'bg-emerald-400 animate-ping'}`} />
-                    {isOverTiffin ? '⚠️ Over-Break Limit' : 'Break Active'}
+                    <span className={`w-2 h-2 rounded-full ${isOverBreak || isEmergency ? 'bg-red-300 animate-ping' : 'bg-emerald-400 animate-ping'}`} />
+                    {isOverBreak ? '⚠️ Over-Break Limit' : isEmergency ? '🚨 Emergency Break' : 'Break Active'}
                   </span>
                   <span className="text-xs font-bold text-white/90">
                     {activeBreak.break_type}
                   </span>
+                  {isEmergency && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/25 text-rose-200 border border-rose-300/30 backdrop-blur-sm">
+                      Approved Shift Gap
+                    </span>
+                  )}
+                  {isNamaz && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/25 text-emerald-200 border border-emerald-300/30 backdrop-blur-sm">
+                      Standard: 20 mins
+                    </span>
+                  )}
                   {isTiffin && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/25 text-amber-200 border border-amber-300/30 backdrop-blur-sm">
                       Standard: 40 mins
@@ -237,8 +257,12 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                 </div>
 
                 <h4 className="text-lg sm:text-xl font-black tracking-tight mt-0.5 text-white flex items-center gap-2">
-                  {isOverTiffin ? (
-                    <span className="text-red-100">⚠️ ৪০ মিনিট পার হয়েছে! (অতিরিক্ত সময় আম কাটা হচ্ছে)</span>
+                  {isOverBreak ? (
+                    <span className="text-red-100">⚠️ {targetMinutes} মিনিট পার হয়েছে! (অতিরিক্ত সময় আম কাটা হচ্ছে)</span>
+                  ) : isEmergency ? (
+                    <span>🚨 জরুরি বিরতি চলছে (কাজের গ্যাপ কাউন্ট হচ্ছে)</span>
+                  ) : isNamaz ? (
+                    <span>🕌 আসরের নামাজ ও বিকাল বিরতি চলছে (দ্রুত ফিরলে বোনাস আম 🥭)</span>
                   ) : isTiffin ? (
                     <span>🥪 টিফিন ব্রেক চলছে (দ্রুত ফিরলে বোনাস আম 🥭)</span>
                   ) : (
@@ -246,19 +270,25 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                   )}
                 </h4>
 
-                {isTiffin && !isOverTiffin && (
+                {isCenterPaidBreak && !isOverBreak && (
                   <p className="text-xs text-emerald-100 font-bold mt-0.5 flex items-center gap-1">
-                    <span>💡 বরাদ্দ আর {Math.floor(remainingTiffinSec / 60)} মিনিট বাকি — এখনই শেষ করলে +{Math.min(25, Math.floor(remainingTiffinSec / 60))} মিনিট আম গাছে জমা হবে!</span>
+                    <span>💡 বরাদ্দ আর {Math.floor(remainingBreakSec / 60)} মিনিট বাকি — এখনই শেষ করলে +{Math.floor(remainingBreakSec / 60)} মিনিট আম গাছে জমা হবে!</span>
                   </p>
                 )}
 
-                {isOverTiffin && (
+                {isOverBreak && (
                   <p className="text-xs text-amber-200 font-bold mt-0.5 animate-pulse">
                     ⚡ অতিরিক্ত সময়: +{Math.floor(overSeconds / 60)} মিনিট (আম গাছ থেকে কেটে নেওয়া হচ্ছে)
                   </p>
                 )}
 
-                {!isTiffin && activeBreak.reason && (
+                {isEmergency && (
+                  <p className="text-xs text-rose-100 font-bold mt-0.5">
+                    ⚠️ এই বিরতির সময়টুকু শিফট গ্যাপ হিসেবে রেকর্ড হবে। কাজ শেষ করে দ্রুত ফিরুন।
+                  </p>
+                )}
+
+                {!isCenterPaidBreak && activeBreak.reason && (
                   <p className="text-xs text-white/80 font-medium italic truncate max-w-md mt-0.5">
                     "{activeBreak.reason}"
                   </p>
@@ -270,10 +300,10 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
             <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto bg-black/20 backdrop-blur-md border border-white/10 p-2.5 sm:p-3 rounded-2xl">
               <div className="px-3 text-left sm:text-right">
                 <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70">
-                  {isOverTiffin ? 'Total Over-Time' : 'Elapsed Time'}
+                  {isOverBreak ? 'Total Over-Time' : 'Elapsed Time'}
                 </p>
                 <p className={`text-2xl sm:text-3xl font-black font-mono tracking-tight drop-shadow-sm ${
-                  isOverTiffin ? 'text-amber-300 animate-pulse' : 'text-white'
+                  isOverBreak || isEmergency ? 'text-amber-300 animate-pulse' : 'text-white'
                 }`}>
                   {formatTimer(elapsedSeconds)}
                 </p>
@@ -284,7 +314,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                 onClick={handleEndBreak}
                 disabled={ending}
                 className={`px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 shrink-0 ${
-                  isOverTiffin
+                  isOverBreak || isEmergency
                     ? 'bg-amber-300 hover:bg-amber-200 text-red-900 ring-2 ring-white/50'
                     : 'bg-white hover:bg-slate-100 text-rose-600'
                 }`}
@@ -297,7 +327,7 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
                 ) : (
                   <>
                     <FiSquare size={16} className="fill-current" />
-                    <span>{isTiffin ? 'End Tiffin & Claim' : 'End Break & Resume'}</span>
+                    <span>{isEmergency ? 'End Emergency Break' : isNamaz ? 'End Namaz & Claim' : isTiffin ? 'End Tiffin & Claim' : 'End Break & Resume'}</span>
                   </>
                 )}
               </button>
@@ -309,26 +339,50 @@ const ActiveBreakWidget = ({ onBreakChange }) => {
 
       {/* ── CASE 2: PENDING APPROVAL ── */}
       {!activeBreak && pendingRequest && (
-        <div className="rounded-2xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 p-4 flex items-center justify-between gap-4 shadow-sm">
+        <div className={`rounded-2xl border p-4 flex items-center justify-between gap-4 shadow-sm ${
+          pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+            ? 'bg-rose-500/10 dark:bg-rose-950/30 border-rose-500/30'
+            : 'bg-amber-500/10 dark:bg-amber-950/30 border-amber-500/30'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <FiClock size={20} className="animate-spin" style={{ animationDuration: '4s' }} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+                ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+            }`}>
+              {pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap' ? (
+                <span className="text-xl animate-pulse">🚨</span>
+              ) : (
+                <FiClock size={20} className="animate-spin" style={{ animationDuration: '4s' }} />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase text-amber-700 dark:text-amber-300">
-                  ⏳ Break Request Pending
+                <span className={`text-xs font-black uppercase ${
+                  pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+                    ? 'text-rose-700 dark:text-rose-300'
+                    : 'text-amber-700 dark:text-amber-300'
+                }`}>
+                  {pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+                    ? '🚨 জরুরি বিরতি অনুমোদনের অপেক্ষায়'
+                    : '⏳ Break Request Pending'}
                 </span>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                   • {pendingRequest.break_type} {pendingRequest.purpose ? `[${pendingRequest.purpose}]` : ''} ({pendingRequest.estimated_minutes || 30} mins)
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
-                Waiting for Admin approval. Your timer will begin once approved.
+                {pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+                  ? 'অ্যাডমিন অনুমোদনের অপেক্ষায় রয়েছে। অনুমোদিত হলে এই সময়টুকু কাজের গ্যাপ হিসেবে গণ্য হবে।'
+                  : 'Waiting for Admin approval. Your timer will begin once approved.'}
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/20 px-3 py-1 rounded-full shrink-0">
+          <span className={`text-[11px] font-bold px-3 py-1 rounded-full shrink-0 ${
+            pendingRequest.break_type === 'Emergency Break' || pendingRequest.purpose === 'Emergency Gap'
+              ? 'text-rose-700 dark:text-rose-400 bg-rose-500/20'
+              : 'text-amber-700 dark:text-amber-400 bg-amber-500/20'
+          }`}>
             Pending...
           </span>
         </div>

@@ -60,8 +60,14 @@ final class Router
             $normalized = rtrim($normalized, '/');
         }
 
-        $regexBody = preg_replace('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '(?P<$1>[^/]+)', $normalized);
-        $regex = '#^' . $regexBody . '$#';
+        if (str_starts_with($normalized, '/api/')) {
+            $sub = substr($normalized, 4);
+            $regexBody = preg_replace('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '(?P<$1>[^/]+)', $sub);
+            $regex = '#^(?:/api)?' . $regexBody . '$#';
+        } else {
+            $regexBody = preg_replace('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '(?P<$1>[^/]+)', $normalized);
+            $regex = '#^' . $regexBody . '$#';
+        }
 
         $this->routes[] = [
             'method' => $method,

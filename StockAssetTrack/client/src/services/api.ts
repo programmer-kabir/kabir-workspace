@@ -28,7 +28,8 @@ import type {
   WatchlistResponse,
 } from '../types/stock';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const rawApiUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const API_BASE_URL = (import.meta.env.PROD && rawApiUrl.includes('localhost')) ? '' : rawApiUrl;
 const AUTH_TOKEN_KEY = 'sat_auth_token_v1';
 const DEVICE_TOKEN_KEY = 'sat_device_token_v1';
 const CSR_TOKEN_KEY = 'sat_csr_token_v1';
@@ -149,7 +150,35 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiClientError(msg, response.status, code, payload?.error?.details);
   }
 
-  return payload;
+  return sanitizePayloadUrls(payload);
+}
+
+function sanitizePayloadUrls<T>(payload: T): T {
+  if (!payload || typeof payload !== 'object') return payload;
+
+  const sanitizeString = (str: string): string => {
+    return str.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/api\/)/i, '$3');
+  };
+
+  const traverse = (obj: unknown): unknown => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(traverse);
+    }
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (typeof value === 'string' && (key.includes('Url') || key === 'url' || key === 'thumbnailUrl' || key === 'preview1000Url')) {
+        result[key] = sanitizeString(value);
+      } else if (typeof value === 'object' && value !== null) {
+        result[key] = traverse(value);
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
+  };
+
+  return traverse(payload) as T;
 }
 
 function buildCatalogQueryString(params: Partial<SearchQueryParams>): string {

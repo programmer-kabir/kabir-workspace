@@ -90,7 +90,7 @@ class OvertimeEngine {
             $breaksByDate = $brkStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
             // ── 4. Daily presence & excess-break aggregation ──────────────────────
-            $allocatedBreakSec = 40 * 60; // 40 m free paid break per day
+            $allocatedBreakSec = 60 * 60; // 60 m free paid break per day (40m tiffin + 20m namaz)
             $dailyPresence    = [];
             $dailyExcessBreak = [];
             foreach ($attRows as $r) {
@@ -139,7 +139,7 @@ class OvertimeEngine {
                 }
             }
 
-            // ── 6. Tiffin efficiency savings bonus ────────────────────────────────
+            // ── 6. Tiffin & Namaz efficiency savings bonus ────────────────────────────────
             $tiffinBonusSec     = 0;
             $monthlyTiffinSec   = [];
             try {
@@ -147,7 +147,7 @@ class OvertimeEngine {
                     SELECT date, COALESCE(tiffin_delta_minutes, 0) AS t_delta
                     FROM user_breaks
                     WHERE user_id = :uid
-                      AND break_type = 'Tiffin'
+                      AND break_type IN ('Tiffin', 'Namaz')
                       AND status = 'Completed'
                       AND date <= :upto
                 ");
@@ -290,7 +290,7 @@ class OvertimeEngine {
                             ELSE 0
                         END), 0) AS held_mins,
                         COALESCE(SUM(CASE WHEN action_type = 'transfer_out' THEN minutes_amount ELSE 0 END), 0) AS out_mins,
-                        COALESCE(SUM(CASE WHEN action_type = 'transfer_in'  THEN minutes_amount ELSE 0 END), 0) AS in_mins
+                        COALESCE(SUM(CASE WHEN action_type IN ('transfer_in', 'salah_reward', 'salah_full_day_bonus') THEN minutes_amount ELSE 0 END), 0) AS in_mins
                     FROM mango_vault_ledger
                     WHERE user_id = :uid
                 ");

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { FiCoffee, FiCheck, FiX, FiClock, FiUser, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import Pusher from 'pusher-js';
+import PrayerScheduleControl from './PrayerScheduleControl';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -47,11 +48,13 @@ const BreakRequestsWidget = () => {
       const channel = pusherInstance.subscribe('staff-breaks');
 
       channel.bind('break-requested', (data) => {
+        const isEmerg = Boolean(data.is_emergency || data.break_type === 'Emergency Break' || data.purpose === 'Emergency Gap');
         const purposeTag = data.purpose ? `[${data.purpose}] ` : '';
-        toast.info(`☕ Break Request: ${data.user_name} requested ${data.estimated_minutes}m ${purposeTag}${data.break_type} break!`, {
-          duration: 7000
+        const title = isEmerg ? `🚨 EMERGENCY BREAK: ${data.user_name}` : `☕ Break Request: ${data.user_name}`;
+        toast.info(`${title} requested ${data.estimated_minutes}m ${purposeTag}${data.break_type} break!`, {
+          duration: 9000
         });
-        setPendingRequests((prev) => [data, ...prev.filter((p) => p.id !== data.id)]);
+        setPendingRequests((prev) => [data, ...prev.filter((p) => (p.id || p.break_id) !== (data.id || data.break_id))]);
       });
 
       channel.bind('break-approved', (data) => {
@@ -103,10 +106,12 @@ const BreakRequestsWidget = () => {
   };
 
   if (loading) return null;
-  if (pendingRequests.length === 0 && activeBreaks.length === 0) return null; // Clean hidden when no break activity!
 
   return (
     <div className="space-y-4 mb-6 animate-in fade-in slide-in-from-top-3 duration-300">
+      
+      {/* ── 0. Center Prayer Schedule & Master Control ── */}
+      <PrayerScheduleControl />
       
       {/* ── 1. PENDING REQUESTS BANNER (HIGH PRIORITY) ── */}
       {pendingRequests.length > 0 && (
@@ -128,16 +133,23 @@ const BreakRequestsWidget = () => {
             {pendingRequests.map((req) => {
               const bId = req.id || req.break_id;
               const isProcessing = processingId === bId;
+              const isEmergency = Boolean(req.is_emergency || req.break_type === 'Emergency Break' || req.purpose === 'Emergency Gap');
 
               return (
                 <div
                   key={bId}
-                  className="bg-white dark:bg-slate-900 border border-amber-300/80 dark:border-amber-500/30 rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3"
+                  className={`border rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3 ${
+                    isEmergency
+                      ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-700/80 ring-2 ring-rose-500/20'
+                      : 'bg-white dark:bg-slate-900 border-amber-300/80 dark:border-amber-500/30'
+                  }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-xs flex items-center justify-center shrink-0">
+                        <div className={`w-8 h-8 rounded-full font-black text-xs flex items-center justify-center shrink-0 ${
+                          isEmergency ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                        }`}>
                           {req.name?.[0] || req.user_name?.[0] || 'S'}
                         </div>
                         <div className="min-w-0">
@@ -150,25 +162,45 @@ const BreakRequestsWidget = () => {
                         </div>
                       </div>
 
-                      <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-extrabold shrink-0">
-                        {req.estimated_minutes || 30} mins
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isEmergency && (
+                          <span className="px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider animate-pulse">
+                            🚨 EMERGENCY GAP
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                          isEmergency
+                            ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                            : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                        }`}>
+                          {req.estimated_minutes || 30} mins
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800">
                       <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
                         <span>Type:</span>
-                        <span className="text-amber-600 dark:text-amber-400">{req.break_type}</span>
+                        <span className={isEmergency ? "text-rose-600 dark:text-rose-400 font-black" : "text-amber-600 dark:text-amber-400"}>
+                          {req.break_type}
+                        </span>
                         {req.purpose && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase">
+                          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                            isEmergency ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                          }`}>
                             {req.purpose}
                           </span>
                         )}
                       </p>
                       {req.reason && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium italic mt-0.5 line-clamp-2">
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium italic mt-1 line-clamp-2">
                           "{req.reason}"
                         </p>
+                      )}
+                      {isEmergency && (
+                        <div className="mt-2 p-2 rounded-xl bg-rose-100/70 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-[10px] text-rose-800 dark:text-rose-200 leading-tight">
+                          ⚠️ <strong>Work Shift Gap:</strong> Staff has 0 mangoes. If approved, this time will be recorded as an approved shift gap (deficit), NOT deducted from mango bank.
+                        </div>
                       )}
                     </div>
                   </div>
@@ -188,10 +220,14 @@ const BreakRequestsWidget = () => {
                       type="button"
                       disabled={isProcessing}
                       onClick={() => handleAction(bId, 'approve')}
-                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                      className={`flex-1 py-2 px-3 rounded-xl text-white text-xs font-extrabold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 ${
+                        isEmergency
+                          ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
+                          : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                      }`}
                     >
                       <FiCheck size={14} />
-                      <span>Approve</span>
+                      <span>{isEmergency ? 'Approve (Work Gap)' : 'Approve'}</span>
                     </button>
                   </div>
                 </div>
@@ -224,7 +260,8 @@ const BreakRequestsWidget = () => {
                   <p className="font-extrabold text-slate-800 dark:text-white leading-tight">
                     {b.name || `Staff #${b.user_id}`}
                   </p>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
+                  <p className={`text-[10px] font-bold mt-0.5 ${b.is_emergency || b.break_type === 'Emergency Break' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {b.is_emergency || b.break_type === 'Emergency Break' ? '🚨 EMERGENCY GAP • ' : ''}
                     {b.purpose ? `${b.purpose} • ` : ''}{b.break_type} Break {b.start_time ? `• Started ${b.start_time.split(' ')[1]?.slice(0, 5)}` : ''}
                   </p>
                 </div>

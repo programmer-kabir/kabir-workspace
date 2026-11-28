@@ -223,7 +223,7 @@ export function SimilarPage() {
       {referenceAsset && (
         <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-brand-indigo/30 bg-white/90 p-4 shadow-md dark:border-brand-indigo/30 dark:bg-slate-900/80 sm:flex-row sm:items-center">
           <img
-            src={referenceAsset.thumbnailUrl}
+            src={referenceAsset.thumbnailUrl?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || referenceAsset.thumbnailUrl}
             alt={referenceAsset.title}
             className="h-28 w-44 shrink-0 rounded-xl object-cover"
           />

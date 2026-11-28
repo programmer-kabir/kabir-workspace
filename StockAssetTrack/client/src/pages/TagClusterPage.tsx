@@ -276,7 +276,7 @@ export function TagClusterPage() {
                 {data.sampledCount}
               </div>
               <div className="mt-1 text-[11px] text-slate-500">
-                {data.cached ? 'MySQL Cached' : 'Fresh Aggregation'}
+                {data.cached ? 'Cluster Cache' : 'Fresh Aggregation'}
               </div>
             </div>
 
@@ -491,7 +491,7 @@ export function TagClusterPage() {
                       className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2 transition hover:border-brand-indigo dark:border-slate-800 dark:bg-slate-950/60"
                     >
                       <img
-                        src={item.thumbnailUrl}
+                        src={item.thumbnailUrl?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || item.thumbnailUrl}
                         alt={item.title}
                         className="h-12 w-16 shrink-0 rounded-lg object-cover"
                       />

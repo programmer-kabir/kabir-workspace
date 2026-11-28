@@ -85,7 +85,7 @@ export function CalendarPage() {
               {data.totalEvents}
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
-              {data.cached ? 'MySQL 12h Cache' : 'Fresh Schedule'}
+              {data.cached ? 'Seasonal Cache' : 'Fresh Schedule'}
             </div>
           </div>
 

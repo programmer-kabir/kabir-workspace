@@ -52,7 +52,7 @@ export function ResultsToolbar({
               : 'bg-brand-indigo/10 text-brand-indigo dark:text-indigo-300'
           }`}
         >
-          {cached ? 'MySQL Cached' : 'Live Adapter'}
+          {cached ? 'Cached Analysis' : 'Live Sync'}
         </span>
       </div>
 

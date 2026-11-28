@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/env.php';
-loadEnvFile(dirname(__DIR__) . '/.env');
-require_once __DIR__ . '/../src/Core/Autoloader.php';
+$serverRoot = file_exists(__DIR__ . '/config/env.php') ? __DIR__ : dirname(__DIR__);
+require_once $serverRoot . '/config/env.php';
+loadEnvFile($serverRoot . '/.env');
+require_once $serverRoot . '/src/Core/Autoloader.php';
 
 use App\Controllers\AiController;
 use App\Controllers\AnalyticsController;
@@ -34,7 +35,6 @@ use App\Services\ScoringService;
 use App\Services\TagClusterService;
 use App\Services\WatchlistService;
 
-$serverRoot = dirname(__DIR__);
 $appConfig = require $serverRoot . '/config/app.php';
 $dbConfig = require $serverRoot . '/config/database.php';
 

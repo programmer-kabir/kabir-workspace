@@ -50,10 +50,10 @@ try {
     $end_ts = strtotime($end_time);
     $duration_minutes = max(1, round(abs($end_ts - $start_ts) / 60));
 
-    // Calculate Tiffin Efficiency Delta if this is a Tiffin break
+    // Calculate Break Efficiency Delta if this is a Tiffin or Namaz break
     $tiffin_delta = 0;
-    if ($break_type === 'Tiffin') {
-        $tiffin_delta = BreakDbHelper::calculateTiffinDelta($duration_minutes);
+    if ($break_type === 'Tiffin' || $break_type === 'Namaz') {
+        $tiffin_delta = BreakDbHelper::calculateBreakDelta($break_type, $duration_minutes);
     }
 
     $update_query = "UPDATE user_breaks 
@@ -85,6 +85,17 @@ try {
             } else {
                 $customMessage = "Tiffin completed right on schedule (40m limit).";
             }
+        } elseif ($break_type === 'Namaz') {
+            if ($tiffin_delta > 0) {
+                $customMessage = "Namaz completed in {$duration_minutes}m! You saved {$tiffin_delta} mins (+{$tiffin_delta}m credited to Mango Tree 🥭).";
+            } elseif ($tiffin_delta < 0) {
+                $absDelta = abs($tiffin_delta);
+                $customMessage = "Namaz exceeded by {$absDelta} mins ({$tiffin_delta}m deducted from Mango Overtime ⚡).";
+            } else {
+                $customMessage = "Namaz completed right on schedule (20m limit).";
+            }
+        } elseif ($break_type === 'Emergency Break' || $purpose === 'Emergency Gap') {
+            $customMessage = "Emergency Break ended ({$duration_minutes}m). Recorded as approved work gap for today.";
         }
 
         // Realtime notification via Pusher

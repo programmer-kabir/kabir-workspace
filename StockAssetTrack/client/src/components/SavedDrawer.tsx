@@ -169,7 +169,7 @@ export function SavedDrawer({ open, onClose }: SavedDrawerProps) {
                     className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-900/60"
                   >
                     <img
-                      src={asset.thumbnailUrl}
+                      src={asset.thumbnailUrl?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || asset.thumbnailUrl}
                       alt={asset.title}
                       className="h-14 w-20 shrink-0 rounded-lg object-cover"
                     />
@@ -220,7 +220,7 @@ export function SavedDrawer({ open, onClose }: SavedDrawerProps) {
                       {c.isWatchlist && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-brand-cyan/15 px-1.5 py-0.5 text-[9px] font-semibold text-brand-cyan">
                           <Bell className="h-2.5 w-2.5" />
-                          MySQL
+                          Synced
                         </span>
                       )}
                     </div>

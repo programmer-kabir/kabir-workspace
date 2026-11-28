@@ -118,6 +118,7 @@ const BreakRequestModal = ({ isOpen, onClose, onSuccess }) => {
   const [availableMinutes, setAvailableMinutes] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('Personal');
   const [estimatedMinutes, setEstimatedMinutes] = useState(15);
+  const [isEmergencyMode, setIsEmergencyMode] = useState(false);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [polishing, setPolishing] = useState(false);
@@ -239,7 +240,11 @@ Rules:
           setAvailableMinutes(mins);
 
           // Auto-adjust default duration to available time
-          if (mins < 15 && mins >= 10) {
+          if (mins < 10) {
+            setIsEmergencyMode(true);
+            setSelectedCategory('Emergency');
+            setEstimatedMinutes(15);
+          } else if (mins < 15 && mins >= 10) {
             setEstimatedMinutes(10);
           } else if (mins >= 15) {
             setEstimatedMinutes(15);
@@ -273,6 +278,44 @@ Rules:
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isEmergencyMode) {
+      if (!reason.trim()) {
+        toast.error('Emergency Break requires an explanation note for Admin.');
+        return;
+      }
+      if (estimatedMinutes > 60) {
+        toast.error('Emergency Break cannot exceed 60 minutes.');
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const fullReason = `[Emergency Gap - ${selectedCategory}] ${reason.trim()}`;
+        const res = await axios.post(`${API_BASE}api/breaks/request_break.php`, {
+          user_id: currentUser.id,
+          break_type: 'Emergency Break',
+          is_emergency: true,
+          is_emergency_gap: true,
+          reason: fullReason,
+          estimated_minutes: estimatedMinutes
+        });
+
+        if (res.data.status === 'success') {
+          toast.success(res.data.message || '🚨 Emergency Break request submitted to Admin!');
+          if (onSuccess) onSuccess(res.data.data);
+          onClose();
+        } else {
+          toast.error(res.data.message || 'Failed to submit break request.');
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Error submitting break request.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     if (!canAffordAny) {
       toast.error('Insufficient Mango Overtime balance. You cannot request custom breaks without overtime.');
       return;
@@ -317,20 +360,34 @@ Rules:
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
 
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0">
+        <div className={`px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0 transition-colors ${
+          isEmergencyMode
+            ? 'bg-gradient-to-r from-rose-500/15 via-red-500/10 to-transparent'
+            : 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-2xl shadow-xs">
-              🥭
+            <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-2xl shadow-xs ${
+              isEmergencyMode
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-600'
+                : 'bg-amber-500/15 border-amber-500/30'
+            }`}>
+              {isEmergencyMode ? '🚨' : '🥭'}
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
-                <span>Request Custom Break</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-700/60">
-                  Mango Overtime
+                <span>{isEmergencyMode ? 'Request Emergency Break' : 'Request Custom Break'}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                  isEmergencyMode
+                    ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700/60'
+                    : 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/60'
+                }`}>
+                  {isEmergencyMode ? 'Work Shift Gap' : 'Mango Overtime'}
                 </span>
               </h3>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Funded by your earned Mango Overtime Bank
+                {isEmergencyMode
+                  ? 'Counts as an approved work shift gap for today (Admin Approval Required)'
+                  : 'Funded by your earned Mango Overtime Bank'}
               </p>
             </div>
           </div>
@@ -342,21 +399,70 @@ Rules:
           </button>
         </div>
 
+        {/* Mode Selector Tabs */}
+        <div className="px-6 pt-3 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsEmergencyMode(false)}
+            className={`pb-2.5 px-3 text-xs font-extrabold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+              !isEmergencyMode
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>🥭</span>
+            <span>Mango Overtime Break</span>
+            {!loadingBank && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                canAffordAny
+                  ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/60'
+                  : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300/60'
+              }`}>
+                {availableMinutes}m
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsEmergencyMode(true);
+              if (selectedCategory !== 'Emergency' && selectedCategory !== 'Medical') {
+                setSelectedCategory('Emergency');
+              }
+              if (estimatedMinutes > 60) setEstimatedMinutes(30);
+            }}
+            className={`pb-2.5 px-3 text-xs font-extrabold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+              isEmergencyMode
+                ? 'border-rose-500 text-rose-600 dark:text-rose-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>🚨</span>
+            <span>Emergency Gap Break</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-black border border-rose-300/60">
+              0 Mango / Work Gap
+            </span>
+          </button>
+        </div>
+
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
 
           {/* Mango Bank Balance Card */}
           <div className={`p-4 rounded-2xl border transition-all ${loadingBank
             ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
-            : canAffordAny
-              ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-emerald-500/10 border-amber-300 dark:border-amber-700/60'
-              : 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800/60'
+            : isEmergencyMode
+              ? 'bg-gradient-to-r from-rose-500/10 via-red-500/5 to-amber-500/5 border-rose-300 dark:border-rose-800/60'
+              : canAffordAny
+                ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-emerald-500/10 border-amber-300 dark:border-amber-700/60'
+                : 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800/60'
             }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🥭</span>
+                <span className="text-xl">{isEmergencyMode ? '🚨' : '🥭'}</span>
                 <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                  Your Mango Overtime Bank:
+                  {isEmergencyMode ? 'Emergency Mode (Work Shift Gap):' : 'Your Mango Overtime Bank:'}
                 </span>
               </div>
               {loadingBank ? (
@@ -364,6 +470,10 @@ Rules:
                   <FiRefreshCw className="animate-spin w-3.5 h-3.5" />
                   <span>Checking bank...</span>
                 </div>
+              ) : isEmergencyMode ? (
+                <span className="text-sm font-black px-2.5 py-0.5 rounded-xl border bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700">
+                  0 Mango Needed (Gap Mode)
+                </span>
               ) : (
                 <span className={`text-sm font-black px-2.5 py-0.5 rounded-xl border ${canAffordAny
                   ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
@@ -375,19 +485,34 @@ Rules:
             </div>
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              <strong>Company Rule:</strong> Standard Tiffin Break is provided on daily schedule for free. All other custom breaks (personal, tea, emergency) are funded directly from your accumulated Overtime Bank.
+              {isEmergencyMode
+                ? <><strong>Emergency Gap Policy:</strong> ম্যাঙ্গো ব্যালেন্স ০ হলেও জরুরি প্রয়োজনে আপনি অ্যাডমিন অনুমোদনের আবেদন করতে পারেন। এটি আপনার দৈনিক কাজের সময়ে গ্যাপ (ঘাটতি) হিসেবে হিসাব হবে।</>
+                : <><strong>Company Rule:</strong> Standard Tiffin Break is provided on daily schedule for free. All other custom breaks (personal, tea, emergency) are funded directly from your accumulated Overtime Bank.</>
+              }
             </p>
 
-            {/* Zero Balance Alert */}
-            {!loadingBank && !canAffordAny && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-100/80 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2">
-                <FiAlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <div>
-                  <strong>Insufficient Overtime Balance!</strong>
-                  <p className="mt-0.5 text-[11px]">
-                    You need at least 10 minutes of earned overtime to request a custom break. Please work extra hours beyond your shift to earn Mango time.
-                  </p>
+            {/* Zero Balance Alert in Normal Mode */}
+            {!loadingBank && !canAffordAny && !isEmergencyMode && (
+              <div className="mt-3 p-3 rounded-xl bg-rose-100/80 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <FiAlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <div>
+                    <strong>Insufficient Overtime Balance!</strong>
+                    <p className="mt-0.5 text-[11px]">
+                      আপনার কোনো ম্যাঙ্গো ওভারটাইম ব্যালেন্স নেই। জরুরি প্রয়োজনে নিচের অপশনটি ব্যবহার করে <strong>Emergency Break</strong> আবেদন করুন।
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEmergencyMode(true);
+                    setSelectedCategory('Emergency');
+                  }}
+                  className="px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold shrink-0 cursor-pointer shadow-xs"
+                >
+                  Switch to Emergency
+                </button>
               </div>
             )}
           </div>
@@ -425,13 +550,17 @@ Rules:
                 2. Select Duration
               </label>
               <span className="text-[11px] font-bold text-slate-400">
-                Max Allowed: <strong>{formatMinutesToHuman(availableMinutes)}</strong>
+                {isEmergencyMode ? (
+                  <span className="text-rose-500 font-extrabold">Emergency Max: 60 mins</span>
+                ) : (
+                  <>Max Allowed: <strong>{formatMinutesToHuman(availableMinutes)}</strong></>
+                )}
               </span>
             </div>
 
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
-              {DURATION_OPTIONS.map((dur) => {
-                const disabled = dur.value > availableMinutes;
+              {DURATION_OPTIONS.filter((dur) => (isEmergencyMode ? dur.value <= 60 : true)).map((dur) => {
+                const disabled = !isEmergencyMode && dur.value > availableMinutes;
                 const isSelected = estimatedMinutes === dur.value;
                 return (
                   <button
@@ -439,12 +568,17 @@ Rules:
                     type="button"
                     disabled={disabled}
                     onClick={() => setEstimatedMinutes(dur.value)}
-                    className={`py-2.5 px-1 text-center rounded-xl border text-xs font-bold transition-all relative ${disabled
-                      ? 'opacity-35 bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800'
-                      : isSelected
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs shadow-amber-500/30 cursor-pointer font-black scale-102'
-                        : 'border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-800 cursor-pointer'
-                      }`}
+                    className={`py-2.5 px-1 text-center rounded-xl border text-xs font-bold transition-all relative ${
+                      disabled
+                        ? 'opacity-35 bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800'
+                        : isSelected
+                          ? isEmergencyMode
+                            ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white border-rose-600 shadow-xs shadow-rose-600/30 cursor-pointer font-black scale-102'
+                            : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs shadow-amber-500/30 cursor-pointer font-black scale-102'
+                          : isEmergencyMode
+                            ? 'border-rose-200 dark:border-rose-800 text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-slate-800 cursor-pointer'
+                            : 'border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-800 cursor-pointer'
+                    }`}
                   >
                     <span>{dur.label}</span>
                     {disabled && (
@@ -458,21 +592,36 @@ Rules:
             </div>
           </div>
 
-          {/* Live Deduction Preview */}
-          {canAffordAny && (
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                <FiClock className="w-4 h-4 text-amber-500" />
-                <span>Overtime Impact:</span>
+          {/* Live Deduction Preview / Work Shift Impact */}
+          {isEmergencyMode ? (
+            <div className="p-3.5 rounded-2xl bg-rose-50/90 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold">
+                <FiClock className="w-4 h-4 text-rose-600" />
+                <span>Shift Time Impact:</span>
               </div>
-              <div className="flex items-center gap-2 font-black text-xs">
-                <span className="text-rose-500">-{estimatedMinutes} mins</span>
-                <span className="text-slate-400">➔</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  Left: {formatMinutesToHuman(remainingMinutes)}
+              <div className="flex items-center gap-1.5 font-extrabold text-xs text-rose-700 dark:text-rose-300">
+                <span>Recorded as:</span>
+                <span className="px-2 py-0.5 rounded-lg bg-rose-600 text-white font-black text-[11px] shadow-xs">
+                  -{estimatedMinutes}m Work Shift Gap
                 </span>
               </div>
             </div>
+          ) : (
+            canAffordAny && (
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                  <FiClock className="w-4 h-4 text-amber-500" />
+                  <span>Overtime Impact:</span>
+                </div>
+                <div className="flex items-center gap-2 font-black text-xs">
+                  <span className="text-rose-500">-{estimatedMinutes} mins</span>
+                  <span className="text-slate-400">➔</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    Left: {formatMinutesToHuman(remainingMinutes)}
+                  </span>
+                </div>
+              </div>
+            )
           )}
 
           {/* Reason Input with Quick Chips & AI Polish */}
@@ -562,12 +711,26 @@ Rules:
           </div>
 
           {/* Footer Notice */}
-          <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 flex items-start gap-2.5 text-[11px] text-amber-800 dark:text-amber-300">
-            <FiInfo size={15} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-            <p>
-              Once submitted, Admin will receive a notification to approve your Mango break. Your timer starts upon approval, and you can end it when you return.
-            </p>
-          </div>
+          {isEmergencyMode ? (
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2.5 text-[11px] text-rose-800 dark:text-rose-300">
+              <FiInfo size={16} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+              <div>
+                <strong className="block font-bold">Emergency Break Rules (জরুরি বিরতির নিয়মাবলী):</strong>
+                <p className="mt-0.5 leading-relaxed text-slate-600 dark:text-slate-300">
+                  ১. এই বিরতির জন্য কোনো ম্যাঙ্গো কাটবে না (Zero Mango deduction)।<br />
+                  ২. অ্যাডমিনের অনুমোদন পেলেই টাইমার শুরু হবে এবং এই সময়টুকু আজকের শিফটের ঘাটতি (Work Gap) হিসেবে গণ্য হবে।<br />
+                  ৩. প্রতি ক্যালেন্ডার মাসে সর্বোচ্চ ৩টি জরুরি বিরতি নেওয়া যাবে।
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 flex items-start gap-2.5 text-[11px] text-amber-800 dark:text-amber-300">
+              <FiInfo size={15} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <p>
+                Once submitted, Admin will receive a notification to approve your Mango break. Your timer starts upon approval, and you can end it when you return.
+              </p>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -580,13 +743,22 @@ Rules:
             </button>
             <button
               type="submit"
-              disabled={submitting || !canAffordAny || !canAffordSelected}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={submitting || (isEmergencyMode ? !reason.trim() : (!canAffordAny || !canAffordSelected))}
+              className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                isEmergencyMode
+                  ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 shadow-rose-600/30'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20'
+              }`}
             >
               {submitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Submitting...</span>
+                </>
+              ) : isEmergencyMode ? (
+                <>
+                  <FiCheck size={14} />
+                  <span>Request Emergency Break ({estimatedMinutes}m Gap)</span>
                 </>
               ) : !canAffordAny ? (
                 <>

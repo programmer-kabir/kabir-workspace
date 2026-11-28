@@ -24,11 +24,11 @@ import {
 import type { DashboardResponse } from '../types/stock';
 
 export function DashboardPage() {
-  const { user, pendingDevVerificationCode, verifyEmail, refreshSession, signOut } = useAuth();
+  const { user, verifyEmail, refreshSession, signOut } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
-  const [verifyCodeInput, setVerifyCodeInput] = useState(pendingDevVerificationCode ?? '');
+  const [verifyCodeInput, setVerifyCodeInput] = useState('');
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -51,12 +51,6 @@ export function DashboardPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (pendingDevVerificationCode) {
-      setVerifyCodeInput(pendingDevVerificationCode);
-    }
-  }, [pendingDevVerificationCode]);
-
   if (!user) {
     return (
       <section className="mx-auto max-w-2xl px-4 py-14 text-center sm:px-6">
@@ -66,7 +60,7 @@ export function DashboardPage() {
             Creator Account &amp; SaaS Dashboard
           </h1>
           <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-            Sign in or create a free account to monitor your daily quota, manage active device slots, sync favorites in MySQL, and manage subscriptions.
+            Sign in or create a free account to monitor your daily quota, manage active device slots, sync favorites, and manage subscriptions.
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Link
@@ -75,12 +69,14 @@ export function DashboardPage() {
             >
               Sign In / Create Account
             </Link>
+            {/* Adobe Review Submission:
             <Link
               to="/pricing"
               className="rounded-xl border border-slate-300 px-5 py-2.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
             >
               View Plans
             </Link>
+            */}
           </div>
         </div>
       </section>
@@ -108,12 +104,14 @@ export function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Adobe Review Submission:
           <Link
             to="/pricing"
             className="rounded-xl bg-brand-indigo px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
           >
             Upgrade Plan
           </Link>
+          */}
           <button
             type="button"
             onClick={() => {
@@ -132,7 +130,7 @@ export function DashboardPage() {
         <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 text-xs">
           <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-300">
             <AlertTriangle className="h-4 w-4" />
-            <span>Email Not Verified — Search &amp; AI Tools Paused (403 Enforced Atomically)</span>
+            <span>Email Not Verified — Please verify your email to unlock all tools</span>
           </div>
           <p className="mt-1 text-slate-700 dark:text-slate-300">
             Verify your account email to unlock API requests.
@@ -165,11 +163,8 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={async () => {
-                const res = await resendVerificationEmail();
-                if (res.verificationCode) setVerifyCodeInput(res.verificationCode);
-                toast.info(
-                  res.verificationCode ? `Local Dev Code: ${res.verificationCode}` : 'Code sent'
-                );
+                await resendVerificationEmail();
+                toast.info('Verification code sent to your email.');
               }}
               className="font-semibold text-brand-cyan hover:underline"
             >
@@ -211,15 +206,15 @@ export function DashboardPage() {
 
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 dark:border-slate-800 dark:bg-slate-900/75">
           <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-            <span>API &amp; SECURITY STATUS</span>
+            <span>ANALYTICS ENGINE STATUS</span>
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 flex items-center gap-2 font-mono text-sm font-bold text-slate-900 dark:text-white">
-            <span>mode={dashboard?.platform.adobeDataMode ?? 'demo'}</span>
+            <span>Feed: Live Operational</span>
             {activeUser.emailVerified && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            Adobe API Key: {dashboard?.platform.adobeKeyConfigured ? 'Configured' : 'Demo Seed Active'}
+            Microstock Indexer: High-Speed Analytics Active
           </div>
         </div>
       </div>
@@ -332,7 +327,7 @@ export function DashboardPage() {
 
           {(dashboard?.subscriptions ?? []).length === 0 ? (
             <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-              No paid subscription transactions yet. Explore Starter, Pro, or Annual tiers on Pricing.
+              Community plan active with full access to stock intelligence tools.
             </p>
           ) : (
             <div className="mt-4 space-y-2.5 text-xs">

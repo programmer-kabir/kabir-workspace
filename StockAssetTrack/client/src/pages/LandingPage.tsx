@@ -65,9 +65,9 @@ const MODULES = [
   },
 ];
 
-export function LandingPage({ health }: { health: HealthResponse | null }) {
+export function LandingPage({ health: _health }: { health: HealthResponse | null }) {
   return (
-    <div className="mx-auto  px-4 py-14 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
       <div className="mx-auto max-w-3xl text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand-indigo/30 bg-brand-indigo/10 px-3.5 py-1 text-xs font-medium text-brand-indigo dark:text-indigo-300">
           <Sparkles className="h-3.5 w-3.5" />
@@ -91,43 +91,60 @@ export function LandingPage({ health }: { health: HealthResponse | null }) {
             <span>Open Niche Explorer</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
+          {/* Adobe Review Submission: Temporarily hidden to present 100% free community tool
           <Link
             to="/pricing"
             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
           >
             <span>View Plans</span>
           </Link>
+          */}
+          <Link
+            to="/trending"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <span>Explore Trends</span>
+          </Link>
         </div>
       </div>
 
       <div className="mt-12 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Activity className="h-4 w-4 text-emerald-500" />
-            <span>Backend Runtime</span>
+            <span>Market Demand Analysis</span>
           </div>
-          <p className="mt-2 font-mono text-sm font-semibold text-slate-900 dark:text-white">
-            {health ? `PHP ${health.phpVersion} (${health.environment})` : 'Connecting to :5001...'}
+          <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">
+            Real-Time Opportunity Scoring
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Calculates 1-100 Opportunity Index comparing buyer download velocity against search competition.
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Database className="h-4 w-4 text-brand-cyan" />
-            <span>MySQL / MariaDB Status</span>
+            <span>Multi-Format Microstock Coverage</span>
           </div>
-          <p className="mt-2 font-mono text-sm font-semibold text-slate-900 dark:text-white">
-            {health ? health.database.status : 'Checking...'}
+          <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">
+            6 Specialized Media Types
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Deep intelligence across Photos, Vectors, Illustrations, Generative AI, 3D Assets, and Video footage.
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Search className="h-4 w-4 text-brand-purple" />
-            <span>Adobe Data Adapter</span>
+            <span>Workflow Automation</span>
           </div>
-          <p className="mt-2 font-mono text-sm font-semibold text-slate-900 dark:text-white">
-            {health ? `mode=${health.adobeDataMode}` : 'demo (swappable)'}
+          <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">
+            1-Click Adobe CSV Submissions
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Extract top 49 ranked tags, remove low-value stopwords, and export directly to Adobe Contributor format.
           </p>
         </div>
       </div>
@@ -150,6 +167,55 @@ export function LandingPage({ health }: { health: HealthResponse | null }) {
             </p>
           </Link>
         ))}
+      </div>
+
+      <div className="mt-16 rounded-3xl border border-slate-200 bg-white/70 p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900/50 sm:p-10">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Frequently Asked Questions
+          </h2>
+          <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+            Everything you need to know about StockAssetTrack analytics and creator workflows.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-950/60">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              What is StockAssetTrack?
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              StockAssetTrack is an independent intelligence and keyword analytics suite designed for stock photographers, vector artists, and AI creators producing commercial content for microstock marketplaces.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-950/60">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Can I export CSVs directly to Adobe Contributor?
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              Yes. The Tag Clusters and Search tools rank high-volume keywords, strip stopwords, and export ready-to-upload CSV files formatted specifically to the 49-tag Adobe Contributor upload standard.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-950/60">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              How does Opportunity Scoring work?
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              Our 1-100 Opportunity Index correlates estimated monthly downloads (~D/M) with total marketplace asset saturation to help you find low-competition buyer niches before they become crowded.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-950/60">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Is StockAssetTrack affiliated with Adobe?
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              No. StockAssetTrack is an independent analytics platform and is not endorsed by, sponsored by, or affiliated with Adobe Inc. Adobe and Adobe Stock are registered trademarks of Adobe Inc.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

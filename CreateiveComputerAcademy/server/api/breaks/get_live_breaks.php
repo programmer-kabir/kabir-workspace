@@ -14,12 +14,12 @@ $today = date('Y-m-d');
 try {
     // 1. Fetch active breaks
     $actQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.purpose, b.start_time, b.reason, b.estimated_minutes,
-                        u.name, u.profile_picture, COALESCE(e.employee_code, st.student_code) as employee_code,
-                        COALESCE(e.allocated_break_minutes, st.allocated_break_minutes, 40) as allocated_break_minutes 
+                        (b.break_type = 'Emergency Break' OR b.purpose = 'Emergency Gap') as is_emergency,
+                        u.name, u.profile_picture, COALESCE(e.employee_code, 'Staff') as employee_code,
+                        COALESCE(e.allocated_break_minutes, 40) as allocated_break_minutes 
                  FROM user_breaks b 
                  JOIN users u ON b.user_id = u.id 
                  LEFT JOIN employees e ON u.id = e.user_id 
-                 LEFT JOIN students st ON u.id = st.user_id 
                  WHERE b.status = 'Active' AND b.date = :today
                  ORDER BY b.start_time ASC";
     $actStmt = $db->prepare($actQuery);
@@ -28,11 +28,11 @@ try {
 
     // 2. Fetch pending requests
     $pendQuery = "SELECT b.id as break_id, b.user_id, b.break_type, b.purpose, b.reason, b.estimated_minutes, b.created_at,
-                         u.name, u.profile_picture, COALESCE(e.employee_code, st.student_code) as employee_code
+                         (b.break_type = 'Emergency Break' OR b.purpose = 'Emergency Gap') as is_emergency,
+                         u.name, u.profile_picture, COALESCE(e.employee_code, 'Staff') as employee_code
                   FROM user_breaks b 
                   JOIN users u ON b.user_id = u.id 
                   LEFT JOIN employees e ON u.id = e.user_id 
-                  LEFT JOIN students st ON u.id = st.user_id 
                   WHERE b.status = 'Pending' AND b.date = :today
                   ORDER BY b.created_at ASC";
     $pendStmt = $db->prepare($pendQuery);

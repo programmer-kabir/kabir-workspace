@@ -39,6 +39,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+**/auto_prayer_log.txt
+**/crons/*.txt
 
 # System & Cache files
 .DS_Store

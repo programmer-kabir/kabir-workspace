@@ -207,7 +207,7 @@ export function HeatmapPage() {
             <div className="mt-1 flex items-center gap-2 font-mono text-lg font-bold text-slate-900 dark:text-white">
               <span>{data.summary.overallAiPercent}% AI</span>
               <span className="rounded-full bg-brand-indigo/15 px-2 py-0.5 text-[10px] font-semibold text-brand-indigo dark:text-indigo-300">
-                {data.cached ? 'MySQL Cached' : data.triggerSource}
+                {data.cached ? 'Snapshot Cache' : data.triggerSource}
               </span>
             </div>
             <div className="mt-1 truncate text-[11px] text-slate-500">

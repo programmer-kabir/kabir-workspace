@@ -46,7 +46,7 @@ export function AssetCard({
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-950">
         <img
-          src={asset.thumbnailUrl}
+          src={asset.thumbnailUrl?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || asset.thumbnailUrl}
           alt={asset.title}
           loading="lazy"
           className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"

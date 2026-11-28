@@ -107,9 +107,11 @@ export function DeviceLimitPage() {
           >
             Back to Sign In
           </button>
+          {/* Adobe Review Submission:
           <Link to="/pricing" className="font-semibold text-brand-cyan hover:underline">
             Upgrade to Pro (3 Slots) or Annual (5 Slots) &rarr;
           </Link>
+          */}
         </div>
       </div>
     </section>

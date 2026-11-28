@@ -1,8 +1,8 @@
 # 🏛️ Creative Computer Academy (CCA) — Master Architectural Blueprint
 
-**Generated / Updated:** November 26, 2026  
+**Generated / Updated:** November 28, 2026  
 **Role:** Lead Software Architect & Senior Full-Stack Engineer  
-**Scope:** Full Workspace (`CreateiveComputerAcademy`) — 4 React 19 Web Frontends, 2 Electron Desktop Apps, 1 Plain PHP REST API (429 endpoints across 34 domains), 96 baseline MySQL tables + self-healing JIT schemas, WebRTC Live Video Conferencing & Virtual Background Studio, Workstation 30-Min Video Surveillance & In-App Shielded Vault Player, Single Source of Truth (SSoT) Overtime & Payroll Ledger Engines, Inactivity Watchdog, and Multi-Tier Storage Routing.
+**Scope:** Full Workspace (`CreateiveComputerAcademy`) — 4 React 19 Web Frontends, 2 Electron Desktop Apps, 1 Plain PHP REST API (429 endpoints across 34 domains), 96 baseline MySQL tables + self-healing JIT schemas, WebRTC Live Video Conferencing & Virtual Background Studio, Workstation 30-Min Video Surveillance & In-App Shielded Vault Player, Single Source of Truth (SSoT) Overtime & Payroll Ledger Engines, Student Academic Leave Pure Overtime Harmonization, Inactivity Watchdog, and Multi-Tier Storage Routing.
 
 No application code or database schemas were modified, deleted, or refactored to produce this document. All statements are traced directly from the active code in this repository as of the current working tree. Anything not directly verifiable is marked `UNKNOWN — insufficient evidence in the provided codebase.`
 
@@ -47,7 +47,7 @@ graph LR
     subgraph Backend_Tier ["Backend Services (PHP REST API)"]
         API["Apache / PHP 8.x Engine"]
         SEC["Auth & JWT Gatekeeper"]
-        HELP["Domain SSoT Helpers (Overtime, Payroll, Meeting)"]
+        HELP["Domain SSoT Helpers (Overtime, Payroll, Break, Meeting)"]
     end
 
     subgraph Persistence_Cloud ["Persistence & External Cloud"]
@@ -115,13 +115,13 @@ flowchart TD
 | 1 | **Workstation Surveillance Video Vault** | `admin-frontend`, `staff-frontend`, `Staff_Apps` | `server/api/screen_monitor/` | 30-min continuous WebM recording, local spooling, auto-sync to Google Drive `CCA_Vault`, in-app shielded video player with popout blocking. |
 | 2 | **Inactivity Watchdog & Idle Alerts** | `Staff_Apps`, `admin-frontend`, `staff-frontend` | `server/api/screen_monitor/` | 5-minute mouse/keyboard freeze detection via Electron & input injector, idle alert logging, live active window & app telemetry. |
 | 3 | **Live Video Conference Studio** | `admin-frontend`, `staff-frontend` | `server/api/meetings/` | WebRTC multi-peer conference, host/co-host hierarchy, MediaPipe AI background blur & CCA virtual office backgrounds, tab audio mixing recorder. |
-| 4 | **Single Source of Truth (SSoT) Overtime** | `staff-frontend`, `admin-frontend` | `server/api/payroll/` | `OvertimeEngine.php`: running cash, shortfall compensation, mango bank harmonization, and automatic cycle adjustments. |
+| 4 | **Single Source of Truth (SSoT) Overtime** | `staff-frontend`, `admin-frontend` | `server/api/payroll/` | `OvertimeEngine.php`: running cash, shortfall compensation, mango bank harmonization, Student Academic Leave zero-hour target with 100% pure OT credit. |
 | 5 | **Modular Payroll Ledger Engine** | `admin-frontend`, `staff-frontend` | `server/api/payroll/` | `PayrollLedger.php`: multi-cycle chronological allocation, fractional rollover, salary withdrawal approvals, bonus & penalty logging. |
-| 6 | **Mango Break Tree & Simulation** | `staff-frontend`, `Staff_Apps` | `server/api/breaks/` | Gamified break requests, boy mascot with interactive harvest basket, 15m/30m/45m break tracking, automated double-deduction immunity. |
+| 6 | **Mango Break Tree & Simulation** | `staff-frontend`, `Staff_Apps` | `server/api/breaks/` | Gamified break requests, boy mascot with interactive harvest basket, 15m/30m/45m break tracking, automated double-deduction immunity, and Student Leave pure overtime recognition. |
 | 7 | **Real-Time Remote Control & Monitoring** | `admin-frontend`, `Staff_Apps` | `server/api/screen_monitor/` | Low-latency WebRTC screen broadcast, live cursor coordinate tracking, and native Windows input injection (`input_injector.exe`). |
 | 8 | **Gamification & Career Badges** | `staff-frontend`, `review-frontend` | `server/api/credits/`, `server/api/gamification/` | Double-entry idempotent credit ledger, tier progression, career milestones, review bonus/penalty issuance. |
 | 9 | **Attendance & Geofencing Security** | `staff-frontend`, `Staff_Apps`, `admin-frontend` | `server/api/attendance/` | Dynamic office IP matching, proxy/VPN header detection, hardware device fingerprinting, and encrypted offline punch queue. |
-| 10 | **Student Academic Leave Quotas** | `staff-frontend`, `admin-frontend`, `student-frontend` | `server/api/leave/` | Course-based leave day quotas, medical slip verification, and automatic class attendance exclusion. |
+| 10 | **Student Academic Leave Pure Overtime** | `staff-frontend`, `admin-frontend` | `server/api/attendance/`, `server/api/breaks/`, `server/api/payroll/` | Pre-created leave rows unblocked for check-in; voluntary attendance credited as 100% pure overtime with 0 shortfall. |
 | 11 | **Developer Console & In-Browser IDE** | `admin-frontend`, `staff-frontend` | `server/api/developer/` | Live log streaming, API test runner, in-browser file manager and code editor with syntax highlighting. |
 | 12 | **Fleet Governance & Auto-Updates** | `admin-frontend`, `Staff_Apps` | `server/api/app_releases/` | Version manifest distribution, forced update enforcement, hash verification, standalone and setup installer delivery. |
 
@@ -133,7 +133,9 @@ The database contains 96 baseline tables and 10 self-healing JIT schemas:
 
 ### Core Tables & Relationships:
 * `users`: Core identity entity (roles: `developer`, `admin`, `staff`, `student`, `reviewer`).
-* `staff_attendance`: Check-in/check-out punch records, punch methods, IP hashes, and hours worked.
+* `attendance`: Check-in/check-out punch records, punch methods, IP hashes, hours worked, and leave status (`Present`, `Late`, `Absent`, `Student Leave`, `Leave`, `Holiday`).
+* `leave_requests`: Formal leave requests (`Student Academic Leave`, `Sick Leave`, etc.), approval status, and date ranges.
+* `user_breaks`: In-shift breaks, Tiffin breaks, Mango breaks (`Mango Full Day`, `Mango Break`, `Mango Overtime`), durations, and timestamps.
 * `staff_workstation_videos`: 30-minute surveillance video clips, chunk indexes, durations, file sizes, and Google Drive file IDs.
 * `staff_idle_alerts`: Inactivity alerts, active window titles, process names, and acknowledgement logs.
 * `staff_heartbeats`: Real-time workstation telemetry (ping, idle status, active application).
@@ -164,42 +166,46 @@ The database contains 96 baseline tables and 10 self-healing JIT schemas:
 
 | Domain | Endpoint Path | Method | Auth | Description |
 |---|---|---|---|---|
+| **Attendance** | `/api/attendance/check_in.php` | POST | Token | Processes check-in with device verification, geofencing, and unblocks pre-created Student Leave rows. |
+| **Attendance** | `/api/attendance/check_out.php` | POST | Token | Finalizes attendance for checked-in records, auto-closes active breaks, logs device punch. |
+| **Attendance** | `/api/attendance/get_attendance.php` | POST | Token | Retrieves monthly attendance history, shifts, overtime, and Student Leave pure OT credits. |
+| **Breaks & Mango** | `/api/breaks/get_mango_break_bank.php` | GET | Token | Single source of truth for Mango Break Tree, ripe mango counts, overtime ledger, and gap calculations. |
+| **Payroll** | `/api/payroll/get_my_wallet.php` | GET | Token | Fetches live wallet balance, overtime earnings, and cycle stats via `OvertimeEngine` & `PayrollLedger`. |
 | **Screen Monitor** | `/api/screen_monitor/get_workstation_videos.php` | GET | Token | Retrieves 30-min video logs for selected date, grouped by staff with embedded streaming URLs. |
-| **Screen Monitor** | `/api/screen_monitor/get_my_workstation_logs.php` | GET | Token | Retrieves logged-in staff's personal video clips and idle alert history. |
 | **Screen Monitor** | `/api/screen_monitor/upload_workstation_video.php` | POST | Token | Receives 30-min WebM chunks from desktop app and uploads directly to Google Drive `CCA_Vault`. |
 | **Meetings** | `/api/meetings/get_room.php` | GET | Token | Fetches meeting status, active host tiers, and settings. |
 | **Meetings** | `/api/meetings/signal.php` | POST | Token | WebRTC signaling exchange (SDP offer/answer and ICE candidates). |
-| **Meetings** | `/api/meetings/upload_recording_drive.php` | POST | Token | Uploads recorded conference composite video directly to Google Drive. |
-| **Payroll** | `/api/payroll/get_my_wallet.php` | GET | Token | Fetches live wallet balance, overtime earnings, and cycle stats via `OvertimeEngine` & `PayrollLedger`. |
-| **Breaks** | `/api/breaks/request_break.php` | POST | Token | Validates break allowance, logs break request, and updates live status. |
-| **Attendance** | `/api/attendance/punch.php` | POST | Token | Processes check-in/check-out with IP geofencing and device validation. |
 
 ---
 
 # 8. IMPORTANT DATA FLOWS
 
-### Surveillance Video Ingestion & Playback Pipeline:
+### Student Academic Leave Pure Overtime Data Flow:
 ```mermaid
 sequenceDiagram
-    participant DA as Attendance Desktop App
-    participant REC as WorkstationRecorderService
-    participant PHP as upload_workstation_video.php
-    participant GDRIVE as Google Drive API (CCA_Vault)
-    participant DB as MySQL (staff_workstation_videos)
-    participant UI as WorkstationVideoPlayerModal
+    participant Admin as Admin / Management
+    participant LeaveAPI as update_leave_status.php
+    participant DB as MySQL (attendance & leave_requests)
+    participant Staff as Staff Member (User 8)
+    participant CheckIn as check_in.php
+    participant CheckOut as check_out.php
+    participant Engine as OvertimeEngine / get_mango_break_bank.php
+    participant UI as Staff Portal (Attendance & Mango Tree)
 
-    DA->>REC: 30-minute timer elapsed (1800s)
-    REC->>REC: Finalize current WebM chunk (~330 MB)
-    REC->>PHP: Multipart POST video_file + metadata
-    PHP->>GDRIVE: findOrCreateFolder & uploadFile to CCA_Vault
-    GDRIVE-->>PHP: Returns drive_file_id & view_url
-    PHP->>DB: INSERT into staff_workstation_videos
-    PHP-->>REC: HTTP 200 OK (Uploaded)
+    Admin->>LeaveAPI: Approves "Student Academic Leave"
+    LeaveAPI->>DB: Pre-creates attendance row (status: "Student Leave", check_in: null)
     
-    Note over UI: Admin / Staff clicks "ভিডিও দেখুন"
-    UI->>UI: Loads sandboxed iframe with drive_file_id/preview
-    UI->>UI: Masks native Google Drive top-bar & blocks popouts
-    UI-->>User: Seamless Full HD 1080p in-app playback
+    Note over Staff: Staff chooses to attend center voluntarily
+    Staff->>CheckIn: Check In Now (via Web / Desktop App)
+    CheckIn->>DB: Updates existing row: check_in = timestamp, status = "Student Leave"
+    
+    Staff->>CheckOut: Check Out (at end of work)
+    CheckOut->>DB: Updates row: check_out = timestamp
+    
+    UI->>Engine: Requests attendance / Mango Tree balance
+    Engine->>Engine: Detects "Student Leave" -> expected_hours = 0
+    Engine->>Engine: presence - 0 = 100% pure overtime (gross_ot += worked_sec, shortfall = 0)
+    Engine-->>UI: Returns +Xh Ym (OT) pure overtime & 0 GAP
 ```
 
 ---
@@ -208,6 +214,7 @@ sequenceDiagram
 
 | Feature | Frontend | Backend | API | Database | Status | Key Files |
 |---|---|---|---|---|---|---|
+| **Student Leave Pure Overtime** | `staff-frontend` | `server/api/attendance/`, `server/api/payroll/`, `server/api/breaks/` | `check_in.php`, `get_attendance.php`, `get_mango_break_bank.php` | `attendance`, `leave_requests` | **Production Ready** | `attendanceUtils.js`, `AttendancePunchCard.jsx`, `OvertimeEngine.php`, `BreakDbHelper.php` |
 | **In-App Video Vault Player** | `admin-frontend`, `staff-frontend`, `Staff_Apps` | `server/api/screen_monitor/` | `get_workstation_videos.php` | `staff_workstation_videos` | **Production Ready** | `WorkstationVideoPlayerModal.jsx`, `WorkstationVideoLogs.jsx`, `MyWorkstation.jsx` |
 | **Meeting Virtual Background** | `admin-frontend`, `staff-frontend` | `server/api/meetings/` | `get_room.php`, `signal.php` | `academy_meetings` | **Production Ready** | `useVirtualBackground.js`, `MeetingVirtualBackgroundModal.jsx`, `MeetingStage.jsx` |
 | **Modal Root Portals** | `Staff_Apps/Attendance-Desktop` | N/A | N/A | N/A | **Production Ready** | `VideoSpoolModal.jsx`, `AttendanceHistoryModal.jsx`, `DesktopSidebar.jsx` |
@@ -226,15 +233,37 @@ sequenceDiagram
 
 # 11. CRITICAL FILES
 
-1. `server/config/GoogleDriveClient.php`: Cloud storage engine managing all Google Drive authentication, folder creation, and file transfers.
-2. `server/api/payroll/OvertimeEngine.php`: Single Source of Truth for all overtime and salary calculations.
-3. `server/api/payroll/PayrollLedger.php`: Chronological financial ledger engine.
-4. `Staff_Apps/Attendance-Desktop/src/services/WorkstationRecorderService.js`: High-reliability continuous screen surveillance recorder.
-5. `admin-frontend/src/components/WorkstationVideoPlayerModal.jsx` & equivalents: Secure in-app video playback shield.
-6. `staff-frontend/src/context/AuthContext.jsx`: Central identity and role provider.
+1. `server/api/payroll/OvertimeEngine.php`: Single Source of Truth for all overtime and salary calculations.
+2. `server/api/breaks/BreakDbHelper.php`: Central Mango overtime and break calculation helper.
+3. `server/api/breaks/get_mango_break_bank.php`: Single Source of Truth for the interactive Mango Break Tree.
+4. `server/config/GoogleDriveClient.php`: Cloud storage engine managing all Google Drive authentication, folder creation, and file transfers.
+5. `server/api/payroll/PayrollLedger.php`: Chronological financial ledger engine.
+6. `Staff_Apps/Attendance-Desktop/src/services/WorkstationRecorderService.js`: High-reliability continuous screen surveillance recorder.
+7. `admin-frontend/src/components/WorkstationVideoPlayerModal.jsx` & equivalents: Secure in-app video playback shield.
+8. `staff-frontend/src/context/AuthContext.jsx`: Central identity and role provider.
 
 ---
 
-# 12. UNKNOWN / UNCERTAIN AREAS
+# 12. MASTER BLUEPRINT (EXHAUSTIVE ARCHITECTURAL SPECIFICATION)
+
+1. **Project Overview**: Creative Computer Academy (CCA) Enterprise ERP, Workstation Surveillance, Real-Time Meeting, and Academic Management System.
+2. **Technology Stack**: React 19, Vite 8.2, Electron 35, Tailwind CSS v3/v4, Plain PHP 8.x, MySQL 8.x, Pusher WebSockets, Google Drive API, MediaPipe AI.
+3. **Folder Structure**:
+   - `admin-frontend/`: Management web portal.
+   - `staff-frontend/`: Staff employee workstation, attendance, payroll, breaks.
+   - `review-frontend/`: Evaluator submission review portal.
+   - `student-frontend/`: Student LMS portal.
+   - `Staff_Apps/Attendance-Desktop/`: Workstation surveillance and punch client.
+   - `Admin_Apps/Admin-Desktop/`: Management desktop client.
+   - `server/api/`: Plain PHP REST endpoints across 34 domains.
+   - `server/config/`: Database, Google Drive, Pusher, and environment configs.
+4. **Attendance & Overtime Core Law**:
+   - Standard Weekday Expected: `shift_hours * 3600` seconds.
+   - Friday / Holiday Expected: `0` seconds (100% presence = pure Overtime).
+   - Approved Student Academic Leave Expected: `0` seconds (100% presence = pure Overtime, 0 shortfall, 0 penalty).
+
+---
+
+# 13. UNKNOWN / UNCERTAIN AREAS
 
 * None. The full workspace, all 4 web frontends, 2 desktop apps, 429 PHP endpoints, and 96+ tables have been verified from actual active code.

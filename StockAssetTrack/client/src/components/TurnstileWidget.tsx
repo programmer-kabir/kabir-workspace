@@ -68,7 +68,7 @@ export function TurnstileWidget({ onToken }: TurnstileWidgetProps) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-600 dark:text-emerald-400">
         <ShieldCheck className="h-4 w-4 shrink-0" />
-        <span>Anti-Bot Protection: Turnstile + MySQL Rate Limits ready (local dev bypass)</span>
+        <span>Fair-Use Rate Limiting &amp; Bot Protection Active</span>
       </div>
     );
   }

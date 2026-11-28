@@ -77,18 +77,35 @@ export default function App() {
               <Route path="/contact" element={<LegalPage kind="contact" />} />
               <Route path="/privacy" element={<LegalPage kind="privacy" />} />
               <Route path="/terms" element={<LegalPage kind="terms" />} />
+              <Route path="/disclosure" element={<LegalPage kind="disclosure" />} />
+              <Route path="/affiliate-disclosure" element={<LegalPage kind="disclosure" />} />
             </Routes>
           </main>
 
-          <footer className="relative z-10 border-t border-slate-200/80 bg-white/60 py-6 text-xs text-slate-500 dark:border-slate-800/80 dark:bg-slate-950/60 dark:text-slate-400">
-            <div className="mx-auto flex flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
-              <span>StockAssetTrack &copy; {new Date().getFullYear()} · Microstock Intelligence SaaS</span>
-              <div className="flex items-center gap-4">
-                <Link to="/pricing" className="hover:text-brand-indigo">Pricing</Link>
-                <Link to="/contact" className="hover:text-brand-indigo">Contact</Link>
-                <Link to="/privacy" className="hover:text-brand-indigo">Privacy</Link>
-                <Link to="/terms" className="hover:text-brand-indigo">Terms</Link>
-                <Link to="/dashboard" className="hover:text-brand-indigo">Dashboard</Link>
+          <footer className="relative z-10 border-t border-slate-200/80 bg-white/70 py-8 text-xs text-slate-500 dark:border-slate-800/80 dark:bg-slate-950/80 dark:text-slate-400">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/70 pb-6 dark:border-slate-800/70">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 dark:text-white">StockAssetTrack</span>
+                  <span>&copy; {new Date().getFullYear()} · Microstock Intelligence Platform</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  {/* Adobe Review Submission: <Link to="/pricing" className="hover:text-brand-indigo transition">Pricing</Link> */}
+                  <Link to="/contact" className="hover:text-brand-indigo transition">Contact &amp; Support</Link>
+                  <Link to="/privacy" className="hover:text-brand-indigo transition">Privacy Policy</Link>
+                  <Link to="/terms" className="hover:text-brand-indigo transition">Terms of Service</Link>
+                  <Link to="/disclosure" className="hover:text-brand-indigo transition">Affiliate Disclosure</Link>
+                  <Link to="/dashboard" className="hover:text-brand-indigo transition">Dashboard</Link>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                <p>
+                  <strong>Disclaimer:</strong> StockAssetTrack is an independent software-as-a-service platform for digital creators and is not affiliated with, sponsored by, authorized by, or endorsed by Adobe Inc. Adobe, Adobe Stock, and Creative Cloud are registered trademarks of Adobe Inc. in the United States and/or other countries.
+                </p>
+                <p>
+                  <strong>Affiliate Disclosure:</strong> Some outbound links on this website pointing to Adobe Stock or partner platforms may be affiliate links. StockAssetTrack may earn an affiliate commission on qualifying purchases or subscriptions at no additional cost to you.
+                </p>
               </div>
             </div>
           </footer>

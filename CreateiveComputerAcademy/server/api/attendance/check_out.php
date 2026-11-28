@@ -88,9 +88,9 @@ if($stmt->execute() && $stmt->rowCount() > 0) {
             $nowTime = time();
             $durMins = max(1, round(abs($nowTime - $sTime) / 60));
             $tDelta = 0;
-            if ($abType === 'Tiffin') {
+            if ($abType === 'Tiffin' || $abType === 'Namaz') {
                 require_once __DIR__ . '/../breaks/BreakDbHelper.php';
-                $tDelta = BreakDbHelper::calculateTiffinDelta($durMins);
+                $tDelta = BreakDbHelper::calculateBreakDelta($abType, $durMins);
             }
             $closeStmt = $db->prepare("UPDATE user_breaks SET end_time = NOW(), duration_minutes = :dur, tiffin_delta_minutes = :delta, status = 'Completed', updated_at = NOW() WHERE id = :id");
             $closeStmt->execute([':dur' => $durMins, ':delta' => $tDelta, ':id' => $abId]);

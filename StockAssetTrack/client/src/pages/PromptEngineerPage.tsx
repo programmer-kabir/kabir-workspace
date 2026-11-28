@@ -220,7 +220,7 @@ export function PromptEngineerPage() {
           {data.referenceAsset && (
             <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-brand-purple/30 bg-white/90 p-4 dark:bg-slate-900/80 sm:flex-row sm:items-center">
               <img
-                src={data.referenceAsset.thumbnailUrl}
+                src={data.referenceAsset.thumbnailUrl?.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, '') || data.referenceAsset.thumbnailUrl}
                 alt={data.referenceAsset.title}
                 className="h-28 w-44 shrink-0 rounded-xl object-cover"
               />
